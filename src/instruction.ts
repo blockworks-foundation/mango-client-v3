@@ -4,14 +4,15 @@ import BN from 'bn.js';
 
 export function makeInitMerpsGroupInstruction(
   programId: PublicKey,
-  merpsGroup: PublicKey
+  merpsGroup: PublicKey,
+  validInterval: number
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: merpsGroup },
   ];
 
   const data = encodeMerpsInstruction({
-    InitMerpsGroup: {},
+    InitMerpsGroup: { validInterval: new BN(validInterval) },
   });
   return new TransactionInstruction({ keys, data, programId });
 }

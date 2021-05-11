@@ -19,7 +19,7 @@ async function tests() {
 
   async function testInitMerpsGroup() {
     const accInstr = await createAccountInstruction(connection, payer.publicKey, 24, programId)
-    const initInstr = makeInitMerpsGroupInstruction(programId, accInstr.account.publicKey)
+    const initInstr = makeInitMerpsGroupInstruction(programId, accInstr.account.publicKey, 2)
     const transaction = new Transaction()
     transaction.add(accInstr.instruction)
     transaction.add(initInstr)

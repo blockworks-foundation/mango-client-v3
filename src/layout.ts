@@ -1,7 +1,8 @@
 import { struct, u32, u8, union } from 'buffer-layout';
 
+
 export const MerpsInstructionLayout = union(u32('instruction'))
-MerpsInstructionLayout.addVariant(0, struct([]), 'InitMerpsGroup')
+MerpsInstructionLayout.addVariant(0, struct([u8('validInterval')]), 'InitMerpsGroup')
 MerpsInstructionLayout.addVariant(1, struct([u8('index')]), 'TestMultiTx')
 // @ts-ignore
 const instructionMaxSpan = Math.max(...Object.values(MerpsInstructionLayout.registry).map((r) => r.span));
