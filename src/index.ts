@@ -5,6 +5,7 @@ import { homedir } from 'os';
 import fs from 'fs';
 import { getUnixTs, sendTransaction, sendTransactions } from './client';
 
+const MAX_TOKENS = 64
 
 async function tests() {
   const keyPairPath = process.env.KEYPAIR || homedir() + '/.config/solana/id.json'
@@ -30,7 +31,7 @@ async function tests() {
   async function testMultiTx() {
 
     const transactions: Transaction[] = []
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < MAX_TOKENS; i++) {
       const transaction = new Transaction()
       transaction.add(makeTestMultiTxInstruction(programId, merpsGroupPk, i))
       transactions.push(transaction)
