@@ -30,6 +30,10 @@ export class I80F48 {
   }
 
 
+  /**
+   * This is mostly for encoding into the transaction
+   * Probably can just return the array underneath the data BN
+   */
   toArray(): Uint8Array {
     throw new Error("Not Implemented")
   }
