@@ -1,6 +1,8 @@
 import { struct, u32, u8, union } from 'buffer-layout';
 
-
+/**
+ * Need to implement layouts for each of the structs found in state.rs
+ */
 export const MerpsInstructionLayout = union(u32('instruction'))
 MerpsInstructionLayout.addVariant(0, struct([u8('validInterval')]), 'InitMerpsGroup')
 MerpsInstructionLayout.addVariant(1, struct([u8('index')]), 'TestMultiTx')

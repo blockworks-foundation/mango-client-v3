@@ -33,3 +33,9 @@ export function makeTestMultiTxInstruction(
 
   return new TransactionInstruction({ keys, data, programId });
 }
+
+export function makePlacePerpOrderInstruction(
+
+): TransactionInstruction {
+  throw new Error("Not Implemented")
+}
