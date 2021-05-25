@@ -18,7 +18,9 @@ export class Keeper {
     while (true) {
       sleep(interval)
 
-
+      /*
+        First task: update the MerpsCache with the RootBank
+       */
     }
   }
 }
