@@ -10,7 +10,8 @@
         "noImplicitAny": false,
         "resolveJsonModule": true,
         "sourceMap": true,
-        "jsx": "react"
+        "jsx": "react",
+        "esModuleInterop": true
     },
     "include": ["./src/**/*"],
     "exclude": ["./src/**/*.test.js", "node_modules", "**/node_modules"]

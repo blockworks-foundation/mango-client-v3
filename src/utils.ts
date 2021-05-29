@@ -8,6 +8,10 @@ import {
   TransactionSignature,
 } from '@solana/web3.js';
 
+import { U64 } from 'n64';
+import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from 'bigint-buffer';
+import { TokenInstructions } from '@project-serum/serum';
+
 export async function awaitTransactionSignatureConfirmation(
   txid: TransactionSignature,
   timeout: number,
@@ -137,4 +141,56 @@ export async function createAccountInstruction(
   })
 
   return { account, instruction };
+}
+
+export async function createTokenAccountInstructions(
+  connection: Connection,
+  payer: PublicKey,
+  account: PublicKey,
+  mint: PublicKey,
+  owner: PublicKey
+): Promise<TransactionInstruction[]> {
+  return [
+    SystemProgram.createAccount({
+      fromPubkey: payer,
+      newAccountPubkey: account,
+      lamports: await connection.getMinimumBalanceForRentExemption(165),
+      space: 165,
+      programId: TokenInstructions.TOKEN_PROGRAM_ID,
+    }),
+    TokenInstructions.initializeAccount({
+      account: account,
+      mint,
+      owner,
+    })
+  ]
+}
+
+export async function createSignerKeyAndNonce(
+  programId: PublicKey,
+  accountKey: PublicKey
+): Promise<{ signerKey: PublicKey, signerNonce: number }> {
+
+  // let res = await PublicKey.findProgramAddress([accountKey.toBuffer()], programId);
+  // console.log(res);
+  // return {
+  //   signerKey: res[0],
+  //   signerNonce: res[1]
+  // };
+   for(let nonce = 0; nonce <= Number.MAX_SAFE_INTEGER; nonce++) {
+    try {
+      const nonceBuffer = Buffer.alloc(8);
+      nonceBuffer.writeUInt32LE(nonce, 0)
+      const seeds = [accountKey.toBuffer(), nonceBuffer];
+      const key = await PublicKey.createProgramAddress(seeds, programId);
+      return {
+        signerKey: key,
+        signerNonce: nonce
+      }
+    } catch(e) {
+      continue;
+    }
+  }
+  
+  throw new Error('Could not generate signer key')
 }

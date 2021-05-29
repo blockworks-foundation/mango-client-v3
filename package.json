@@ -17,7 +17,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
-    "start": "ts-node src/index.ts",
+    "start": "ts-node src/test.ts",
     "clean": "rm -rf lib",
     "prepare": "run-s clean build",
     "shell": "node -e \"$(< shell)\" -i --experimental-repl-await",
@@ -59,9 +59,11 @@
     "@project-serum/sol-wallet-adapter": "^0.1.4",
     "@solana/spl-token": "0.0.13",
     "@solana/web3.js": "^0.90.0",
+    "bigint-buffer": "^1.1.5",
     "bn.js": "^5.1.2",
     "borsh": "https://github.com/defactojob/borsh-js#field-mapper",
-    "buffer-layout": "^1.2.0"
+    "buffer-layout": "^1.2.0",
+    "n64": "^0.2.10"
   },
   "browserslist": [
     ">0.2%",
