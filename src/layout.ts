@@ -2,7 +2,6 @@ import { struct, u32, u8, union, seq, Blob, Structure } from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import BN from 'bn.js';
-import { toBigIntLE, toBufferLE } from 'bigint-buffer';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
@@ -41,22 +40,6 @@ class BNLayout extends Blob {
   }
 }
 
-class U64Layout extends Blob {
-  constructor(property) {
-    super(8, property);
-    // restore prototype chain
-    Object.setPrototypeOf(this, new.target.prototype)
-  }
-
-  decode(b, offset) {
-    return toBigIntLE(super.decode(b, offset));
-  }
-
-  encode(src, b, offset) {
-    return super.encode(toBufferLE(src, 8), b, offset);
-  }
-}
-
 export function u64(property = '') {
   return new BNLayout(8, property);
 }
@@ -66,7 +49,16 @@ export function u64(property = '') {
  */
 export const MerpsInstructionLayout = union(u32('instruction'))
 MerpsInstructionLayout.addVariant(0, struct([u64('signerNonce'), u8('validInterval')]), 'InitMerpsGroup')
-MerpsInstructionLayout.addVariant(1, struct([u8('index')]), 'TestMultiTx')
+MerpsInstructionLayout.addVariant(1, struct([]), 'InitMerpsAccount');
+MerpsInstructionLayout.addVariant(2, struct([u64('quantity')]), 'Deposit');
+MerpsInstructionLayout.addVariant(3, struct([u64('quantity')]), 'Withdraw');
+MerpsInstructionLayout.addVariant(4, struct([]), 'AddAsset');
+MerpsInstructionLayout.addVariant(5, struct([]), 'AddSpotMarket');
+MerpsInstructionLayout.addVariant(6, struct([]), 'AddToBasket');
+MerpsInstructionLayout.addVariant(7, struct([u64('quantity')]), 'Borrow');
+MerpsInstructionLayout.addVariant(8, struct([]), 'CachePrices');
+MerpsInstructionLayout.addVariant(9, struct([]), 'CacheRootBanks');
+
 // @ts-ignore
 const instructionMaxSpan = Math.max(...Object.values(MerpsInstructionLayout.registry).map((r) => r.span));
 export function encodeMerpsInstruction(data) {
@@ -127,8 +119,8 @@ export function metaDataLayout(property = '') {
 
 export const MerpsGroupLayout = struct([
   metaDataLayout('metaData'),
-  u8('numTokens'), //usize?
-  u8('numMarkets'), //usize?
+  u64('numTokens'), //usize?
+  u64('numMarkets'), //usize?
   seq(publicKeyLayout(), MAX_TOKENS, 'tokens'),
   seq(publicKeyLayout(), MAX_PAIRS, 'oracles'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotMarkets'),
@@ -141,17 +133,16 @@ export const MerpsGroupLayout = struct([
   publicKeyLayout('dexProgramId'),
   publicKeyLayout('merpsCache'),
   u8('validInterval'),
-  seq(u8(), 21, 'padding') // padding required for alignment
+  seq(u8(), 7, 'padding') // padding required for alignment
 ]);
 
 export const RootBankLayout = struct([
   metaDataLayout('metaData'),
-  u8('numNodeBanks'), // usize?
+  u64('numNodeBanks'), // usize?
   seq(publicKeyLayout(), MAX_NODE_BANKS, 'nodeBanks'),
   I80F48Layout('depositIndex'),
   I80F48Layout('borrowIndex'),
   u64('lastUpdated'),
-  seq(u8(), 7, 'padding'),
 ]);
 
 export const NodeBankLayout = struct([

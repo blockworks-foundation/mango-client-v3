@@ -7,12 +7,9 @@ import {
   TransactionConfirmationStatus,
   TransactionSignature,
   TransactionInstruction,
+  SYSVAR_CLOCK_PUBKEY,
 } from '@solana/web3.js';
 import BN from 'bn.js';
-import { U64 } from 'n64';
-import { 
-  makeInitMerpsGroupInstruction,
-} from './instruction';
 import { 
   awaitTransactionSignatureConfirmation,
   simulateTransaction,
@@ -28,6 +25,8 @@ import {
   RootBankLayout,
   MerpsCacheLayout
 } from './layout';
+import MerpsGroup from './MerpsGroup';
+
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -174,6 +173,37 @@ export class MerpsClient {
     ]);
 
     return accountInstruction.account.publicKey;
+  }
+
+  async getMerpsGroup(merpsGroup: PublicKey): Promise<MerpsGroup> {
+    const accountInfo = await this.connection.getAccountInfo(merpsGroup);
+    const decoded = MerpsGroupLayout.decode(accountInfo == null ? undefined : accountInfo.data);
+
+    return new MerpsGroup(merpsGroup, decoded);
+  }
+
+  // Keeper functions
+  async cacheRootBanks(
+    payer: Account,
+    merpsGroup: PublicKey,
+    merpsCache: PublicKey,
+  ): Promise<TransactionSignature> {
+    const keys = [
+      { isSigner: false, isWritable: false, pubkey: merpsGroup },
+      { isSigner: false, isWritable: true, pubkey: merpsCache },
+      { isSigner: false, isWritable: false, pubkey: SYSVAR_CLOCK_PUBKEY },
+    ]
+
+    const data = encodeMerpsInstruction({
+      CacheRootBanks: {},
+    })
+
+    const cacheRootBanksInstruction = new TransactionInstruction({ keys, data, programId: this.programId })
+
+    const transaction = new Transaction();
+    transaction.add(cacheRootBanksInstruction);
+
+    return await this.sendTransaction(transaction, payer, []);
   }
 
   async placePerpOrder(): Promise<TransactionSignature[]> {
