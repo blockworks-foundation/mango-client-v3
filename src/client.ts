@@ -1,6 +1,7 @@
 import {
   Account,
-  Connection, PublicKey,
+  Connection,
+  PublicKey,
   SimulatedTransactionResponse,
   SYSVAR_RENT_PUBKEY,
   Transaction,
@@ -10,35 +11,34 @@ import {
   SYSVAR_CLOCK_PUBKEY,
 } from '@solana/web3.js';
 import BN from 'bn.js';
-import { 
+import {
   awaitTransactionSignatureConfirmation,
   simulateTransaction,
   sleep,
   createAccountInstruction,
   createSignerKeyAndNonce,
-  createTokenAccountInstructions
+  createTokenAccountInstructions,
 } from './utils';
 import {
   MerpsGroupLayout,
   encodeMerpsInstruction,
   NodeBankLayout,
   RootBankLayout,
-  MerpsCacheLayout
+  MerpsCacheLayout,
 } from './layout';
 import MerpsGroup from './MerpsGroup';
 
-
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
-}
+};
 
 export class MerpsClient {
   connection: Connection;
-  programId: PublicKey
+  programId: PublicKey;
 
   constructor(connection: Connection, programId: PublicKey) {
-    this.connection = connection
-    this.programId = programId
+    this.connection = connection;
+    this.programId = programId;
   }
 
   async sendTransactions(
@@ -46,9 +46,19 @@ export class MerpsClient {
     payer: Account,
     additionalSigners: Account[],
     timeout = 30000,
-    confirmLevel: TransactionConfirmationStatus = 'confirmed'
+    confirmLevel: TransactionConfirmationStatus = 'confirmed',
   ): Promise<TransactionSignature[]> {
-    return await Promise.all(transactions.map((tx) => this.sendTransaction(tx, payer, additionalSigners, timeout, confirmLevel)))
+    return await Promise.all(
+      transactions.map((tx) =>
+        this.sendTransaction(
+          tx,
+          payer,
+          additionalSigners,
+          timeout,
+          confirmLevel,
+        ),
+      ),
+    );
   }
 
   async sendTransaction(
@@ -56,32 +66,44 @@ export class MerpsClient {
     payer: Account,
     additionalSigners: Account[],
     timeout = 30000,
-    confirmLevel: TransactionConfirmationStatus = 'confirmed'
+    confirmLevel: TransactionConfirmationStatus = 'confirmed',
   ): Promise<TransactionSignature> {
+    transaction.recentBlockhash = (
+      await this.connection.getRecentBlockhash('singleGossip')
+    ).blockhash;
+    transaction.setSigners(
+      payer.publicKey,
+      ...additionalSigners.map((a) => a.publicKey),
+    );
 
-    transaction.recentBlockhash = (await this.connection.getRecentBlockhash('singleGossip')).blockhash
-    transaction.setSigners(payer.publicKey, ...additionalSigners.map( a => a.publicKey ))
-
-    const signers = [payer].concat(additionalSigners)
-    transaction.sign(...signers)
-    const rawTransaction = transaction.serialize()
+    const signers = [payer].concat(additionalSigners);
+    transaction.sign(...signers);
+    const rawTransaction = transaction.serialize();
     const startTime = getUnixTs();
 
-    const txid: TransactionSignature = await this.connection.sendRawTransaction(rawTransaction, { skipPreflight: true, },);
+    const txid: TransactionSignature = await this.connection.sendRawTransaction(
+      rawTransaction,
+      { skipPreflight: true },
+    );
 
     console.log('Started awaiting confirmation for', txid);
     let done = false;
     (async () => {
-      while (!done && (getUnixTs() - startTime) < timeout / 1000) {
+      while (!done && getUnixTs() - startTime < timeout / 1000) {
         this.connection.sendRawTransaction(rawTransaction, {
-          skipPreflight: true
+          skipPreflight: true,
         });
         await sleep(300);
       }
     })();
 
     try {
-      await awaitTransactionSignatureConfirmation(txid, timeout, this.connection, confirmLevel);
+      await awaitTransactionSignatureConfirmation(
+        txid,
+        timeout,
+        this.connection,
+        confirmLevel,
+      );
     } catch (err) {
       if (err.timeout) {
         throw new Error('Timed out awaiting confirmation on transaction');
@@ -89,11 +111,13 @@ export class MerpsClient {
       let simulateResult: SimulatedTransactionResponse | null = null;
       try {
         simulateResult = (
-          await simulateTransaction(this.connection, transaction, 'singleGossip')
+          await simulateTransaction(
+            this.connection,
+            transaction,
+            'singleGossip',
+          )
         ).value;
-      } catch (e) {
-
-      }
+      } catch (e) {}
       if (simulateResult && simulateResult.err) {
         if (simulateResult.logs) {
           for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
@@ -123,38 +147,85 @@ export class MerpsClient {
     validInterval: number,
   ): Promise<PublicKey> {
     const accountInstruction = await createAccountInstruction(
-      this.connection, payer.publicKey, MerpsGroupLayout.span, this.programId);
-    const { signerKey, signerNonce } = await createSignerKeyAndNonce(this.programId, accountInstruction.account.publicKey);
+      this.connection,
+      payer.publicKey,
+      MerpsGroupLayout.span,
+      this.programId,
+    );
+    const { signerKey, signerNonce } = await createSignerKeyAndNonce(
+      this.programId,
+      accountInstruction.account.publicKey,
+    );
     const newAccount = new Account();
-    
-    const quoteVaultAccountInstructions = await createTokenAccountInstructions(
-      this.connection, payer.publicKey, newAccount.publicKey, quoteMint, signerKey);
 
-    const quoteNodeBankAccountInstruction = await createAccountInstruction(this.connection,
-      payer.publicKey, NodeBankLayout.span, this.programId);
-    const quoteRootBankAccountInstruction = await createAccountInstruction(this.connection,
-      payer.publicKey, RootBankLayout.span, this.programId);
-    const cacheAccountInstruction = await createAccountInstruction(this.connection,
-      payer.publicKey, MerpsCacheLayout.span, this.programId);
+    const quoteVaultAccountInstructions = await createTokenAccountInstructions(
+      this.connection,
+      payer.publicKey,
+      newAccount.publicKey,
+      quoteMint,
+      signerKey,
+    );
+
+    const quoteNodeBankAccountInstruction = await createAccountInstruction(
+      this.connection,
+      payer.publicKey,
+      NodeBankLayout.span,
+      this.programId,
+    );
+    const quoteRootBankAccountInstruction = await createAccountInstruction(
+      this.connection,
+      payer.publicKey,
+      RootBankLayout.span,
+      this.programId,
+    );
+    const cacheAccountInstruction = await createAccountInstruction(
+      this.connection,
+      payer.publicKey,
+      MerpsCacheLayout.span,
+      this.programId,
+    );
 
     const keys = [
-        { isSigner: false, isWritable: true, pubkey: accountInstruction.account.publicKey },
-        { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
-        { isSigner: false, isWritable: false, pubkey: signerKey },
-        { isSigner: true, isWritable: false, pubkey: payer.publicKey},
-        { isSigner: false, isWritable: false, pubkey: quoteMint },
-        { isSigner: false, isWritable: true, pubkey: newAccount.publicKey },
-        { isSigner: false, isWritable: true, pubkey: quoteNodeBankAccountInstruction.account.publicKey },
-        { isSigner: false, isWritable: true, pubkey: quoteRootBankAccountInstruction.account.publicKey },
-        { isSigner: false, isWritable: true, pubkey: cacheAccountInstruction.account.publicKey },
-        { isSigner: false, isWritable: false, pubkey: dexProgram },
-    ]
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: accountInstruction.account.publicKey,
+      },
+      { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
+      { isSigner: false, isWritable: false, pubkey: signerKey },
+      { isSigner: true, isWritable: false, pubkey: payer.publicKey },
+      { isSigner: false, isWritable: false, pubkey: quoteMint },
+      { isSigner: false, isWritable: true, pubkey: newAccount.publicKey },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: quoteNodeBankAccountInstruction.account.publicKey,
+      },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: quoteRootBankAccountInstruction.account.publicKey,
+      },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: cacheAccountInstruction.account.publicKey,
+      },
+      { isSigner: false, isWritable: false, pubkey: dexProgram },
+    ];
 
     const data = encodeMerpsInstruction({
-      InitMerpsGroup: { signerNonce: new BN(signerNonce), validInterval: new BN(validInterval) },
-    })
+      InitMerpsGroup: {
+        signerNonce: new BN(signerNonce),
+        validInterval: new BN(validInterval),
+      },
+    });
 
-    const initMerpsGroupInstruction = new TransactionInstruction({ keys, data, programId: this.programId })
+    const initMerpsGroupInstruction = new TransactionInstruction({
+      keys,
+      data,
+      programId: this.programId,
+    });
 
     const transaction = new Transaction();
     transaction.add(accountInstruction.instruction);
@@ -177,7 +248,9 @@ export class MerpsClient {
 
   async getMerpsGroup(merpsGroup: PublicKey): Promise<MerpsGroup> {
     const accountInfo = await this.connection.getAccountInfo(merpsGroup);
-    const decoded = MerpsGroupLayout.decode(accountInfo == null ? undefined : accountInfo.data);
+    const decoded = MerpsGroupLayout.decode(
+      accountInfo == null ? undefined : accountInfo.data,
+    );
 
     return new MerpsGroup(merpsGroup, decoded);
   }
@@ -192,13 +265,17 @@ export class MerpsClient {
       { isSigner: false, isWritable: false, pubkey: merpsGroup },
       { isSigner: false, isWritable: true, pubkey: merpsCache },
       { isSigner: false, isWritable: false, pubkey: SYSVAR_CLOCK_PUBKEY },
-    ]
+    ];
 
     const data = encodeMerpsInstruction({
       CacheRootBanks: {},
-    })
+    });
 
-    const cacheRootBanksInstruction = new TransactionInstruction({ keys, data, programId: this.programId })
+    const cacheRootBanksInstruction = new TransactionInstruction({
+      keys,
+      data,
+      programId: this.programId,
+    });
 
     const transaction = new Transaction();
     transaction.add(cacheRootBanksInstruction);
@@ -207,10 +284,10 @@ export class MerpsClient {
   }
 
   async placePerpOrder(): Promise<TransactionSignature[]> {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
 
   async cancelPerpOrder(): Promise<TransactionSignature[]> {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
 }

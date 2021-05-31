@@ -7,16 +7,14 @@ This will be very similar to the crank in serum dex.
  */
 import { sleep } from './utils';
 
-
 export class Keeper {
-
   /**
    * Long running program that never exits except on keyboard interrupt
    */
   run() {
-    const interval = 5000
+    const interval = 5000;
     while (true) {
-      sleep(interval)
+      sleep(interval);
 
       /*
         First task: update the MerpsCache with the RootBank

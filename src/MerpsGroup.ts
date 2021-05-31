@@ -1,6 +1,6 @@
-import { PublicKey } from "@solana/web3.js";
-import BN from "bn.js";
-import { MetaData } from "./layout";
+import { PublicKey } from '@solana/web3.js';
+import BN from 'bn.js';
+import { MetaData } from './layout';
 
 export default class MerpsGroup {
   publicKey: PublicKey;
@@ -21,7 +21,7 @@ export default class MerpsGroup {
   validInterval!: number[];
 
   constructor(publicKey: PublicKey, decoded: any) {
-    this.publicKey = publicKey
-    Object.assign(this, decoded)
+    this.publicKey = publicKey;
+    Object.assign(this, decoded);
   }
 }

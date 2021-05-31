@@ -1,15 +1,17 @@
-import { PublicKey, SYSVAR_CLOCK_PUBKEY, TransactionInstruction } from '@solana/web3.js';
+import {
+  PublicKey,
+  SYSVAR_CLOCK_PUBKEY,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import { encodeMerpsInstruction } from './layout';
 import BN from 'bn.js';
 
 export function makeInitMerpsGroupInstruction(
   programId: PublicKey,
   merpsGroup: PublicKey,
-  validInterval: number
+  validInterval: number,
 ): TransactionInstruction {
-  const keys = [
-    { isSigner: false, isWritable: true, pubkey: merpsGroup },
-  ];
+  const keys = [{ isSigner: false, isWritable: true, pubkey: merpsGroup }];
 
   const data = encodeMerpsInstruction({
     InitMerpsGroup: { validInterval: new BN(validInterval) },
@@ -20,7 +22,7 @@ export function makeInitMerpsGroupInstruction(
 export function makeTestMultiTxInstruction(
   programId: PublicKey,
   merpsGroup: PublicKey,
-  index: number
+  index: number,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: merpsGroup },
@@ -28,14 +30,12 @@ export function makeTestMultiTxInstruction(
   ];
 
   const data = encodeMerpsInstruction({
-    TestMultiTx: {index: new BN(index)},
+    TestMultiTx: { index: new BN(index) },
   });
 
   return new TransactionInstruction({ keys, data, programId });
 }
 
-export function makePlacePerpOrderInstruction(
-
-): TransactionInstruction {
-  throw new Error("Not Implemented")
+export function makePlacePerpOrderInstruction(): TransactionInstruction {
+  throw new Error('Not Implemented');
 }

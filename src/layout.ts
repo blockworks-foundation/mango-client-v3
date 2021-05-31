@@ -5,15 +5,15 @@ import BN from 'bn.js';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
-export const MAX_NODE_BANKS =  8;
+export const MAX_NODE_BANKS = 8;
 
 class _I80F48Layout extends Blob {
   constructor(property: string) {
-    super(16, property)
+    super(16, property);
   }
 
   decode(b, offset) {
-    return new I80F48(new BN(super.decode(b, offset), 10, 'le'))
+    return new I80F48(new BN(super.decode(b, offset), 10, 'le'));
   }
 
   encode(src, b, offset) {
@@ -28,7 +28,7 @@ class BNLayout extends Blob {
   constructor(number: number, property) {
     super(number, property);
     // restore prototype chain
-    Object.setPrototypeOf(this, new.target.prototype)
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 
   decode(b, offset) {
@@ -47,8 +47,12 @@ export function u64(property = '') {
 /**
  * Need to implement layouts for each of the structs found in state.rs
  */
-export const MerpsInstructionLayout = union(u32('instruction'))
-MerpsInstructionLayout.addVariant(0, struct([u64('signerNonce'), u8('validInterval')]), 'InitMerpsGroup')
+export const MerpsInstructionLayout = union(u32('instruction'));
+MerpsInstructionLayout.addVariant(
+  0,
+  struct([u64('signerNonce'), u8('validInterval')]),
+  'InitMerpsGroup',
+);
 MerpsInstructionLayout.addVariant(1, struct([]), 'InitMerpsAccount');
 MerpsInstructionLayout.addVariant(2, struct([u64('quantity')]), 'Deposit');
 MerpsInstructionLayout.addVariant(3, struct([u64('quantity')]), 'Withdraw');
@@ -60,7 +64,9 @@ MerpsInstructionLayout.addVariant(8, struct([]), 'CachePrices');
 MerpsInstructionLayout.addVariant(9, struct([]), 'CacheRootBanks');
 
 // @ts-ignore
-const instructionMaxSpan = Math.max(...Object.values(MerpsInstructionLayout.registry).map((r) => r.span));
+const instructionMaxSpan = Math.max(
+  ...Object.values(MerpsInstructionLayout.registry).map((r) => r.span),
+);
 export function encodeMerpsInstruction(data) {
   const b = Buffer.alloc(instructionMaxSpan);
   const span = MerpsInstructionLayout.encode(data, b);
@@ -85,25 +91,28 @@ export function publicKeyLayout(property = '') {
 }
 
 export class MetaData {
- dataType!: number;
- version!: number;
- isInitialized!: boolean;
+  dataType!: number;
+  version!: number;
+  isInitialized!: boolean;
 
- constructor(decoded: any) {
-   Object.assign(this, decoded);
- }
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
 }
 
 export class MetaDataLayout extends Structure {
   constructor(property) {
-    super([
-      u8('dataType'),
-      u8('version'),
-      u8('isInitialized'),
-      seq(u8(), 5, 'padding')
-    ], property)
+    super(
+      [
+        u8('dataType'),
+        u8('version'),
+        u8('isInitialized'),
+        seq(u8(), 5, 'padding'),
+      ],
+      property,
+    );
   }
-  
+
   decode(b, offset) {
     return new MetaData(super.decode(b, offset));
   }
@@ -111,8 +120,7 @@ export class MetaDataLayout extends Structure {
   encode(src, b, offset) {
     return super.encode(src.toBuffer(), b, offset);
   }
-
-};
+}
 export function metaDataLayout(property = '') {
   return new MetaDataLayout(property);
 }
@@ -133,7 +141,7 @@ export const MerpsGroupLayout = struct([
   publicKeyLayout('dexProgramId'),
   publicKeyLayout('merpsCache'),
   u8('validInterval'),
-  seq(u8(), 7, 'padding') // padding required for alignment
+  seq(u8(), 7, 'padding'), // padding required for alignment
 ]);
 
 export const RootBankLayout = struct([
@@ -156,19 +164,16 @@ export class PriceCache {
   price!: I80F48;
   lastUpdate!: BN;
   isInitialized!: boolean;
- 
+
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
 }
 export class PriceCacheLayout extends Structure {
   constructor(property) {
-    super([
-      I80F48Layout('price'),
-      u64('lastUpdate'),
-    ], property)
+    super([I80F48Layout('price'), u64('lastUpdate')], property);
   }
-  
+
   decode(b, offset) {
     return new PriceCache(super.decode(b, offset));
   }
@@ -185,18 +190,21 @@ export class RootBankCache {
   depositIndex!: I80F48;
   borrowIndex!: I80F48;
   lastUpdate!: BN;
- 
+
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
 }
 export class RootBankCacheLayout extends Structure {
   constructor(property) {
-    super([
-      I80F48Layout('depositIndex'),
-      I80F48Layout('borrowIndex'),
-      u64('lastUpdate'),
-    ], property)
+    super(
+      [
+        I80F48Layout('depositIndex'),
+        I80F48Layout('borrowIndex'),
+        u64('lastUpdate'),
+      ],
+      property,
+    );
   }
 
   decode(b, offset) {
@@ -214,17 +222,14 @@ export function rootBankCacheLayout(property = '') {
 export class PerpMarketCache {
   fundingEarned!: I80F48;
   lastUpdate!: BN;
- 
+
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
 }
 export class PerpMarketCacheLayout extends Structure {
   constructor(property) {
-    super([
-      I80F48Layout('fundingEarned'),
-      u64('lastUpdate'),
-    ], property)
+    super([I80F48Layout('fundingEarned'), u64('lastUpdate')], property);
   }
 
   decode(b, offset) {
@@ -244,4 +249,4 @@ export const MerpsCacheLayout = struct([
   seq(priceCacheLayout(), MAX_PAIRS, 'priceCache'),
   seq(rootBankCacheLayout(), MAX_TOKENS, 'rootBankCache'),
   seq(perpMarketCacheLayout(), MAX_PAIRS, 'perpMarketCache'),
-])
+]);
