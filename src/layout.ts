@@ -1,4 +1,14 @@
-import { struct, u32, u8, union, seq, Blob, Structure } from 'buffer-layout';
+import {
+  struct,
+  i64,
+  u32,
+  u8,
+  union,
+  seq,
+  Blob,
+  Structure,
+  boolean,
+} from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import BN from 'bn.js';
@@ -144,6 +154,20 @@ export const MerpsGroupLayout = struct([
   seq(u8(), 7, 'padding'), // padding required for alignment
 ]);
 
+export const MerpsAccountLayout = struct([
+  metaDataLayout('metaData'),
+  publicKeyLayout('merpsGroups'),
+  publicKeyLayout('owner'),
+  seq(boolean(), MAX_PAIRS, 'inBasket'),
+  seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
+  seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
+  seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
+  seq(i64(), MAX_PAIRS, 'basePositions'),
+  seq(i64(), MAX_PAIRS, 'quotePositions'),
+  seq(I80F48Layout(), MAX_PAIRS, 'fundingSettled'),
+  seq(perpOpenOrdersLayout(), MAX_PAIRS, 'perpOpenOrders'),
+]);
+
 export const RootBankLayout = struct([
   metaDataLayout('metaData'),
   u64('numNodeBanks'), // usize?
@@ -250,3 +274,44 @@ export const MerpsCacheLayout = struct([
   seq(rootBankCacheLayout(), MAX_TOKENS, 'rootBankCache'),
   seq(perpMarketCacheLayout(), MAX_PAIRS, 'perpMarketCache'),
 ]);
+
+export class PerpOpenOrders {
+  totalBase!: BN;
+  totalQuote!: BN;
+  isFreeBits!: BN;
+  isBidBits!: BN;
+  orders!: BN[];
+  clientOrderIds!: BN[];
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+
+export class PerpOpenOrdersLayout extends Structure {
+  constructor(property) {
+    super(
+      [
+        i64('totalBase'),
+        i64('totalQuote'),
+        u32('isFreeBits'),
+        u32('isBidBits'),
+        seq(u64(), MAX_TOKENS, 'orders'),
+        seq(u64(), MAX_TOKENS, 'clientOrderIds'),
+      ],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new PerpOpenOrders(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+
+export function perpOpenOrdersLayout(property = '') {
+  return new PerpOpenOrdersLayout(property);
+}

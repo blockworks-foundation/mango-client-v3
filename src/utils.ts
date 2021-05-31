@@ -14,6 +14,12 @@ import {
 
 import { TokenInstructions } from '@project-serum/serum';
 
+export const zeroKey = new PublicKey(new Uint8Array(32))
+
+export async function promiseUndef(): Promise<undefined> {
+  return undefined
+}
+
 export async function awaitTransactionSignatureConfirmation(
   txid: TransactionSignature,
   timeout: number,

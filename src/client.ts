@@ -25,8 +25,10 @@ import {
   NodeBankLayout,
   RootBankLayout,
   MerpsCacheLayout,
+  MerpsAccountLayout,
 } from './layout';
 import MerpsGroup from './MerpsGroup';
+import MerpsAccount from './MerpsAccount';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -253,6 +255,66 @@ export class MerpsClient {
     );
 
     return new MerpsGroup(merpsGroup, decoded);
+  }
+
+  async initMerpsAccount(
+    merpsGroup: MerpsGroup,
+    owner: Account,
+  ): Promise<PublicKey> {
+    const accountInstruction = await createAccountInstruction(
+      this.connection,
+      owner.publicKey,
+      MerpsAccountLayout.span,
+      this.programId,
+    );
+
+    const keys = [
+      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: accountInstruction.account.publicKey,
+      },
+      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
+      { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
+    ];
+
+    const data = encodeMerpsInstruction({ InitMerpsAccount: {} });
+    const initMerpsAccountInstruction = new TransactionInstruction({
+      keys,
+      data,
+      programId: this.programId,
+    });
+
+    // Add all instructions to one atomic transaction
+    const transaction = new Transaction();
+    transaction.add(accountInstruction.instruction);
+    transaction.add(initMerpsAccountInstruction);
+
+    const additionalSigners = [accountInstruction.account];
+    const txid = await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+    );
+
+    return accountInstruction.account.publicKey;
+  }
+
+  async getMerpsAccount(
+    merpsAccountPk: PublicKey,
+    dexProgramId: PublicKey,
+  ): Promise<MerpsAccount> {
+    const acc = await this.connection.getAccountInfo(
+      merpsAccountPk,
+      'singleGossip',
+    );
+    const merpsAccount = new MerpsAccount(
+      merpsAccountPk,
+      MerpsAccountLayout.decode(acc == null ? undefined : acc.data),
+    );
+    await merpsAccount.loadOpenOrders(this.connection, dexProgramId);
+    return merpsAccount;
   }
 
   // Keeper functions
