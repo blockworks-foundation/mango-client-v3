@@ -12,8 +12,6 @@ import {
   TransactionSignature,
 } from '@solana/web3.js';
 
-import { U64 } from 'n64';
-import { toBigIntBE, toBigIntLE, toBufferBE, toBufferLE } from 'bigint-buffer';
 import { TokenInstructions } from '@project-serum/serum';
 
 export async function awaitTransactionSignatureConfirmation(

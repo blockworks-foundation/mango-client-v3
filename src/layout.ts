@@ -63,8 +63,8 @@ MerpsInstructionLayout.addVariant(7, struct([u64('quantity')]), 'Borrow');
 MerpsInstructionLayout.addVariant(8, struct([]), 'CachePrices');
 MerpsInstructionLayout.addVariant(9, struct([]), 'CacheRootBanks');
 
-// @ts-ignore
 const instructionMaxSpan = Math.max(
+  // @ts-ignore
   ...Object.values(MerpsInstructionLayout.registry).map((r) => r.span),
 );
 export function encodeMerpsInstruction(data) {
