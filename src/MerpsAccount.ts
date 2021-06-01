@@ -8,20 +8,20 @@ import { promiseUndef, zeroKey } from './utils';
 export default class MerpsAccount {
   publicKey: PublicKey;
   metaData!: MetaData;
-  merpsGroup: PublicKey;
-  owner: PublicKey;
+  merpsGroup!: PublicKey;
+  owner!: PublicKey;
 
-  inBasket: boolean[];
-  deposits: I80F48[];
-  borrows: I80F48[];
+  inBasket!: boolean[];
+  deposits!: I80F48[];
+  borrows!: I80F48[];
 
-  spotOpenOrders: PublicKey[];
-  spotOpenOrdersAccounts: (OpenOrders | undefined)[];
+  spotOpenOrders!: PublicKey[];
+  spotOpenOrdersAccounts!: (OpenOrders | undefined)[];
 
-  basePositions: BN[];
-  quotePositions: BN[];
-  fundingSettled: I80F48[];
-  perpOpenOrders: PerpOpenOrders[];
+  basePositions!: BN[];
+  quotePositions!: BN[];
+  fundingSettled!: I80F48[];
+  perpOpenOrders!: PerpOpenOrders[];
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;

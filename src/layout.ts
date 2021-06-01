@@ -1,13 +1,12 @@
 import {
   struct,
-  i64,
   u32,
   u8,
   union,
   seq,
   Blob,
   Structure,
-  boolean,
+  Layout,
 } from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
@@ -52,6 +51,65 @@ class BNLayout extends Blob {
 
 export function u64(property = '') {
   return new BNLayout(8, property);
+}
+
+export function i64(property = '') {
+  return new BNLayout(8, property);
+}
+
+export function u128(property?: string) {
+  return new BNLayout(16, property);
+}
+
+export function i128(property?: string) {
+  return new BNLayout(16, property);
+}
+
+class WrappedLayout<T, U> extends Layout<U> {
+  layout: Layout<T>;
+  decoder: (data: T) => U;
+  encoder: (src: U) => T;
+
+  constructor(
+    layout: Layout<T>,
+    decoder: (data: T) => U,
+    encoder: (src: U) => T,
+    property?: string,
+  ) {
+    super(layout.span, property);
+    this.layout = layout;
+    this.decoder = decoder;
+    this.encoder = encoder;
+  }
+
+  decode(b: Buffer, offset?: number): U {
+    return this.decoder(this.layout.decode(b, offset));
+  }
+
+  encode(src: U, b: Buffer, offset?: number): number {
+    return this.layout.encode(this.encoder(src), b, offset);
+  }
+
+  getSpan(b: Buffer, offset?: number): number {
+    return this.layout.getSpan(b, offset);
+  }
+}
+
+export function bool(property?: string) {
+  return new WrappedLayout(u8(), decodeBool, encodeBool, property);
+}
+
+function decodeBool(value: number): boolean {
+  if (value === 0) {
+    return false;
+  } else if (value === 1) {
+    return true;
+  }
+  throw new Error('Invalid bool: ' + value);
+}
+
+function encodeBool(value: boolean): number {
+  return value ? 1 : 0;
 }
 
 /**
@@ -135,16 +193,176 @@ export function metaDataLayout(property = '') {
   return new MetaDataLayout(property);
 }
 
+export class TokenInfo {
+  mint!: PublicKey;
+  rootBank!: PublicKey;
+  decimals!: number;
+  padding!: number[];
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+
+export class TokenInfoLayout extends Structure {
+  constructor(property) {
+    super(
+      [
+        publicKeyLayout('mint'),
+        publicKeyLayout('rootBank'),
+        u8('decimals'),
+        seq(u8(), 7, 'padding'),
+      ],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new TokenInfo(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+
+export function tokenInfoLayout(property = '') {
+  return new TokenInfoLayout(property);
+}
+
+export class SpotMarketInfo {
+  spotMarket!: PublicKey;
+  maintAssetWeight!: I80F48;
+  initAssetWeight!: I80F48;
+  maintLiabWeight!: I80F48;
+  initLiabWeight!: I80F48;
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+
+export class SpotMarketInfoLayout extends Structure {
+  constructor(property) {
+    super(
+      [
+        publicKeyLayout('spotMarket'),
+        I80F48Layout('maintAssetWeight'),
+        I80F48Layout('initAssetWeight'),
+        I80F48Layout('maintLiabWeight'),
+        I80F48Layout('initLiabWeight'),
+      ],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new SpotMarketInfo(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+
+export function spotMarketInfoLayout(property = '') {
+  return new SpotMarketInfoLayout(property);
+}
+
+export class PerpMarketInfo {
+  spotMarket!: PublicKey;
+  maintAssetWeight!: I80F48;
+  initAssetWeight!: I80F48;
+  maintLiabWeight!: I80F48;
+  initLiabWeight!: I80F48;
+  baseLotSize!: BN;
+  quoteLotSize!: BN;
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+
+export class PerpMarketInfoLayout extends Structure {
+  constructor(property) {
+    super(
+      [
+        publicKeyLayout('perpMarket'),
+        I80F48Layout('maintAssetWeight'),
+        I80F48Layout('initAssetWeight'),
+        I80F48Layout('maintLiabWeight'),
+        I80F48Layout('initLiabWeight'),
+        i64('baseLotSize'),
+        i64('quoteLotSize'),
+      ],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new PerpMarketInfo(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+
+export function perpMarketInfoLayout(property = '') {
+  return new PerpMarketInfoLayout(property);
+}
+
+export class PerpOpenOrders {
+  totalBase!: BN;
+  totalQuote!: BN;
+  isFreeBits!: BN;
+  isBidBits!: BN;
+  orders!: BN[];
+  clientOrderIds!: BN[];
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+
+export class PerpOpenOrdersLayout extends Structure {
+  constructor(property) {
+    super(
+      [
+        i64('totalBase'),
+        i64('totalQuote'),
+        u32('isFreeBits'),
+        u32('isBidBits'),
+        seq(u64(), MAX_TOKENS, 'orders'),
+        seq(u64(), MAX_TOKENS, 'clientOrderIds'),
+      ],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new PerpOpenOrders(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+
+export function perpOpenOrdersLayout(property = '') {
+  return new PerpOpenOrdersLayout(property);
+}
+
 export const MerpsGroupLayout = struct([
   metaDataLayout('metaData'),
-  u64('numTokens'), //usize?
-  u64('numMarkets'), //usize?
-  seq(publicKeyLayout(), MAX_TOKENS, 'tokens'),
+  u64('numOracles'), //usize?
+
+  seq(tokenInfoLayout(), MAX_TOKENS, 'tokens'),
+  seq(spotMarketInfoLayout(), MAX_PAIRS, 'spotMarkets'),
+  seq(perpMarketInfoLayout(), MAX_PAIRS, 'perpMarkets'),
+
   seq(publicKeyLayout(), MAX_PAIRS, 'oracles'),
-  seq(publicKeyLayout(), MAX_PAIRS, 'spotMarkets'),
-  seq(publicKeyLayout(), MAX_PAIRS, 'perpMarkets'),
-  seq(publicKeyLayout(), MAX_TOKENS, 'rootBanks'),
-  seq(I80F48Layout(), MAX_TOKENS, 'assetWeights'),
+
   u64('signerNonce'),
   publicKeyLayout('signerKey'),
   publicKeyLayout('admin'),
@@ -158,7 +376,7 @@ export const MerpsAccountLayout = struct([
   metaDataLayout('metaData'),
   publicKeyLayout('merpsGroups'),
   publicKeyLayout('owner'),
-  seq(boolean(), MAX_PAIRS, 'inBasket'),
+  seq(bool(), MAX_PAIRS, 'inBasket'),
   seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
@@ -275,43 +493,14 @@ export const MerpsCacheLayout = struct([
   seq(perpMarketCacheLayout(), MAX_PAIRS, 'perpMarketCache'),
 ]);
 
-export class PerpOpenOrders {
-  totalBase!: BN;
-  totalQuote!: BN;
-  isFreeBits!: BN;
-  isBidBits!: BN;
-  orders!: BN[];
-  clientOrderIds!: BN[];
+export class RootBank {
+  numNodeBanks!: number;
+  nodeBanks!: PublicKey[];
+  depositIndex!: I80F48;
+  borrowIndex!: I80F48;
+  lastUpdated!: BN;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
-}
-
-export class PerpOpenOrdersLayout extends Structure {
-  constructor(property) {
-    super(
-      [
-        i64('totalBase'),
-        i64('totalQuote'),
-        u32('isFreeBits'),
-        u32('isBidBits'),
-        seq(u64(), MAX_TOKENS, 'orders'),
-        seq(u64(), MAX_TOKENS, 'clientOrderIds'),
-      ],
-      property,
-    );
-  }
-
-  decode(b, offset) {
-    return new PerpOpenOrders(super.decode(b, offset));
-  }
-
-  encode(src, b, offset) {
-    return super.encode(src.toBuffer(), b, offset);
-  }
-}
-
-export function perpOpenOrdersLayout(property = '') {
-  return new PerpOpenOrdersLayout(property);
 }

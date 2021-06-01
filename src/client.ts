@@ -18,6 +18,7 @@ import {
   createAccountInstruction,
   createSignerKeyAndNonce,
   createTokenAccountInstructions,
+  uiToNative,
 } from './utils';
 import {
   MerpsGroupLayout,
@@ -29,6 +30,8 @@ import {
 } from './layout';
 import MerpsGroup from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { makeWithdrawInstruction } from './instruction';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -292,11 +295,7 @@ export class MerpsClient {
     transaction.add(initMerpsAccountInstruction);
 
     const additionalSigners = [accountInstruction.account];
-    const txid = await this.sendTransaction(
-      transaction,
-      owner,
-      additionalSigners,
-    );
+    await this.sendTransaction(transaction, owner, additionalSigners);
 
     return accountInstruction.account.publicKey;
   }
@@ -315,6 +314,89 @@ export class MerpsClient {
     );
     await merpsAccount.loadOpenOrders(this.connection, dexProgramId);
     return merpsAccount;
+  }
+
+  async deposit(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    owner: Account,
+    rootBank: PublicKey,
+    nodeBank: PublicKey,
+    vault: PublicKey,
+    tokenAcc: PublicKey,
+
+    quantity: number,
+  ): Promise<TransactionSignature> {
+    const tokenIndex = merpsGroup.getRootBankIndex(rootBank);
+    const nativeQuantity = uiToNative(
+      quantity,
+      merpsGroup.tokens[tokenIndex].decimals,
+    );
+
+    const keys = [
+      { isSigner: false, isWritable: true, pubkey: merpsGroup.publicKey },
+      { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
+      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
+      { isSigner: true, isWritable: true, pubkey: rootBank },
+      { isSigner: true, isWritable: true, pubkey: nodeBank },
+      { isSigner: true, isWritable: false, pubkey: vault },
+      { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+      { isSigner: false, isWritable: true, pubkey: tokenAcc },
+    ];
+    const data = encodeMerpsInstruction({
+      Deposit: { quantity: nativeQuantity },
+    });
+
+    const instruction = new TransactionInstruction({
+      keys,
+      data,
+      programId: this.programId,
+    });
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async withdraw(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    owner: Account,
+    rootBank: PublicKey,
+    nodeBank: PublicKey,
+    vault: PublicKey,
+    tokenAcc: PublicKey,
+
+    quantity: number,
+  ): Promise<TransactionSignature> {
+    const tokenIndex = merpsGroup.getRootBankIndex(rootBank);
+    const nativeQuantity = uiToNative(
+      quantity,
+      merpsGroup.tokens[tokenIndex].decimals,
+    );
+
+    const instruction = makeWithdrawInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      merpsAccount.publicKey,
+      owner.publicKey,
+      merpsGroup.merpsCache,
+      rootBank,
+      nodeBank,
+      vault,
+      tokenAcc,
+      merpsGroup.signerKey,
+      merpsGroup.oracles,
+      nativeQuantity,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
   // Keeper functions

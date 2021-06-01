@@ -18,7 +18,10 @@ async function test() {
   );
   const payer = new Account(
     JSON.parse(
-      fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+      fs.readFileSync(
+        os.homedir() + '/my-solana-wallet/my-keypair.json',
+        'utf-8',
+      ),
     ),
   );
   const connection = new Connection(
@@ -41,7 +44,7 @@ async function test() {
   console.log('Group Created:', merpsGroup.publicKey.toBase58());
   assertEq(
     'quoteMint',
-    merpsGroup.tokens[0].toBase58(),
+    merpsGroup.tokens[0].mint.toBase58(),
     quoteMintKey.toBase58(),
   );
   assertEq('admin', merpsGroup.admin.toBase58(), payer.publicKey.toBase58());
