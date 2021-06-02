@@ -1,1 +1,1 @@
-export { MerpsClient } from './client'
+export { MerpsClient } from './client';

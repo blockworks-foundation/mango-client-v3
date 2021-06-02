@@ -1,6 +1,5 @@
 import BN from 'bn.js';
 
-
 export class I80F48 {
   /**
   This is represented by a 128 bit signed integer underneath
@@ -11,43 +10,42 @@ export class I80F48 {
   Read up on how 2s complement works: https://en.wikipedia.org/wiki/Two%27s_complement
    */
 
-  data: BN;  // This is i128 => array of 16 bytes
+  data: BN; // This is i128 => array of 16 bytes
 
   constructor(data: BN) {
     this.data = data;
   }
 
   static fromFloat(x: number): I80F48 {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
 
   toFloat(): number {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
 
   toString(): string {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
-
 
   /**
    * This is mostly for encoding into the transaction
    * Probably can just return the array underneath the data BN
    */
   toArray(): Uint8Array {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
 
   static fromArray(src: Uint8Array): I80F48 {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
 
   add(x: I80F48): I80F48 {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
 
   sub(x: I80F48): I80F48 {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
 
   /**
@@ -55,11 +53,10 @@ export class I80F48 {
    * @param x
    */
   mul(x: I80F48): I80F48 {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
 
   div(x: I80F48): I80F48 {
-    throw new Error("Not Implemented")
+    throw new Error('Not Implemented');
   }
-
 }

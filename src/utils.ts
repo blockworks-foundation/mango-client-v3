@@ -1,27 +1,44 @@
+import BN from 'bn.js';
 import {
   Account,
   Commitment,
-  Connection, PublicKey,
+  Connection,
+  PublicKey,
   RpcResponseAndContext,
-  SimulatedTransactionResponse, SystemProgram,
-  Transaction, TransactionConfirmationStatus, TransactionInstruction,
+  SimulatedTransactionResponse,
+  SystemProgram,
+  Transaction,
+  TransactionConfirmationStatus,
+  TransactionInstruction,
   TransactionSignature,
 } from '@solana/web3.js';
+
+import { TokenInstructions } from '@project-serum/serum';
+
+export const zeroKey = new PublicKey(new Uint8Array(32));
+
+export async function promiseUndef(): Promise<undefined> {
+  return undefined;
+}
+
+export function uiToNative(amount: number, decimals: number): BN {
+  return new BN(Math.round(amount * Math.pow(10, decimals)));
+}
 
 export async function awaitTransactionSignatureConfirmation(
   txid: TransactionSignature,
   timeout: number,
   connection: Connection,
-  confirmLevel: TransactionConfirmationStatus
+  confirmLevel: TransactionConfirmationStatus,
 ) {
   let done = false;
 
-  const confirmLevels: (TransactionConfirmationStatus | null)[] = ['finalized']
+  const confirmLevels: (TransactionConfirmationStatus | null)[] = ['finalized'];
   if (confirmLevel === 'confirmed') {
-    confirmLevels.push('confirmed')
+    confirmLevels.push('confirmed');
   } else if (confirmLevel === 'processed') {
-    confirmLevels.push('confirmed')
-    confirmLevels.push('processed')
+    confirmLevels.push('confirmed');
+    confirmLevels.push('processed');
   }
 
   const result = await new Promise((resolve, reject) => {
@@ -68,7 +85,12 @@ export async function awaitTransactionSignatureConfirmation(
                 console.log('REST error for', txid, result);
                 done = true;
                 reject(result.err);
-              } else if (!(result.confirmations || confirmLevels.includes(result.confirmationStatus))) {
+              } else if (
+                !(
+                  result.confirmations ||
+                  confirmLevels.includes(result.confirmationStatus)
+                )
+              ) {
                 console.log('REST not confirmed', txid, result);
               } else {
                 console.log('REST confirmed', txid, result);
@@ -125,16 +147,69 @@ export async function createAccountInstruction(
   payer: PublicKey,
   space: number,
   owner: PublicKey,
-  lamports?: number
-): Promise<{ account: Account, instruction: TransactionInstruction }> {
+  lamports?: number,
+): Promise<{ account: Account; instruction: TransactionInstruction }> {
   const account = new Account();
   const instruction = SystemProgram.createAccount({
     fromPubkey: payer,
     newAccountPubkey: account.publicKey,
-    lamports: lamports ? lamports : await connection.getMinimumBalanceForRentExemption(space),
+    lamports: lamports
+      ? lamports
+      : await connection.getMinimumBalanceForRentExemption(space),
     space,
-    programId: owner
-  })
+    programId: owner,
+  });
 
   return { account, instruction };
+}
+
+export async function createTokenAccountInstructions(
+  connection: Connection,
+  payer: PublicKey,
+  account: PublicKey,
+  mint: PublicKey,
+  owner: PublicKey,
+): Promise<TransactionInstruction[]> {
+  return [
+    SystemProgram.createAccount({
+      fromPubkey: payer,
+      newAccountPubkey: account,
+      lamports: await connection.getMinimumBalanceForRentExemption(165),
+      space: 165,
+      programId: TokenInstructions.TOKEN_PROGRAM_ID,
+    }),
+    TokenInstructions.initializeAccount({
+      account: account,
+      mint,
+      owner,
+    }),
+  ];
+}
+
+export async function createSignerKeyAndNonce(
+  programId: PublicKey,
+  accountKey: PublicKey,
+): Promise<{ signerKey: PublicKey; signerNonce: number }> {
+  // let res = await PublicKey.findProgramAddress([accountKey.toBuffer()], programId);
+  // console.log(res);
+  // return {
+  //   signerKey: res[0],
+  //   signerNonce: res[1]
+  // };
+  for (let nonce = 0; nonce <= Number.MAX_SAFE_INTEGER; nonce++) {
+    try {
+      const nonceBuffer = Buffer.alloc(8);
+      nonceBuffer.writeUInt32LE(nonce, 0);
+      const seeds = [accountKey.toBuffer(), nonceBuffer];
+      const key = await PublicKey.createProgramAddress(seeds, programId);
+      return {
+        signerKey: key,
+        signerNonce: nonce,
+      };
+    } catch (e) {
+      continue;
+    }
+  }
+
+  throw new Error('Could not generate signer key');
 }

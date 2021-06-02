@@ -1,0 +1,81 @@
+import { Market } from '@project-serum/serum';
+import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
+import BN from 'bn.js';
+import {
+  MetaData,
+  RootBank,
+  RootBankLayout,
+  TokenInfo,
+  SpotMarketInfo,
+  PerpMarketInfo,
+} from './layout';
+import { promiseUndef, zeroKey } from './utils';
+
+export default class MerpsGroup {
+  publicKey: PublicKey;
+  metaData!: MetaData;
+  numOracles!: number;
+  tokens!: TokenInfo[];
+  spotMarkets!: SpotMarketInfo[];
+  perpMarkets!: PerpMarketInfo[];
+  oracles!: PublicKey[];
+  signerNonce!: BN;
+  signerKey!: PublicKey;
+  admin!: PublicKey;
+  dexProgramId!: PublicKey;
+  merpsCache!: PublicKey;
+  validInterval!: number[];
+
+  constructor(publicKey: PublicKey, decoded: any) {
+    this.publicKey = publicKey;
+    Object.assign(this, decoded);
+  }
+
+  getMarketIndex(spotMarket: Market): number {
+    for (let i = 0; i < this.spotMarkets.length; i++) {
+      if (this.spotMarkets[i].spotMarket.equals(spotMarket.publicKey)) {
+        return i;
+      }
+    }
+    throw new Error('This Market does not belong to this MerpsGroup');
+  }
+
+  getTokenIndex(token: PublicKey): number {
+    for (let i = 0; i < this.tokens.length; i++) {
+      if (this.tokens[i].mint.equals(token)) {
+        return i;
+      }
+    }
+    throw new Error('This token does not belong in this MerpsGroup');
+  }
+
+  getRootBankIndex(rootBank: PublicKey): number {
+    for (let i = 0; i < this.tokens.length; i++) {
+      if (this.tokens[i].rootBank.equals(rootBank)) {
+        return i;
+      }
+    }
+    throw new Error('This root bank does not belong in this MerpsGroup');
+  }
+
+  async loadRootBanks(
+    connection: Connection,
+  ): Promise<(RootBank | undefined)[]> {
+    const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
+
+    for (let i = 0; i < this.tokens.length; i++) {
+      if (this.tokens[i].rootBank.equals(zeroKey)) {
+        promises.push(promiseUndef());
+      } else {
+        promises.push(connection.getAccountInfo(this.tokens[i].rootBank));
+      }
+    }
+
+    const accounts = await Promise.all(promises);
+
+    return accounts.map((acc, i) => {
+      const decoded = RootBankLayout.decode(acc ? acc.data : undefined);
+      return decoded ? new RootBank(decoded) : undefined;
+    });
+  }
+}
