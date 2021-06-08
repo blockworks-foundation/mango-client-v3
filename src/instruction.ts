@@ -52,7 +52,7 @@ export function makeWithdrawInstruction(
   vaultPk: PublicKey,
   tokenAccPk: PublicKey,
   signerKey: PublicKey,
-  oracles: PublicKey[],
+  openOrders: PublicKey[],
 
   nativeQuantity: BN,
 ): TransactionInstruction {
@@ -67,7 +67,7 @@ export function makeWithdrawInstruction(
     { isSigner: false, isWritable: true, pubkey: tokenAccPk },
     { isSigner: false, isWritable: false, pubkey: signerKey },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
-    ...oracles.map((pubkey) => ({
+    ...openOrders.map((pubkey) => ({
       isSigner: false,
       isWritable: false,
       pubkey,

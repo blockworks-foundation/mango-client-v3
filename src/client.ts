@@ -387,7 +387,7 @@ export class MerpsClient {
       vault,
       tokenAcc,
       merpsGroup.signerKey,
-      merpsGroup.oracles,
+      merpsAccount.spotOpenOrders,
       nativeQuantity,
     );
 
