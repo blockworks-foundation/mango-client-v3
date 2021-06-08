@@ -125,11 +125,10 @@ MerpsInstructionLayout.addVariant(1, struct([]), 'InitMerpsAccount');
 MerpsInstructionLayout.addVariant(2, struct([u64('quantity')]), 'Deposit');
 MerpsInstructionLayout.addVariant(3, struct([u64('quantity')]), 'Withdraw');
 MerpsInstructionLayout.addVariant(4, struct([]), 'AddAsset');
-MerpsInstructionLayout.addVariant(5, struct([]), 'AddSpotMarket');
-MerpsInstructionLayout.addVariant(6, struct([]), 'AddToBasket');
-MerpsInstructionLayout.addVariant(7, struct([u64('quantity')]), 'Borrow');
-MerpsInstructionLayout.addVariant(8, struct([]), 'CachePrices');
-MerpsInstructionLayout.addVariant(9, struct([]), 'CacheRootBanks');
+MerpsInstructionLayout.addVariant(5, struct([]), 'AddToBasket');
+MerpsInstructionLayout.addVariant(6, struct([u64('quantity')]), 'Borrow');
+MerpsInstructionLayout.addVariant(7, struct([]), 'CachePrices');
+MerpsInstructionLayout.addVariant(8, struct([]), 'CacheRootBanks');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore

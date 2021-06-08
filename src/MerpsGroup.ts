@@ -11,6 +11,11 @@ import {
 } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 
+export const MAX_TOKENS = 32;
+export const MAX_PAIRS = MAX_TOKENS - 1;
+export const MAX_NODE_BANKS = 8;
+export const QUOTE_INDEX = MAX_TOKENS - 1;
+
 export default class MerpsGroup {
   publicKey: PublicKey;
   metaData!: MetaData;

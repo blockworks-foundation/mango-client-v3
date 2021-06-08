@@ -2,7 +2,8 @@ import { Account } from '@solana/web3.js';
 import { expect } from 'chai';
 import * as Test from './utils';
 import { MerpsClient } from '../src';
-import MerpsGroup from '../src/MerpsGroup';
+import MerpsGroup, { QUOTE_INDEX } from '../src/MerpsGroup';
+import { sleep, zeroKey } from '../src/utils';
 
 describe('MerpsClient', async () => {
   let client: MerpsClient;
@@ -11,11 +12,14 @@ describe('MerpsClient', async () => {
   before(async () => {
     const connection = Test.createDevnetConnection();
     client = new MerpsClient(connection, Test.MerpsProgramId);
+    sleep(2000); // sleeping because devnet rate limits suck
     payer = await Test.createAccount(connection);
+    sleep(2000); // sleeping because devnet rate limits suck
   });
 
   describe('initMerpsGroup', async () => {
     it('should successfully create a MerpsGroup', async () => {
+      sleep(1000); // sleeping because devnet rate limits suck
       const groupKey = await client.initMerpsGroup(
         payer,
         Test.USDCMint,
@@ -25,7 +29,7 @@ describe('MerpsClient', async () => {
       const group = await client.getMerpsGroup(groupKey);
       expect(groupKey).to.not.be.undefined;
       expect(group).to.not.be.undefined;
-      expect(group.tokens[0].toBase58(), 'quoteMint').to.equal(
+      expect(group.tokens[QUOTE_INDEX].mint.toBase58(), 'quoteMint').to.equal(
         Test.USDCMint.toBase58(),
       );
       expect(group.admin.toBase58(), 'admin').to.equal(
@@ -49,11 +53,17 @@ describe('MerpsClient', async () => {
       );
       group = await client.getMerpsGroup(groupKey);
     });
+
     it('should successfully update the cache', async () => {
+      const rootBankPks = group.tokens
+        .filter((tokenInfo) => !tokenInfo.mint.equals(zeroKey))
+        .map((tokenInfo) => tokenInfo.rootBank);
+
       const txid = await client.cacheRootBanks(
         payer,
         group.publicKey,
         group.merpsCache,
+        rootBankPks,
       );
     });
   });

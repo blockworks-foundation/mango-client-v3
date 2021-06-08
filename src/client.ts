@@ -196,7 +196,6 @@ export class MerpsClient {
         isWritable: true,
         pubkey: accountInstruction.account.publicKey,
       },
-      { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
       { isSigner: false, isWritable: false, pubkey: signerKey },
       { isSigner: true, isWritable: false, pubkey: payer.publicKey },
       { isSigner: false, isWritable: false, pubkey: quoteMint },
@@ -404,11 +403,16 @@ export class MerpsClient {
     payer: Account,
     merpsGroup: PublicKey,
     merpsCache: PublicKey,
+    rootBanks: PublicKey[],
   ): Promise<TransactionSignature> {
     const keys = [
       { isSigner: false, isWritable: false, pubkey: merpsGroup },
       { isSigner: false, isWritable: true, pubkey: merpsCache },
-      { isSigner: false, isWritable: false, pubkey: SYSVAR_CLOCK_PUBKEY },
+      ...rootBanks.map((pubkey) => ({
+        isSigner: false,
+        isWritable: false,
+        pubkey,
+      })),
     ];
 
     const data = encodeMerpsInstruction({

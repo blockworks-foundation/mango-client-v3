@@ -10,7 +10,7 @@ import {
 import { sleep } from '../src/utils';
 
 export const MerpsProgramId = new PublicKey(
-  'EBXaJhhjhRKYDRNwHUgqJhMDWGNqKwpwD3sYkXRN9Yuz',
+  'G8WLEqRYYfe19tKYdTowPMT4DWJbUiKKxpHSiZLHtRAK',
 );
 export const DexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -35,7 +35,10 @@ export async function _sendTransaction(
 }
 
 export function createDevnetConnection() {
-  return new Connection('https://devnet.solana.com', 'processed' as Commitment);
+  return new Connection(
+    'https://api.devnet.solana.com',
+    'processed' as Commitment,
+  );
 }
 
 export async function airdropSol(
