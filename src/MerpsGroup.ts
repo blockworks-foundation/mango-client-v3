@@ -79,8 +79,11 @@ export default class MerpsGroup {
     const accounts = await Promise.all(promises);
 
     return accounts.map((acc, i) => {
-      const decoded = RootBankLayout.decode(acc ? acc.data : undefined);
-      return decoded ? new RootBank(decoded) : undefined;
+      if (acc && acc.data) {
+        const decoded = RootBankLayout.decode(acc.data);
+        return new RootBank(decoded);
+      }
+      return undefined;
     });
   }
 }

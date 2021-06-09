@@ -332,7 +332,7 @@ export class PerpOpenOrdersLayout extends Structure {
         i64('totalQuote'),
         u32('isFreeBits'),
         u32('isBidBits'),
-        seq(u64(), MAX_TOKENS, 'orders'),
+        seq(i128(), MAX_TOKENS, 'orders'),
         seq(u64(), MAX_TOKENS, 'clientOrderIds'),
       ],
       property,
@@ -383,6 +383,7 @@ export const MerpsAccountLayout = struct([
   seq(i64(), MAX_PAIRS, 'quotePositions'),
   seq(I80F48Layout(), MAX_PAIRS, 'fundingSettled'),
   seq(perpOpenOrdersLayout(), MAX_PAIRS, 'perpOpenOrders'),
+  seq(u8(), 1, 'padding'),
 ]);
 
 export const RootBankLayout = struct([

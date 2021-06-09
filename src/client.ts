@@ -278,7 +278,6 @@ export class MerpsClient {
         pubkey: accountInstruction.account.publicKey,
       },
       { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-      { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
     ];
 
     const data = encodeMerpsInstruction({ InitMerpsAccount: {} });

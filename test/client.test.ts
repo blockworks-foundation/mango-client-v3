@@ -4,13 +4,14 @@ import * as Test from './utils';
 import { MerpsClient } from '../src';
 import MerpsGroup, { QUOTE_INDEX } from '../src/MerpsGroup';
 import { sleep, zeroKey } from '../src/utils';
+import MerpsAccount from '../src/MerpsAccount';
 
 describe('MerpsClient', async () => {
   let client: MerpsClient;
   let payer: Account;
+  const connection = Test.createDevnetConnection();
 
   before(async () => {
-    const connection = Test.createDevnetConnection();
     client = new MerpsClient(connection, Test.MerpsProgramId);
     sleep(2000); // sleeping because devnet rate limits suck
     payer = await Test.createAccount(connection);
@@ -64,6 +65,28 @@ describe('MerpsClient', async () => {
         group.publicKey,
         group.merpsCache,
         rootBankPks,
+      );
+    });
+  });
+
+  describe.only('initMerpsAccount, deposit, and withdraw', async () => {
+    let group: MerpsGroup;
+    let user: Account;
+    let merpsAccount: MerpsAccount;
+
+    before(async () => {
+      const groupKey = await client.initMerpsGroup(
+        payer,
+        Test.USDCMint,
+        Test.DexProgramId,
+        5,
+      );
+      group = await client.getMerpsGroup(groupKey);
+      user = await Test.createAccount(connection);
+      const merpsAccountPk = await client.initMerpsAccount(group, user);
+      merpsAccount = await client.getMerpsAccount(
+        merpsAccountPk,
+        Test.DexProgramId,
       );
     });
   });
