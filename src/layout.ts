@@ -8,9 +8,10 @@ import {
   Structure,
   Layout,
 } from 'buffer-layout';
-import { PublicKey } from '@solana/web3.js';
+import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import BN from 'bn.js';
+import { promiseUndef, zeroKey } from './utils';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
@@ -493,6 +494,16 @@ export const MerpsCacheLayout = struct([
   seq(perpMarketCacheLayout(), MAX_PAIRS, 'perpMarketCache'),
 ]);
 
+export class NodeBank {
+  deposits!: I80F48;
+  borrows!: I80F48;
+  vault!: PublicKey;
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+
 export class RootBank {
   numNodeBanks!: number;
   nodeBanks!: PublicKey[];
@@ -502,5 +513,29 @@ export class RootBank {
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
+  }
+
+  async loadNodeBanks(
+    connection: Connection,
+  ): Promise<(NodeBank | undefined)[]> {
+    const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
+
+    for (let i = 0; i < this.nodeBanks.length; i++) {
+      if (this.nodeBanks[i].equals(zeroKey)) {
+        promises.push(promiseUndef());
+      } else {
+        promises.push(connection.getAccountInfo(this.nodeBanks[i]));
+      }
+    }
+
+    const accounts = await Promise.all(promises);
+
+    return accounts.map((acc, i) => {
+      if (acc && acc.data) {
+        const decoded = NodeBankLayout.decode(acc.data);
+        return new NodeBank(decoded);
+      }
+      return undefined;
+    });
   }
 }

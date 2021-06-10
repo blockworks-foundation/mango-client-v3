@@ -73,6 +73,7 @@ describe('MerpsClient', async () => {
     let group: MerpsGroup;
     let user: Account;
     let merpsAccount: MerpsAccount;
+    let userTokenAcc: Account;
 
     before(async () => {
       const groupKey = await client.initMerpsGroup(
@@ -83,11 +84,35 @@ describe('MerpsClient', async () => {
       );
       group = await client.getMerpsGroup(groupKey);
       user = await Test.createAccount(connection);
+      userTokenAcc = await Test.createAccount(connection);
       const merpsAccountPk = await client.initMerpsAccount(group, user);
       merpsAccount = await client.getMerpsAccount(
         merpsAccountPk,
         Test.DexProgramId,
       );
+    });
+
+    it('deposit USDC and then WITHDRAW the USDC', async () => {
+      const rootBanks = await group.loadRootBanks(client.connection);
+      const usdcRootBank = rootBanks[QUOTE_INDEX];
+
+      if (usdcRootBank) {
+        const nodeBanks = await usdcRootBank.loadNodeBanks(client.connection);
+
+        const filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
+        expect(filteredNodeBanks.length).to.equal(1);
+
+        await client.deposit(
+          group,
+          merpsAccount,
+          user,
+          group.tokens[QUOTE_INDEX].rootBank,
+          usdcRootBank.nodeBanks[0],
+          filteredNodeBanks[0].vault,
+          userTokenAcc.publicKey,
+          10,
+        );
+      }
     });
   });
 });

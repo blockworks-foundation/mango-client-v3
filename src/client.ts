@@ -9,6 +9,7 @@ import {
   TransactionSignature,
   TransactionInstruction,
   SYSVAR_CLOCK_PUBKEY,
+  AccountInfo,
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import {
@@ -27,6 +28,7 @@ import {
   RootBankLayout,
   MerpsCacheLayout,
   MerpsAccountLayout,
+  RootBank,
 } from './layout';
 import MerpsGroup from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
@@ -436,5 +438,85 @@ export class MerpsClient {
 
   async cancelPerpOrder(): Promise<TransactionSignature[]> {
     throw new Error('Not Implemented');
+  }
+
+  async loadRootBanks(rootBanks: PublicKey[]): Promise<RootBank[]> {
+    const accounts = await Promise.all(
+      rootBanks.map((pk) => this.connection.getAccountInfo(pk)),
+    );
+
+    const parsedRootBanks = accounts.map((acc, i) => {
+      const decoded = RootBankLayout.decode(acc.data);
+      return new RootBank(decoded);
+    });
+
+    return parsedRootBanks;
+  }
+
+  async addOracle(
+    merpsGroup: MerpsGroup,
+    oracle: PublicKey,
+    admin: Account,
+  ): Promise<TransactionSignature> {
+    const keys = [
+      { isSigner: false, isWritable: true, pubkey: merpsGroup.publicKey },
+      { isSigner: false, isWritable: false, pubkey: oracle },
+      { isSigner: true, isWritable: false, pubkey: admin.publicKey },
+    ];
+    const data = encodeMerpsInstruction({ AddOracle: {} });
+
+    const instruction = new TransactionInstruction({
+      keys,
+      data,
+      programId: this.programId,
+    });
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async addSpotMarket(
+    merpsGroup: MerpsGroup,
+    spotMarket: PublicKey,
+    rootBank: PublicKey,
+    nodeBank: PublicKey,
+    vault: PublicKey,
+    mint: PublicKey,
+    admin: Account,
+
+    maintAssetWeight: BN,
+    initAssetWeight: BN,
+  ): Promise<TransactionSignature> {
+    const keys = [
+      { isSigner: false, isWritable: true, pubkey: merpsGroup.publicKey },
+      { isSigner: false, isWritable: false, pubkey: spotMarket },
+      { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+      { isSigner: false, isWritable: false, pubkey: mint },
+      { isSigner: false, isWritable: true, pubkey: nodeBank },
+      { isSigner: false, isWritable: false, pubkey: vault },
+      { isSigner: false, isWritable: true, pubkey: rootBank },
+      { isSigner: true, isWritable: false, pubkey: admin.publicKey },
+    ];
+    const data = encodeMerpsInstruction({
+      AddSpotMarket: {
+        maint_asset_weight: maintAssetWeight,
+        init_asset_weight: initAssetWeight,
+      },
+    });
+
+    const instruction = new TransactionInstruction({
+      keys,
+      data,
+      programId: this.programId,
+    });
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 }
