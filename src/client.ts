@@ -432,6 +432,38 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  async cachePrices(
+    merpsGroup: PublicKey,
+    merpsCache: PublicKey,
+    oracles: PublicKey[],
+    payer: Account,
+  ): Promise<TransactionSignature> {
+    const keys = [
+      { isSigner: false, isWritable: false, pubkey: merpsGroup },
+      { isSigner: false, isWritable: true, pubkey: merpsCache },
+      ...oracles.map((pubkey) => ({
+        isSigner: false,
+        isWritable: false,
+        pubkey,
+      })),
+    ];
+
+    const data = encodeMerpsInstruction({
+      CachePrices: {},
+    });
+
+    const cachePricesInstruction = new TransactionInstruction({
+      keys,
+      data,
+      programId: this.programId,
+    });
+
+    const transaction = new Transaction();
+    transaction.add(cachePricesInstruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
   async placePerpOrder(): Promise<TransactionSignature[]> {
     throw new Error('Not Implemented');
   }
