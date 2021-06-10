@@ -1,3 +1,4 @@
+import { TokenInstructions } from '@project-serum/serum';
 import {
   Account,
   Commitment,
@@ -5,6 +6,7 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
   TransactionSignature,
 } from '@solana/web3.js';
 import { sleep } from '../src/utils';
@@ -18,6 +20,7 @@ export const DexProgramId = new PublicKey(
 export const USDCMint = new PublicKey(
   'H6hy7Ykzc43EuGivv7VVuUKNpKgUoFAfUY3wdPr4UyRX',
 );
+
 export async function _sendTransaction(
   connection: Connection,
   transaction: Transaction,
@@ -78,4 +81,96 @@ export async function createAccount(
     await airdropSol(connection, account, solBalance);
   }
   return account;
+}
+
+// export async function createTokenAccountWithBalance(
+//   connection: Connection,
+//   owner: Account,
+//   tokenName: string,
+//   mangoGroupTokenMappings: any,
+//   faucetIds: any,
+//   amount: number,
+//   wrappedSol: boolean = true,
+// ) {
+//   const tokenMapping: any = Object.values(mangoGroupTokenMappings).find(
+//     (x: any) => x.tokenName === tokenName,
+//   );
+//   const { tokenMint, decimals } = tokenMapping;
+//   const multiplier = Math.pow(10, decimals);
+//   const processedAmount = amount * multiplier;
+//   let ownedTokenAccountPk: PublicKey | null = null;
+//   if (tokenName === 'SOL') {
+//     await airdropSol(connection, owner, amount);
+//     if (wrappedSol) {
+//       ownedTokenAccountPk = await createWrappedNativeAccount(
+//         connection,
+//         owner,
+//         processedAmount,
+//       );
+//     }
+//   } else {
+//     ownedTokenAccountPk = await createTokenAccount(
+//       connection,
+//       tokenMint,
+//       owner,
+//     );
+//     if (amount > 0) {
+//       await airdropTokens(
+//         connection,
+//         owner,
+//         faucetIds[tokenName],
+//         ownedTokenAccountPk,
+//         tokenMint,
+//         new u64(processedAmount),
+//       );
+//     }
+//   }
+//   return ownedTokenAccountPk;
+// }
+
+export async function createTokenAccount(
+  connection: Connection,
+  mint: PublicKey,
+  owner: Account,
+): Promise<PublicKey> {
+  const newAccount = new Account();
+  const tx = new Transaction();
+  const signers = [owner, newAccount];
+  const signerPks = signers.map((x) => x.publicKey);
+  tx.add(
+    ...(await createTokenAccountInstrs(
+      connection,
+      newAccount.publicKey,
+      mint,
+      owner.publicKey,
+    )),
+  );
+  tx.setSigners(...signerPks);
+  await _sendTransaction(connection, tx, signers);
+  return newAccount.publicKey;
+}
+
+export async function createTokenAccountInstrs(
+  connection: Connection,
+  newAccountPubkey: PublicKey,
+  mint: PublicKey,
+  ownerPk: PublicKey,
+  lamports?: number,
+): Promise<TransactionInstruction[]> {
+  if (lamports === undefined)
+    lamports = await connection.getMinimumBalanceForRentExemption(165);
+  return [
+    SystemProgram.createAccount({
+      fromPubkey: ownerPk,
+      newAccountPubkey,
+      space: 165,
+      lamports,
+      programId: TokenInstructions.TOKEN_PROGRAM_ID,
+    }),
+    TokenInstructions.initializeAccount({
+      account: newAccountPubkey,
+      mint,
+      owner: ownerPk,
+    }),
+  ];
 }

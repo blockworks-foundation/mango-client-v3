@@ -83,7 +83,7 @@ describe('MerpsClient', async () => {
         5,
       );
       group = await client.getMerpsGroup(groupKey);
-      user = await Test.createAccount(connection);
+      user = await Test.createAccount(connection, 5);
       userTokenAcc = await Test.createAccount(connection);
       const merpsAccountPk = await client.initMerpsAccount(group, user);
       merpsAccount = await client.getMerpsAccount(

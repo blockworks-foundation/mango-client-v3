@@ -8,6 +8,7 @@ import {
   TokenInfo,
   SpotMarketInfo,
   PerpMarketInfo,
+  NodeBank,
 } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 
@@ -90,7 +91,12 @@ export default class MerpsGroup {
   async loadBanksForSpotMarket(
     connection: Connection,
     spotMarketIndex: number,
-  ) {
+  ): Promise<{
+    baseRootBank: RootBank | undefined;
+    baseNodeBank: NodeBank | undefined;
+    quoteRootBank: RootBank | undefined;
+    quoteNodeBank: NodeBank | undefined;
+  }> {
     const rootBanks = await this.loadRootBanks(connection);
 
     const baseRootBank = rootBanks[spotMarketIndex];
@@ -98,17 +104,17 @@ export default class MerpsGroup {
 
     // TODO need to handle multiple node banks
     const nodeBankIndex = 0;
-    const baseNodeBankPk = baseRootBank.nodeBanks[nodeBankIndex];
-    const quoteNodeBankPk = quoteRootBank.nodeBanks[nodeBankIndex];
+    const baseNodeBankPk = baseRootBank?.nodeBanks[nodeBankIndex];
+    const quoteNodeBankPk = quoteRootBank?.nodeBanks[nodeBankIndex];
 
-    const baseNodeBanks = await baseRootBank.loadNodeBanks(connection);
-    const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
+    const baseNodeBanks = await baseRootBank?.loadNodeBanks(connection);
+    const quoteNodeBanks = await quoteRootBank?.loadNodeBanks(connection);
 
-    const baseNodeBank = baseNodeBanks.find(
-      (nb) => nb.publicKey == baseNodeBankPk,
+    const baseNodeBank = baseNodeBanks?.find(
+      (nodeBank) => nodeBank?.publicKey == baseNodeBankPk,
     );
-    const quoteNodeBank = quoteNodeBanks.find(
-      (nb) => nb.publicKey == quoteNodeBankPk,
+    const quoteNodeBank = quoteNodeBanks?.find(
+      (nodeBank) => nodeBank?.publicKey == quoteNodeBankPk,
     );
 
     return { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank };

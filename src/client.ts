@@ -486,10 +486,15 @@ export class MerpsClient {
       rootBanks.map((pk) => this.connection.getAccountInfo(pk)),
     );
 
-    const parsedRootBanks = accounts.map((acc, i) => {
-      const decoded = RootBankLayout.decode(acc.data);
-      return new RootBank(rootBanks[i], decoded);
-    });
+    let parsedRootBanks: RootBank[] = [];
+
+    for (let i = 0; i < accounts.length; i++) {
+      let acc = accounts[i];
+      if (acc) {
+        const decoded = RootBankLayout.decode(acc.data);
+        parsedRootBanks.push(new RootBank(rootBanks[i], decoded));
+      }
+    }
 
     return parsedRootBanks;
   }
@@ -680,12 +685,12 @@ export class MerpsClient {
         isWritable: true,
         pubkey: spotMarket['_decoded'].quoteVault,
       },
-      { isSigner: false, isWritable: false, pubkey: baseRootBank.publicKey }, // base_root_bank_ai
-      { isSigner: false, isWritable: true, pubkey: baseNodeBank.publicKey }, // base_node_bank_ai
-      { isSigner: false, isWritable: true, pubkey: quoteRootBank.publicKey }, // quote_root_bank_ai
-      { isSigner: false, isWritable: true, pubkey: quoteNodeBank.publicKey }, // quote_node_bank_ai
-      { isSigner: false, isWritable: true, pubkey: quoteNodeBank.vault }, // quote_vault_ai
-      { isSigner: false, isWritable: true, pubkey: baseNodeBank.vault }, // base_vault_ai
+      { isSigner: false, isWritable: false, pubkey: baseRootBank?.publicKey }, // base_root_bank_ai
+      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.publicKey }, // base_node_bank_ai
+      { isSigner: false, isWritable: true, pubkey: quoteRootBank?.publicKey }, // quote_root_bank_ai
+      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.publicKey }, // quote_node_bank_ai
+      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.vault }, // quote_vault_ai
+      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.vault }, // base_vault_ai
       { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
       { isSigner: false, isWritable: false, pubkey: merpsGroup.signerKey },
       { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },

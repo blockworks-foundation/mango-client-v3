@@ -57,6 +57,7 @@ async function test() {
     payer,
     merpsGroup.publicKey,
     merpsGroup.merpsCache,
+    [],
   );
   console.log('Cache Updated:', cacheRootBanksTxID);
 }

@@ -17,6 +17,7 @@ export class Keeper {
    */
   async run() {
     const interval = 5000;
+    // eslint-disable-next-line
     while (true) {
       await sleep(interval);
       // TODO: Fetch ids from ids.json
@@ -24,9 +25,9 @@ export class Keeper {
       const merpsProgramId = new PublicKey(
         'EBXaJhhjhRKYDRNwHUgqJhMDWGNqKwpwD3sYkXRN9Yuz',
       );
-      const dexProgramId = new PublicKey(
-        'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
-      );
+      // const dexProgramId = new PublicKey(
+      //   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
+      // );
       const merpsGroupKey = new PublicKey('');
       const payer = new Account(
         JSON.parse(
@@ -44,7 +45,12 @@ export class Keeper {
       const merpsGroup = await client.getMerpsGroup(merpsGroupKey);
 
       // update the MerpsCache with the RootBank
-      await client.cacheRootBanks(payer, merpsGroupKey, merpsGroup.merpsCache);
+      await client.cacheRootBanks(
+        payer,
+        merpsGroupKey,
+        merpsGroup.merpsCache,
+        [],
+      );
     }
   }
 }
