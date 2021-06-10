@@ -55,6 +55,7 @@ export function makeWithdrawInstruction(
   openOrders: PublicKey[],
 
   nativeQuantity: BN,
+  allowBorrow: boolean,
 ): TransactionInstruction {
   const withdrawKeys = [
     { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
@@ -74,7 +75,7 @@ export function makeWithdrawInstruction(
     })),
   ];
   const withdrawData = encodeMerpsInstruction({
-    Withdraw: { quantity: nativeQuantity },
+    Withdraw: { quantity: nativeQuantity, allow_borrow: allowBorrow },
   });
   return new TransactionInstruction({
     keys: withdrawKeys,

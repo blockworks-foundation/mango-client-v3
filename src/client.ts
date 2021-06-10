@@ -3,13 +3,12 @@ import {
   Connection,
   PublicKey,
   SimulatedTransactionResponse,
-  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionConfirmationStatus,
   TransactionSignature,
   TransactionInstruction,
-  SYSVAR_CLOCK_PUBKEY,
   AccountInfo,
+  SYSVAR_RENT_PUBKEY,
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import {
@@ -19,7 +18,9 @@ import {
   createAccountInstruction,
   createSignerKeyAndNonce,
   createTokenAccountInstructions,
+  nativeToUi,
   uiToNative,
+  zeroKey,
 } from './utils';
 import {
   MerpsGroupLayout,
@@ -30,10 +31,16 @@ import {
   MerpsAccountLayout,
   RootBank,
 } from './layout';
-import MerpsGroup from './MerpsGroup';
+import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { makeWithdrawInstruction } from './instruction';
+import {
+  Market,
+  getFeeRates,
+  getFeeTier,
+  OpenOrders,
+} from '@project-serum/serum';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -370,6 +377,7 @@ export class MerpsClient {
     tokenAcc: PublicKey,
 
     quantity: number,
+    allowBorrow: boolean,
   ): Promise<TransactionSignature> {
     const tokenIndex = merpsGroup.getRootBankIndex(rootBank);
     const nativeQuantity = uiToNative(
@@ -390,6 +398,7 @@ export class MerpsClient {
       merpsGroup.signerKey,
       merpsAccount.spotOpenOrders,
       nativeQuantity,
+      allowBorrow,
     );
 
     const transaction = new Transaction();
@@ -479,7 +488,7 @@ export class MerpsClient {
 
     const parsedRootBanks = accounts.map((acc, i) => {
       const decoded = RootBankLayout.decode(acc.data);
-      return new RootBank(decoded);
+      return new RootBank(rootBanks[i], decoded);
     });
 
     return parsedRootBanks;
@@ -550,5 +559,163 @@ export class MerpsClient {
 
     const additionalSigners = [];
     return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async placeSpotOrder(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    merpsCache: PublicKey,
+    spotMarket: Market,
+    owner: Account,
+
+    side: 'buy' | 'sell',
+    price: number,
+    size: number,
+    orderType?: 'limit' | 'ioc' | 'postOnly',
+  ) {
+    const limitPrice = spotMarket.priceNumberToLots(price);
+    const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
+
+    // TODO implement srm vault fee discount
+    // const feeTier = getFeeTier(0, nativeToUi(merpsGroup.nativeSrm || 0, SRM_DECIMALS));
+    const feeTier = getFeeTier(0, nativeToUi(0, 0));
+    const rates = getFeeRates(feeTier);
+    const maxQuoteQuantity = new BN(
+      spotMarket['_decoded'].quoteLotSize.toNumber() * (1 + rates.taker),
+    ).mul(
+      spotMarket
+        .baseSizeNumberToLots(size)
+        .mul(spotMarket.priceNumberToLots(price)),
+    );
+
+    if (maxBaseQuantity.lte(new BN(0))) {
+      throw new Error('size too small');
+    }
+    if (limitPrice.lte(new BN(0))) {
+      throw new Error('invalid price');
+    }
+    const selfTradeBehavior = 'decrementTake';
+
+    const spotMarketIndex = merpsGroup.getSpotMarketIndex(spotMarket);
+
+    const { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank } =
+      await merpsGroup.loadBanksForSpotMarket(this.connection, spotMarketIndex);
+
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
+
+    const openOrdersKeys: PublicKey[] = [];
+    for (let i = 0; i < merpsAccount.spotOpenOrders.length; i++) {
+      if (
+        i === spotMarketIndex &&
+        merpsAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)
+      ) {
+        // open orders missing for this market; create a new one now
+        const openOrdersSpace = OpenOrders.getLayout(
+          merpsGroup.dexProgramId,
+        ).span;
+        const openOrdersLamports =
+          await this.connection.getMinimumBalanceForRentExemption(
+            openOrdersSpace,
+            'singleGossip',
+          );
+        const accInstr = await createAccountInstruction(
+          this.connection,
+          owner.publicKey,
+          openOrdersSpace,
+          merpsGroup.dexProgramId,
+          openOrdersLamports,
+        );
+
+        transaction.add(accInstr.instruction);
+        additionalSigners.push(accInstr.account);
+        openOrdersKeys.push(accInstr.account.publicKey);
+      } else {
+        openOrdersKeys.push(merpsAccount.spotOpenOrders[i]);
+      }
+    }
+
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
+    const keys = [
+      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
+      { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
+      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
+      { isSigner: false, isWritable: false, pubkey: merpsCache },
+      { isSigner: false, isWritable: false, pubkey: spotMarket.programId },
+      { isSigner: false, isWritable: true, pubkey: spotMarket.publicKey },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: spotMarket['_decoded'].bids,
+      },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: spotMarket['_decoded'].asks,
+      },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: spotMarket['_decoded'].requestQueue,
+      },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: spotMarket['_decoded'].eventQueue,
+      },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: spotMarket['_decoded'].baseVault,
+      },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: spotMarket['_decoded'].quoteVault,
+      },
+      { isSigner: false, isWritable: false, pubkey: baseRootBank.publicKey }, // base_root_bank_ai
+      { isSigner: false, isWritable: true, pubkey: baseNodeBank.publicKey }, // base_node_bank_ai
+      { isSigner: false, isWritable: true, pubkey: quoteRootBank.publicKey }, // quote_root_bank_ai
+      { isSigner: false, isWritable: true, pubkey: quoteNodeBank.publicKey }, // quote_node_bank_ai
+      { isSigner: false, isWritable: true, pubkey: quoteNodeBank.vault }, // quote_vault_ai
+      { isSigner: false, isWritable: true, pubkey: baseNodeBank.vault }, // base_vault_ai
+      { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+      { isSigner: false, isWritable: false, pubkey: merpsGroup.signerKey },
+      { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
+      { isSigner: false, isWritable: false, pubkey: dexSigner },
+      ...openOrdersKeys.map((pubkey) => ({
+        isSigner: false,
+        isWritable: true,
+        pubkey,
+      })),
+    ];
+
+    const data = encodeMerpsInstruction({
+      PlaceSpotOrder: {
+        side,
+        limitPrice,
+        maxBaseQuantity,
+        maxQuoteQuantity,
+        selfTradeBehavior,
+        orderType,
+        limit: 65535,
+      },
+    });
+
+    const placeOrderInstruction = new TransactionInstruction({
+      keys,
+      data,
+      programId: this.programId,
+    });
+    transaction.add(placeOrderInstruction);
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 }

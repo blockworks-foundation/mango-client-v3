@@ -36,7 +36,7 @@ export default class MerpsGroup {
     Object.assign(this, decoded);
   }
 
-  getMarketIndex(spotMarket: Market): number {
+  getSpotMarketIndex(spotMarket: Market): number {
     for (let i = 0; i < this.spotMarkets.length; i++) {
       if (this.spotMarkets[i].spotMarket.equals(spotMarket.publicKey)) {
         return i;
@@ -81,9 +81,36 @@ export default class MerpsGroup {
     return accounts.map((acc, i) => {
       if (acc && acc.data) {
         const decoded = RootBankLayout.decode(acc.data);
-        return new RootBank(decoded);
+        return new RootBank(this.tokens[i].rootBank, decoded);
       }
       return undefined;
     });
+  }
+
+  async loadBanksForSpotMarket(
+    connection: Connection,
+    spotMarketIndex: number,
+  ) {
+    const rootBanks = await this.loadRootBanks(connection);
+
+    const baseRootBank = rootBanks[spotMarketIndex];
+    const quoteRootBank = rootBanks[QUOTE_INDEX];
+
+    // TODO need to handle multiple node banks
+    const nodeBankIndex = 0;
+    const baseNodeBankPk = baseRootBank.nodeBanks[nodeBankIndex];
+    const quoteNodeBankPk = quoteRootBank.nodeBanks[nodeBankIndex];
+
+    const baseNodeBanks = await baseRootBank.loadNodeBanks(connection);
+    const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
+
+    const baseNodeBank = baseNodeBanks.find(
+      (nb) => nb.publicKey == baseNodeBankPk,
+    );
+    const quoteNodeBank = quoteNodeBanks.find(
+      (nb) => nb.publicKey == quoteNodeBankPk,
+    );
+
+    return { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank };
   }
 }

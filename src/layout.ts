@@ -495,23 +495,29 @@ export const MerpsCacheLayout = struct([
 ]);
 
 export class NodeBank {
+  publicKey: PublicKey;
+
   deposits!: I80F48;
   borrows!: I80F48;
   vault!: PublicKey;
 
-  constructor(decoded: any) {
+  constructor(publicKey: PublicKey, decoded: any) {
+    this.publicKey = publicKey;
     Object.assign(this, decoded);
   }
 }
 
 export class RootBank {
+  publicKey: PublicKey;
+
   numNodeBanks!: number;
   nodeBanks!: PublicKey[];
   depositIndex!: I80F48;
   borrowIndex!: I80F48;
   lastUpdated!: BN;
 
-  constructor(decoded: any) {
+  constructor(publicKey: PublicKey, decoded: any) {
+    this.publicKey = publicKey;
     Object.assign(this, decoded);
   }
 
@@ -533,7 +539,7 @@ export class RootBank {
     return accounts.map((acc, i) => {
       if (acc && acc.data) {
         const decoded = NodeBankLayout.decode(acc.data);
-        return new NodeBank(decoded);
+        return new NodeBank(this.nodeBanks[i], decoded);
       }
       return undefined;
     });
