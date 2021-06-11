@@ -130,6 +130,8 @@ MerpsInstructionLayout.addVariant(5, struct([]), 'AddToBasket');
 MerpsInstructionLayout.addVariant(6, struct([u64('quantity')]), 'Borrow');
 MerpsInstructionLayout.addVariant(7, struct([]), 'CachePrices');
 MerpsInstructionLayout.addVariant(8, struct([]), 'CacheRootBanks');
+MerpsInstructionLayout.addVariant(9, struct([]), 'PlaceSpotOrder');
+MerpsInstructionLayout.addVariant(10, struct([]), 'AddOracle');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -312,6 +314,44 @@ export function perpMarketInfoLayout(property = '') {
   return new PerpMarketInfoLayout(property);
 }
 
+export class PerpAccount {
+  basePosition!: BN;
+  quotePosition!: I80F48;
+  longSettledFunding!: I80F48;
+  shortSettledFunding!: I80F48;
+  openOrders!: PerpOpenOrders;
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+
+export class PerpAccountLayout extends Structure {
+  constructor(property) {
+    super(
+      [
+        i64('basePosition'),
+        I80F48Layout('quotePosition'),
+        I80F48Layout('longSettledFunding'),
+        I80F48Layout('shortSettledFunding'),
+        perpOpenOrdersLayout('openOrders'),
+      ],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new PerpAccount(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+
+export function perpAccountLayout(property = '') {
+  return new PerpAccountLayout(property);
+}
 export class PerpOpenOrders {
   totalBase!: BN;
   totalQuote!: BN;
@@ -380,10 +420,8 @@ export const MerpsAccountLayout = struct([
   seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
-  seq(i64(), MAX_PAIRS, 'basePositions'),
-  seq(i64(), MAX_PAIRS, 'quotePositions'),
-  seq(I80F48Layout(), MAX_PAIRS, 'fundingSettled'),
-  seq(perpOpenOrdersLayout(), MAX_PAIRS, 'perpOpenOrders'),
+  seq(perpAccountLayout(), MAX_PAIRS, 'perpAccounts'),
+
   seq(u8(), 1, 'padding'),
 ]);
 
@@ -463,7 +501,8 @@ export function rootBankCacheLayout(property = '') {
 }
 
 export class PerpMarketCache {
-  fundingEarned!: I80F48;
+  longFunding!: I80F48;
+  shortFunding!: I80F48;
   lastUpdate!: BN;
 
   constructor(decoded: any) {
@@ -472,7 +511,14 @@ export class PerpMarketCache {
 }
 export class PerpMarketCacheLayout extends Structure {
   constructor(property) {
-    super([I80F48Layout('fundingEarned'), u64('lastUpdate')], property);
+    super(
+      [
+        I80F48Layout('longFunding'),
+        I80F48Layout('shortFunding'),
+        u64('lastUpdate'),
+      ],
+      property,
+    );
   }
 
   decode(b, offset) {
