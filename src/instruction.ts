@@ -58,11 +58,11 @@ export function makeWithdrawInstruction(
   allowBorrow: boolean,
 ): TransactionInstruction {
   const withdrawKeys = [
-    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
     { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
     { isSigner: true, isWritable: false, pubkey: walletPk },
-    { isSigner: true, isWritable: false, pubkey: merpsCachePk },
-    { isSigner: true, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
     { isSigner: false, isWritable: true, pubkey: vaultPk },
     { isSigner: false, isWritable: true, pubkey: tokenAccPk },
