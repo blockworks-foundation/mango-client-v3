@@ -7,7 +7,7 @@ import {
   TransactionConfirmationStatus,
   TransactionSignature,
   TransactionInstruction,
-  AccountInfo,
+  // AccountInfo,
   SYSVAR_RENT_PUBKEY,
 } from '@solana/web3.js';
 import BN from 'bn.js';
@@ -31,7 +31,7 @@ import {
   MerpsAccountLayout,
   RootBank,
 } from './layout';
-import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
+import MerpsGroup from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { makeWithdrawInstruction } from './instruction';
@@ -131,7 +131,10 @@ export class MerpsClient {
             'singleGossip',
           )
         ).value;
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Simulate transaction failed');
+      }
+
       if (simulateResult && simulateResult.err) {
         if (simulateResult.logs) {
           for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
@@ -170,12 +173,12 @@ export class MerpsClient {
       this.programId,
       accountInstruction.account.publicKey,
     );
-    const newAccount = new Account();
+    const quoteVaultAccount = new Account();
 
     const quoteVaultAccountInstructions = await createTokenAccountInstructions(
       this.connection,
       payer.publicKey,
-      newAccount.publicKey,
+      quoteVaultAccount.publicKey,
       quoteMint,
       signerKey,
     );
@@ -208,7 +211,11 @@ export class MerpsClient {
       { isSigner: false, isWritable: false, pubkey: signerKey },
       { isSigner: true, isWritable: false, pubkey: payer.publicKey },
       { isSigner: false, isWritable: false, pubkey: quoteMint },
-      { isSigner: false, isWritable: true, pubkey: newAccount.publicKey },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: quoteVaultAccount.publicKey,
+      },
       {
         isSigner: false,
         isWritable: true,
@@ -248,9 +255,9 @@ export class MerpsClient {
     transaction.add(cacheAccountInstruction.instruction);
     transaction.add(initMerpsGroupInstruction);
 
-    const txid = await this.sendTransaction(transaction, payer, [
+    await this.sendTransaction(transaction, payer, [
       accountInstruction.account,
-      newAccount,
+      quoteVaultAccount,
       quoteNodeBankAccountInstruction.account,
       quoteRootBankAccountInstruction.account,
       cacheAccountInstruction.account,
@@ -341,12 +348,12 @@ export class MerpsClient {
     );
 
     const keys = [
-      { isSigner: false, isWritable: true, pubkey: merpsGroup.publicKey },
+      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
       { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
       { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-      { isSigner: true, isWritable: true, pubkey: rootBank },
-      { isSigner: true, isWritable: true, pubkey: nodeBank },
-      { isSigner: true, isWritable: false, pubkey: vault },
+      { isSigner: false, isWritable: false, pubkey: rootBank },
+      { isSigner: false, isWritable: true, pubkey: nodeBank },
+      { isSigner: false, isWritable: true, pubkey: vault },
       { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
       { isSigner: false, isWritable: true, pubkey: tokenAcc },
     ];
@@ -486,10 +493,10 @@ export class MerpsClient {
       rootBanks.map((pk) => this.connection.getAccountInfo(pk)),
     );
 
-    let parsedRootBanks: RootBank[] = [];
+    const parsedRootBanks: RootBank[] = [];
 
     for (let i = 0; i < accounts.length; i++) {
-      let acc = accounts[i];
+      const acc = accounts[i];
       if (acc) {
         const decoded = RootBankLayout.decode(acc.data);
         parsedRootBanks.push(new RootBank(rootBanks[i], decoded));

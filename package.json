@@ -62,7 +62,7 @@
     "@project-serum/serum": "^0.13.20",
     "@project-serum/sol-wallet-adapter": "^0.1.4",
     "@solana/spl-token": "0.0.13",
-    "@solana/web3.js": "^0.90.0",
+    "@solana/web3.js": "^0.95.0",
     "big.js": "^6.1.1",
     "bigint-buffer": "^1.1.5",
     "bn.js": "^5.1.2",

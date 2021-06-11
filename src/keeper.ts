@@ -38,7 +38,7 @@ export class Keeper {
         ),
       );
       const connection = new Connection(
-        'https://devnet.solana.com',
+        'https://api.devnet.solana.com',
         'processed' as Commitment,
       );
       const client = new MerpsClient(connection, merpsProgramId);

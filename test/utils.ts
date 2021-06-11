@@ -1,4 +1,5 @@
 import { TokenInstructions } from '@project-serum/serum';
+import { u64 } from '@solana/spl-token';
 import {
   Account,
   Commitment,
@@ -20,6 +21,17 @@ export const DexProgramId = new PublicKey(
 export const USDCMint = new PublicKey(
   'H6hy7Ykzc43EuGivv7VVuUKNpKgUoFAfUY3wdPr4UyRX',
 );
+
+const FAUCET_PROGRAM_ID = new PublicKey(
+  '4bXpkKSV8swHSnwqtzuboGPaPDeEgAn4Vt8GfarV5rZt',
+);
+
+const getPDA = () => {
+  return PublicKey.findProgramAddress(
+    [Buffer.from('faucet')],
+    FAUCET_PROGRAM_ID,
+  );
+};
 
 export async function _sendTransaction(
   connection: Connection,
@@ -74,7 +86,7 @@ export async function airdropSol(
 
 export async function createAccount(
   connection,
-  solBalance: number = 1,
+  solBalance = 5,
 ): Promise<Account> {
   const account = new Account();
   if (solBalance >= 1) {
@@ -83,50 +95,76 @@ export async function createAccount(
   return account;
 }
 
-// export async function createTokenAccountWithBalance(
-//   connection: Connection,
-//   owner: Account,
-//   tokenName: string,
-//   mangoGroupTokenMappings: any,
-//   faucetIds: any,
-//   amount: number,
-//   wrappedSol: boolean = true,
-// ) {
-//   const tokenMapping: any = Object.values(mangoGroupTokenMappings).find(
-//     (x: any) => x.tokenName === tokenName,
-//   );
-//   const { tokenMint, decimals } = tokenMapping;
-//   const multiplier = Math.pow(10, decimals);
-//   const processedAmount = amount * multiplier;
-//   let ownedTokenAccountPk: PublicKey | null = null;
-//   if (tokenName === 'SOL') {
-//     await airdropSol(connection, owner, amount);
-//     if (wrappedSol) {
-//       ownedTokenAccountPk = await createWrappedNativeAccount(
-//         connection,
-//         owner,
-//         processedAmount,
-//       );
-//     }
-//   } else {
-//     ownedTokenAccountPk = await createTokenAccount(
-//       connection,
-//       tokenMint,
-//       owner,
-//     );
-//     if (amount > 0) {
-//       await airdropTokens(
-//         connection,
-//         owner,
-//         faucetIds[tokenName],
-//         ownedTokenAccountPk,
-//         tokenMint,
-//         new u64(processedAmount),
-//       );
-//     }
-//   }
-//   return ownedTokenAccountPk;
-// }
+export async function createTokenAccountWithBalance(
+  connection: Connection,
+  owner: Account,
+  tokenMint: PublicKey,
+  tokenDecimals: number,
+  faucetId: PublicKey,
+  amount: number,
+) {
+  const multiplier = Math.pow(10, tokenDecimals);
+  const processedAmount = amount * multiplier;
+  let ownedTokenAccountPk: PublicKey | null = null;
+  ownedTokenAccountPk = await createTokenAccount(connection, tokenMint, owner);
+  if (amount > 0) {
+    await airdropTokens(
+      connection,
+      owner,
+      faucetId,
+      ownedTokenAccountPk,
+      tokenMint,
+      new u64(processedAmount),
+    );
+  }
+  return ownedTokenAccountPk;
+}
+
+export async function airdropTokens(
+  connection: Connection,
+  feePayerAccount: Account,
+  faucetPubkey: PublicKey,
+  tokenDestinationPublicKey: PublicKey,
+  mint: PublicKey,
+  amount: u64,
+) {
+  const ix = await buildAirdropTokensIx(
+    amount,
+    mint,
+    tokenDestinationPublicKey,
+    faucetPubkey,
+  );
+  const tx = new Transaction();
+  tx.add(ix);
+  const signers = [feePayerAccount];
+  await _sendTransaction(connection, tx, signers);
+  return tokenDestinationPublicKey.toBase58();
+}
+
+export async function buildAirdropTokensIx(
+  amount: u64,
+  tokenMintPublicKey: PublicKey,
+  destinationAccountPubkey: PublicKey,
+  faucetPubkey: PublicKey,
+) {
+  const pubkeyNonce = await getPDA();
+  const keys = [
+    { pubkey: pubkeyNonce[0], isSigner: false, isWritable: false },
+    { pubkey: tokenMintPublicKey, isSigner: false, isWritable: true },
+    { pubkey: destinationAccountPubkey, isSigner: false, isWritable: true },
+    {
+      pubkey: TokenInstructions.TOKEN_PROGRAM_ID,
+      isSigner: false,
+      isWritable: false,
+    },
+    { pubkey: faucetPubkey, isSigner: false, isWritable: false },
+  ];
+  return new TransactionInstruction({
+    programId: FAUCET_PROGRAM_ID,
+    data: Buffer.from([1, ...amount.toArray('le', 8)]),
+    keys,
+  });
+}
 
 export async function createTokenAccount(
   connection: Connection,

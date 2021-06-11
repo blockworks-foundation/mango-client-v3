@@ -60,7 +60,7 @@ describe('MerpsClient', async () => {
         .filter((tokenInfo) => !tokenInfo.mint.equals(zeroKey))
         .map((tokenInfo) => tokenInfo.rootBank);
 
-      const txid = await client.cacheRootBanks(
+      await client.cacheRootBanks(
         payer,
         group.publicKey,
         group.merpsCache,
@@ -84,7 +84,6 @@ describe('MerpsClient', async () => {
       );
       group = await client.getMerpsGroup(groupKey);
       user = await Test.createAccount(connection, 5);
-      userTokenAcc = await Test.createAccount(connection);
       const merpsAccountPk = await client.initMerpsAccount(group, user);
       merpsAccount = await client.getMerpsAccount(
         merpsAccountPk,
