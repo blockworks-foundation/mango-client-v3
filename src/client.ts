@@ -612,6 +612,38 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 
+  async addToBasket(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    owner: Account,
+
+    marketIndex: number,
+  ): Promise<TransactionSignature> {
+    const keys = [
+      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
+      { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
+      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
+    ];
+
+    const data = encodeMerpsInstruction({
+      AddToBasket: {
+        marketIndex: new BN(marketIndex),
+      },
+    });
+
+    const instruction = new TransactionInstruction({
+      keys,
+      data,
+      programId: this.programId,
+    });
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
   async placeSpotOrder(
     merpsGroup: MerpsGroup,
     merpsAccount: MerpsAccount,
@@ -623,7 +655,7 @@ export class MerpsClient {
     price: number,
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
-  ) {
+  ): Promise<TransactionSignature> {
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
 

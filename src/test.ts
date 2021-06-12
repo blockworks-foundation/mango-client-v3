@@ -111,16 +111,18 @@ async function test() {
   const maintAssetWeight = (2 * maxLeverage) / (2 * maxLeverage + 1);
   const initAssetWeight = maxLeverage / (maxLeverage + 1);
 
+  const marketIndex = 0;
+
   await client.addSpotMarket(
     merpsGroup,
     btcUsdSpotMarket,
     btcMint,
     payer,
-    0, // marketIndex
+    marketIndex,
     I80F48.fromString(maintAssetWeight.toString()),
     I80F48.fromString(initAssetWeight.toString()),
   );
-  // await client.addToBasket(merpsGroup, merpsAccount, payer);
+  await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
   // const cacheRootBanksTxID = await client.cacheRootBanks(
   //   payer,
   //   merpsGroup.publicKey,

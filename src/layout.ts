@@ -134,7 +134,11 @@ MerpsInstructionLayout.addVariant(
   ]),
   'AddSpotMarket',
 );
-MerpsInstructionLayout.addVariant(5, struct([]), 'AddToBasket');
+MerpsInstructionLayout.addVariant(
+  5,
+  struct([u64('marketIndex')]),
+  'AddToBasket',
+);
 MerpsInstructionLayout.addVariant(6, struct([u64('quantity')]), 'Borrow');
 MerpsInstructionLayout.addVariant(7, struct([]), 'CachePrices');
 MerpsInstructionLayout.addVariant(8, struct([]), 'CacheRootBanks');
