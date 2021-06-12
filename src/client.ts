@@ -41,6 +41,7 @@ import {
   getFeeTier,
   OpenOrders,
 } from '@project-serum/serum';
+import { I80F48 } from './fixednum';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -534,29 +535,60 @@ export class MerpsClient {
   async addSpotMarket(
     merpsGroup: MerpsGroup,
     spotMarket: PublicKey,
-    rootBank: PublicKey,
-    nodeBank: PublicKey,
-    vault: PublicKey,
     mint: PublicKey,
     admin: Account,
 
-    maintAssetWeight: BN,
-    initAssetWeight: BN,
+    marketIndex: number,
+    maintAssetWeight: I80F48,
+    initAssetWeight: I80F48,
   ): Promise<TransactionSignature> {
+    const vaultAccount = new Account();
+
+    const vaultAccountInstructions = await createTokenAccountInstructions(
+      this.connection,
+      admin.publicKey,
+      vaultAccount.publicKey,
+      mint,
+      merpsGroup.signerKey,
+    );
+
+    const nodeBankAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      NodeBankLayout.span,
+      this.programId,
+    );
+    const rootBankAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      RootBankLayout.span,
+      this.programId,
+    );
+
     const keys = [
       { isSigner: false, isWritable: true, pubkey: merpsGroup.publicKey },
       { isSigner: false, isWritable: false, pubkey: spotMarket },
-      { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+      { isSigner: false, isWritable: false, pubkey: merpsGroup.dexProgramId },
       { isSigner: false, isWritable: false, pubkey: mint },
-      { isSigner: false, isWritable: true, pubkey: nodeBank },
-      { isSigner: false, isWritable: false, pubkey: vault },
-      { isSigner: false, isWritable: true, pubkey: rootBank },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: nodeBankAccountInstruction.account.publicKey,
+      },
+      { isSigner: false, isWritable: false, pubkey: vaultAccount.publicKey },
+      {
+        isSigner: false,
+        isWritable: true,
+        pubkey: rootBankAccountInstruction.account.publicKey,
+      },
       { isSigner: true, isWritable: false, pubkey: admin.publicKey },
     ];
+
     const data = encodeMerpsInstruction({
       AddSpotMarket: {
-        maint_asset_weight: maintAssetWeight,
-        init_asset_weight: initAssetWeight,
+        marketIndex: new BN(marketIndex),
+        maintAssetWeight: maintAssetWeight.getInternalValue(),
+        initAssetWeight: initAssetWeight.getInternalValue(),
       },
     });
 
@@ -567,9 +599,16 @@ export class MerpsClient {
     });
 
     const transaction = new Transaction();
+    transaction.add(...vaultAccountInstructions);
+    transaction.add(nodeBankAccountInstruction.instruction);
+    transaction.add(rootBankAccountInstruction.instruction);
     transaction.add(instruction);
 
-    const additionalSigners = [];
+    const additionalSigners = [
+      vaultAccount,
+      nodeBankAccountInstruction.account,
+      rootBankAccountInstruction.account,
+    ];
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 

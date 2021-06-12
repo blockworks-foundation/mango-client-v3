@@ -125,7 +125,15 @@ MerpsInstructionLayout.addVariant(
 MerpsInstructionLayout.addVariant(1, struct([]), 'InitMerpsAccount');
 MerpsInstructionLayout.addVariant(2, struct([u64('quantity')]), 'Deposit');
 MerpsInstructionLayout.addVariant(3, struct([u64('quantity')]), 'Withdraw');
-MerpsInstructionLayout.addVariant(4, struct([]), 'AddAsset');
+MerpsInstructionLayout.addVariant(
+  4,
+  struct([
+    u64('marketIndex'),
+    u128('maintAssetWeight'),
+    u128('initAssetWeight'),
+  ]),
+  'AddSpotMarket',
+);
 MerpsInstructionLayout.addVariant(5, struct([]), 'AddToBasket');
 MerpsInstructionLayout.addVariant(6, struct([u64('quantity')]), 'Borrow');
 MerpsInstructionLayout.addVariant(7, struct([]), 'CachePrices');
