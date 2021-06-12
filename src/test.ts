@@ -18,9 +18,6 @@ const merpsProgramId = new PublicKey(
 const dexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
 );
-const payerQuoteTokenAcc = new PublicKey(
-  '7f2xJqihAgdWVxqR4jLa5jxc7a4QxverYLntkc6FCYq',
-);
 const quoteMintKey = new PublicKey(
   'EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK',
 );
@@ -35,6 +32,7 @@ const connection = new Connection(
   'https://api.devnet.solana.com',
   'processed' as Commitment,
 );
+
 const payer = new Account(
   JSON.parse(
     fs.readFileSync(
@@ -42,6 +40,12 @@ const payer = new Account(
       'utf-8',
     ),
   ),
+);
+const payerQuoteTokenAcc = new PublicKey(
+  '7f2xJqihAgdWVxqR4jLa5jxc7a4QxverYLntkc6FCYq',
+);
+const payerBtcTokenAcc = new PublicKey(
+  'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
 );
 
 async function test() {
@@ -52,10 +56,11 @@ async function test() {
     dexProgramId,
     5,
   );
-  const merpsGroup = await client.getMerpsGroup(groupKey);
-  await sleep(3000);
-  const rootBanks = await merpsGroup.loadRootBanks(client.connection);
+  let merpsGroup = await client.getMerpsGroup(groupKey);
+  await sleep(3000); // devnet rate limits
+  let rootBanks = await merpsGroup.loadRootBanks(client.connection);
   const usdcRootBank = rootBanks[QUOTE_INDEX];
+  if (!usdcRootBank) throw new Error('no root bank');
 
   assertEq(
     'quoteMint',
@@ -70,19 +75,17 @@ async function test() {
   );
 
   const merpsAccountPk = await client.initMerpsAccount(merpsGroup, payer);
-
   await sleep(5000); // devnet rate limits
   const merpsAccount = await client.getMerpsAccount(
     merpsAccountPk,
     dexProgramId,
   );
 
-  if (!usdcRootBank) throw new Error('no root bank');
-
-  const nodeBanks = await usdcRootBank.loadNodeBanks(client.connection);
-  const filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
-
-  if (!filteredNodeBanks[0]) throw new Error('node banks empty');
+  const quoteNodeBanks = await usdcRootBank.loadNodeBanks(client.connection);
+  const filteredQuoteNodeBanks = quoteNodeBanks.filter(
+    (nodeBank) => !!nodeBank,
+  );
+  if (!filteredQuoteNodeBanks[0]) throw new Error('node banks empty');
 
   await sleep(10000); // devnet rate limits
 
@@ -94,7 +97,7 @@ async function test() {
       payer,
       merpsGroup.tokens[QUOTE_INDEX].rootBank,
       usdcRootBank.nodeBanks?.[0],
-      filteredNodeBanks[0].vault,
+      filteredQuoteNodeBanks[0].vault,
       payerQuoteTokenAcc,
       10,
     );
@@ -107,10 +110,10 @@ async function test() {
   } catch (err) {
     console.log('Error on adding oracle', `${err}`);
   }
+
   const maxLeverage = 5;
   const maintAssetWeight = (2 * maxLeverage) / (2 * maxLeverage + 1);
   const initAssetWeight = maxLeverage / (maxLeverage + 1);
-
   const marketIndex = 0;
 
   await client.addSpotMarket(
@@ -122,7 +125,25 @@ async function test() {
     I80F48.fromString(maintAssetWeight.toString()),
     I80F48.fromString(initAssetWeight.toString()),
   );
+  // console.log('================');
+  // await sleep(5000); // avoid devnet rate limit
+  // console.log('adding to basket');
+
   await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
+
+  merpsGroup = await client.getMerpsGroup(groupKey);
+  // console.log('================');
+  // await sleep(5000); // avoid devnet rate limit
+  rootBanks = await merpsGroup.loadRootBanks(client.connection);
+  // console.log('================');
+  // await sleep(5000); // avoid devnet rate limit
+  const btcRootBank = rootBanks[marketIndex];
+  if (!btcRootBank) throw new Error('no root bank');
+  const btcNodeBanks = await btcRootBank.loadNodeBanks(client.connection);
+  const filteredBtcNodeBanks = btcNodeBanks.filter((nodeBank) => !!nodeBank);
+  if (!filteredBtcNodeBanks[0]) throw new Error('node banks empty');
+
+  // run keeper fns
   // const cacheRootBanksTxID = await client.cacheRootBanks(
   //   payer,
   //   merpsGroup.publicKey,
@@ -130,6 +151,18 @@ async function test() {
   //   [],
   // );
   // console.log('Cache Updated:', cacheRootBanksTxID);
+
+  await client.withdraw(
+    merpsGroup,
+    merpsAccount,
+    payer,
+    merpsGroup.tokens[marketIndex].rootBank,
+    btcRootBank.nodeBanks?.[0],
+    filteredBtcNodeBanks[0].vault,
+    payerBtcTokenAcc,
+    5,
+    true, // allow borrow
+  );
 }
 
 test();

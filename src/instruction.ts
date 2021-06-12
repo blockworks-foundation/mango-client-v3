@@ -75,7 +75,7 @@ export function makeWithdrawInstruction(
     })),
   ];
   const withdrawData = encodeMerpsInstruction({
-    Withdraw: { quantity: nativeQuantity, allow_borrow: allowBorrow },
+    Withdraw: { quantity: nativeQuantity, allowBorrow: allowBorrow },
   });
   return new TransactionInstruction({
     keys: withdrawKeys,

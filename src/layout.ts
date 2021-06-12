@@ -124,7 +124,11 @@ MerpsInstructionLayout.addVariant(
 );
 MerpsInstructionLayout.addVariant(1, struct([]), 'InitMerpsAccount');
 MerpsInstructionLayout.addVariant(2, struct([u64('quantity')]), 'Deposit');
-MerpsInstructionLayout.addVariant(3, struct([u64('quantity')]), 'Withdraw');
+MerpsInstructionLayout.addVariant(
+  3,
+  struct([u64('quantity'), u8('allowBorrow')]),
+  'Withdraw',
+);
 MerpsInstructionLayout.addVariant(
   4,
   struct([
