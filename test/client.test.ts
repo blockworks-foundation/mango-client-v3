@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion, no-console */
 import { Account } from '@solana/web3.js';
 import { expect } from 'chai';
 import * as Test from './utils';
@@ -100,7 +101,6 @@ describe('MerpsClient', async () => {
 
         const filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
         expect(filteredNodeBanks.length).to.equal(1);
-        if (!filteredNodeBanks[0]) return;
 
         await client.deposit(
           group,
@@ -108,7 +108,7 @@ describe('MerpsClient', async () => {
           user,
           group.tokens[QUOTE_INDEX].rootBank,
           usdcRootBank.nodeBanks[0],
-          filteredNodeBanks[0].vault,
+          filteredNodeBanks[0]!.vault,
           userTokenAcc.publicKey,
           10,
         );
