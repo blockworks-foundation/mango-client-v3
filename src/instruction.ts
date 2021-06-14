@@ -6,6 +6,7 @@ import {
 import { encodeMerpsInstruction } from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Order } from '@project-serum/serum/lib/market';
 
 export function makeInitMerpsGroupInstruction(
   programId: PublicKey,
@@ -82,4 +83,83 @@ export function makeWithdrawInstruction(
     data: withdrawData,
     programId,
   });
+}
+
+export function makeSettleFundsInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  ownerPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  dexProgramId: PublicKey,
+  spotMarketPk: PublicKey,
+  openOrdersPk: PublicKey,
+  signerKey: PublicKey,
+  spotMarketBaseVaultPk: PublicKey,
+  spotMarketQuoteVaultPk: PublicKey,
+  baseRootBankPk: PublicKey,
+  baseNodeBankPk: PublicKey,
+  quoteRootBankPk: PublicKey,
+  quoteNodeBankPk: PublicKey,
+  baseVaultPk: PublicKey,
+  quoteVaultPk: PublicKey,
+  dexSignerKey: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramId },
+    { isSigner: false, isWritable: true, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: true, pubkey: openOrdersPk },
+    { isSigner: false, isWritable: false, pubkey: signerKey },
+    { isSigner: false, isWritable: true, pubkey: spotMarketBaseVaultPk },
+    { isSigner: false, isWritable: true, pubkey: spotMarketQuoteVaultPk },
+    { isSigner: false, isWritable: false, pubkey: baseRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseNodeBankPk },
+    { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseVaultPk },
+    { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
+    { isSigner: false, isWritable: false, pubkey: dexSignerKey },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+  const data = encodeMerpsInstruction({ SettleFunds: {} });
+
+  return new TransactionInstruction({ keys, data, programId });
+}
+
+export function makeCancelOrderInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  ownerPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  dexProgramId: PublicKey,
+  spotMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  openOrdersPk: PublicKey,
+  signerKey: PublicKey,
+  eventQueuePk: PublicKey,
+  order: Order,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramId },
+    { isSigner: false, isWritable: false, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: openOrdersPk },
+    { isSigner: false, isWritable: false, pubkey: signerKey },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+  ];
+
+  const data = encodeMerpsInstruction({
+    CancelOrder: {
+      side: order.side,
+      orderId: order.orderId,
+    },
+  });
+  return new TransactionInstruction({ keys, data, programId });
 }

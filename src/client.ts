@@ -31,10 +31,14 @@ import {
   MerpsAccountLayout,
   RootBank,
 } from './layout';
-import MerpsGroup from './MerpsGroup';
+import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { makeWithdrawInstruction } from './instruction';
+import {
+  makeCancelOrderInstruction,
+  makeSettleFundsInstruction,
+  makeWithdrawInstruction,
+} from './instruction';
 import {
   Market,
   getFeeRates,
@@ -42,6 +46,7 @@ import {
   OpenOrders,
 } from '@project-serum/serum';
 import { I80F48 } from './fixednum';
+import { Order } from '@project-serum/serum/lib/market';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -799,6 +804,84 @@ export class MerpsClient {
     });
     transaction.add(placeOrderInstruction);
 
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async cancelSpotOrder(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    owner: Account,
+    spotMarket: Market,
+    order: Order,
+  ): Promise<TransactionSignature> {
+    const instruction = makeCancelOrderInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      owner.publicKey,
+      merpsAccount.publicKey,
+      spotMarket.programId,
+      spotMarket.publicKey,
+      spotMarket['_decoded'].bids,
+      spotMarket['_decoded'].asks,
+      order.openOrdersAddress,
+      merpsGroup.signerKey,
+      spotMarket['_decoded'].eventQueue,
+      order,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async settleFunds(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    owner: Account,
+    spotMarket: Market,
+  ): Promise<TransactionSignature> {
+    const marketIndex = merpsGroup.getSpotMarketIndex(spotMarket);
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
+    const { baseNodeBank, quoteNodeBank } =
+      await merpsGroup.loadBanksForSpotMarket(this.connection, marketIndex);
+
+    if (!baseNodeBank || !quoteNodeBank) {
+      throw new Error('Invalid or missing node banks');
+    }
+
+    const instruction = makeSettleFundsInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      owner.publicKey,
+      merpsAccount.publicKey,
+      spotMarket.programId,
+      spotMarket.publicKey,
+      merpsAccount.spotOpenOrders[marketIndex],
+      merpsGroup.signerKey,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      merpsGroup.tokens[marketIndex].rootBank,
+      baseNodeBank.publicKey,
+      merpsGroup.tokens[QUOTE_INDEX].rootBank,
+      quoteNodeBank.publicKey,
+      baseNodeBank.vault,
+      quoteNodeBank.vault,
+      dexSigner,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    const additionalSigners = [];
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 }
