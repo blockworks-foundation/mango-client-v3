@@ -69,7 +69,7 @@ describe('MerpsClient', async () => {
     });
   });
 
-  describe.only('initMerpsAccount, deposit, and withdraw', async () => {
+  describe.skip('initMerpsAccount, deposit, and withdraw', async () => {
     let group: MerpsGroup;
     let user: Account;
     let merpsAccount: MerpsAccount;
@@ -91,7 +91,7 @@ describe('MerpsClient', async () => {
       );
     });
 
-    it('deposit USDC and then WITHDRAW the USDC', async () => {
+    xit('deposit USDC and then WITHDRAW the USDC', async () => {
       const rootBanks = await group.loadRootBanks(client.connection);
       const usdcRootBank = rootBanks[QUOTE_INDEX];
 
@@ -100,6 +100,7 @@ describe('MerpsClient', async () => {
 
         const filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
         expect(filteredNodeBanks.length).to.equal(1);
+        if (!filteredNodeBanks[0]) return;
 
         await client.deposit(
           group,

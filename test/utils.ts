@@ -13,7 +13,7 @@ import {
 import { sleep } from '../src/utils';
 
 export const MerpsProgramId = new PublicKey(
-  'H3Xu3m3qiYZmXcdUDTEhQNJSui7bcfziphw8LGvot9Hp',
+  'Hc12EyQQ3XVNEE5URg7XjjtZA8sbUPnMeT1CXGbwN6ei',
 );
 export const DexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
