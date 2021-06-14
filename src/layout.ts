@@ -2,11 +2,13 @@ import {
   struct,
   u32,
   u8,
+  u16,
   union,
   seq,
   Blob,
   Structure,
   Layout,
+  UInt,
 } from 'buffer-layout';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
@@ -113,6 +115,47 @@ function encodeBool(value: boolean): number {
   return value ? 1 : 0;
 }
 
+class EnumLayout extends UInt {
+  values: any;
+  constructor(values, span, property) {
+    super(span, property);
+    this.values = values;
+  }
+  encode(src, b, offset) {
+    if (this.values[src] !== undefined) {
+      return super.encode(this.values[src], b, offset);
+    }
+    throw new Error('Invalid ' + this['property']);
+  }
+
+  decode(b, offset) {
+    const decodedValue = super.decode(b, offset);
+    const entry = Object.entries(this.values).find(
+      ([, value]) => value === decodedValue,
+    );
+    if (entry) {
+      return entry[0];
+    }
+    throw new Error('Invalid ' + this['property']);
+  }
+}
+
+export function sideLayout(property) {
+  return new EnumLayout({ buy: 0, sell: 1 }, 4, property);
+}
+
+export function orderTypeLayout(property) {
+  return new EnumLayout({ limit: 0, ioc: 1, postOnly: 2 }, 4, property);
+}
+
+export function selfTradeBehaviorLayout(property) {
+  return new EnumLayout(
+    { decrementTake: 0, cancelProvide: 1, abortTransaction: 2 },
+    4,
+    property,
+  );
+}
+
 /**
  * Need to implement layouts for each of the structs found in state.rs
  */
@@ -146,7 +189,20 @@ MerpsInstructionLayout.addVariant(
 MerpsInstructionLayout.addVariant(6, struct([u64('quantity')]), 'Borrow');
 MerpsInstructionLayout.addVariant(7, struct([]), 'CachePrices');
 MerpsInstructionLayout.addVariant(8, struct([]), 'CacheRootBanks');
-MerpsInstructionLayout.addVariant(9, struct([]), 'PlaceSpotOrder');
+MerpsInstructionLayout.addVariant(
+  9,
+  struct([
+    sideLayout('side'),
+    u64('limitPrice'),
+    u64('maxBaseQuantity'),
+    u64('maxQuoteQuantity'),
+    selfTradeBehaviorLayout('selfTradeBehavior'),
+    orderTypeLayout('orderType'),
+    u64('clientId'),
+    u16('limit'),
+  ]),
+  'PlaceSpotOrder',
+);
 MerpsInstructionLayout.addVariant(10, struct([]), 'AddOracle');
 
 const instructionMaxSpan = Math.max(
