@@ -174,11 +174,7 @@ MerpsInstructionLayout.addVariant(
 );
 MerpsInstructionLayout.addVariant(
   4,
-  struct([
-    u64('marketIndex'),
-    u128('maintAssetWeight'),
-    u128('initAssetWeight'),
-  ]),
+  struct([u64('marketIndex'), u128('maintLeverage'), u128('initLeverage')]),
   'AddSpotMarket',
 );
 MerpsInstructionLayout.addVariant(
@@ -204,28 +200,36 @@ MerpsInstructionLayout.addVariant(
   'PlaceSpotOrder',
 );
 MerpsInstructionLayout.addVariant(10, struct([]), 'AddOracle');
-MerpsInstructionLayout.addVariant(11, struct([
-  u64('marketIndex'),
-  I80F48Layout('maintLeverage'),
-  I80F48Layout('initLeverage'),
-  i64('baseLotSize'),
-  i64('quoteLotSize'),
-]), 'AddPerpMarket');
-MerpsInstructionLayout.addVariant(12, struct([
-  u64('client_order_id'),
-]), 'CancelPerpOrderByClientId');
-MerpsInstructionLayout.addVariant(13, struct([
-  i128('order_id'),
-  sideLayout('side'),
-]), 'CancelPerpOrder');
-MerpsInstructionLayout.addVariant(14, struct([
-  u64('limit'),
-]), 'ConsumeEvents');
+MerpsInstructionLayout.addVariant(
+  11,
+  struct([
+    u64('marketIndex'),
+    I80F48Layout('maintLeverage'),
+    I80F48Layout('initLeverage'),
+    i64('baseLotSize'),
+    i64('quoteLotSize'),
+  ]),
+  'AddPerpMarket',
+);
+MerpsInstructionLayout.addVariant(
+  12,
+  struct([u64('client_order_id')]),
+  'CancelPerpOrderByClientId',
+);
+MerpsInstructionLayout.addVariant(
+  13,
+  struct([i128('order_id'), sideLayout('side')]),
+  'CancelPerpOrder',
+);
+MerpsInstructionLayout.addVariant(14, struct([u64('limit')]), 'ConsumeEvents');
 MerpsInstructionLayout.addVariant(15, struct([]), 'CachePerpMarkets');
 MerpsInstructionLayout.addVariant(16, struct([]), 'UpdateFunding');
-MerpsInstructionLayout.addVariant(17, struct([
-  I80F48Layout('price'),
-]), 'SetOracle');
+MerpsInstructionLayout.addVariant(
+  17,
+  struct([I80F48Layout('price')]),
+  'SetOracle',
+);
+MerpsInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -371,6 +375,7 @@ export class PerpMarketInfo {
   initAssetWeight!: I80F48;
   maintLiabWeight!: I80F48;
   initLiabWeight!: I80F48;
+  liquidationFee!: I80F48;
   baseLotSize!: BN;
   quoteLotSize!: BN;
 
@@ -388,6 +393,7 @@ export class PerpMarketInfoLayout extends Structure {
         I80F48Layout('initAssetWeight'),
         I80F48Layout('maintLiabWeight'),
         I80F48Layout('initLiabWeight'),
+        I80F48Layout('liquidationFee'),
         i64('baseLotSize'),
         i64('quoteLotSize'),
       ],
@@ -502,8 +508,7 @@ export const MerpsGroupLayout = struct([
   publicKeyLayout('admin'),
   publicKeyLayout('dexProgramId'),
   publicKeyLayout('merpsCache'),
-  u8('validInterval'),
-  seq(u8(), 7, 'padding'), // padding required for alignment
+  u64('validInterval'),
 ]);
 
 export const MerpsAccountLayout = struct([
@@ -533,6 +538,11 @@ export const NodeBankLayout = struct([
   I80F48Layout('deposits'),
   I80F48Layout('borrows'),
   publicKeyLayout('vault'),
+]);
+
+export const StubOracleLayout = struct([
+  I80F48Layout('price'),
+  u64('lastUpdate'),
 ]);
 
 export class PriceCache {

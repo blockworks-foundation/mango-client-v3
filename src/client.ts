@@ -35,7 +35,13 @@ import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
+  makeAddSpotMarketInstruction,
+  makeCachePricesInstruction,
+  makeCacheRootBankInstruction,
   makeCancelOrderInstruction,
+  makeDepositInstruction,
+  makeInitMerpsAccountInstruction,
+  makeInitMerpsGroupInstruction,
   makeSettleFundsInstruction,
   makeWithdrawInstruction,
 } from './instruction';
@@ -208,50 +214,20 @@ export class MerpsClient {
       this.programId,
     );
 
-    const keys = [
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: accountInstruction.account.publicKey,
-      },
-      { isSigner: false, isWritable: false, pubkey: signerKey },
-      { isSigner: true, isWritable: false, pubkey: payer.publicKey },
-      { isSigner: false, isWritable: false, pubkey: quoteMint },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: quoteVaultAccount.publicKey,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: quoteNodeBankAccountInstruction.account.publicKey,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: quoteRootBankAccountInstruction.account.publicKey,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: cacheAccountInstruction.account.publicKey,
-      },
-      { isSigner: false, isWritable: false, pubkey: dexProgram },
-    ];
-
-    const data = encodeMerpsInstruction({
-      InitMerpsGroup: {
-        signerNonce: new BN(signerNonce),
-        validInterval: new BN(validInterval),
-      },
-    });
-
-    const initMerpsGroupInstruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const initMerpsGroupInstruction = makeInitMerpsGroupInstruction(
+      this.programId,
+      accountInstruction.account.publicKey,
+      signerKey,
+      payer.publicKey,
+      quoteMint,
+      quoteVaultAccount.publicKey,
+      quoteNodeBankAccountInstruction.account.publicKey,
+      quoteRootBankAccountInstruction.account.publicKey,
+      cacheAccountInstruction.account.publicKey,
+      dexProgram,
+      signerNonce,
+      validInterval,
+    );
 
     const transaction = new Transaction();
     transaction.add(accountInstruction.instruction);
@@ -292,22 +268,12 @@ export class MerpsClient {
       this.programId,
     );
 
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: accountInstruction.account.publicKey,
-      },
-      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-    ];
-
-    const data = encodeMerpsInstruction({ InitMerpsAccount: {} });
-    const initMerpsAccountInstruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const initMerpsAccountInstruction = makeInitMerpsAccountInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      accountInstruction.account.publicKey,
+      owner.publicKey,
+    );
 
     // Add all instructions to one atomic transaction
     const transaction = new Transaction();
@@ -353,25 +319,17 @@ export class MerpsClient {
       merpsGroup.tokens[tokenIndex].decimals,
     );
 
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
-      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-      { isSigner: false, isWritable: false, pubkey: rootBank },
-      { isSigner: false, isWritable: true, pubkey: nodeBank },
-      { isSigner: false, isWritable: true, pubkey: vault },
-      { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
-      { isSigner: false, isWritable: true, pubkey: tokenAcc },
-    ];
-    const data = encodeMerpsInstruction({
-      Deposit: { quantity: nativeQuantity },
-    });
-
-    const instruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const instruction = makeDepositInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      owner.publicKey,
+      merpsAccount.publicKey,
+      rootBank,
+      nodeBank,
+      vault,
+      tokenAcc,
+      nativeQuantity,
+    );
 
     const transaction = new Transaction();
     transaction.add(instruction);
@@ -428,25 +386,12 @@ export class MerpsClient {
     merpsCache: PublicKey,
     rootBanks: PublicKey[],
   ): Promise<TransactionSignature> {
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup },
-      { isSigner: false, isWritable: true, pubkey: merpsCache },
-      ...rootBanks.map((pubkey) => ({
-        isSigner: false,
-        isWritable: true,
-        pubkey,
-      })),
-    ];
-
-    const data = encodeMerpsInstruction({
-      CacheRootBanks: {},
-    });
-
-    const cacheRootBanksInstruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const cacheRootBanksInstruction = makeCacheRootBankInstruction(
+      this.programId,
+      merpsGroup,
+      merpsCache,
+      rootBanks,
+    );
 
     const transaction = new Transaction();
     transaction.add(cacheRootBanksInstruction);
@@ -460,28 +405,47 @@ export class MerpsClient {
     oracles: PublicKey[],
     payer: Account,
   ): Promise<TransactionSignature> {
+    const cachePricesInstruction = makeCachePricesInstruction(
+      this.programId,
+      merpsGroup,
+      merpsCache,
+      oracles,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(cachePricesInstruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async updateRootBanks(
+    merpsGroup: PublicKey,
+    rootBank: PublicKey,
+    nodeBanks: PublicKey[],
+    payer: Account,
+  ): Promise<TransactionSignature> {
     const keys = [
       { isSigner: false, isWritable: false, pubkey: merpsGroup },
-      { isSigner: false, isWritable: true, pubkey: merpsCache },
-      ...oracles.map((pubkey) => ({
+      { isSigner: false, isWritable: true, pubkey: rootBank },
+      ...nodeBanks.map((pubkey) => ({
         isSigner: false,
-        isWritable: false,
+        isWritable: true,
         pubkey,
       })),
     ];
 
     const data = encodeMerpsInstruction({
-      CachePrices: {},
+      UpdateRootBank: {},
     });
 
-    const cachePricesInstruction = new TransactionInstruction({
+    const updateRootBanksInstruction = new TransactionInstruction({
       keys,
       data,
       programId: this.programId,
     });
 
     const transaction = new Transaction();
-    transaction.add(cachePricesInstruction);
+    transaction.add(updateRootBanksInstruction);
 
     return await this.sendTransaction(transaction, payer, []);
   }
@@ -570,38 +534,20 @@ export class MerpsClient {
       this.programId,
     );
 
-    const keys = [
-      { isSigner: false, isWritable: true, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: false, pubkey: spotMarket },
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.dexProgramId },
-      { isSigner: false, isWritable: false, pubkey: mint },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: nodeBankAccountInstruction.account.publicKey,
-      },
-      { isSigner: false, isWritable: false, pubkey: vaultAccount.publicKey },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: rootBankAccountInstruction.account.publicKey,
-      },
-      { isSigner: true, isWritable: false, pubkey: admin.publicKey },
-    ];
-
-    const data = encodeMerpsInstruction({
-      AddSpotMarket: {
-        marketIndex: new BN(marketIndex),
-        maintAssetWeight: maintLeverage.getInternalValue(),
-        initAssetWeight: initLeverage.getInternalValue(),
-      },
-    });
-
-    const instruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const instruction = makeAddSpotMarketInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      spotMarket,
+      merpsGroup.dexProgramId,
+      mint,
+      nodeBankAccountInstruction.account.publicKey,
+      vaultAccount.publicKey,
+      rootBankAccountInstruction.account.publicKey,
+      admin.publicKey,
+      marketIndex,
+      maintLeverage,
+      initLeverage,
+    );
 
     const transaction = new Transaction();
     transaction.add(...vaultAccountInstructions);

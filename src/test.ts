@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as os from 'os';
 import * as fs from 'fs';
 import { MerpsClient } from './client';
@@ -6,6 +7,7 @@ import { QUOTE_INDEX } from '../src/MerpsGroup';
 import { sleep } from './utils';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
+import * as Test from '../test/utils';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -23,9 +25,7 @@ const quoteMintKey = new PublicKey(
   'EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK',
 );
 const btcMint = new PublicKey('bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP');
-const btcOraclePk = new PublicKey(
-  'FuEnReoxhqW8Li6EMLoaaUWbWAEjTfSRuBARo5GrGCqN',
-);
+
 const btcUsdSpotMarket = new PublicKey(
   'E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9',
 );
@@ -45,11 +45,12 @@ const payer = new Account(
 const payerQuoteTokenAcc = new PublicKey(
   '7f2xJqihAgdWVxqR4jLa5jxc7a4QxverYLntkc6FCYq',
 );
-const payerBtcTokenAcc = new PublicKey(
-  'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
-);
+// const payerBtcTokenAcc = new PublicKey(
+//   'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
+// );
 
 async function test() {
+  console.log('= starting =');
   const client = new MerpsClient(connection, merpsProgramId);
   const groupKey = await client.initMerpsGroup(
     payer,
@@ -57,12 +58,8 @@ async function test() {
     dexProgramId,
     500,
   );
+  console.log('= merps group created =');
   let merpsGroup = await client.getMerpsGroup(groupKey);
-  await sleep(3000); // devnet rate limits
-  let rootBanks = await merpsGroup.loadRootBanks(client.connection);
-  const usdcRootBank = rootBanks[QUOTE_INDEX];
-  if (!usdcRootBank) throw new Error('no root bank');
-
   assertEq(
     'quoteMint',
     merpsGroup.tokens[QUOTE_INDEX].mint.toBase58(),
@@ -79,16 +76,17 @@ async function test() {
   await sleep(5000); // devnet rate limits
   let merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
 
+  await sleep(5000); // devnet rate limits
+  let rootBanks = await merpsGroup.loadRootBanks(client.connection);
+  const usdcRootBank = rootBanks[QUOTE_INDEX];
+  if (!usdcRootBank) throw new Error('no root bank');
   const quoteNodeBanks = await usdcRootBank.loadNodeBanks(client.connection);
-  const filteredQuoteNodeBanks = quoteNodeBanks.filter(
-    (nodeBank) => !!nodeBank,
-  );
+  const filteredQuoteNodeBanks = quoteNodeBanks.filter((bank) => !!bank);
   if (!filteredQuoteNodeBanks[0]) throw new Error('node banks empty');
 
-  await sleep(10000); // devnet rate limits
-
+  await sleep(5000); // devnet rate limits
   try {
-    console.log('depositing');
+    console.log('= depositing =');
     await client.deposit(
       merpsGroup,
       merpsAccount,
@@ -103,8 +101,10 @@ async function test() {
     console.log('Error on deposit', `${err}`);
   }
 
+  let btcOraclePk;
   try {
-    console.log('adding oracle');
+    console.log('= adding oracle =');
+    btcOraclePk = await Test.createOracle(connection, merpsProgramId, payer);
     await client.addOracle(merpsGroup, btcOraclePk, payer);
   } catch (err) {
     console.log('Error on adding oracle', `${err}`);
@@ -113,8 +113,7 @@ async function test() {
   const initLeverage = 5;
   const maintLeverage = initLeverage * 2;
   const marketIndex = 0;
-
-  console.log('adding spot market');
+  console.log('= adding spot market =');
   await client.addSpotMarket(
     merpsGroup,
     btcUsdSpotMarket,
@@ -124,15 +123,13 @@ async function test() {
     I80F48.fromString(maintLeverage.toString()),
     I80F48.fromString(initLeverage.toString()),
   );
-  console.log('================');
+
   await sleep(5000); // avoid devnet rate limit
-  console.log('adding to basket');
+  console.log('= adding to basket =');
 
   await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
 
   merpsGroup = await client.getMerpsGroup(groupKey);
-
-  console.log('================');
   await sleep(5000); // avoid devnet rate limit
 
   // run keeper fns
@@ -145,18 +142,15 @@ async function test() {
       merpsGroup.tokens[QUOTE_INDEX].rootBank,
     ],
   );
-  console.log('Cache Updated:', cacheRootBanksTxID);
-
   await client.cachePrices(
     merpsGroup.publicKey,
     merpsGroup.merpsCache,
     [btcOraclePk],
     payer,
   );
+  console.log('= cache updated =', cacheRootBanksTxID);
 
   rootBanks = await merpsGroup.loadRootBanks(client.connection);
-
-  console.log('================ loading banks');
   await sleep(5000); // avoid devnet rate limit
 
   const btcRootBank = rootBanks[marketIndex];
@@ -165,7 +159,18 @@ async function test() {
   const filteredBtcNodeBanks = btcNodeBanks.filter((nodeBank) => !!nodeBank);
   if (!filteredBtcNodeBanks[0]) throw new Error('node banks empty');
 
-  console.log('btc root bank:   ', btcRootBank.lastUpdated);
+  await client.updateRootBanks(
+    merpsGroup.publicKey,
+    btcRootBank.publicKey,
+    filteredBtcNodeBanks.map((bank) => bank!.publicKey),
+    payer,
+  );
+  await client.updateRootBanks(
+    merpsGroup.publicKey,
+    usdcRootBank.publicKey,
+    filteredQuoteNodeBanks.map((bank) => bank!.publicKey),
+    payer,
+  );
 
   await sleep(5000); // devnet rate limits
   merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
@@ -177,7 +182,6 @@ async function test() {
   );
 
   console.log('placing spot order');
-
   await client.placeSpotOrder(
     merpsGroup,
     merpsAccount,

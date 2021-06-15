@@ -10,7 +10,8 @@ import {
   TransactionInstruction,
   TransactionSignature,
 } from '@solana/web3.js';
-import { sleep } from '../src/utils';
+import { StubOracleLayout } from '../src/layout';
+import { createAccountInstruction, sleep } from '../src/utils';
 
 export const MerpsProgramId = new PublicKey(
   'Hc12EyQQ3XVNEE5URg7XjjtZA8sbUPnMeT1CXGbwN6ei',
@@ -84,8 +85,29 @@ export async function airdropSol(
   await _sendTransaction(connection, tx, signers);
 }
 
+export async function createOracle(
+  connection: Connection,
+  programId: PublicKey,
+  payer: Account,
+): Promise<PublicKey> {
+  const createOracleIns = await createAccountInstruction(
+    connection,
+    payer.publicKey,
+    StubOracleLayout.span,
+    programId,
+  );
+  const tx = new Transaction();
+  tx.add(createOracleIns.instruction);
+
+  const signers = [payer, createOracleIns.account];
+  const signerPks = signers.map((x) => x.publicKey);
+  tx.setSigners(...signerPks);
+  await _sendTransaction(connection, tx, signers);
+  return createOracleIns.account.publicKey;
+}
+
 export async function createAccount(
-  connection,
+  connection: Connection,
   solBalance = 5,
 ): Promise<Account> {
   const account = new Account();
