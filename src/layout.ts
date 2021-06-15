@@ -174,11 +174,7 @@ MerpsInstructionLayout.addVariant(
 );
 MerpsInstructionLayout.addVariant(
   4,
-  struct([
-    u64('marketIndex'),
-    u128('maintAssetWeight'),
-    u128('initAssetWeight'),
-  ]),
+  struct([u64('marketIndex'), u128('maintLeverage'), u128('initLeverage')]),
   'AddSpotMarket',
 );
 MerpsInstructionLayout.addVariant(

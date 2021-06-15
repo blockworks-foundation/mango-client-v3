@@ -7,6 +7,7 @@ import { encodeMerpsInstruction } from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
+import { I80F48 } from './fixednum';
 
 export function makeInitMerpsGroupInstruction(
   programId: PublicKey,
@@ -290,6 +291,47 @@ export function makeCachePricesInstruction(
 
   const data = encodeMerpsInstruction({
     CachePrices: {},
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeAddSpotMarketInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  spotMarketPk: PublicKey,
+  serumDexPk: PublicKey,
+  mintPk: PublicKey,
+  nodeBankPk: PublicKey,
+  vaultPk: PublicKey,
+  rootBankPk: PublicKey,
+  adminPk: PublicKey,
+
+  marketIndex: number,
+  maintLeverage: I80F48,
+  initLeverage: I80F48,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: false, pubkey: serumDexPk },
+    { isSigner: false, isWritable: false, pubkey: mintPk },
+    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
+    { isSigner: false, isWritable: false, pubkey: vaultPk },
+    { isSigner: false, isWritable: true, pubkey: rootBankPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+
+  const data = encodeMerpsInstruction({
+    AddSpotMarket: {
+      marketIndex: new BN(marketIndex),
+      maintLeverage: maintLeverage.getInternalValue(),
+      initLeverage: initLeverage.getInternalValue(),
+    },
   });
 
   return new TransactionInstruction({

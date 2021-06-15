@@ -35,6 +35,7 @@ import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
+  makeAddSpotMarketInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
   makeCancelOrderInstruction,
@@ -533,38 +534,20 @@ export class MerpsClient {
       this.programId,
     );
 
-    const keys = [
-      { isSigner: false, isWritable: true, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: false, pubkey: spotMarket },
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.dexProgramId },
-      { isSigner: false, isWritable: false, pubkey: mint },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: nodeBankAccountInstruction.account.publicKey,
-      },
-      { isSigner: false, isWritable: false, pubkey: vaultAccount.publicKey },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: rootBankAccountInstruction.account.publicKey,
-      },
-      { isSigner: true, isWritable: false, pubkey: admin.publicKey },
-    ];
-
-    const data = encodeMerpsInstruction({
-      AddSpotMarket: {
-        marketIndex: new BN(marketIndex),
-        maintAssetWeight: maintLeverage.getInternalValue(),
-        initAssetWeight: initLeverage.getInternalValue(),
-      },
-    });
-
-    const instruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const instruction = makeAddSpotMarketInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      spotMarket,
+      merpsGroup.dexProgramId,
+      mint,
+      nodeBankAccountInstruction.account.publicKey,
+      vaultAccount.publicKey,
+      rootBankAccountInstruction.account.publicKey,
+      admin.publicKey,
+      marketIndex,
+      maintLeverage,
+      initLeverage,
+    );
 
     const transaction = new Transaction();
     transaction.add(...vaultAccountInstructions);
