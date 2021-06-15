@@ -35,6 +35,7 @@ import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
+  makeCachePricesInstruction,
   makeCacheRootBankInstruction,
   makeCancelOrderInstruction,
   makeDepositInstruction,
@@ -403,25 +404,12 @@ export class MerpsClient {
     oracles: PublicKey[],
     payer: Account,
   ): Promise<TransactionSignature> {
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup },
-      { isSigner: false, isWritable: true, pubkey: merpsCache },
-      ...oracles.map((pubkey) => ({
-        isSigner: false,
-        isWritable: false,
-        pubkey,
-      })),
-    ];
-
-    const data = encodeMerpsInstruction({
-      CachePrices: {},
-    });
-
-    const cachePricesInstruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const cachePricesInstruction = makeCachePricesInstruction(
+      this.programId,
+      merpsGroup,
+      merpsCache,
+      oracles,
+    );
 
     const transaction = new Transaction();
     transaction.add(cachePricesInstruction);
