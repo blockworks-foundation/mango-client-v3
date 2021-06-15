@@ -95,7 +95,7 @@ async function test() {
       usdcRootBank.nodeBanks?.[0],
       filteredQuoteNodeBanks[0].vault,
       payerQuoteTokenAcc,
-      10,
+      1000, // quantity
     );
   } catch (err) {
     console.log('Error on deposit', `${err}`);
@@ -181,18 +181,22 @@ async function test() {
     dexProgramId,
   );
 
-  console.log('placing spot order');
-  await client.placeSpotOrder(
-    merpsGroup,
-    merpsAccount,
-    merpsGroup.merpsCache,
-    btcSpotMarket,
-    payer,
-    'buy',
-    40000, // price
-    1, // size
-    'limit',
-  );
+  try {
+    console.log('= placing spot order =');
+    await client.placeSpotOrder(
+      merpsGroup,
+      merpsAccount,
+      merpsGroup.merpsCache,
+      btcSpotMarket,
+      payer,
+      'buy',
+      40000, // price
+      0.0001, // size
+      'limit',
+    );
+  } catch (e) {
+    console.log('Error placing order', `${e}`);
+  }
 
   // await client.withdraw(
   //   merpsGroup,
