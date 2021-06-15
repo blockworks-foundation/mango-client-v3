@@ -328,8 +328,8 @@ export class MerpsClient {
     const instruction = makeDepositInstruction(
       this.programId,
       merpsGroup.publicKey,
-      merpsAccount.publicKey,
       owner.publicKey,
+      merpsAccount.publicKey,
       rootBank,
       nodeBank,
       vault,

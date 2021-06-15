@@ -511,8 +511,7 @@ export const MerpsGroupLayout = struct([
   publicKeyLayout('admin'),
   publicKeyLayout('dexProgramId'),
   publicKeyLayout('merpsCache'),
-  u8('validInterval'),
-  seq(u8(), 7, 'padding'), // padding required for alignment
+  u64('validInterval'),
 ]);
 
 export const MerpsAccountLayout = struct([

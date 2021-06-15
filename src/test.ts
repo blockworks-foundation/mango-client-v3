@@ -49,6 +49,7 @@ const payerQuoteTokenAcc = new PublicKey(
 // );
 
 async function test() {
+  console.log('starting');
   const client = new MerpsClient(connection, merpsProgramId);
   const groupKey = await client.initMerpsGroup(
     payer,
@@ -56,12 +57,8 @@ async function test() {
     dexProgramId,
     500,
   );
+  console.log('merps group created');
   let merpsGroup = await client.getMerpsGroup(groupKey);
-  await sleep(3000); // devnet rate limits
-  let rootBanks = await merpsGroup.loadRootBanks(client.connection);
-  const usdcRootBank = rootBanks[QUOTE_INDEX];
-  if (!usdcRootBank) throw new Error('no root bank');
-
   assertEq(
     'quoteMint',
     merpsGroup.tokens[QUOTE_INDEX].mint.toBase58(),
@@ -78,14 +75,17 @@ async function test() {
   await sleep(5000); // devnet rate limits
   let merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
 
+  await sleep(5000); // devnet rate limits
+  let rootBanks = await merpsGroup.loadRootBanks(client.connection);
+  const usdcRootBank = rootBanks[QUOTE_INDEX];
+  if (!usdcRootBank) throw new Error('no root bank');
   const quoteNodeBanks = await usdcRootBank.loadNodeBanks(client.connection);
   const filteredQuoteNodeBanks = quoteNodeBanks.filter(
     (nodeBank) => !!nodeBank,
   );
   if (!filteredQuoteNodeBanks[0]) throw new Error('node banks empty');
 
-  await sleep(10000); // devnet rate limits
-
+  await sleep(5000); // devnet rate limits
   try {
     console.log('depositing');
     await client.deposit(
