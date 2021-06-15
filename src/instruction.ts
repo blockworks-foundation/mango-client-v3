@@ -163,3 +163,36 @@ export function makeCancelOrderInstruction(
   });
   return new TransactionInstruction({ keys, data, programId });
 }
+
+export function makeDepositInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  ownerPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBankPk: PublicKey,
+  vaultPk: PublicKey,
+  tokenAccPk: PublicKey,
+
+  nativeQuantity: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: vaultPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+    { isSigner: false, isWritable: true, pubkey: tokenAccPk },
+  ];
+  const data = encodeMerpsInstruction({
+    Deposit: { quantity: nativeQuantity },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

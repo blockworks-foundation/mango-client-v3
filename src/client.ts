@@ -36,6 +36,7 @@ import MerpsAccount from './MerpsAccount';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   makeCancelOrderInstruction,
+  makeDepositInstruction,
   makeSettleFundsInstruction,
   makeWithdrawInstruction,
 } from './instruction';
@@ -353,25 +354,17 @@ export class MerpsClient {
       merpsGroup.tokens[tokenIndex].decimals,
     );
 
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
-      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-      { isSigner: false, isWritable: false, pubkey: rootBank },
-      { isSigner: false, isWritable: true, pubkey: nodeBank },
-      { isSigner: false, isWritable: true, pubkey: vault },
-      { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
-      { isSigner: false, isWritable: true, pubkey: tokenAcc },
-    ];
-    const data = encodeMerpsInstruction({
-      Deposit: { quantity: nativeQuantity },
-    });
-
-    const instruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const instruction = makeDepositInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      merpsAccount.publicKey,
+      owner.publicKey,
+      rootBank,
+      nodeBank,
+      vault,
+      tokenAcc,
+      nativeQuantity,
+    );
 
     const transaction = new Transaction();
     transaction.add(instruction);
