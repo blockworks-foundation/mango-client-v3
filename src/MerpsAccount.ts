@@ -1,14 +1,7 @@
 import { OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
-import BN from 'bn.js';
 import { I80F48 } from './fixednum';
-import {
-  MAX_PAIRS,
-  MetaData,
-  PerpAccount,
-  PerpOpenOrders,
-  RootBank,
-} from './layout';
+import { MAX_PAIRS, MetaData, PerpAccount, RootBank } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 
 export default class MerpsAccount {
