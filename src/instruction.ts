@@ -10,15 +10,43 @@ import { Order } from '@project-serum/serum/lib/market';
 
 export function makeInitMerpsGroupInstruction(
   programId: PublicKey,
-  merpsGroup: PublicKey,
+  merpsGroupPk: PublicKey,
+  signerKey: PublicKey,
+  payerPk: PublicKey,
+  quoteMintPk: PublicKey,
+  quoteVaultPk: PublicKey,
+  quoteNodeBankPk: PublicKey,
+  quoteRootBankPk: PublicKey,
+  merpsCachePk: PublicKey,
+  dexProgramPk: PublicKey,
+
+  signerNonce: number,
   validInterval: number,
 ): TransactionInstruction {
-  const keys = [{ isSigner: false, isWritable: true, pubkey: merpsGroup }];
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: signerKey },
+    { isSigner: true, isWritable: false, pubkey: payerPk },
+    { isSigner: false, isWritable: false, pubkey: quoteMintPk },
+    { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
+    { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramPk },
+  ];
 
   const data = encodeMerpsInstruction({
-    InitMerpsGroup: { validInterval: new BN(validInterval) },
+    InitMerpsGroup: {
+      signerNonce: new BN(signerNonce),
+      validInterval: new BN(validInterval),
+    },
   });
-  return new TransactionInstruction({ keys, data, programId });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId: programId,
+  });
 }
 
 export function makeTestMultiTxInstruction(

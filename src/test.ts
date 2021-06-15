@@ -124,15 +124,13 @@ async function test() {
     I80F48.fromString(maintLeverage.toString()),
     I80F48.fromString(initLeverage.toString()),
   );
-  console.log('================');
+
   await sleep(5000); // avoid devnet rate limit
   console.log('adding to basket');
 
   await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
 
   merpsGroup = await client.getMerpsGroup(groupKey);
-
-  console.log('================');
   await sleep(5000); // avoid devnet rate limit
 
   // run keeper fns
@@ -177,7 +175,6 @@ async function test() {
   );
 
   console.log('placing spot order');
-
   await client.placeSpotOrder(
     merpsGroup,
     merpsAccount,
