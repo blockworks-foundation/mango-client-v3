@@ -17,6 +17,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
+    "cli": "ts-node src/cli.ts",
     "start": "ts-node src/test.ts",
     "clean": "rm -rf lib",
     "prepare": "run-s clean build",
@@ -68,7 +69,8 @@
     "bn.js": "^5.1.2",
     "borsh": "https://github.com/defactojob/borsh-js#field-mapper",
     "buffer-layout": "^1.2.0",
-    "n64": "^0.2.10"
+    "n64": "^0.2.10",
+    "yargs": "^17.0.1"
   },
   "browserslist": [
     ">0.2%",
