@@ -8,6 +8,7 @@ import { sleep } from './utils';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import * as Test from '../test/utils';
+import { u64 } from '@solana/spl-token';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -25,7 +26,9 @@ const quoteMintKey = new PublicKey(
   'EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK',
 );
 const btcMint = new PublicKey('bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP');
-
+const btcFaucetPk = new PublicKey(
+  '454w2aqqmu3tzY3dgCh8gCk6jwQcxdo6ojvqj2JcLJqh',
+);
 const btcUsdSpotMarket = new PublicKey(
   'E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9',
 );
@@ -45,9 +48,9 @@ const payer = new Account(
 const payerQuoteTokenAcc = new PublicKey(
   '7f2xJqihAgdWVxqR4jLa5jxc7a4QxverYLntkc6FCYq',
 );
-// const payerBtcTokenAcc = new PublicKey(
-//   'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
-// );
+const payerBtcTokenAcc = new PublicKey(
+  'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
+);
 
 async function test() {
   console.log('= starting =');
@@ -159,6 +162,19 @@ async function test() {
   const filteredBtcNodeBanks = btcNodeBanks.filter((nodeBank) => !!nodeBank);
   if (!filteredBtcNodeBanks[0]) throw new Error('node banks empty');
 
+  console.log('= airdropping in btc vault =');
+  const multiplier = Math.pow(10, 6);
+  const btcAmount = 5 * multiplier;
+  await Test.airdropTokens(
+    connection,
+    payer,
+    btcFaucetPk,
+    filteredBtcNodeBanks[0].vault,
+    btcMint,
+    new u64(btcAmount),
+  );
+  sleep(5000);
+
   await client.updateRootBanks(
     merpsGroup.publicKey,
     btcRootBank.publicKey,
@@ -198,17 +214,18 @@ async function test() {
     console.log('Error placing order', `${e}`);
   }
 
-  // await client.withdraw(
-  //   merpsGroup,
-  //   merpsAccount,
-  //   payer,
-  //   merpsGroup.tokens[marketIndex].rootBank,
-  //   btcRootBank.nodeBanks?.[0],
-  //   filteredBtcNodeBanks[0].vault,
-  //   payerBtcTokenAcc,
-  //   5,
-  //   true, // allow borrow
-  // );
+  console.log('= borrow and withdraw =');
+  await client.withdraw(
+    merpsGroup,
+    merpsAccount,
+    payer,
+    merpsGroup.tokens[marketIndex].rootBank,
+    btcRootBank.nodeBanks?.[0],
+    filteredBtcNodeBanks[0].vault,
+    payerBtcTokenAcc,
+    0.5, // withdraw amount
+    true, // allow borrow
+  );
 }
 
 test();
