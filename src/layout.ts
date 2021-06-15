@@ -370,7 +370,7 @@ export function spotMarketInfoLayout(property = '') {
 }
 
 export class PerpMarketInfo {
-  spotMarket!: PublicKey;
+  perpMarket!: PublicKey;
   maintAssetWeight!: I80F48;
   initAssetWeight!: I80F48;
   maintLiabWeight!: I80F48;
@@ -513,15 +513,13 @@ export const MerpsGroupLayout = struct([
 
 export const MerpsAccountLayout = struct([
   metaDataLayout('metaData'),
-  publicKeyLayout('merpsGroups'),
+  publicKeyLayout('merpsGroup'),
   publicKeyLayout('owner'),
   seq(bool(), MAX_PAIRS, 'inBasket'),
   seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
   seq(perpAccountLayout(), MAX_PAIRS, 'perpAccounts'),
-
-  seq(u8(), 1, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
@@ -544,6 +542,44 @@ export const StubOracleLayout = struct([
   I80F48Layout('price'),
   u64('lastUpdate'),
 ]);
+
+export const PerpMarketLayout = struct([
+  metaDataLayout('metaData'),
+  publicKeyLayout('merpsGroup'),
+  publicKeyLayout('bids'),
+  publicKeyLayout('asks'),
+  publicKeyLayout('eventQueue'),
+
+  I80F48Layout('longFunding'),
+  I80F48Layout('shortFunding'),
+  i64('openInterest'),
+  i64('quoteLotSize'),
+  publicKeyLayout('indexOracle'),
+  u64('lastUpdated'),
+  u64('seqNum'),
+  i64('contractSize'),
+]);
+
+export class PerpMarket {
+  publicKey: PublicKey;
+  merpsGroup!: PublicKey;
+  bids!: PublicKey;
+  asks!: PublicKey;
+  eventQueue!: PublicKey;
+  longFunding!: I80F48;
+  shortFunding!: I80F48;
+  openInterest!: BN;
+  quoteLotSize!: BN;
+  indexOracle!: PublicKey;
+  lastUpdated!: BN;
+  seqNum!: BN;
+  contractSize!: BN;
+
+  constructor(publicKey: PublicKey, decoded: any) {
+    this.publicKey = publicKey;
+    Object.assign(this, decoded);
+  }
+}
 
 export class PriceCache {
   price!: I80F48;

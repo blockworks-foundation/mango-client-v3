@@ -30,6 +30,7 @@ import {
   MerpsCacheLayout,
   MerpsAccountLayout,
   RootBank,
+  PerpMarket,
 } from './layout';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
@@ -795,15 +796,27 @@ export class MerpsClient {
   async settlePnl(
     merpsGroup: MerpsGroup,
     merpsAccount: MerpsAccount,
-
+    perpMarket: PerpMarket,
     owner: Account,
   ) {
     // fetch all MerpsAccounts filtered for having this perp market in basket
-    //
+    const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
+
+    const filter = {
+      memcmp: {
+        offset: MerpsAccountLayout.offsetOf('inBasket') + marketIndex,
+        bytes: '2', // TODO - check if this actually works; needs to be base58 encoding of true byte
+      },
+    };
+
+    const merpsAccounts = await this.getAllMerpsAccounts(merpsGroup, [filter]);
+
+    throw new Error('Not Implemented');
+
+    // Calculate the profit or loss per market
   }
 
   async getAllMerpsAccounts(
-    programId: PublicKey,
     merpsGroup: MerpsGroup,
     filters?: [any],
   ): Promise<MerpsAccount[]> {
@@ -825,7 +838,7 @@ export class MerpsClient {
 
     const merpsAccountProms = getFilteredProgramAccounts(
       this.connection,
-      programId,
+      this.programId,
       accountFilters,
     ).then((accounts) =>
       accounts.map(
