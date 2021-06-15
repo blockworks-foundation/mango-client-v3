@@ -637,14 +637,13 @@
     tweetnacl "^1.0.0"
     ws "^7.0.0"
 
-"@solana/web3.js@^1.18.0":
-  version "1.18.0"
-  resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.18.0.tgz#f4c422a843aa57a1366d98b06cb6b45441644d59"
-  integrity sha512-ijAoRd4Sje1QYoPAwDr7KYlDK40FE7tAUa2V3wT4PGKatWf4ETDXoyYlW89J6vrqOT+mV3GUuaVC76tOFlrXyA==
+"@solana/web3.js@^0.95.0":
+  version "0.95.0"
+  resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-0.95.0.tgz#c028c800bf078bec90945240370df51026f8bdab"
+  integrity sha512-jdjAESYTChAYI1aZwH1RggcoT22BxdB9tDKBOt2Iw9SSpZ1Bb81ydrP+7eksE1AwQj6lpzrgtVt2d3sFosqupQ==
   dependencies:
     "@babel/runtime" "^7.12.5"
     bn.js "^5.0.0"
-    borsh "^0.4.0"
     bs58 "^4.0.1"
     buffer "6.0.1"
     buffer-layout "^1.2.0"
@@ -1232,16 +1231,6 @@ boolbase@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/boolbase/-/boolbase-1.0.0.tgz#68dff5fbe60c51eb37725ea9e3ed310dcc1e776e"
   integrity sha1-aN/1++YMUes3cl6p4+0xDcwed24=
-
-borsh@^0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/borsh/-/borsh-0.4.0.tgz#9dd6defe741627f1315eac2a73df61421f6ddb9f"
-  integrity sha512-aX6qtLya3K0AkT66CmYWCCDr77qsE9arV05OmdFpmat9qu8Pg9J5tBUPDztAW5fNh/d/MyVG/OYziP52Ndzx1g==
-  dependencies:
-    "@types/bn.js" "^4.11.5"
-    bn.js "^5.0.0"
-    bs58 "^4.0.0"
-    text-encoding-utf-8 "^1.0.2"
 
 "borsh@https://github.com/defactojob/borsh-js#field-mapper":
   version "0.3.1"
