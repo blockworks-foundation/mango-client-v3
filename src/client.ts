@@ -8,7 +8,6 @@ import {
   TransactionSignature,
   TransactionInstruction,
   // AccountInfo,
-  SYSVAR_RENT_PUBKEY,
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import {
@@ -33,7 +32,6 @@ import {
 } from './layout';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   makeAddSpotMarketInstruction,
   makeAddToBasketInstruction,
@@ -43,6 +41,7 @@ import {
   makeDepositInstruction,
   makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
+  makePlaceSpotOrderInstruction,
   makeSettleFundsInstruction,
   makeWithdrawInstruction,
 } from './instruction';
@@ -626,6 +625,9 @@ export class MerpsClient {
     const { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank } =
       await merpsGroup.loadBanksForSpotMarket(this.connection, spotMarketIndex);
 
+    if (!baseRootBank || !baseNodeBank || !quoteRootBank || !quoteNodeBank)
+      throw new Error('Empty banks');
+
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
@@ -671,77 +673,37 @@ export class MerpsClient {
       spotMarket.programId,
     );
 
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
-      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-      { isSigner: false, isWritable: false, pubkey: merpsCache },
-      { isSigner: false, isWritable: false, pubkey: spotMarket.programId },
-      { isSigner: false, isWritable: true, pubkey: spotMarket.publicKey },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].bids,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].asks,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].requestQueue,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].eventQueue,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].baseVault,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].quoteVault,
-      },
-      { isSigner: false, isWritable: false, pubkey: baseRootBank?.publicKey },
-      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.publicKey },
-      { isSigner: false, isWritable: true, pubkey: quoteRootBank?.publicKey },
-      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.publicKey },
-      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.vault },
-      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.vault },
-      { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.signerKey },
-      { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
-      { isSigner: false, isWritable: false, pubkey: dexSigner },
-      ...openOrdersKeys.map((pubkey) => ({
-        isSigner: false,
-        isWritable: true,
-        pubkey,
-      })),
-    ];
+    const placeOrderInstruction = makePlaceSpotOrderInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      merpsAccount.publicKey,
+      owner.publicKey,
+      merpsCache,
+      spotMarket.programId,
+      spotMarket.publicKey,
+      spotMarket['_decoded'].bids,
+      spotMarket['_decoded'].asks,
+      spotMarket['_decoded'].requestQueue,
+      spotMarket['_decoded'].eventQueue,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      baseRootBank.publicKey,
+      baseNodeBank.publicKey,
+      quoteRootBank.publicKey,
+      quoteNodeBank.publicKey,
+      quoteNodeBank.vault,
+      baseNodeBank.vault,
+      merpsGroup.signerKey,
+      dexSigner,
+      openOrdersKeys,
 
-    const data = encodeMerpsInstruction({
-      PlaceSpotOrder: {
-        side,
-        limitPrice,
-        maxBaseQuantity,
-        maxQuoteQuantity,
-        selfTradeBehavior,
-        orderType,
-        limit: 65535,
-      },
-    });
-
-    const placeOrderInstruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+      side,
+      limitPrice,
+      maxBaseQuantity,
+      maxQuoteQuantity,
+      selfTradeBehavior,
+      orderType,
+    );
     transaction.add(placeOrderInstruction);
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
