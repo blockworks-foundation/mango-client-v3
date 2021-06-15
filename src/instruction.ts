@@ -244,3 +244,30 @@ export function makeDepositInstruction(
     programId,
   });
 }
+
+export function makeCacheRootBankInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsCachePk: PublicKey,
+  rootBanks: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    ...rootBanks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMerpsInstruction({
+    CacheRootBanks: {},
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

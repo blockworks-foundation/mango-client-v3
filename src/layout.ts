@@ -233,6 +233,7 @@ MerpsInstructionLayout.addVariant(
   struct([I80F48Layout('price')]),
   'SetOracle',
 );
+MerpsInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
