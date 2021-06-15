@@ -6,7 +6,6 @@ import {
   Transaction,
   TransactionConfirmationStatus,
   TransactionSignature,
-  TransactionInstruction,
   // AccountInfo,
 } from '@solana/web3.js';
 import BN from 'bn.js';
@@ -23,7 +22,6 @@ import {
 } from './utils';
 import {
   MerpsGroupLayout,
-  encodeMerpsInstruction,
   NodeBankLayout,
   RootBankLayout,
   MerpsCacheLayout,
@@ -33,6 +31,7 @@ import {
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
 import {
+  makeAddOracleInstruction,
   makeAddSpotMarketInstruction,
   makeAddToBasketInstruction,
   makeCachePricesInstruction,
@@ -43,6 +42,7 @@ import {
   makeInitMerpsGroupInstruction,
   makePlaceSpotOrderInstruction,
   makeSettleFundsInstruction,
+  makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
 } from './instruction';
 import {
@@ -424,25 +424,12 @@ export class MerpsClient {
     nodeBanks: PublicKey[],
     payer: Account,
   ): Promise<TransactionSignature> {
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup },
-      { isSigner: false, isWritable: true, pubkey: rootBank },
-      ...nodeBanks.map((pubkey) => ({
-        isSigner: false,
-        isWritable: true,
-        pubkey,
-      })),
-    ];
-
-    const data = encodeMerpsInstruction({
-      UpdateRootBank: {},
-    });
-
-    const updateRootBanksInstruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const updateRootBanksInstruction = makeUpdateRootBankInstruction(
+      this.programId,
+      merpsGroup,
+      rootBank,
+      nodeBanks,
+    );
 
     const transaction = new Transaction();
     transaction.add(updateRootBanksInstruction);
@@ -481,18 +468,12 @@ export class MerpsClient {
     oracle: PublicKey,
     admin: Account,
   ): Promise<TransactionSignature> {
-    const keys = [
-      { isSigner: false, isWritable: true, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: false, pubkey: oracle },
-      { isSigner: true, isWritable: false, pubkey: admin.publicKey },
-    ];
-    const data = encodeMerpsInstruction({ AddOracle: {} });
-
-    const instruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const instruction = makeAddOracleInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      oracle,
+      admin.publicKey,
+    );
 
     const transaction = new Transaction();
     transaction.add(instruction);

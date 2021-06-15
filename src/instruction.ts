@@ -447,3 +447,50 @@ export function makePlaceSpotOrderInstruction(
     programId,
   });
 }
+
+export function makeUpdateRootBankInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBanks: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: rootBankPk },
+    ...nodeBanks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMerpsInstruction({
+    UpdateRootBank: {},
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeAddOracleInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  oraclePk: PublicKey,
+  adminPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: oraclePk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMerpsInstruction({ AddOracle: {} });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
