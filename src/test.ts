@@ -17,7 +17,7 @@ function assertEq(msg, a, b) {
 }
 
 const merpsProgramId = new PublicKey(
-  'Hc12EyQQ3XVNEE5URg7XjjtZA8sbUPnMeT1CXGbwN6ei',
+  '8XywrZebqGoRTYgK1zLoESRdPx6gviRQe6hMonQZbt7M',
 );
 const dexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -39,17 +39,14 @@ const connection = new Connection(
 
 const payer = new Account(
   JSON.parse(
-    fs.readFileSync(
-      os.homedir() + '/my-solana-wallet/my-keypair.json',
-      'utf-8',
-    ),
+    fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
   ),
 );
 const payerQuoteTokenAcc = new PublicKey(
-  '7f2xJqihAgdWVxqR4jLa5jxc7a4QxverYLntkc6FCYq',
+  '2nWRemiv1iiq1SpE7vZMv6ezUwDiU79DFc6hmdZMHsop',
 );
 const payerBtcTokenAcc = new PublicKey(
-  'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
+  'C7E8sNvvGp1oKspjjHnr4PszqcAEcQoKkSyVaz15K8DY',
 );
 
 async function test() {
