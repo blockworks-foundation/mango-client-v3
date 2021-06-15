@@ -36,6 +36,7 @@ import MerpsAccount from './MerpsAccount';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   makeAddSpotMarketInstruction,
+  makeAddToBasketInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
   makeCancelOrderInstruction,
@@ -570,23 +571,13 @@ export class MerpsClient {
 
     marketIndex: number,
   ): Promise<TransactionSignature> {
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
-      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-    ];
-
-    const data = encodeMerpsInstruction({
-      AddToBasket: {
-        marketIndex: new BN(marketIndex),
-      },
-    });
-
-    const instruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const instruction = makeAddToBasketInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      merpsAccount.publicKey,
+      owner.publicKey,
+      marketIndex,
+    );
 
     const transaction = new Transaction();
     transaction.add(instruction);

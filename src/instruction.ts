@@ -340,3 +340,29 @@ export function makeAddSpotMarketInstruction(
     programId,
   });
 }
+
+export function makeAddToBasketInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  marketIndex: number,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+  ];
+
+  const data = encodeMerpsInstruction({
+    AddToBasket: {
+      marketIndex: new BN(marketIndex),
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
