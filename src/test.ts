@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as os from 'os';
 import * as fs from 'fs';
 import { MerpsClient } from './client';
@@ -49,6 +50,7 @@ const payerQuoteTokenAcc = new PublicKey(
 // );
 
 async function test() {
+  console.log('= starting =');
   const client = new MerpsClient(connection, merpsProgramId);
   const groupKey = await client.initMerpsGroup(
     payer,
@@ -56,12 +58,8 @@ async function test() {
     dexProgramId,
     500,
   );
+  console.log('= merps group created =');
   let merpsGroup = await client.getMerpsGroup(groupKey);
-  await sleep(3000); // devnet rate limits
-  let rootBanks = await merpsGroup.loadRootBanks(client.connection);
-  const usdcRootBank = rootBanks[QUOTE_INDEX];
-  if (!usdcRootBank) throw new Error('no root bank');
-
   assertEq(
     'quoteMint',
     merpsGroup.tokens[QUOTE_INDEX].mint.toBase58(),
@@ -78,16 +76,17 @@ async function test() {
   await sleep(5000); // devnet rate limits
   let merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
 
+  await sleep(5000); // devnet rate limits
+  let rootBanks = await merpsGroup.loadRootBanks(client.connection);
+  const usdcRootBank = rootBanks[QUOTE_INDEX];
+  if (!usdcRootBank) throw new Error('no root bank');
   const quoteNodeBanks = await usdcRootBank.loadNodeBanks(client.connection);
-  const filteredQuoteNodeBanks = quoteNodeBanks.filter(
-    (nodeBank) => !!nodeBank,
-  );
+  const filteredQuoteNodeBanks = quoteNodeBanks.filter((bank) => !!bank);
   if (!filteredQuoteNodeBanks[0]) throw new Error('node banks empty');
 
-  await sleep(10000); // devnet rate limits
-
+  await sleep(5000); // devnet rate limits
   try {
-    console.log('depositing');
+    console.log('= depositing =');
     await client.deposit(
       merpsGroup,
       merpsAccount,
@@ -96,7 +95,7 @@ async function test() {
       usdcRootBank.nodeBanks?.[0],
       filteredQuoteNodeBanks[0].vault,
       payerQuoteTokenAcc,
-      10,
+      1000, // quantity
     );
   } catch (err) {
     console.log('Error on deposit', `${err}`);
@@ -104,7 +103,7 @@ async function test() {
 
   let btcOraclePk;
   try {
-    console.log('adding oracle');
+    console.log('= adding oracle =');
     btcOraclePk = await Test.createOracle(connection, merpsProgramId, payer);
     await client.addOracle(merpsGroup, btcOraclePk, payer);
   } catch (err) {
@@ -114,7 +113,7 @@ async function test() {
   const initLeverage = 5;
   const maintLeverage = initLeverage * 2;
   const marketIndex = 0;
-  console.log('adding spot market');
+  console.log('= adding spot market =');
   await client.addSpotMarket(
     merpsGroup,
     btcUsdSpotMarket,
@@ -126,7 +125,7 @@ async function test() {
   );
 
   await sleep(5000); // avoid devnet rate limit
-  console.log('adding to basket');
+  console.log('= adding to basket =');
 
   await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
 
@@ -143,18 +142,15 @@ async function test() {
       merpsGroup.tokens[QUOTE_INDEX].rootBank,
     ],
   );
-  console.log('Cache Updated:', cacheRootBanksTxID);
-
   await client.cachePrices(
     merpsGroup.publicKey,
     merpsGroup.merpsCache,
     [btcOraclePk],
     payer,
   );
+  console.log('= cache updated =', cacheRootBanksTxID);
 
   rootBanks = await merpsGroup.loadRootBanks(client.connection);
-
-  console.log('================ loading banks');
   await sleep(5000); // avoid devnet rate limit
 
   const btcRootBank = rootBanks[marketIndex];
@@ -163,7 +159,18 @@ async function test() {
   const filteredBtcNodeBanks = btcNodeBanks.filter((nodeBank) => !!nodeBank);
   if (!filteredBtcNodeBanks[0]) throw new Error('node banks empty');
 
-  console.log('btc root bank:   ', btcRootBank.lastUpdated);
+  await client.updateRootBanks(
+    merpsGroup.publicKey,
+    btcRootBank.publicKey,
+    filteredBtcNodeBanks.map((bank) => bank!.publicKey),
+    payer,
+  );
+  await client.updateRootBanks(
+    merpsGroup.publicKey,
+    usdcRootBank.publicKey,
+    filteredQuoteNodeBanks.map((bank) => bank!.publicKey),
+    payer,
+  );
 
   await sleep(5000); // devnet rate limits
   merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
@@ -174,18 +181,22 @@ async function test() {
     dexProgramId,
   );
 
-  console.log('placing spot order');
-  await client.placeSpotOrder(
-    merpsGroup,
-    merpsAccount,
-    merpsGroup.merpsCache,
-    btcSpotMarket,
-    payer,
-    'buy',
-    40000, // price
-    1, // size
-    'limit',
-  );
+  try {
+    console.log('= placing spot order =');
+    await client.placeSpotOrder(
+      merpsGroup,
+      merpsAccount,
+      merpsGroup.merpsCache,
+      btcSpotMarket,
+      payer,
+      'buy',
+      40000, // price
+      0.0001, // size
+      'limit',
+    );
+  } catch (e) {
+    console.log('Error placing order', `${e}`);
+  }
 
   // await client.withdraw(
   //   merpsGroup,

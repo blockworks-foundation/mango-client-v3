@@ -174,11 +174,7 @@ MerpsInstructionLayout.addVariant(
 );
 MerpsInstructionLayout.addVariant(
   4,
-  struct([
-    u64('marketIndex'),
-    u128('maintAssetWeight'),
-    u128('initAssetWeight'),
-  ]),
+  struct([u64('marketIndex'), u128('maintLeverage'), u128('initLeverage')]),
   'AddSpotMarket',
 );
 MerpsInstructionLayout.addVariant(
@@ -233,6 +229,7 @@ MerpsInstructionLayout.addVariant(
   struct([I80F48Layout('price')]),
   'SetOracle',
 );
+MerpsInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -511,8 +508,7 @@ export const MerpsGroupLayout = struct([
   publicKeyLayout('admin'),
   publicKeyLayout('dexProgramId'),
   publicKeyLayout('merpsCache'),
-  u8('validInterval'),
-  seq(u8(), 7, 'padding'), // padding required for alignment
+  u64('validInterval'),
 ]);
 
 export const MerpsAccountLayout = struct([
