@@ -535,6 +535,11 @@ export const NodeBankLayout = struct([
   publicKeyLayout('vault'),
 ]);
 
+export const StubOracleLayout = struct([
+  I80F48Layout('price'),
+  u64('lastUpdate'),
+]);
+
 export class PriceCache {
   price!: I80F48;
   lastUpdate!: BN;

@@ -6,6 +6,7 @@ import { QUOTE_INDEX } from '../src/MerpsGroup';
 import { sleep } from './utils';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
+import * as Test from '../test/utils';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -23,9 +24,7 @@ const quoteMintKey = new PublicKey(
   'EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK',
 );
 const btcMint = new PublicKey('bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP');
-const btcOraclePk = new PublicKey(
-  'FuEnReoxhqW8Li6EMLoaaUWbWAEjTfSRuBARo5GrGCqN',
-);
+
 const btcUsdSpotMarket = new PublicKey(
   'E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9',
 );
@@ -45,9 +44,9 @@ const payer = new Account(
 const payerQuoteTokenAcc = new PublicKey(
   '7f2xJqihAgdWVxqR4jLa5jxc7a4QxverYLntkc6FCYq',
 );
-const payerBtcTokenAcc = new PublicKey(
-  'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
-);
+// const payerBtcTokenAcc = new PublicKey(
+//   'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
+// );
 
 async function test() {
   const client = new MerpsClient(connection, merpsProgramId);
@@ -103,8 +102,10 @@ async function test() {
     console.log('Error on deposit', `${err}`);
   }
 
+  let btcOraclePk;
   try {
     console.log('adding oracle');
+    btcOraclePk = await Test.createOracle(connection, merpsProgramId, payer);
     await client.addOracle(merpsGroup, btcOraclePk, payer);
   } catch (err) {
     console.log('Error on adding oracle', `${err}`);
@@ -113,7 +114,6 @@ async function test() {
   const initLeverage = 5;
   const maintLeverage = initLeverage * 2;
   const marketIndex = 0;
-
   console.log('adding spot market');
   await client.addSpotMarket(
     merpsGroup,
