@@ -2,7 +2,7 @@ import { OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
 import { I80F48 } from './fixednum';
-import { MetaData, PerpOpenOrders } from './layout';
+import { MetaData, PerpOpenOrders, RootBank } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 
 export default class MerpsAccount {
@@ -26,6 +26,20 @@ export default class MerpsAccount {
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
+  }
+
+  getNativeDeposit(rootBank: RootBank, tokenIndex: number): I80F48 {
+    // TODO maybe load rootBank here instead of passing in?
+    return rootBank.depositIndex.mul(this.deposits[tokenIndex]);
+  }
+  getNativeBorrow(rootBank: RootBank, tokenIndex: number): I80F48 {
+    return rootBank.borrowIndex.mul(this.borrows[tokenIndex]);
+  }
+  getUiDeposit(): number {
+    throw new Error('not implemented');
+  }
+  getUiBorrow(): number {
+    throw new Error('not implemented');
   }
 
   async loadOpenOrders(

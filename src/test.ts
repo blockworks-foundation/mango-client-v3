@@ -5,6 +5,7 @@ import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { QUOTE_INDEX } from '../src/MerpsGroup';
 import { sleep } from './utils';
 import { I80F48 } from './fixednum';
+import { Market } from '@project-serum/serum';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -54,7 +55,7 @@ async function test() {
     payer,
     quoteMintKey,
     dexProgramId,
-    5,
+    500,
   );
   let merpsGroup = await client.getMerpsGroup(groupKey);
   await sleep(3000); // devnet rate limits
@@ -76,10 +77,7 @@ async function test() {
 
   const merpsAccountPk = await client.initMerpsAccount(merpsGroup, payer);
   await sleep(5000); // devnet rate limits
-  const merpsAccount = await client.getMerpsAccount(
-    merpsAccountPk,
-    dexProgramId,
-  );
+  let merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
 
   const quoteNodeBanks = await usdcRootBank.loadNodeBanks(client.connection);
   const filteredQuoteNodeBanks = quoteNodeBanks.filter(
@@ -106,63 +104,103 @@ async function test() {
   }
 
   try {
+    console.log('adding oracle');
     await client.addOracle(merpsGroup, btcOraclePk, payer);
   } catch (err) {
     console.log('Error on adding oracle', `${err}`);
   }
 
-  const maxLeverage = 5;
-  const maintAssetWeight = (2 * maxLeverage) / (2 * maxLeverage + 1);
-  const initAssetWeight = maxLeverage / (maxLeverage + 1);
+  const initLeverage = 5;
+  const maintLeverage = initLeverage * 2;
   const marketIndex = 0;
 
+  console.log('adding spot market');
   await client.addSpotMarket(
     merpsGroup,
     btcUsdSpotMarket,
     btcMint,
     payer,
     marketIndex,
-    I80F48.fromString(maintAssetWeight.toString()),
-    I80F48.fromString(initAssetWeight.toString()),
+    I80F48.fromString(maintLeverage.toString()),
+    I80F48.fromString(initLeverage.toString()),
   );
-  // console.log('================');
-  // await sleep(5000); // avoid devnet rate limit
-  // console.log('adding to basket');
+  console.log('================');
+  await sleep(5000); // avoid devnet rate limit
+  console.log('adding to basket');
 
   await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
 
   merpsGroup = await client.getMerpsGroup(groupKey);
-  // console.log('================');
-  // await sleep(5000); // avoid devnet rate limit
+
+  console.log('================');
+  await sleep(5000); // avoid devnet rate limit
+
+  // run keeper fns
+  const cacheRootBanksTxID = await client.cacheRootBanks(
+    payer,
+    merpsGroup.publicKey,
+    merpsGroup.merpsCache,
+    [
+      merpsGroup.tokens[marketIndex].rootBank,
+      merpsGroup.tokens[QUOTE_INDEX].rootBank,
+    ],
+  );
+  console.log('Cache Updated:', cacheRootBanksTxID);
+
+  await client.cachePrices(
+    merpsGroup.publicKey,
+    merpsGroup.merpsCache,
+    [btcOraclePk],
+    payer,
+  );
+
   rootBanks = await merpsGroup.loadRootBanks(client.connection);
-  // console.log('================');
-  // await sleep(5000); // avoid devnet rate limit
+
+  console.log('================ loading banks');
+  await sleep(5000); // avoid devnet rate limit
+
   const btcRootBank = rootBanks[marketIndex];
   if (!btcRootBank) throw new Error('no root bank');
   const btcNodeBanks = await btcRootBank.loadNodeBanks(client.connection);
   const filteredBtcNodeBanks = btcNodeBanks.filter((nodeBank) => !!nodeBank);
   if (!filteredBtcNodeBanks[0]) throw new Error('node banks empty');
 
-  // run keeper fns
-  // const cacheRootBanksTxID = await client.cacheRootBanks(
-  //   payer,
-  //   merpsGroup.publicKey,
-  //   merpsGroup.merpsCache,
-  //   [],
-  // );
-  // console.log('Cache Updated:', cacheRootBanksTxID);
+  console.log('btc root bank:   ', btcRootBank.lastUpdated);
 
-  await client.withdraw(
+  await sleep(5000); // devnet rate limits
+  merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
+  const btcSpotMarket = await Market.load(
+    connection,
+    btcUsdSpotMarket,
+    {},
+    dexProgramId,
+  );
+
+  console.log('placing spot order');
+
+  await client.placeSpotOrder(
     merpsGroup,
     merpsAccount,
+    merpsGroup.merpsCache,
+    btcSpotMarket,
     payer,
-    merpsGroup.tokens[marketIndex].rootBank,
-    btcRootBank.nodeBanks?.[0],
-    filteredBtcNodeBanks[0].vault,
-    payerBtcTokenAcc,
-    5,
-    true, // allow borrow
+    'buy',
+    40000, // price
+    1, // size
+    'limit',
   );
+
+  // await client.withdraw(
+  //   merpsGroup,
+  //   merpsAccount,
+  //   payer,
+  //   merpsGroup.tokens[marketIndex].rootBank,
+  //   btcRootBank.nodeBanks?.[0],
+  //   filteredBtcNodeBanks[0].vault,
+  //   payerBtcTokenAcc,
+  //   5,
+  //   true, // allow borrow
+  // );
 }
 
 test();

@@ -162,7 +162,7 @@ export function selfTradeBehaviorLayout(property) {
 export const MerpsInstructionLayout = union(u32('instruction'));
 MerpsInstructionLayout.addVariant(
   0,
-  struct([u64('signerNonce'), u8('validInterval')]),
+  struct([u64('signerNonce'), u64('validInterval')]),
   'InitMerpsGroup',
 );
 MerpsInstructionLayout.addVariant(1, struct([]), 'InitMerpsAccount');

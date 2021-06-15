@@ -433,7 +433,7 @@ export class MerpsClient {
       { isSigner: false, isWritable: true, pubkey: merpsCache },
       ...rootBanks.map((pubkey) => ({
         isSigner: false,
-        isWritable: false,
+        isWritable: true,
         pubkey,
       })),
     ];
@@ -544,8 +544,8 @@ export class MerpsClient {
     admin: Account,
 
     marketIndex: number,
-    maintAssetWeight: I80F48,
-    initAssetWeight: I80F48,
+    maintLeverage: I80F48,
+    initLeverage: I80F48,
   ): Promise<TransactionSignature> {
     const vaultAccount = new Account();
 
@@ -592,8 +592,8 @@ export class MerpsClient {
     const data = encodeMerpsInstruction({
       AddSpotMarket: {
         marketIndex: new BN(marketIndex),
-        maintAssetWeight: maintAssetWeight.getInternalValue(),
-        initAssetWeight: initAssetWeight.getInternalValue(),
+        maintAssetWeight: maintLeverage.getInternalValue(),
+        initAssetWeight: initLeverage.getInternalValue(),
       },
     });
 
@@ -694,6 +694,9 @@ export class MerpsClient {
 
     const openOrdersKeys: PublicKey[] = [];
     for (let i = 0; i < merpsAccount.spotOpenOrders.length; i++) {
+      if (!merpsAccount.inBasket[i]) {
+        continue;
+      }
       if (
         i === spotMarketIndex &&
         merpsAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)
@@ -768,12 +771,12 @@ export class MerpsClient {
         isWritable: true,
         pubkey: spotMarket['_decoded'].quoteVault,
       },
-      { isSigner: false, isWritable: false, pubkey: baseRootBank?.publicKey }, // base_root_bank_ai
-      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.publicKey }, // base_node_bank_ai
-      { isSigner: false, isWritable: true, pubkey: quoteRootBank?.publicKey }, // quote_root_bank_ai
-      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.publicKey }, // quote_node_bank_ai
-      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.vault }, // quote_vault_ai
-      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.vault }, // base_vault_ai
+      { isSigner: false, isWritable: false, pubkey: baseRootBank?.publicKey },
+      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.publicKey },
+      { isSigner: false, isWritable: true, pubkey: quoteRootBank?.publicKey },
+      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.publicKey },
+      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.vault },
+      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.vault },
       { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
       { isSigner: false, isWritable: false, pubkey: merpsGroup.signerKey },
       { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
