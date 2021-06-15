@@ -49,6 +49,26 @@ export function makeInitMerpsGroupInstruction(
   });
 }
 
+export function makeInitMerpsAccountInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  ownerPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+  ];
+
+  const data = encodeMerpsInstruction({ InitMerpsAccount: {} });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
 export function makeTestMultiTxInstruction(
   programId: PublicKey,
   merpsGroup: PublicKey,

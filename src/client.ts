@@ -37,6 +37,7 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   makeCancelOrderInstruction,
   makeDepositInstruction,
+  makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
   makeSettleFundsInstruction,
   makeWithdrawInstruction,
@@ -264,22 +265,12 @@ export class MerpsClient {
       this.programId,
     );
 
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: accountInstruction.account.publicKey,
-      },
-      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-    ];
-
-    const data = encodeMerpsInstruction({ InitMerpsAccount: {} });
-    const initMerpsAccountInstruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const initMerpsAccountInstruction = makeInitMerpsAccountInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      accountInstruction.account.publicKey,
+      owner.publicKey,
+    );
 
     // Add all instructions to one atomic transaction
     const transaction = new Transaction();
