@@ -19,6 +19,7 @@ import {
   nativeToUi,
   uiToNative,
   zeroKey,
+  getFilteredProgramAccounts,
 } from './utils';
 import {
   MerpsGroupLayout,
@@ -27,6 +28,7 @@ import {
   MerpsCacheLayout,
   MerpsAccountLayout,
   RootBank,
+  PerpMarket,
 } from './layout';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
@@ -766,5 +768,118 @@ export class MerpsClient {
 
     const additionalSigners = [];
     return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  /**
+   * Automatically fetch MerpsAccounts for this PerpMarket
+   * Pick enough MerpsAccounts that have opposite sign and send them in to get settled
+   */
+  async settlePnl(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    perpMarket: PerpMarket,
+    owner: Account,
+  ) {
+    // fetch all MerpsAccounts filtered for having this perp market in basket
+    const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
+
+    const filter = {
+      memcmp: {
+        offset: MerpsAccountLayout.offsetOf('inBasket') + marketIndex,
+        bytes: '2', // TODO - check if this actually works; needs to be base58 encoding of true byte
+      },
+    };
+
+    const merpsAccounts = await this.getAllMerpsAccounts(merpsGroup, [filter]);
+
+    throw new Error('Not Implemented');
+
+    // Calculate the profit or loss per market
+  }
+
+  async getAllMerpsAccounts(
+    merpsGroup: MerpsGroup,
+    filters?: [any],
+  ): Promise<MerpsAccount[]> {
+    const accountFilters = [
+      {
+        memcmp: {
+          offset: MerpsAccountLayout.offsetOf('merpsGroup'),
+          bytes: merpsGroup.publicKey.toBase58(),
+        },
+      },
+      {
+        dataSize: MerpsAccountLayout.span,
+      },
+    ];
+
+    if (filters && filters.length) {
+      accountFilters.push(...filters);
+    }
+
+    const merpsAccountProms = getFilteredProgramAccounts(
+      this.connection,
+      this.programId,
+      accountFilters,
+    ).then((accounts) =>
+      accounts.map(
+        ({ publicKey, accountInfo }) =>
+          new MerpsAccount(
+            publicKey,
+            MerpsAccountLayout.decode(
+              accountInfo == null ? undefined : accountInfo.data,
+            ),
+          ),
+      ),
+    );
+
+    const ordersFilters = [
+      {
+        memcmp: {
+          offset: OpenOrders.getLayout(merpsGroup.dexProgramId).offsetOf(
+            'owner',
+          ),
+          bytes: merpsGroup.signerKey.toBase58(),
+        },
+      },
+      {
+        dataSize: OpenOrders.getLayout(merpsGroup.dexProgramId).span,
+      },
+    ];
+
+    const openOrdersProms = getFilteredProgramAccounts(
+      this.connection,
+      merpsGroup.dexProgramId,
+      ordersFilters,
+    ).then((accounts) =>
+      accounts.map(({ publicKey, accountInfo }) =>
+        OpenOrders.fromAccountInfo(
+          publicKey,
+          accountInfo,
+          merpsGroup.dexProgramId,
+        ),
+      ),
+    );
+
+    const merpsAccounts = await merpsAccountProms;
+    const openOrders = await openOrdersProms;
+
+    const pkToOpenOrdersAccount = {};
+    openOrders.forEach(
+      (openOrdersAccount) =>
+        (pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
+          openOrdersAccount),
+    );
+
+    for (const ma of merpsAccounts) {
+      for (let i = 0; i < ma.spotOpenOrders.length; i++) {
+        if (ma.spotOpenOrders[i].toBase58() in pkToOpenOrdersAccount) {
+          ma.spotOpenOrdersAccounts[i] =
+            pkToOpenOrdersAccount[ma.spotOpenOrders[i].toBase58()];
+        }
+      }
+    }
+
+    return merpsAccounts;
   }
 }

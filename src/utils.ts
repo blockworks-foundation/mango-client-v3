@@ -1,6 +1,7 @@
 import BN from 'bn.js';
 import {
   Account,
+  AccountInfo,
   Commitment,
   Connection,
   PublicKey,
@@ -216,4 +217,34 @@ export async function createSignerKeyAndNonce(
   }
 
   throw new Error('Could not generate signer key');
+}
+
+export async function getFilteredProgramAccounts(
+  connection: Connection,
+  programId: PublicKey,
+  filters,
+): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
+  // @ts-ignore
+  const resp = await connection._rpcRequest('getProgramAccounts', [
+    programId.toBase58(),
+    {
+      commitment: connection.commitment,
+      filters,
+      encoding: 'base64',
+    },
+  ]);
+  if (resp.error) {
+    throw new Error(resp.error.message);
+  }
+  return resp.result.map(
+    ({ pubkey, account: { data, executable, owner, lamports } }) => ({
+      publicKey: new PublicKey(pubkey),
+      accountInfo: {
+        data: Buffer.from(data[0], 'base64'),
+        executable,
+        owner: new PublicKey(owner),
+        lamports,
+      },
+    }),
+  );
 }
