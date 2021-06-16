@@ -39,7 +39,9 @@ export async function awaitTransactionSignatureConfirmation(
 ) {
   let done = false;
 
-  const confirmLevels: (TransactionConfirmationStatus | null)[] = ['finalized'];
+  const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] = [
+    'finalized',
+  ];
   if (confirmLevel === 'confirmed') {
     confirmLevels.push('confirmed');
   } else if (confirmLevel === 'processed') {
