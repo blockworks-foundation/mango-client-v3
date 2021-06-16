@@ -30,11 +30,16 @@ import {
   RootBank,
   PerpMarket,
   StubOracleLayout,
+  PerpMarketLayout,
+  PerpBookSizeLayout,
+  PerpEventQueueLayout,
+  PerpEventLayout,
 } from './layout';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
 import {
   makeAddOracleInstruction,
+  makeAddPerpMarketInstruction,
   makeAddSpotMarketInstruction,
   makeAddToBasketInstruction,
   makeCachePricesInstruction,
@@ -947,6 +952,89 @@ export class MerpsClient {
     transaction.add(instruction);
 
     const additionalSigners = [];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async addPerpMarket(
+    merpsGroupPk: PublicKey,
+    admin: Account,
+    marketIndex: number,
+    maintLeverage: number,
+    initLeverage: number,
+    baseLotSize: number,
+    quoteLotSize: number,
+    maxNumEvents: number,
+  ) {
+    const makePerpMarketAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      PerpMarketLayout.span,
+      this.programId,
+    );
+
+    const makeEventQueueAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      PerpEventQueueLayout.span + (maxNumEvents - 1) * PerpEventLayout.span,
+      this.programId,
+    );
+
+    const makeBidAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      PerpBookSizeLayout.span,
+      this.programId,
+    );
+
+    const makeAskAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      PerpBookSizeLayout.span,
+      this.programId,
+    );
+
+    console.log(
+      marketIndex,
+      maintLeverage,
+      initLeverage,
+      baseLotSize,
+      quoteLotSize,
+    );
+
+    console.log(
+      I80F48.fromString(maintLeverage.toString()),
+      I80F48.fromString(initLeverage.toString()),
+    );
+
+    const instruction = await makeAddPerpMarketInstruction(
+      this.programId,
+      merpsGroupPk,
+      makePerpMarketAccountInstruction.account.publicKey,
+      makeEventQueueAccountInstruction.account.publicKey,
+      makeBidAccountInstruction.account.publicKey,
+      makeAskAccountInstruction.account.publicKey,
+      admin.publicKey,
+      new BN(marketIndex),
+      I80F48.fromString(maintLeverage.toString()),
+      I80F48.fromString(initLeverage.toString()),
+      new BN(baseLotSize),
+      new BN(quoteLotSize),
+    );
+
+    const transaction = new Transaction();
+    transaction.add(makePerpMarketAccountInstruction.instruction);
+    transaction.add(makeEventQueueAccountInstruction.instruction);
+    transaction.add(makeBidAccountInstruction.instruction);
+    transaction.add(makeAskAccountInstruction.instruction);
+    transaction.add(instruction);
+
+    const additionalSigners = [
+      makePerpMarketAccountInstruction.account,
+      makeEventQueueAccountInstruction.account,
+      makeBidAccountInstruction.account,
+      makeAskAccountInstruction.account,
+    ];
+
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 }

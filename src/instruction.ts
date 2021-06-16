@@ -517,3 +517,42 @@ export function makeSetOracleInstruction(
     programId,
   });
 }
+
+export function makeAddPerpMarketInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  perpMarketPk: PublicKey,
+  eventQueuePk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  adminPk: PublicKey,
+  marketIndex: BN,
+  maintLeverage: I80F48,
+  initLeverage: I80F48,
+  baseLotSize: BN,
+  quoteLotSize: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMerpsInstruction({
+    AddPerpMarket: {
+      marketIndex,
+      maintLeverage: maintLeverage.getInternalValue(),
+      initLeverage: initLeverage.getInternalValue(),
+      baseLotSize,
+      quoteLotSize,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

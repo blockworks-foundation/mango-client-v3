@@ -6,7 +6,12 @@ import { hideBin } from 'yargs/helpers';
 import { Options, PositionalOptions } from 'yargs';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 
-import { addStubOracle, initGroup, setStubOracle } from './commands';
+import {
+  addPerpMarket,
+  addStubOracle,
+  initGroup,
+  setStubOracle,
+} from './commands';
 import { Cluster, Config, GroupConfig } from './config';
 
 const clusterDesc: [string, Options] = [
@@ -188,6 +193,57 @@ yargs(hideBin(process.argv))
   .command(
     'add-perp-market <group> <symbol>',
     'add a perp market to the group',
-    (y) => y.positional(...groupDesc).positional(...symbolDesc),
-    (_args) => {},
+    (y) =>
+      y
+        .positional(...groupDesc)
+        .positional(...symbolDesc)
+        .option('maint_leverage', {
+          describe: '',
+          default: 20,
+          type: 'number',
+        })
+        .option('init_leverage', {
+          default: 10,
+          type: 'number',
+        })
+        .option('base_lot_size', {
+          default: 100,
+          type: 'number',
+        })
+        .option('quote_lot_size', {
+          default: 10,
+          type: 'number',
+        })
+        .option('max_num_events', {
+          default: 1024,
+          type: 'number',
+        })
+        .option(...clusterDesc)
+        .option(...configDesc)
+        .option(...keypairDesc),
+    async (args) => {
+      console.log('add-perp-market', args);
+      const account = readKeypair(args.keypair as string);
+      const config = readConfig(args.config as string);
+      const cluster = args.cluster as Cluster;
+      const connection = openConnection(config, cluster);
+      const group = config.getGroup(
+        cluster,
+        args.group as string,
+      ) as GroupConfig;
+      const result = await addPerpMarket(
+        connection,
+        account,
+        group,
+        args.symbol as string,
+        args.maint_leverage as number,
+        args.init_leverage as number,
+        args.base_lot_size as number,
+        args.quote_lot_size as number,
+        args.max_num_events as number,
+      );
+      config.storeGroup(result);
+      writeConfig(args.config as string, config);
+      process.exit(0);
+    },
   ).argv;

@@ -583,6 +583,21 @@ export class PerpMarket {
   }
 }
 
+export const PerpEventLayout = struct([]);
+
+export const PerpEventQueueLayout = struct([]);
+
+export class PerpEventQueue {
+  publicKey: PublicKey;
+
+  constructor(publicKey: PublicKey, decoded: any) {
+    this.publicKey = publicKey;
+    Object.assign(this, decoded);
+  }
+}
+
+export const PerpBookSizeLayout = struct([]);
+
 export class PriceCache {
   price!: I80F48;
   lastUpdate!: BN;

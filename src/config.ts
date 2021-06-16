@@ -21,6 +21,26 @@ function oracleConfigToJson(o: OracleConfig): any {
   };
 }
 
+export interface PerpMarketConfig {
+  base_symbol: string;
+  key: PublicKey;
+  market_index: number;
+}
+
+function perpMarketConfigFromJson(j: any) {
+  return {
+    ...j,
+    key: new PublicKey(j.key),
+  };
+}
+
+function perpMarketConfigToJson(p: PerpMarketConfig): any {
+  return {
+    ...p,
+    key: p.key.toBase58(),
+  };
+}
+
 export interface TokenConfig {
   symbol: string;
   mint_key: PublicKey;
@@ -54,11 +74,16 @@ export interface GroupConfig {
   merps_program_id: PublicKey;
   serum_program_id: PublicKey;
   oracles: OracleConfig[];
+  perp_markets: PerpMarketConfig[];
   tokens: TokenConfig[];
 }
 
 export function getOracleBySymbol(group: GroupConfig, symbol: string) {
   return group.oracles.find((o) => o.symbol === symbol);
+}
+
+export function getPerpMarketByBaseSymbol(group: GroupConfig, symbol: string) {
+  return group.perp_markets.find((p) => p.base_symbol === symbol);
 }
 
 function groupConfigFromJson(j: any) {
@@ -67,7 +92,8 @@ function groupConfigFromJson(j: any) {
     key: new PublicKey(j.key),
     merps_program_id: new PublicKey(j.merps_program_id),
     serum_program_id: new PublicKey(j.serum_program_id),
-    oracles: j.oracles.map((t) => oracleConfigFromJson(t)),
+    oracles: j.oracles.map((o) => oracleConfigFromJson(o)),
+    perp_markets: j.perp_markets.map((p) => perpMarketConfigFromJson(p)),
     tokens: j.tokens.map((t) => tokenConfigFromJson(t)),
   } as GroupConfig;
 }
@@ -78,7 +104,8 @@ function groupConfigToJson(g: GroupConfig): any {
     key: g.key.toBase58(),
     merps_program_id: g.merps_program_id.toBase58(),
     serum_program_id: g.serum_program_id.toBase58(),
-    oracles: g.oracles.map((t) => oracleConfigToJson(t)),
+    oracles: g.oracles.map((o) => oracleConfigToJson(o)),
+    perp_markets: g.perp_markets.map((p) => perpMarketConfigToJson(p)),
     tokens: g.tokens.map((t) => tokenConfigToJson(t)),
   };
 }
