@@ -29,7 +29,7 @@ import {
   MerpsCacheLayout,
   MerpsAccountLayout,
   RootBank,
-  PerpMarket,
+  // PerpMarket,
   StubOracleLayout,
   PerpMarketLayout,
   PerpBookSizeLayout,
@@ -916,7 +916,7 @@ export class MerpsClient {
       },
     };
 
-    const merpsAccounts = await this.getAllMerpsAccounts(merpsGroup, [filter]);
+  //   const merpsAccounts = await this.getAllMerpsAccounts(merpsGroup, [filter]);
 
     const sign = pnl.gt(ZERO_I80F48) ? 1 : -1;
 
