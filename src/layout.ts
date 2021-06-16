@@ -222,23 +222,24 @@ MerpsInstructionLayout.addVariant(
   'AddPerpMarket',
 );
 MerpsInstructionLayout.addVariant(
-  12,
+  13,
   struct([u64('client_order_id')]),
   'CancelPerpOrderByClientId',
 );
 MerpsInstructionLayout.addVariant(
-  13,
+  14,
   struct([i128('order_id'), sideLayout('side')]),
   'CancelPerpOrder',
 );
-MerpsInstructionLayout.addVariant(14, struct([u64('limit')]), 'ConsumeEvents');
-MerpsInstructionLayout.addVariant(15, struct([]), 'CachePerpMarkets');
-MerpsInstructionLayout.addVariant(16, struct([]), 'UpdateFunding');
+MerpsInstructionLayout.addVariant(15, struct([u64('limit')]), 'ConsumeEvents');
+MerpsInstructionLayout.addVariant(16, struct([]), 'CachePerpMarkets');
+MerpsInstructionLayout.addVariant(17, struct([]), 'UpdateFunding');
 MerpsInstructionLayout.addVariant(
-  17,
+  18,
   struct([I80F48Layout('price')]),
   'SetOracle',
 );
+MerpsInstructionLayout.addVariant(19, struct([]), 'SettleFunds');
 MerpsInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
 
 const instructionMaxSpan = Math.max(
@@ -717,9 +718,7 @@ export class RootBank {
     Object.assign(this, decoded);
   }
 
-  async loadNodeBanks(
-    connection: Connection,
-  ): Promise<(NodeBank | undefined)[]> {
+  async loadNodeBanks(connection: Connection): Promise<NodeBank[]> {
     const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
 
     for (let i = 0; i < this.nodeBanks.length; i++) {
@@ -732,12 +731,11 @@ export class RootBank {
 
     const accounts = await Promise.all(promises);
 
-    return accounts.map((acc, i) => {
-      if (acc && acc.data) {
-        const decoded = NodeBankLayout.decode(acc.data);
+    return accounts
+      .filter((acc) => acc && acc.data)
+      .map((acc, i) => {
+        const decoded = NodeBankLayout.decode(acc?.data);
         return new NodeBank(this.nodeBanks[i], decoded);
-      }
-      return undefined;
-    });
+      });
   }
 }

@@ -1,6 +1,5 @@
 import { OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
-import BN from 'bn.js';
 import { I80F48 } from './fixednum';
 import {
   MAX_PAIRS,
@@ -49,7 +48,7 @@ export default class MerpsAccount {
 
   async loadOpenOrders(
     connection: Connection,
-    dexProgramId: PublicKey,
+    serumDexPk: PublicKey,
   ): Promise<(OpenOrders | undefined)[]> {
     const promises: Promise<OpenOrders | undefined>[] = [];
 
@@ -58,7 +57,7 @@ export default class MerpsAccount {
         promises.push(promiseUndef());
       } else {
         promises.push(
-          OpenOrders.load(connection, this.spotOpenOrders[i], dexProgramId),
+          OpenOrders.load(connection, this.spotOpenOrders[i], serumDexPk),
         );
       }
     }

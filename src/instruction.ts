@@ -494,3 +494,26 @@ export function makeAddOracleInstruction(
     programId,
   });
 }
+
+export function makeSetOracleInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  oraclePk: PublicKey,
+  adminPk: PublicKey,
+  price: I80F48,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: oraclePk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMerpsInstruction({
+    SetOracle: { price: price.getInternalValue() },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

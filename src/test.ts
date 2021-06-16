@@ -17,9 +17,9 @@ function assertEq(msg, a, b) {
 }
 
 const merpsProgramId = new PublicKey(
-  'Hc12EyQQ3XVNEE5URg7XjjtZA8sbUPnMeT1CXGbwN6ei',
+  'BDNBBo2xcwudqDWzMdbxj4zvGSBGkvo8Ua5PkvW8MML5',
 );
-const dexProgramId = new PublicKey(
+const serumDexPk = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
 );
 const quoteMintKey = new PublicKey(
@@ -39,27 +39,24 @@ const connection = new Connection(
 
 const payer = new Account(
   JSON.parse(
-    fs.readFileSync(
-      os.homedir() + '/my-solana-wallet/my-keypair.json',
-      'utf-8',
-    ),
+    fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
   ),
 );
 const payerQuoteTokenAcc = new PublicKey(
-  '7f2xJqihAgdWVxqR4jLa5jxc7a4QxverYLntkc6FCYq',
+  '2nWRemiv1iiq1SpE7vZMv6ezUwDiU79DFc6hmdZMHsop',
 );
 const payerBtcTokenAcc = new PublicKey(
-  'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
+  'C7E8sNvvGp1oKspjjHnr4PszqcAEcQoKkSyVaz15K8DY',
 );
 
 async function test() {
   console.log('= starting =');
   const client = new MerpsClient(connection, merpsProgramId);
   const groupKey = await client.initMerpsGroup(
-    payer,
     quoteMintKey,
-    dexProgramId,
+    serumDexPk,
     500,
+    payer,
   );
   console.log('= merps group created =');
   let merpsGroup = await client.getMerpsGroup(groupKey);
@@ -70,14 +67,14 @@ async function test() {
   );
   assertEq('admin', merpsGroup.admin.toBase58(), payer.publicKey.toBase58());
   assertEq(
-    'dexProgramId',
+    'serumDexPk',
     merpsGroup.dexProgramId.toBase58(),
-    dexProgramId.toBase58(),
+    serumDexPk.toBase58(),
   );
 
   const merpsAccountPk = await client.initMerpsAccount(merpsGroup, payer);
   await sleep(5000); // devnet rate limits
-  let merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
+  let merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
 
   await sleep(5000); // devnet rate limits
   let rootBanks = await merpsGroup.loadRootBanks(client.connection);
@@ -109,6 +106,12 @@ async function test() {
     console.log('= adding oracle =');
     btcOraclePk = await Test.createOracle(connection, merpsProgramId, payer);
     await client.addOracle(merpsGroup, btcOraclePk, payer);
+    await client.setOracle(
+      merpsGroup,
+      btcOraclePk,
+      payer,
+      I80F48.fromString('40000'),
+    );
   } catch (err) {
     console.log('Error on adding oracle', `${err}`);
   }
@@ -137,13 +140,13 @@ async function test() {
 
   // run keeper fns
   const cacheRootBanksTxID = await client.cacheRootBanks(
-    payer,
     merpsGroup.publicKey,
     merpsGroup.merpsCache,
     [
       merpsGroup.tokens[marketIndex].rootBank,
       merpsGroup.tokens[QUOTE_INDEX].rootBank,
     ],
+    payer,
   );
   await client.cachePrices(
     merpsGroup.publicKey,
@@ -175,13 +178,13 @@ async function test() {
   );
   sleep(5000);
 
-  await client.updateRootBanks(
+  await client.updateRootBank(
     merpsGroup.publicKey,
     btcRootBank.publicKey,
     filteredBtcNodeBanks.map((bank) => bank!.publicKey),
     payer,
   );
-  await client.updateRootBanks(
+  await client.updateRootBank(
     merpsGroup.publicKey,
     usdcRootBank.publicKey,
     filteredQuoteNodeBanks.map((bank) => bank!.publicKey),
@@ -189,12 +192,12 @@ async function test() {
   );
 
   await sleep(5000); // devnet rate limits
-  merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
+  merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
   const btcSpotMarket = await Market.load(
     connection,
     btcUsdSpotMarket,
     {},
-    dexProgramId,
+    serumDexPk,
   );
 
   try {
@@ -206,7 +209,7 @@ async function test() {
       btcSpotMarket,
       payer,
       'buy',
-      40000, // price
+      30000, // price
       0.0001, // size
       'limit',
     );
@@ -226,6 +229,19 @@ async function test() {
     0.5, // withdraw amount
     true, // allow borrow
   );
+
+  await sleep(5000);
+  merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
+  console.log('open orders accounts', merpsAccount.spotOpenOrdersAccounts);
+
+  console.log('= cancel order =');
+  // await client.cancelSpotOrder(
+  //   merpsGroup,
+  //   merpsAccount,
+  //   payer,
+  //   btcSpotMarket,
+  //   openOrdersAccounts[0],
+  // );
 }
 
 test();

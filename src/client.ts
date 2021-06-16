@@ -29,6 +29,7 @@ import {
   MerpsAccountLayout,
   RootBank,
   PerpMarket,
+  StubOracleLayout,
 } from './layout';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
@@ -43,6 +44,7 @@ import {
   makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
   makePlaceSpotOrderInstruction,
+  makeSetOracleInstruction,
   makeSettleFundsInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
@@ -114,7 +116,7 @@ export class MerpsClient {
       { skipPreflight: true },
     );
 
-    console.log('Started awaiting confirmation for', txid);
+  console.log('Started awaiting confirmation for', txid);
     let done = false;
     (async () => {
       while (!done && getUnixTs() - startTime < timeout / 1000) {
@@ -172,10 +174,10 @@ export class MerpsClient {
   }
 
   async initMerpsGroup(
-    payer: Account,
     quoteMint: PublicKey,
     dexProgram: PublicKey,
     validInterval: number,
+    payer: Account,
   ): Promise<PublicKey> {
     const accountInstruction = await createAccountInstruction(
       this.connection,
@@ -383,10 +385,10 @@ export class MerpsClient {
 
   // Keeper functions
   async cacheRootBanks(
-    payer: Account,
     merpsGroup: PublicKey,
     merpsCache: PublicKey,
     rootBanks: PublicKey[],
+    payer: Account,
   ): Promise<TransactionSignature> {
     const cacheRootBanksInstruction = makeCacheRootBankInstruction(
       this.programId,
@@ -420,7 +422,7 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
-  async updateRootBanks(
+  async updateRootBank(
     merpsGroup: PublicKey,
     rootBank: PublicKey,
     nodeBanks: PublicKey[],
@@ -475,6 +477,27 @@ export class MerpsClient {
       merpsGroup.publicKey,
       oracle,
       admin.publicKey,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async setOracle(
+    merpsGroup: MerpsGroup,
+    oracle: PublicKey,
+    admin: Account,
+    price: I80F48,
+  ): Promise<TransactionSignature> {
+    const instruction = makeSetOracleInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      oracle,
+      admin.publicKey,
+      price,
     );
 
     const transaction = new Transaction();
@@ -881,5 +904,29 @@ export class MerpsClient {
     }
 
     return merpsAccounts;
+  }
+
+  async addStubOracle(merpsGroupPk: PublicKey, admin: Account) {
+    const createOracleAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      StubOracleLayout.span,
+      this.programId,
+    );
+
+    const instruction = makeAddOracleInstruction(
+      this.programId,
+      merpsGroupPk,
+      createOracleAccountInstruction.account.publicKey,
+      admin.publicKey,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(createOracleAccountInstruction.instruction);
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, admin, [
+      createOracleAccountInstruction.account,
+    ]);
   }
 }
