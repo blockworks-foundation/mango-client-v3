@@ -1,6 +1,7 @@
 import BN from 'bn.js';
 import Big from 'big.js';
 
+// TODO - this whole class is inefficient; consider optimizing
 export class I80F48 {
   /**
   This is represented by a 128 bit signed integer underneath
@@ -19,6 +20,7 @@ export class I80F48 {
   binaryLayout: string;
 
   constructor(data: BN) {
+    // TODO why is this calculated here? should just be static part of the class
     this.maxValue = new BN(2)
       .pow(new BN(I80F48.MAX_SIZE))
       .div(new BN(2))
@@ -27,6 +29,7 @@ export class I80F48 {
     if (data.lt(this.minValue) || data.gt(this.maxValue)) {
       throw new Error('Number out of range');
     }
+
     this.data = data;
     this.binaryLayout = data
       .toTwos(I80F48.MAX_SIZE)
@@ -41,6 +44,12 @@ export class I80F48 {
     const initialValue = new Big(x).times(multiplier);
     const fixedPointValue = new BN(initialValue.round().toFixed());
     return new I80F48(fixedPointValue);
+  }
+  static fromI64(x: BN): I80F48 {
+    return this.fromString(x.toString());
+  }
+  static fromU64(x: BN): I80F48 {
+    return this.fromString(x.toString());
   }
   toString(): string {
     const divider = new Big(2).pow(I80F48.FRACTIONS);
@@ -98,5 +107,26 @@ export class I80F48 {
       .round()
       .toFixed();
     return new I80F48(new BN(result));
+  }
+
+  gt(x: I80F48): boolean {
+    return this.data.gt(x.getInternalValue());
+  }
+  lt(x: I80F48): boolean {
+    return this.data.lt(x.getInternalValue());
+  }
+  gte(x: I80F48): boolean {
+    return this.data.gte(x.getInternalValue());
+  }
+  lte(x: I80F48): boolean {
+    return this.data.lte(x.getInternalValue());
+  }
+  eq(x: I80F48): boolean {
+    // TODO make sure this works when they're diff signs or 0
+    return this.data.eq(x.getInternalValue());
+  }
+  cmp(x: I80F48): -1 | 0 | 1 {
+    // TODO make sure this works when they're diff signs or 0
+    return this.data.cmp(x.getInternalValue());
   }
 }
