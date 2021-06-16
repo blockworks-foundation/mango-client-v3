@@ -12,7 +12,7 @@
     "url": "https://blockworks.foundation"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=16"
   },
   "license": "MIT",
   "scripts": {
