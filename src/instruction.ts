@@ -1,6 +1,7 @@
 import {
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
+  SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from '@solana/web3.js';
 import { encodeMerpsInstruction } from './layout';
@@ -333,6 +334,159 @@ export function makeAddSpotMarketInstruction(
       initLeverage: initLeverage.getInternalValue(),
     },
   });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeAddToBasketInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  marketIndex: number,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+  ];
+
+  const data = encodeMerpsInstruction({
+    AddToBasket: {
+      marketIndex: new BN(marketIndex),
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makePlaceSpotOrderInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  merpsCachePk: PublicKey,
+  serumDexPk: PublicKey,
+  spotMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  requestQueuePk: PublicKey,
+  eventQueuePk: PublicKey,
+  spotMktBaseVaultPk: PublicKey,
+  spotMktQuoteVaultPk: PublicKey,
+  baseRootBankPk: PublicKey,
+  baseNodeBankPk: PublicKey,
+  quoteRootBankPk: PublicKey,
+  quoteNodeBankPk: PublicKey,
+  quoteVaultPk: PublicKey,
+  baseVaultPk: PublicKey,
+  signerPk: PublicKey,
+  dexSignerPk: PublicKey,
+  openOrders: PublicKey[],
+
+  side: 'buy' | 'sell',
+  limitPrice: BN,
+  maxBaseQuantity: BN,
+  maxQuoteQuantity: BN,
+  selfTradeBehavior: string,
+  orderType?: 'limit' | 'ioc' | 'postOnly',
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: serumDexPk },
+    { isSigner: false, isWritable: true, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: requestQueuePk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    { isSigner: false, isWritable: true, pubkey: spotMktBaseVaultPk },
+    { isSigner: false, isWritable: true, pubkey: spotMktQuoteVaultPk },
+    { isSigner: false, isWritable: false, pubkey: baseRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
+    { isSigner: false, isWritable: true, pubkey: baseVaultPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
+    { isSigner: false, isWritable: false, pubkey: dexSignerPk },
+    ...openOrders.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMerpsInstruction({
+    PlaceSpotOrder: {
+      side,
+      limitPrice,
+      maxBaseQuantity,
+      maxQuoteQuantity,
+      selfTradeBehavior,
+      orderType,
+      limit: 65535,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeUpdateRootBankInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBanks: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: rootBankPk },
+    ...nodeBanks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMerpsInstruction({
+    UpdateRootBank: {},
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeAddOracleInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  oraclePk: PublicKey,
+  adminPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: oraclePk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMerpsInstruction({ AddOracle: {} });
 
   return new TransactionInstruction({
     keys,

@@ -51,21 +51,21 @@ describe('fixednumTests', async () => {
       ).to.equal('-170141183460469231731687303715884105728');
     });
     it('should create arbitrary values', async () => {
-      expect(
-        I80F48.fromString('0').getInternalValue().toString().toString(),
-      ).to.equal('0');
-      expect(
-        I80F48.fromString('1').getInternalValue().toString().toString(),
-      ).to.equal('281474976710656');
-      expect(
-        I80F48.fromString('-1').getInternalValue().toString().toString(),
-      ).to.equal('-281474976710656');
-      expect(
-        I80F48.fromString('1.25').getInternalValue().toString().toString(),
-      ).to.equal('351843720888320');
-      expect(
-        I80F48.fromString('-1.25').getInternalValue().toString().toString(),
-      ).to.equal('-351843720888320');
+      expect(I80F48.fromString('0').getInternalValue().toString()).to.equal(
+        '0',
+      );
+      expect(I80F48.fromString('1').getInternalValue().toString()).to.equal(
+        '281474976710656',
+      );
+      expect(I80F48.fromString('-1').getInternalValue().toString()).to.equal(
+        '-281474976710656',
+      );
+      expect(I80F48.fromString('1.25').getInternalValue().toString()).to.equal(
+        '351843720888320',
+      );
+      expect(I80F48.fromString('-1.25').getInternalValue().toString()).to.equal(
+        '-351843720888320',
+      );
     });
     it('should fail creating a (max number + 1)', async () => {
       expect(function () {

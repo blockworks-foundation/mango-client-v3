@@ -9,6 +9,7 @@ import {
   SpotMarketInfo,
   PerpMarketInfo,
   NodeBank,
+  PerpMarket,
 } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 
@@ -38,12 +39,21 @@ export default class MerpsGroup {
   }
 
   getSpotMarketIndex(spotMarket: Market): number {
-    for (let i = 0; i < this.spotMarkets.length; i++) {
+    for (let i = 0; i < this.numOracles; i++) {
       if (this.spotMarkets[i].spotMarket.equals(spotMarket.publicKey)) {
         return i;
       }
     }
     throw new Error('This Market does not belong to this MerpsGroup');
+  }
+
+  getPerpMarketIndex(perpMarket: PerpMarket): number {
+    for (let i = 0; i < this.numOracles; i++) {
+      if (this.perpMarkets[i].perpMarket.equals(perpMarket.publicKey)) {
+        return i;
+      }
+    }
+    throw new Error('This PerpMarket does not belong to this MerpsGroup');
   }
 
   getTokenIndex(token: PublicKey): number {

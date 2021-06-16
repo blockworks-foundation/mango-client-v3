@@ -6,9 +6,7 @@ import {
   Transaction,
   TransactionConfirmationStatus,
   TransactionSignature,
-  TransactionInstruction,
   // AccountInfo,
-  SYSVAR_RENT_PUBKEY,
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import {
@@ -21,28 +19,32 @@ import {
   nativeToUi,
   uiToNative,
   zeroKey,
+  getFilteredProgramAccounts,
 } from './utils';
 import {
   MerpsGroupLayout,
-  encodeMerpsInstruction,
   NodeBankLayout,
   RootBankLayout,
   MerpsCacheLayout,
   MerpsAccountLayout,
   RootBank,
+  PerpMarket,
 } from './layout';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
+  makeAddOracleInstruction,
   makeAddSpotMarketInstruction,
+  makeAddToBasketInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
   makeCancelOrderInstruction,
   makeDepositInstruction,
   makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
+  makePlaceSpotOrderInstruction,
   makeSettleFundsInstruction,
+  makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
 } from './instruction';
 import {
@@ -424,25 +426,12 @@ export class MerpsClient {
     nodeBanks: PublicKey[],
     payer: Account,
   ): Promise<TransactionSignature> {
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup },
-      { isSigner: false, isWritable: true, pubkey: rootBank },
-      ...nodeBanks.map((pubkey) => ({
-        isSigner: false,
-        isWritable: true,
-        pubkey,
-      })),
-    ];
-
-    const data = encodeMerpsInstruction({
-      UpdateRootBank: {},
-    });
-
-    const updateRootBanksInstruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const updateRootBanksInstruction = makeUpdateRootBankInstruction(
+      this.programId,
+      merpsGroup,
+      rootBank,
+      nodeBanks,
+    );
 
     const transaction = new Transaction();
     transaction.add(updateRootBanksInstruction);
@@ -481,18 +470,12 @@ export class MerpsClient {
     oracle: PublicKey,
     admin: Account,
   ): Promise<TransactionSignature> {
-    const keys = [
-      { isSigner: false, isWritable: true, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: false, pubkey: oracle },
-      { isSigner: true, isWritable: false, pubkey: admin.publicKey },
-    ];
-    const data = encodeMerpsInstruction({ AddOracle: {} });
-
-    const instruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const instruction = makeAddOracleInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      oracle,
+      admin.publicKey,
+    );
 
     const transaction = new Transaction();
     transaction.add(instruction);
@@ -570,23 +553,13 @@ export class MerpsClient {
 
     marketIndex: number,
   ): Promise<TransactionSignature> {
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
-      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-    ];
-
-    const data = encodeMerpsInstruction({
-      AddToBasket: {
-        marketIndex: new BN(marketIndex),
-      },
-    });
-
-    const instruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+    const instruction = makeAddToBasketInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      merpsAccount.publicKey,
+      owner.publicKey,
+      marketIndex,
+    );
 
     const transaction = new Transaction();
     transaction.add(instruction);
@@ -635,6 +608,9 @@ export class MerpsClient {
     const { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank } =
       await merpsGroup.loadBanksForSpotMarket(this.connection, spotMarketIndex);
 
+    if (!baseRootBank || !baseNodeBank || !quoteRootBank || !quoteNodeBank)
+      throw new Error('Empty banks');
+
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
@@ -680,77 +656,37 @@ export class MerpsClient {
       spotMarket.programId,
     );
 
-    const keys = [
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.publicKey },
-      { isSigner: false, isWritable: true, pubkey: merpsAccount.publicKey },
-      { isSigner: true, isWritable: false, pubkey: owner.publicKey },
-      { isSigner: false, isWritable: false, pubkey: merpsCache },
-      { isSigner: false, isWritable: false, pubkey: spotMarket.programId },
-      { isSigner: false, isWritable: true, pubkey: spotMarket.publicKey },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].bids,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].asks,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].requestQueue,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].eventQueue,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].baseVault,
-      },
-      {
-        isSigner: false,
-        isWritable: true,
-        pubkey: spotMarket['_decoded'].quoteVault,
-      },
-      { isSigner: false, isWritable: false, pubkey: baseRootBank?.publicKey },
-      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.publicKey },
-      { isSigner: false, isWritable: true, pubkey: quoteRootBank?.publicKey },
-      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.publicKey },
-      { isSigner: false, isWritable: true, pubkey: quoteNodeBank?.vault },
-      { isSigner: false, isWritable: true, pubkey: baseNodeBank?.vault },
-      { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
-      { isSigner: false, isWritable: false, pubkey: merpsGroup.signerKey },
-      { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
-      { isSigner: false, isWritable: false, pubkey: dexSigner },
-      ...openOrdersKeys.map((pubkey) => ({
-        isSigner: false,
-        isWritable: true,
-        pubkey,
-      })),
-    ];
+    const placeOrderInstruction = makePlaceSpotOrderInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      merpsAccount.publicKey,
+      owner.publicKey,
+      merpsCache,
+      spotMarket.programId,
+      spotMarket.publicKey,
+      spotMarket['_decoded'].bids,
+      spotMarket['_decoded'].asks,
+      spotMarket['_decoded'].requestQueue,
+      spotMarket['_decoded'].eventQueue,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      baseRootBank.publicKey,
+      baseNodeBank.publicKey,
+      quoteRootBank.publicKey,
+      quoteNodeBank.publicKey,
+      quoteNodeBank.vault,
+      baseNodeBank.vault,
+      merpsGroup.signerKey,
+      dexSigner,
+      openOrdersKeys,
 
-    const data = encodeMerpsInstruction({
-      PlaceSpotOrder: {
-        side,
-        limitPrice,
-        maxBaseQuantity,
-        maxQuoteQuantity,
-        selfTradeBehavior,
-        orderType,
-        limit: 65535,
-      },
-    });
-
-    const placeOrderInstruction = new TransactionInstruction({
-      keys,
-      data,
-      programId: this.programId,
-    });
+      side,
+      limitPrice,
+      maxBaseQuantity,
+      maxQuoteQuantity,
+      selfTradeBehavior,
+      orderType,
+    );
     transaction.add(placeOrderInstruction);
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
@@ -832,5 +768,118 @@ export class MerpsClient {
 
     const additionalSigners = [];
     return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  /**
+   * Automatically fetch MerpsAccounts for this PerpMarket
+   * Pick enough MerpsAccounts that have opposite sign and send them in to get settled
+   */
+  async settlePnl(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    perpMarket: PerpMarket,
+    owner: Account,
+  ) {
+    // fetch all MerpsAccounts filtered for having this perp market in basket
+    const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
+
+    const filter = {
+      memcmp: {
+        offset: MerpsAccountLayout.offsetOf('inBasket') + marketIndex,
+        bytes: '2', // TODO - check if this actually works; needs to be base58 encoding of true byte
+      },
+    };
+
+    const merpsAccounts = await this.getAllMerpsAccounts(merpsGroup, [filter]);
+
+    throw new Error('Not Implemented');
+
+    // Calculate the profit or loss per market
+  }
+
+  async getAllMerpsAccounts(
+    merpsGroup: MerpsGroup,
+    filters?: [any],
+  ): Promise<MerpsAccount[]> {
+    const accountFilters = [
+      {
+        memcmp: {
+          offset: MerpsAccountLayout.offsetOf('merpsGroup'),
+          bytes: merpsGroup.publicKey.toBase58(),
+        },
+      },
+      {
+        dataSize: MerpsAccountLayout.span,
+      },
+    ];
+
+    if (filters && filters.length) {
+      accountFilters.push(...filters);
+    }
+
+    const merpsAccountProms = getFilteredProgramAccounts(
+      this.connection,
+      this.programId,
+      accountFilters,
+    ).then((accounts) =>
+      accounts.map(
+        ({ publicKey, accountInfo }) =>
+          new MerpsAccount(
+            publicKey,
+            MerpsAccountLayout.decode(
+              accountInfo == null ? undefined : accountInfo.data,
+            ),
+          ),
+      ),
+    );
+
+    const ordersFilters = [
+      {
+        memcmp: {
+          offset: OpenOrders.getLayout(merpsGroup.dexProgramId).offsetOf(
+            'owner',
+          ),
+          bytes: merpsGroup.signerKey.toBase58(),
+        },
+      },
+      {
+        dataSize: OpenOrders.getLayout(merpsGroup.dexProgramId).span,
+      },
+    ];
+
+    const openOrdersProms = getFilteredProgramAccounts(
+      this.connection,
+      merpsGroup.dexProgramId,
+      ordersFilters,
+    ).then((accounts) =>
+      accounts.map(({ publicKey, accountInfo }) =>
+        OpenOrders.fromAccountInfo(
+          publicKey,
+          accountInfo,
+          merpsGroup.dexProgramId,
+        ),
+      ),
+    );
+
+    const merpsAccounts = await merpsAccountProms;
+    const openOrders = await openOrdersProms;
+
+    const pkToOpenOrdersAccount = {};
+    openOrders.forEach(
+      (openOrdersAccount) =>
+        (pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
+          openOrdersAccount),
+    );
+
+    for (const ma of merpsAccounts) {
+      for (let i = 0; i < ma.spotOpenOrders.length; i++) {
+        if (ma.spotOpenOrders[i].toBase58() in pkToOpenOrdersAccount) {
+          ma.spotOpenOrdersAccounts[i] =
+            pkToOpenOrdersAccount[ma.spotOpenOrders[i].toBase58()];
+        }
+      }
+    }
+
+    return merpsAccounts;
   }
 }

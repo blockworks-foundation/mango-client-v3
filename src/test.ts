@@ -8,6 +8,7 @@ import { sleep } from './utils';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import * as Test from '../test/utils';
+import { u64 } from '@solana/spl-token';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -16,7 +17,7 @@ function assertEq(msg, a, b) {
 }
 
 const merpsProgramId = new PublicKey(
-  'Hc12EyQQ3XVNEE5URg7XjjtZA8sbUPnMeT1CXGbwN6ei',
+  '8XywrZebqGoRTYgK1zLoESRdPx6gviRQe6hMonQZbt7M',
 );
 const dexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -25,7 +26,9 @@ const quoteMintKey = new PublicKey(
   'EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK',
 );
 const btcMint = new PublicKey('bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP');
-
+const btcFaucetPk = new PublicKey(
+  '454w2aqqmu3tzY3dgCh8gCk6jwQcxdo6ojvqj2JcLJqh',
+);
 const btcUsdSpotMarket = new PublicKey(
   'E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9',
 );
@@ -36,18 +39,15 @@ const connection = new Connection(
 
 const payer = new Account(
   JSON.parse(
-    fs.readFileSync(
-      os.homedir() + '/my-solana-wallet/my-keypair.json',
-      'utf-8',
-    ),
+    fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
   ),
 );
 const payerQuoteTokenAcc = new PublicKey(
-  '7f2xJqihAgdWVxqR4jLa5jxc7a4QxverYLntkc6FCYq',
+  '2nWRemiv1iiq1SpE7vZMv6ezUwDiU79DFc6hmdZMHsop',
 );
-// const payerBtcTokenAcc = new PublicKey(
-//   'FHfBgNkxVyDYUkJHYExRxCVnQtk7gVRU9ycQSyvQinJm',
-// );
+const payerBtcTokenAcc = new PublicKey(
+  'C7E8sNvvGp1oKspjjHnr4PszqcAEcQoKkSyVaz15K8DY',
+);
 
 async function test() {
   console.log('= starting =');
@@ -95,7 +95,7 @@ async function test() {
       usdcRootBank.nodeBanks?.[0],
       filteredQuoteNodeBanks[0].vault,
       payerQuoteTokenAcc,
-      10,
+      1000, // quantity
     );
   } catch (err) {
     console.log('Error on deposit', `${err}`);
@@ -159,6 +159,19 @@ async function test() {
   const filteredBtcNodeBanks = btcNodeBanks.filter((nodeBank) => !!nodeBank);
   if (!filteredBtcNodeBanks[0]) throw new Error('node banks empty');
 
+  console.log('= airdropping in btc vault =');
+  const multiplier = Math.pow(10, 6);
+  const btcAmount = 5 * multiplier;
+  await Test.airdropTokens(
+    connection,
+    payer,
+    btcFaucetPk,
+    filteredBtcNodeBanks[0].vault,
+    btcMint,
+    new u64(btcAmount),
+  );
+  sleep(5000);
+
   await client.updateRootBanks(
     merpsGroup.publicKey,
     btcRootBank.publicKey,
@@ -181,30 +194,35 @@ async function test() {
     dexProgramId,
   );
 
-  console.log('placing spot order');
-  await client.placeSpotOrder(
+  try {
+    console.log('= placing spot order =');
+    await client.placeSpotOrder(
+      merpsGroup,
+      merpsAccount,
+      merpsGroup.merpsCache,
+      btcSpotMarket,
+      payer,
+      'buy',
+      40000, // price
+      0.0001, // size
+      'limit',
+    );
+  } catch (e) {
+    console.log('Error placing order', `${e}`);
+  }
+
+  console.log('= borrow and withdraw =');
+  await client.withdraw(
     merpsGroup,
     merpsAccount,
-    merpsGroup.merpsCache,
-    btcSpotMarket,
     payer,
-    'buy',
-    40000, // price
-    1, // size
-    'limit',
+    merpsGroup.tokens[marketIndex].rootBank,
+    btcRootBank.nodeBanks?.[0],
+    filteredBtcNodeBanks[0].vault,
+    payerBtcTokenAcc,
+    0.5, // withdraw amount
+    true, // allow borrow
   );
-
-  // await client.withdraw(
-  //   merpsGroup,
-  //   merpsAccount,
-  //   payer,
-  //   merpsGroup.tokens[marketIndex].rootBank,
-  //   btcRootBank.nodeBanks?.[0],
-  //   filteredBtcNodeBanks[0].vault,
-  //   payerBtcTokenAcc,
-  //   5,
-  //   true, // allow borrow
-  // );
 }
 
 test();

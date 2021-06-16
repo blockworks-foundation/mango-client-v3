@@ -1,8 +1,7 @@
 import { OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
-import BN from 'bn.js';
 import { I80F48 } from './fixednum';
-import { MetaData, PerpOpenOrders, RootBank } from './layout';
+import { MAX_PAIRS, MetaData, PerpAccount, RootBank } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 
 export default class MerpsAccount {
@@ -16,15 +15,14 @@ export default class MerpsAccount {
   borrows!: I80F48[];
 
   spotOpenOrders!: PublicKey[];
-  spotOpenOrdersAccounts!: (OpenOrders | undefined)[];
+  spotOpenOrdersAccounts: (OpenOrders | undefined)[];
 
-  basePositions!: BN[];
-  quotePositions!: BN[];
-  fundingSettled!: I80F48[];
-  perpOpenOrders!: PerpOpenOrders[];
+  perpAccounts!: PerpAccount[];
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
+    this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);
+
     Object.assign(this, decoded);
   }
 
