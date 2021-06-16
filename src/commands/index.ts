@@ -1,4 +1,5 @@
 import initGroup from './initGroup';
-import addStubOracle from './addOracle';
+import addStubOracle from './addStubOracle';
+import setStubOracle from './setStubOracle';
 
-export { addStubOracle, initGroup };
+export { addStubOracle, initGroup, setStubOracle };

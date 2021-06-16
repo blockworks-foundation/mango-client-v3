@@ -10,7 +10,7 @@ export interface OracleConfig {
 function oracleConfigFromJson(j: any) {
   return {
     ...j,
-    key: new PublicKey(j),
+    key: new PublicKey(j.key),
   };
 }
 

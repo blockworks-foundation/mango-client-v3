@@ -116,7 +116,7 @@ export class MerpsClient {
       { skipPreflight: true },
     );
 
-  console.log('Started awaiting confirmation for', txid);
+    console.log('Started awaiting confirmation for', txid);
     let done = false;
     (async () => {
       while (!done && getUnixTs() - startTime < timeout / 1000) {
@@ -925,8 +925,28 @@ export class MerpsClient {
     transaction.add(createOracleAccountInstruction.instruction);
     transaction.add(instruction);
 
-    return await this.sendTransaction(transaction, admin, [
-      createOracleAccountInstruction.account,
-    ]);
+    const additionalSigners = [createOracleAccountInstruction.account];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async setStubOracle(
+    merpsGroupPk: PublicKey,
+    oraclePk: PublicKey,
+    admin: Account,
+    price: number,
+  ) {
+    const instruction = makeSetOracleInstruction(
+      this.programId,
+      merpsGroupPk,
+      oraclePk,
+      admin.publicKey,
+      I80F48.fromString(price),
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 }
