@@ -23,10 +23,10 @@ describe('MerpsClient', async () => {
     it('should successfully create a MerpsGroup', async () => {
       sleep(1000); // sleeping because devnet rate limits suck
       const groupKey = await client.initMerpsGroup(
-        payer,
         Test.USDCMint,
         Test.DexProgramId,
         5,
+        payer,
       );
       const group = await client.getMerpsGroup(groupKey);
       expect(groupKey).to.not.be.undefined;
@@ -48,10 +48,10 @@ describe('MerpsClient', async () => {
 
     before(async () => {
       const groupKey = await client.initMerpsGroup(
-        payer,
         Test.USDCMint,
         Test.DexProgramId,
         5,
+        payer,
       );
       group = await client.getMerpsGroup(groupKey);
     });
@@ -62,10 +62,10 @@ describe('MerpsClient', async () => {
         .map((tokenInfo) => tokenInfo.rootBank);
 
       await client.cacheRootBanks(
-        payer,
         group.publicKey,
         group.merpsCache,
         rootBankPks,
+        payer,
       );
     });
   });
@@ -78,10 +78,10 @@ describe('MerpsClient', async () => {
 
     before(async () => {
       const groupKey = await client.initMerpsGroup(
-        payer,
         Test.USDCMint,
         Test.DexProgramId,
         5,
+        payer,
       );
       group = await client.getMerpsGroup(groupKey);
       user = await Test.createAccount(connection, 5);
