@@ -6,13 +6,11 @@ import {
   MerpsCache,
   MetaData,
   PerpAccount,
-  PerpOpenOrders,
   RootBank,
   RootBankCache,
 } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
-import markdown = Mocha.reporters.markdown;
 
 export default class MerpsAccount {
   publicKey: PublicKey;

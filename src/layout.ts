@@ -509,7 +509,7 @@ export class PerpAccount {
       liabWeight,
       this.openOrders.asksQuantity.neg(),
     );
-    let health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
+    const health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
     if (this.basePosition.gt(new BN(0))) {
       return health.sub(
         longFunding
