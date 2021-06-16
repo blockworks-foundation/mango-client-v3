@@ -272,6 +272,13 @@
   dependencies:
     "@types/yargs-parser" "*"
 
+"@types/yargs@^17.0.0":
+  version "17.0.0"
+  resolved "https://registry.yarnpkg.com/@types/yargs/-/yargs-17.0.0.tgz#32f740934eedf0a5cd19470249f317755c91f1ae"
+  integrity sha512-RS7u2X7vdXjVQs160PWY1pjLBw6GJj04utojn0KU8p2rRZR37FSzzK6XOT+KLzT/DVbDYRyezroc0LHIvM5Z2A==
+  dependencies:
+    "@types/yargs-parser" "*"
+
 "@typescript-eslint/eslint-plugin@^4.14.2":
   version "4.26.1"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/eslint-plugin/-/eslint-plugin-4.26.1.tgz#b9c7313321cb837e2bf8bebe7acc2220659e67d3"
