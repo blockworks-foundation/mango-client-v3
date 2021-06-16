@@ -8,34 +8,23 @@
   "groups": [
     {
       "cluster": "devnet",
-      "name": "merps_v1",
-      "key": "HssMcM7UoT94hABYSjUNTTJ7tmRukLW2yssXLeVgnFVH",
-      "merps_program_id": "8XywrZebqGoRTYgK1zLoESRdPx6gviRQe6hMonQZbt7M",
+      "name": "merps_test_v1",
+      "key": "Hh9xjuEWR9HfDXt9oaDbpge7ttQNHg3AR59EYazKNTHe",
+      "merps_program_id": "viQTKtBmaGvx3nugHcvijedy9ApbDowqiGYq35qAJqq",
       "serum_program_id": "DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY",
-      "oracles": [
-        {
-          "symbol": "BTC",
-          "key": "3k4hcxUYU2iaEBre44fwxL9uSxtrmAHv1iDg6wnByG8T"
-        }
-      ],
-      "perp_markets": [
-        {
-          "base_symbol": "BTC",
-          "key": "5oRQZQjLqUsBfFKhB6Jc9omVgUdp9hwHVBZjgy2QmeWe",
-          "market_index": 0
-        }
-      ],
       "tokens": [
         {
           "symbol": "USDC",
           "mint_key": "EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK",
           "decimals": 9,
-          "root_key": "CLDMdBd7AytLdcCeq2n5AQf7VGracCbH9AyfkJdg5ypR",
+          "root_key": "HYaa91bKwHYXkW4ejznkAsPdgk2mYi5rEe4BEXbxkJAr",
           "node_keys": [
-            "3pZfWTRaBNVUYjLsEMWm9cBHzeksJ5qdEiCx6VCFfBRa"
+            "4BUXUzprBxfqkmsQJ1VVoifAqag2ALXvRZt9Tk232EUv"
           ]
         }
-      ]
+      ],
+      "oracles": [],
+      "perp_markets": []
     }
   ]
 }
