@@ -88,10 +88,6 @@ export function makeTestMultiTxInstruction(
   return new TransactionInstruction({ keys, data, programId });
 }
 
-export function makePlacePerpOrderInstruction(): TransactionInstruction {
-  throw new Error('Not Implemented');
-}
-
 export function makeWithdrawInstruction(
   programId: PublicKey,
   merpsGroupPk: PublicKey,
@@ -603,6 +599,49 @@ export function makeSettlePnlInstruction(
   const data = encodeMerpsInstruction({
     AddPerpMarket: {
       marketIndex,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makePlacePerpOrderInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  adminPk: PublicKey,
+  merpsCachePk: PublicKey,
+  perpMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  eventQueuePk: PublicKey,
+  price: BN,
+  quantity: BN,
+  clientOrderId: BN,
+  side: 'bid' | 'ask',
+  orderType?: 'limit' | 'ioc' | 'postOnly',
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+  ];
+  const data = encodeMerpsInstruction({
+    PlacePerpOrder: {
+      price,
+      quantity,
+      clientOrderId,
+      side,
+      orderType,
     },
   });
 
