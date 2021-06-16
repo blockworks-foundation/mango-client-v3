@@ -31,7 +31,7 @@
     "test:lint": "eslint src"
   },
   "devDependencies": {
-    "@tsconfig/node16": "^1.0.1",
+    "@tsconfig/recommended": "^1.0.1",
     "@types/bn.js": "^4.11.6",
     "@types/chai": "^4.2.14",
     "@types/jest": "^26.0.9",
