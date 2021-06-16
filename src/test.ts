@@ -172,13 +172,13 @@ async function test() {
   );
   sleep(5000);
 
-  await client.updateRootBanks(
+  await client.updateRootBank(
     merpsGroup.publicKey,
     btcRootBank.publicKey,
     filteredBtcNodeBanks.map((bank) => bank!.publicKey),
     payer,
   );
-  await client.updateRootBanks(
+  await client.updateRootBank(
     merpsGroup.publicKey,
     usdcRootBank.publicKey,
     filteredQuoteNodeBanks.map((bank) => bank!.publicKey),

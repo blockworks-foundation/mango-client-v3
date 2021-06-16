@@ -23,12 +23,14 @@ export class Keeper {
       // TODO: Fetch ids from ids.json
       // TODO: Get cluster and keypair from env
       const merpsProgramId = new PublicKey(
-        'EBXaJhhjhRKYDRNwHUgqJhMDWGNqKwpwD3sYkXRN9Yuz',
+        '8XywrZebqGoRTYgK1zLoESRdPx6gviRQe6hMonQZbt7M',
       );
       // const dexProgramId = new PublicKey(
       //   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
       // );
-      const merpsGroupKey = new PublicKey('');
+      const merpsGroupKey = new PublicKey(
+        'kLeipzWY2EqG9jFAiPmT2szU6evrQtce9CLDBccBWgo',
+      );
       const payer = new Account(
         JSON.parse(
           fs.readFileSync(
@@ -44,13 +46,26 @@ export class Keeper {
       const client = new MerpsClient(connection, merpsProgramId);
       const merpsGroup = await client.getMerpsGroup(merpsGroupKey);
 
-      // update the MerpsCache with the RootBank
       await client.cacheRootBanks(
-        payer,
-        merpsGroupKey,
+        merpsGroup.publicKey,
         merpsGroup.merpsCache,
         [],
+        payer
       );
+
+      const rootBanks = await merpsGroup.loadRootBanks(connection);
+      rootBanks.forEach(async (rootBank) => {
+        if (rootBank) {
+          await client.updateRootBank(
+            merpsGroup.publicKey,
+            rootBank.publicKey,
+            rootBank.nodeBanks.slice(0, rootBank.numNodeBanks),
+            payer,
+          );
+        }
+      });
     }
   }
 }
+
+new Keeper().run();

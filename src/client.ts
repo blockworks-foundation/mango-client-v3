@@ -420,7 +420,7 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
-  async updateRootBanks(
+  async updateRootBank(
     merpsGroup: PublicKey,
     rootBank: PublicKey,
     nodeBanks: PublicKey[],
