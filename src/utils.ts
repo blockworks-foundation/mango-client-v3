@@ -13,8 +13,9 @@ import {
   TransactionInstruction,
   TransactionSignature,
 } from '@solana/web3.js';
-
 import { TokenInstructions } from '@project-serum/serum';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { ACCOUNT_LAYOUT } from './layout';
 
 export const zeroKey = new PublicKey(new Uint8Array(32));
 
@@ -247,4 +248,53 @@ export async function getFilteredProgramAccounts(
       },
     }),
   );
+}
+
+export function parseTokenAccountData(data: Buffer): {
+  mint: PublicKey;
+  owner: PublicKey;
+  amount: number;
+} {
+  const { mint, owner, amount } = ACCOUNT_LAYOUT.decode(data);
+  return {
+    mint: new PublicKey(mint),
+    owner: new PublicKey(owner),
+    amount,
+  };
+}
+
+export async function findLargestTokenAccountForOwner(
+  connection: Connection,
+  owner: PublicKey,
+  mint: PublicKey,
+): Promise<{
+  publicKey: PublicKey;
+  tokenAccount: { mint: PublicKey; owner: PublicKey; amount: number };
+}> {
+  const response = await connection.getTokenAccountsByOwner(
+    owner,
+    { mint, programId: TOKEN_PROGRAM_ID },
+    connection.commitment,
+  );
+  let max = -1;
+  let maxTokenAccount: null | {
+    mint: PublicKey;
+    owner: PublicKey;
+    amount: number;
+  } = null;
+  let maxPubkey: null | PublicKey = null;
+  for (const { pubkey, account } of response.value) {
+    const tokenAccount = parseTokenAccountData(account.data);
+    if (tokenAccount.amount > max) {
+      maxTokenAccount = tokenAccount;
+      max = tokenAccount.amount;
+      maxPubkey = pubkey;
+    }
+  }
+
+  if (maxPubkey && maxTokenAccount) {
+    return { publicKey: maxPubkey, tokenAccount: maxTokenAccount };
+  } else {
+    throw new Error('No accounts for this token');
+  }
 }

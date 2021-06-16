@@ -45,18 +45,11 @@ export default class MerpsAccount {
     serumDexPk: PublicKey,
   ): Promise<(OpenOrders | undefined)[]> {
     const promises: Promise<OpenOrders | undefined>[] = [];
-    console.log(
-      'length',
-      this.spotOpenOrders.length,
-      this.spotOpenOrders.map((pk) => pk.toString()),
-    );
 
     for (let i = 0; i < this.spotOpenOrders.length; i++) {
       if (this.spotOpenOrders[i].equals(zeroKey)) {
         promises.push(promiseUndef());
       } else {
-        console.log('index', i);
-
         promises.push(
           OpenOrders.load(connection, this.spotOpenOrders[i], serumDexPk),
         );

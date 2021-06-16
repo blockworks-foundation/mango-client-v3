@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import { MerpsClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { QUOTE_INDEX } from '../src/MerpsGroup';
-import { sleep } from './utils';
+import { findLargestTokenAccountForOwner, sleep } from './utils';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import * as Test from '../test/utils';
@@ -42,16 +42,20 @@ const payer = new Account(
     fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
   ),
 );
-const payerQuoteTokenAcc = new PublicKey(
-  '2nWRemiv1iiq1SpE7vZMv6ezUwDiU79DFc6hmdZMHsop',
-);
-const payerBtcTokenAcc = new PublicKey(
-  'C7E8sNvvGp1oKspjjHnr4PszqcAEcQoKkSyVaz15K8DY',
-);
 
 async function test() {
   console.log('= starting =');
   const client = new MerpsClient(connection, merpsProgramId);
+  const userQuoteTokenAcc = await findLargestTokenAccountForOwner(
+    connection,
+    payer.publicKey,
+    quoteMintKey,
+  );
+  const userBtcTokenAcc = await findLargestTokenAccountForOwner(
+    connection,
+    payer.publicKey,
+    btcMint,
+  );
   const groupKey = await client.initMerpsGroup(
     quoteMintKey,
     serumDexPk,
@@ -94,7 +98,7 @@ async function test() {
       merpsGroup.tokens[QUOTE_INDEX].rootBank,
       usdcRootBank.nodeBanks?.[0],
       filteredQuoteNodeBanks[0].vault,
-      payerQuoteTokenAcc,
+      userQuoteTokenAcc.publicKey,
       1000, // quantity
     );
   } catch (err) {
@@ -228,7 +232,7 @@ async function test() {
     merpsGroup.tokens[marketIndex].rootBank,
     btcRootBank.nodeBanks?.[0],
     filteredBtcNodeBanks[0].vault,
-    payerBtcTokenAcc,
+    userBtcTokenAcc.publicKey,
     0.5, // withdraw amount
     true, // allow borrow
   );

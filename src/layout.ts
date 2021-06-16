@@ -9,6 +9,8 @@ import {
   Structure,
   Layout,
   UInt,
+  blob,
+  nu64,
 } from 'buffer-layout';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
@@ -155,6 +157,13 @@ export function selfTradeBehaviorLayout(property) {
     property,
   );
 }
+
+export const ACCOUNT_LAYOUT = struct([
+  blob(32, 'mint'),
+  blob(32, 'owner'),
+  nu64('amount'),
+  blob(93),
+]);
 
 /**
  * Need to implement layouts for each of the structs found in state.rs
