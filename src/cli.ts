@@ -6,7 +6,12 @@ import { hideBin } from 'yargs/helpers';
 import { Options, PositionalOptions } from 'yargs';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 
-import { addStubOracle, initGroup } from './commands';
+import {
+  addPerpMarket,
+  addStubOracle,
+  initGroup,
+  setStubOracle,
+} from './commands';
 import { Cluster, Config, GroupConfig } from './config';
 
 const clusterDesc: [string, Options] = [
@@ -62,9 +67,10 @@ export function writeConfig(configPath: string, config: Config) {
   fs.writeFileSync(configPath, JSON.stringify(config.toJson(), null, 2));
 }
 
+//@ts-ignore
 yargs(hideBin(process.argv))
   .command(
-    'init_group <group> <merps_program_id> <serum_program_id> <quote_mint>',
+    'init-group <group> <merps_program_id> <serum_program_id> <quote_mint>',
     'initialize a new group',
     (y) =>
       y
@@ -110,16 +116,16 @@ yargs(hideBin(process.argv))
       );
       config.storeGroup(result);
       writeConfig(args.config as string, config);
+      process.exit(0);
     },
   )
   .command(
-    'add_oracle <group> <symbol> <mint>',
+    'add-oracle <group> <symbol>',
     'add an oracle to the group',
     (y) =>
       y
         .positional(...groupDesc)
         .positional(...symbolDesc)
-        .positional('mint', { describe: 'the base token mint', type: 'string' })
         .option('provider', {
           describe: 'oracle provider',
           default: 'stub',
@@ -146,11 +152,98 @@ yargs(hideBin(process.argv))
       );
       config.storeGroup(result);
       writeConfig(args.config as string, config);
+      process.exit(0);
     },
   )
   .command(
-    'add_perp_market <group> <symbol>',
+    'set-oracle <group> <symbol> <value>',
+    'set stub oracle to given value',
+    (y) =>
+      y
+        .positional(...groupDesc)
+        .positional(...symbolDesc)
+        .positional('value', {
+          describe: 'new oracle value is base_price * quote_unit / base_unit',
+          type: 'number',
+        })
+        .option(...clusterDesc)
+        .option(...configDesc)
+        .option(...keypairDesc),
+    async (args) => {
+      console.log('set_oracle', args);
+      const account = readKeypair(args.keypair as string);
+      const config = readConfig(args.config as string);
+      const cluster = args.cluster as Cluster;
+      const connection = openConnection(config, cluster);
+      const group = config.getGroup(
+        cluster,
+        args.group as string,
+      ) as GroupConfig;
+
+      await setStubOracle(
+        connection,
+        account,
+        group,
+        args.symbol as string,
+        args.value as number,
+      );
+      process.exit(0);
+    },
+  )
+  .command(
+    'add-perp-market <group> <symbol>',
     'add a perp market to the group',
-    (y) => y.positional(...groupDesc).positional(...symbolDesc),
-    (_args) => {},
+    (y) =>
+      y
+        .positional(...groupDesc)
+        .positional(...symbolDesc)
+        .option('maint_leverage', {
+          describe: '',
+          default: 20,
+          type: 'number',
+        })
+        .option('init_leverage', {
+          default: 10,
+          type: 'number',
+        })
+        .option('base_lot_size', {
+          default: 100,
+          type: 'number',
+        })
+        .option('quote_lot_size', {
+          default: 10,
+          type: 'number',
+        })
+        .option('max_num_events', {
+          default: 128,
+          type: 'number',
+        })
+        .option(...clusterDesc)
+        .option(...configDesc)
+        .option(...keypairDesc),
+    async (args) => {
+      console.log('add-perp-market', args);
+      const account = readKeypair(args.keypair as string);
+      const config = readConfig(args.config as string);
+      const cluster = args.cluster as Cluster;
+      const connection = openConnection(config, cluster);
+      const group = config.getGroup(
+        cluster,
+        args.group as string,
+      ) as GroupConfig;
+      const result = await addPerpMarket(
+        connection,
+        account,
+        group,
+        args.symbol as string,
+        args.maint_leverage as number,
+        args.init_leverage as number,
+        args.base_lot_size as number,
+        args.quote_lot_size as number,
+        args.max_num_events as number,
+      );
+      config.storeGroup(result);
+      writeConfig(args.config as string, config);
+      process.exit(0);
+    },
   ).argv;

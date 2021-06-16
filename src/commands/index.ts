@@ -1,4 +1,6 @@
 import initGroup from './initGroup';
-import addStubOracle from './addOracle';
+import addPerpMarket from './addPerpMarket';
+import addStubOracle from './addStubOracle';
+import setStubOracle from './setStubOracle';
 
-export { addStubOracle, initGroup };
+export { addPerpMarket, addStubOracle, initGroup, setStubOracle };

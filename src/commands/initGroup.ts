@@ -26,10 +26,10 @@ export default async function initGroup(
 
   const client = new MerpsClient(connection, merpsProgramId);
   const groupKey = await client.initMerpsGroup(
-    payer,
     quoteMint,
     serumProgramId,
     validInterval,
+    payer,
   );
   const group = await client.getMerpsGroup(groupKey);
   const banks = await group.loadRootBanks(connection);
@@ -51,6 +51,7 @@ export default async function initGroup(
     serum_program_id: serumProgramId,
     tokens: [tokenDesc],
     oracles: [],
+    perp_markets: [],
   };
   return groupDesc;
 }

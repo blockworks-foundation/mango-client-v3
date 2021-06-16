@@ -33,7 +33,10 @@ export class I80F48 {
       .toString(2, I80F48.MAX_SIZE)
       .replace(/-/g, '');
   }
-  static fromString(x: number | string): I80F48 {
+  static fromNumber(x: number): I80F48 {
+    return this.fromString(x.toString());
+  }
+  static fromString(x: string): I80F48 {
     const multiplier = new Big(2).pow(this.FRACTIONS);
     const initialValue = new Big(x).times(multiplier);
     const fixedPointValue = new BN(initialValue.round().toFixed());
