@@ -595,15 +595,6 @@ export const PerpEventQueueLayout = struct([
   u64('seqNum'),
 ]);
 
-export class PerpEventQueue {
-  publicKey: PublicKey;
-
-  constructor(publicKey: PublicKey, decoded: any) {
-    this.publicKey = publicKey;
-    Object.assign(this, decoded);
-  }
-}
-
 export const PerpBookSizeLayout = struct([
   metaDataLayout('metaData'),
   u64('bumpIndex'),
