@@ -29,6 +29,7 @@ import {
   MerpsAccountLayout,
   RootBank,
   PerpMarket,
+  StubOracleLayout,
 } from './layout';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
@@ -903,5 +904,29 @@ export class MerpsClient {
     }
 
     return merpsAccounts;
+  }
+
+  async addStubOracle(merpsGroupPk: PublicKey, admin: Account) {
+    const createOracleAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      StubOracleLayout.span,
+      this.programId,
+    );
+
+    const instruction = makeAddOracleInstruction(
+      this.programId,
+      merpsGroupPk,
+      createOracleAccountInstruction.account.publicKey,
+      admin.publicKey,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(createOracleAccountInstruction.instruction);
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, admin, [
+      createOracleAccountInstruction.account,
+    ]);
   }
 }

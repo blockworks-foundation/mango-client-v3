@@ -709,9 +709,7 @@ export class RootBank {
     Object.assign(this, decoded);
   }
 
-  async loadNodeBanks(
-    connection: Connection,
-  ): Promise<(NodeBank | undefined)[]> {
+  async loadNodeBanks(connection: Connection): Promise<NodeBank[]> {
     const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
 
     for (let i = 0; i < this.nodeBanks.length; i++) {
@@ -724,12 +722,11 @@ export class RootBank {
 
     const accounts = await Promise.all(promises);
 
-    return accounts.map((acc, i) => {
-      if (acc && acc.data) {
-        const decoded = NodeBankLayout.decode(acc.data);
+    return accounts
+      .filter((acc) => acc && acc.data)
+      .map((acc, i) => {
+        const decoded = NodeBankLayout.decode(acc?.data);
         return new NodeBank(this.nodeBanks[i], decoded);
-      }
-      return undefined;
-    });
+      });
   }
 }
