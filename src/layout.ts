@@ -322,6 +322,9 @@ export class TokenInfo {
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
+  isEmpty(): boolean {
+    return this.mint.equals(zeroKey);
+  }
 }
 
 export class TokenInfoLayout extends Structure {
@@ -359,6 +362,10 @@ export class SpotMarketInfo {
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
+  }
+
+  isEmpty(): boolean {
+    return this.spotMarket.equals(zeroKey);
   }
 }
 
@@ -402,6 +409,9 @@ export class PerpMarketInfo {
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
+  isEmpty(): boolean {
+    return this.perpMarket.equals(zeroKey);
+  }
 }
 
 export class PerpMarketInfoLayout extends Structure {
@@ -444,6 +454,76 @@ export class PerpAccount {
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
+
+  simPositionHealth(
+    perpMarketInfo: PerpMarketInfo,
+    price: I80F48,
+    assetWeight: I80F48,
+    liabWeight: I80F48,
+    baseChange: BN,
+  ): I80F48 {
+    const newBase = this.basePosition.add(baseChange);
+
+    let health = this.quotePosition.sub(
+      I80F48.fromI64(baseChange.mul(perpMarketInfo.baseLotSize)).mul(price),
+    );
+    if (newBase.gt(new BN(0))) {
+      health = health.add(
+        I80F48.fromI64(newBase.mul(perpMarketInfo.baseLotSize))
+          .mul(price)
+          .mul(assetWeight),
+      );
+    } else {
+      health = health.add(
+        I80F48.fromI64(newBase.mul(perpMarketInfo.baseLotSize))
+          .mul(price)
+          .mul(liabWeight),
+      );
+    }
+
+    return health;
+  }
+
+  getHealth(
+    perpMarketInfo: PerpMarketInfo,
+    price: I80F48,
+    assetWeight: I80F48,
+    liabWeight: I80F48,
+    longFunding: I80F48,
+    shortFunding: I80F48,
+  ): I80F48 {
+    // const bidsHealth = this.simPositionHealth();
+
+    const bidsHealth = this.simPositionHealth(
+      perpMarketInfo,
+      price,
+      assetWeight,
+      liabWeight,
+      this.openOrders.bidsQuantity,
+    );
+
+    const asksHealth = this.simPositionHealth(
+      perpMarketInfo,
+      price,
+      assetWeight,
+      liabWeight,
+      this.openOrders.asksQuantity.neg(),
+    );
+    let health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
+    if (this.basePosition.gt(new BN(0))) {
+      return health.sub(
+        longFunding
+          .sub(this.longSettledFunding)
+          .mul(I80F48.fromI64(this.basePosition)),
+      );
+    } else {
+      return health.add(
+        shortFunding
+          .sub(this.shortSettledFunding)
+          .mul(I80F48.fromI64(this.basePosition)),
+      );
+    }
+  }
 }
 
 export class PerpAccountLayout extends Structure {
@@ -473,8 +553,8 @@ export function perpAccountLayout(property = '') {
   return new PerpAccountLayout(property);
 }
 export class PerpOpenOrders {
-  totalBase!: BN;
-  totalQuote!: BN;
+  bidsQuantity!: BN;
+  asksQuantity!: BN;
   isFreeBits!: BN;
   isBidBits!: BN;
   orders!: BN[];
@@ -489,8 +569,8 @@ export class PerpOpenOrdersLayout extends Structure {
   constructor(property) {
     super(
       [
-        i64('totalBase'),
-        i64('totalQuote'),
+        i64('bidsQuantity'),
+        i64('asksQuantity'),
         u32('isFreeBits'),
         u32('isBidBits'),
         seq(i128(), MAX_TOKENS, 'orders'),
@@ -722,6 +802,18 @@ export const MerpsCacheLayout = struct([
   seq(perpMarketCacheLayout(), MAX_PAIRS, 'perpMarketCache'),
 ]);
 
+export class MerpsCache {
+  publicKey: PublicKey;
+
+  priceCache!: PriceCache[];
+  rootBankCache!: RootBankCache[];
+  perpMarketCache!: PerpMarketCache[];
+
+  constructor(publicKey: PublicKey, decoded: any) {
+    this.publicKey = publicKey;
+    Object.assign(this, decoded);
+  }
+}
 export class NodeBank {
   publicKey: PublicKey;
 

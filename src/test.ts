@@ -10,6 +10,7 @@ import { Market } from '@project-serum/serum';
 import * as Test from '../test/utils';
 import { u64 } from '@solana/spl-token';
 import { MerpsAccountLayout } from './layout';
+import BN from 'bn.js';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -46,8 +47,6 @@ const payer = new Account(
 
 async function test() {
   console.log('= starting =');
-
-  console.log(MerpsAccountLayout.span);
 
   const client = new MerpsClient(connection, merpsProgramId);
   const userQuoteTokenAcc = await findLargestTokenAccountForOwner(
