@@ -53,10 +53,10 @@ async function test() {
   console.log('= starting =');
   const client = new MerpsClient(connection, merpsProgramId);
   const groupKey = await client.initMerpsGroup(
-    payer,
     quoteMintKey,
     dexProgramId,
     500,
+    payer,
   );
   console.log('= merps group created =');
   let merpsGroup = await client.getMerpsGroup(groupKey);
@@ -134,13 +134,13 @@ async function test() {
 
   // run keeper fns
   const cacheRootBanksTxID = await client.cacheRootBanks(
-    payer,
     merpsGroup.publicKey,
     merpsGroup.merpsCache,
     [
       merpsGroup.tokens[marketIndex].rootBank,
       merpsGroup.tokens[QUOTE_INDEX].rootBank,
     ],
+    payer,
   );
   await client.cachePrices(
     merpsGroup.publicKey,

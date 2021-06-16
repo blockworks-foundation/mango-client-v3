@@ -114,7 +114,7 @@ export class MerpsClient {
       { skipPreflight: true },
     );
 
-    console.log('Started awaiting confirmation for', txid);
+  console.log('Started awaiting confirmation for', txid);
     let done = false;
     (async () => {
       while (!done && getUnixTs() - startTime < timeout / 1000) {
@@ -172,10 +172,10 @@ export class MerpsClient {
   }
 
   async initMerpsGroup(
-    payer: Account,
     quoteMint: PublicKey,
     dexProgram: PublicKey,
     validInterval: number,
+    payer: Account,
   ): Promise<PublicKey> {
     const accountInstruction = await createAccountInstruction(
       this.connection,
@@ -383,10 +383,10 @@ export class MerpsClient {
 
   // Keeper functions
   async cacheRootBanks(
-    payer: Account,
     merpsGroup: PublicKey,
     merpsCache: PublicKey,
     rootBanks: PublicKey[],
+    payer: Account,
   ): Promise<TransactionSignature> {
     const cacheRootBanksInstruction = makeCacheRootBankInstruction(
       this.programId,
