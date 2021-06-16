@@ -31,9 +31,6 @@ class _I80F48Layout extends Blob {
   }
 
   encode(src, b, offset) {
-    if (src instanceof I80F48) {
-      src = src.getInternalValue();
-    }
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
@@ -42,14 +39,24 @@ export function I80F48Layout(property = '') {
 }
 
 class BNLayout extends Blob {
-  constructor(number: number, property) {
+  signed: boolean;
+
+  constructor(number: number, property, signed = false) {
     super(number, property);
+    this.signed = signed;
+
     // restore prototype chain
     Object.setPrototypeOf(this, new.target.prototype);
   }
 
   decode(b, offset) {
-    return new BN(super.decode(b, offset), 10, 'le');
+    if (this.signed) {
+      return new BN(super.decode(b, offset), 10, 'le').toTwos(
+        Math.pow(2, this['length']),
+      );
+    } else {
+      return new BN(super.decode(b, offset), 10, 'le');
+    }
   }
 
   encode(src, b, offset) {
@@ -62,7 +69,7 @@ export function u64(property = '') {
 }
 
 export function i64(property = '') {
-  return new BNLayout(8, property);
+  return new BNLayout(8, property, true);
 }
 
 export function u128(property?: string) {
@@ -70,7 +77,7 @@ export function u128(property?: string) {
 }
 
 export function i128(property?: string) {
-  return new BNLayout(16, property);
+  return new BNLayout(16, property, true);
 }
 
 class WrappedLayout<T, U> extends Layout<U> {
@@ -528,8 +535,7 @@ export const MerpsAccountLayout = struct([
   metaDataLayout('metaData'),
   publicKeyLayout('merpsGroup'),
   publicKeyLayout('owner'),
-  seq(bool(), MAX_PAIRS, 'inBasket'),
-  seq(u8(), 1, 'padding'),
+  seq(bool(), MAX_TOKENS, 'inBasket'),
   seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),

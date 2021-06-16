@@ -55,6 +55,9 @@ export class I80F48 {
   toArray(): Uint8Array {
     return new Uint8Array(this.data.toTwos(I80F48.MAX_SIZE).toArray('le', 16));
   }
+  toArrayLike(): Buffer {
+    return this.data.toTwos(I80F48.MAX_SIZE).toArrayLike(Buffer, 'le', 16);
+  }
   getInternalValue(): BN {
     return this.data;
   }

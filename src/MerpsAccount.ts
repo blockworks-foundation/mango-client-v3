@@ -1,7 +1,13 @@
 import { OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
-import { MAX_PAIRS, MetaData, PerpAccount, RootBank } from './layout';
+import {
+  MAX_PAIRS,
+  MetaData,
+  PerpAccount,
+  PerpOpenOrders,
+  RootBank,
+} from './layout';
 import { promiseUndef, zeroKey } from './utils';
 
 export default class MerpsAccount {
@@ -58,5 +64,10 @@ export default class MerpsAccount {
 
     this.spotOpenOrdersAccounts = await Promise.all(promises);
     return this.spotOpenOrdersAccounts;
+  }
+
+  getHealth(): I80F48 {
+    // A loss is the delta between the position marked to current market price vs. quote position
+    return I80F48.fromString('0');
   }
 }
