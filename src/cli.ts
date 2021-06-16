@@ -7,6 +7,7 @@ import { Options, PositionalOptions } from 'yargs';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 
 import { initGroup } from './commands';
+import { Cluster, Config } from './config';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -14,6 +15,15 @@ const clusterDesc: [string, Options] = [
     describe: 'the cluster to connect to',
     default: 'devnet',
     choices: ['devnet', 'mainnet'],
+  },
+];
+
+const configDesc: [string, Options] = [
+  'config',
+  {
+    describe: 'the config file to store all public keys',
+    default: __dirname + '/ids.json',
+    type: 'string',
   },
 ];
 const keypairDesc: [string, Options] = [
@@ -33,20 +43,28 @@ const symbolDesc: [string, PositionalOptions] = [
   { describe: 'the base token symbol', type: 'string' },
 ];
 
-function openConnection(_: string | unknown) {
+function openConnection(config: Config, cluster: Cluster) {
   return new Connection(
-    'https://api.devnet.solana.com', // TODO: fix url
+    config.cluster_urls[cluster],
     'processed' as Commitment,
   );
 }
 
-function useKeypair(keypairPath: string) {
+function readKeypair(keypairPath: string) {
   return new Account(JSON.parse(fs.readFileSync(keypairPath, 'utf-8')));
+}
+
+export function readConfig(configPath: string) {
+  return new Config(JSON.parse(fs.readFileSync(configPath, 'utf-8')));
+}
+
+export function writeConfig(configPath: string, config: Config) {
+  fs.writeFileSync(configPath, JSON.stringify(config.toJson(), null, 2));
 }
 
 yargs(hideBin(process.argv))
   .command(
-    'init_group <group> <merps_program_id> <quote_mint>',
+    'init_group <group> <merps_program_id> <serum_program_id> <quote_mint>',
     'initialize a new group',
     (y) =>
       y
@@ -69,22 +87,28 @@ yargs(hideBin(process.argv))
           type: 'string',
         })
         .option(...clusterDesc)
+        .option(...configDesc)
         .option(...keypairDesc),
-    (args) => {
+    async (args) => {
+      console.log('init_group', args);
       const merpsProgramId = new PublicKey(args.merps_program_id as string);
       const serumProgramId = new PublicKey(args.serum_program_id as string);
       const quoteMint = new PublicKey(args.quote_mint as string);
-      const account = useKeypair(args.keypair as string);
-      const result = initGroup(
-        openConnection(args.cluster),
+      const account = readKeypair(args.keypair as string);
+      const config = readConfig(args.config as string);
+      const cluster = args.cluster as Cluster;
+      const result = await initGroup(
+        openConnection(config, cluster),
         account,
+        cluster,
         args.group as string,
         merpsProgramId,
         serumProgramId,
         args.symbol as string,
         quoteMint,
       );
-      console.log(result);
+      config.storeGroup(cluster, result);
+      writeConfig(args.config as string, config);
     },
   )
   .command(
