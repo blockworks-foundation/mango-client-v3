@@ -526,7 +526,7 @@ export const MerpsAccountLayout = struct([
   metaDataLayout('metaData'),
   publicKeyLayout('merpsGroup'),
   publicKeyLayout('owner'),
-  seq(bool(), MAX_PAIRS, 'inBasket'),
+  seq(bool(), MAX_TOKENS, 'inBasket'),
   seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),

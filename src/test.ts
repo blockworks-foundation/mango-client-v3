@@ -9,6 +9,7 @@ import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import * as Test from '../test/utils';
 import { u64 } from '@solana/spl-token';
+import { MerpsAccountLayout } from './layout';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -17,7 +18,7 @@ function assertEq(msg, a, b) {
 }
 
 const merpsProgramId = new PublicKey(
-  'BDNBBo2xcwudqDWzMdbxj4zvGSBGkvo8Ua5PkvW8MML5',
+  'viQTKtBmaGvx3nugHcvijedy9ApbDowqiGYq35qAJqq',
 );
 const serumDexPk = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -51,6 +52,9 @@ const payerBtcTokenAcc = new PublicKey(
 
 async function test() {
   console.log('= starting =');
+
+  console.log(MerpsAccountLayout.span);
+
   const client = new MerpsClient(connection, merpsProgramId);
   const groupKey = await client.initMerpsGroup(
     quoteMintKey,
