@@ -234,8 +234,8 @@ export class MerpsClient {
       quoteRootBankAccountInstruction.account.publicKey,
       cacheAccountInstruction.account.publicKey,
       dexProgram,
-      signerNonce,
-      validInterval,
+      new BN(signerNonce),
+      new BN(validInterval),
     );
 
     const transaction = new Transaction();
@@ -555,7 +555,7 @@ export class MerpsClient {
       vaultAccount.publicKey,
       rootBankAccountInstruction.account.publicKey,
       admin.publicKey,
-      marketIndex,
+      new BN(marketIndex),
       maintLeverage,
       initLeverage,
     );
@@ -586,7 +586,7 @@ export class MerpsClient {
       merpsGroup.publicKey,
       merpsAccount.publicKey,
       owner.publicKey,
-      marketIndex,
+      new BN(marketIndex),
     );
 
     const transaction = new Transaction();

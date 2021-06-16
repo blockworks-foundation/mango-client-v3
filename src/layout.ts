@@ -9,6 +9,8 @@ import {
   Structure,
   Layout,
   UInt,
+  blob,
+  nu64,
 } from 'buffer-layout';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
@@ -158,6 +160,13 @@ export function selfTradeBehaviorLayout(property) {
     property,
   );
 }
+
+export const ACCOUNT_LAYOUT = struct([
+  blob(32, 'mint'),
+  blob(32, 'owner'),
+  nu64('amount'),
+  blob(93),
+]);
 
 /**
  * Need to implement layouts for each of the structs found in state.rs
@@ -520,11 +529,11 @@ export const MerpsAccountLayout = struct([
   publicKeyLayout('merpsGroup'),
   publicKeyLayout('owner'),
   seq(bool(), MAX_PAIRS, 'inBasket'),
+  seq(u8(), 1, 'padding'),
   seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
   seq(perpAccountLayout(), MAX_PAIRS, 'perpAccounts'),
-  seq(u8(), 1, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
