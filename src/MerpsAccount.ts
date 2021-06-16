@@ -66,4 +66,9 @@ export default class MerpsAccount {
     this.spotOpenOrdersAccounts = await Promise.all(promises);
     return this.spotOpenOrdersAccounts;
   }
+
+  getHealth(): I80F48 {
+    // A loss is the delta between the position marked to current market price vs. quote position
+    return I80F48.fromString('0');
+  }
 }
