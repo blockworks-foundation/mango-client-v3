@@ -3,14 +3,12 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { MerpsClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
-import { QUOTE_INDEX } from '../src/MerpsGroup';
+import MerpsGroup, { QUOTE_INDEX } from '../src/MerpsGroup';
 import { findLargestTokenAccountForOwner, sleep } from './utils';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import * as Test from '../test/utils';
 import { u64 } from '@solana/spl-token';
-import { MerpsAccountLayout } from './layout';
-import BN from 'bn.js';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -44,21 +42,9 @@ const payer = new Account(
     fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
   ),
 );
+const client = new MerpsClient(connection, merpsProgramId);
 
-async function test() {
-  console.log('= starting =');
-
-  const client = new MerpsClient(connection, merpsProgramId);
-  const userQuoteTokenAcc = await findLargestTokenAccountForOwner(
-    connection,
-    payer.publicKey,
-    quoteMintKey,
-  );
-  const userBtcTokenAcc = await findLargestTokenAccountForOwner(
-    connection,
-    payer.publicKey,
-    btcMint,
-  );
+async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
   const groupKey = await client.initMerpsGroup(
     quoteMintKey,
     serumDexPk,
@@ -77,6 +63,55 @@ async function test() {
     'serumDexPk',
     merpsGroup.dexProgramId.toBase58(),
     serumDexPk.toBase58(),
+  );
+
+  let btcOraclePk;
+  try {
+    console.log('= adding oracle =');
+    btcOraclePk = await Test.createOracle(connection, merpsProgramId, payer);
+    await client.addOracle(merpsGroup, btcOraclePk, payer);
+    await client.setOracle(
+      merpsGroup,
+      btcOraclePk,
+      payer,
+      I80F48.fromNumber(40000),
+    );
+  } catch (err) {
+    console.log('Error on adding oracle', `${err}`);
+  }
+
+  const initLeverage = 5;
+  const maintLeverage = initLeverage * 2;
+  const marketIndex = 0;
+  console.log('= adding spot market =');
+  await client.addSpotMarket(
+    merpsGroup,
+    btcUsdSpotMarket,
+    btcMint,
+    payer,
+    marketIndex,
+    I80F48.fromNumber(maintLeverage),
+    I80F48.fromNumber(initLeverage),
+  );
+
+  merpsGroup = await client.getMerpsGroup(groupKey);
+  return merpsGroup;
+}
+
+async function test_place_spot_order() {
+  console.log('= starting =');
+
+  let merpsGroup = await init_merps_group_and_spot_market();
+
+  const userQuoteTokenAcc = await findLargestTokenAccountForOwner(
+    connection,
+    payer.publicKey,
+    quoteMintKey,
+  );
+  const userBtcTokenAcc = await findLargestTokenAccountForOwner(
+    connection,
+    payer.publicKey,
+    btcMint,
   );
 
   const merpsAccountPk = await client.initMerpsAccount(merpsGroup, payer);
@@ -108,41 +143,14 @@ async function test() {
     console.log('Error on deposit', `${err}`);
   }
 
-  let btcOraclePk;
-  try {
-    console.log('= adding oracle =');
-    btcOraclePk = await Test.createOracle(connection, merpsProgramId, payer);
-    await client.addOracle(merpsGroup, btcOraclePk, payer);
-    await client.setOracle(
-      merpsGroup,
-      btcOraclePk,
-      payer,
-      I80F48.fromNumber(40000),
-    );
-  } catch (err) {
-    console.log('Error on adding oracle', `${err}`);
-  }
-
-  const initLeverage = 5;
-  const maintLeverage = initLeverage * 2;
   const marketIndex = 0;
-  console.log('= adding spot market =');
-  await client.addSpotMarket(
-    merpsGroup,
-    btcUsdSpotMarket,
-    btcMint,
-    payer,
-    marketIndex,
-    I80F48.fromNumber(maintLeverage),
-    I80F48.fromNumber(initLeverage),
-  );
 
   await sleep(10000); // avoid devnet rate limit
   console.log('= adding to basket =');
 
   await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
 
-  merpsGroup = await client.getMerpsGroup(groupKey);
+  merpsGroup = await client.getMerpsGroup(merpsGroup.publicKey);
   await sleep(5000); // avoid devnet rate limit
 
   // run keeper fns
@@ -158,7 +166,7 @@ async function test() {
   await client.cachePrices(
     merpsGroup.publicKey,
     merpsGroup.merpsCache,
-    [btcOraclePk],
+    [merpsGroup.oracles[marketIndex]],
     payer,
   );
   console.log('= cache updated =', cacheRootBanksTxID);
@@ -250,4 +258,4 @@ async function test() {
   // );
 }
 
-test();
+test_place_spot_order();
