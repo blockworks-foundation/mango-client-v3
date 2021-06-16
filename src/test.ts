@@ -17,7 +17,7 @@ function assertEq(msg, a, b) {
 }
 
 const merpsProgramId = new PublicKey(
-  'BDNBBo2xcwudqDWzMdbxj4zvGSBGkvo8Ua5PkvW8MML5',
+  'Fn6cEV9iXQPgaZQufdszgdgK7C8YEwzT2BJspophyENA',
 );
 const serumDexPk = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -130,7 +130,7 @@ async function test() {
     I80F48.fromString(initLeverage.toString()),
   );
 
-  await sleep(5000); // avoid devnet rate limit
+  await sleep(10000); // avoid devnet rate limit
   console.log('= adding to basket =');
 
   await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
@@ -217,6 +217,9 @@ async function test() {
     console.log('Error placing order', `${e}`);
   }
 
+  await sleep(5000);
+  merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
+
   console.log('= borrow and withdraw =');
   await client.withdraw(
     merpsGroup,
@@ -230,11 +233,7 @@ async function test() {
     true, // allow borrow
   );
 
-  await sleep(5000);
-  merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
-  console.log('open orders accounts', merpsAccount.spotOpenOrdersAccounts);
-
-  console.log('= cancel order =');
+  // console.log('= cancel order =');
   // await client.cancelSpotOrder(
   //   merpsGroup,
   //   merpsAccount,

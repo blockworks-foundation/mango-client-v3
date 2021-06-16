@@ -107,6 +107,7 @@ export default class MerpsGroup {
     quoteRootBank: RootBank | undefined;
     quoteNodeBank: NodeBank | undefined;
   }> {
+    // TODO only load the root bank for the spot mkt
     const rootBanks = await this.loadRootBanks(connection);
 
     const baseRootBank = rootBanks[spotMarketIndex];
