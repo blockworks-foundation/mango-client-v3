@@ -215,7 +215,7 @@ yargs(hideBin(process.argv))
           type: 'number',
         })
         .option('max_num_events', {
-          default: 1024,
+          default: 128,
           type: 'number',
         })
         .option(...clusterDesc)

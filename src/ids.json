@@ -18,14 +18,22 @@
           "key": "Awm5BomqedJVm4skc2ezMfJ1XViyJGweSbVocd8U3Lge"
         }
       ],
-      "perp_markets": [],
+      "perp_markets": [
+        {
+          "base_symbol": "BTC",
+          "key": "3bgX4wsurbgCg6Zkch1Qn9YhCJUuDbLpsXvKjhMqq7nb",
+          "market_index": 0
+        }
+      ],
       "tokens": [
         {
           "symbol": "USDC",
           "mint_key": "EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK",
           "decimals": 9,
           "root_key": "9GwWHAddZrumfBbJbyocJkXrvwyu4kY63gXCLL65e9UT",
-          "node_keys": ["Cw3Ps8NX4RmU6tS7jktBr3QddfJnq6fxHHk8XsprPvaZ"]
+          "node_keys": [
+            "Cw3Ps8NX4RmU6tS7jktBr3QddfJnq6fxHHk8XsprPvaZ"
+          ]
         }
       ]
     }

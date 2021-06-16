@@ -583,9 +583,17 @@ export class PerpMarket {
   }
 }
 
-export const PerpEventLayout = struct([]);
+export const PerpEventLayout = struct([
+  u8('eventType'),
+  seq(u8(), 87, 'padding'),
+]);
 
-export const PerpEventQueueLayout = struct([]);
+export const PerpEventQueueLayout = struct([
+  metaDataLayout('metaData'),
+  u64('head'),
+  u64('count'),
+  u64('seqNum'),
+]);
 
 export class PerpEventQueue {
   publicKey: PublicKey;
@@ -596,7 +604,15 @@ export class PerpEventQueue {
   }
 }
 
-export const PerpBookSizeLayout = struct([]);
+export const PerpBookSizeLayout = struct([
+  metaDataLayout('metaData'),
+  u64('bumpIndex'),
+  u64('freeListLen'),
+  u32('freeListHead'),
+  u32('rootNode'),
+  u64('leafCount'),
+  seq(u8(), 72 * 1024, 'nodes'),
+]);
 
 export class PriceCache {
   price!: I80F48;
