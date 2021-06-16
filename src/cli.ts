@@ -6,8 +6,8 @@ import { hideBin } from 'yargs/helpers';
 import { Options, PositionalOptions } from 'yargs';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 
-import { initGroup } from './commands';
-import { Cluster, Config } from './config';
+import { addStubOracle, initGroup } from './commands';
+import { Cluster, Config, GroupConfig } from './config';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -97,8 +97,9 @@ yargs(hideBin(process.argv))
       const account = readKeypair(args.keypair as string);
       const config = readConfig(args.config as string);
       const cluster = args.cluster as Cluster;
+      const connection = openConnection(config, cluster);
       const result = await initGroup(
-        openConnection(config, cluster),
+        connection,
         account,
         cluster,
         args.group as string,
@@ -107,7 +108,7 @@ yargs(hideBin(process.argv))
         args.symbol as string,
         quoteMint,
       );
-      config.storeGroup(cluster, result);
+      config.storeGroup(result);
       writeConfig(args.config as string, config);
     },
   )
@@ -122,9 +123,30 @@ yargs(hideBin(process.argv))
         .option('provider', {
           describe: 'oracle provider',
           default: 'stub',
-          choices: ['stub', 'pyth'],
-        }),
-    (_args) => {},
+          choices: ['stub' /*, 'pyth'*/],
+        })
+        .option(...clusterDesc)
+        .option(...configDesc)
+        .option(...keypairDesc),
+    async (args) => {
+      console.log('add_oracle', args);
+      const account = readKeypair(args.keypair as string);
+      const config = readConfig(args.config as string);
+      const cluster = args.cluster as Cluster;
+      const connection = openConnection(config, cluster);
+      const group = config.getGroup(
+        cluster,
+        args.group as string,
+      ) as GroupConfig;
+      const result = await addStubOracle(
+        connection,
+        account,
+        group,
+        args.symbol as string,
+      );
+      config.storeGroup(result);
+      writeConfig(args.config as string, config);
+    },
   )
   .command(
     'add_perp_market <group> <symbol>',

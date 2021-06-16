@@ -1,0 +1,34 @@
+{
+  "cluster_urls": {
+    "devnet": "https://api.devnet.solana.com",
+    "localnet": "http://127.0.0.1:8899",
+    "mainnet-beta": "https://solana-api.projectserum.com",
+    "testnet": "https://testnet.solana.com"
+  },
+  "groups": [
+    {
+      "cluster": "devnet",
+      "name": "merps_v1",
+      "key": "Ewuz1RPPxt3LPBQF5tjdzs1bw9f4eJNikAJoxzA5Hn2t",
+      "merps_program_id": "8XywrZebqGoRTYgK1zLoESRdPx6gviRQe6hMonQZbt7M",
+      "serum_program_id": "DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY",
+      "oracles": [
+        {
+          "symbol": "BTC",
+          "key": "Awm5BomqedJVm4skc2ezMfJ1XViyJGweSbVocd8U3Lge"
+        }
+      ],
+      "tokens": [
+        {
+          "symbol": "USDC",
+          "mint_key": "EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK",
+          "decimals": 9,
+          "root_key": "9GwWHAddZrumfBbJbyocJkXrvwyu4kY63gXCLL65e9UT",
+          "node_keys": [
+            "Cw3Ps8NX4RmU6tS7jktBr3QddfJnq6fxHHk8XsprPvaZ"
+          ]
+        }
+      ]
+    }
+  ]
+}

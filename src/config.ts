@@ -2,6 +2,25 @@ import { PublicKey } from '@solana/web3.js';
 
 export type Cluster = 'devnet' | 'mainnet-beta' | 'localnet' | 'testnet';
 
+export interface OracleConfig {
+  symbol: string;
+  key: PublicKey;
+}
+
+function oracleConfigFromJson(j: any) {
+  return {
+    ...j,
+    key: new PublicKey(j),
+  };
+}
+
+function oracleConfigToJson(o: OracleConfig): any {
+  return {
+    ...o,
+    key: o.key.toBase58(),
+  };
+}
+
 export interface TokenConfig {
   symbol: string;
   mint_key: PublicKey;
@@ -34,7 +53,12 @@ export interface GroupConfig {
   key: PublicKey;
   merps_program_id: PublicKey;
   serum_program_id: PublicKey;
+  oracles: OracleConfig[];
   tokens: TokenConfig[];
+}
+
+export function getOracleBySymbol(group: GroupConfig, symbol: string) {
+  return group.oracles.find((o) => o.symbol === symbol);
 }
 
 function groupConfigFromJson(j: any) {
@@ -43,6 +67,7 @@ function groupConfigFromJson(j: any) {
     key: new PublicKey(j.key),
     merps_program_id: new PublicKey(j.merps_program_id),
     serum_program_id: new PublicKey(j.serum_program_id),
+    oracles: j.oracles.map((t) => oracleConfigFromJson(t)),
     tokens: j.tokens.map((t) => tokenConfigFromJson(t)),
   } as GroupConfig;
 }
@@ -53,6 +78,7 @@ function groupConfigToJson(g: GroupConfig): any {
     key: g.key.toBase58(),
     merps_program_id: g.merps_program_id.toBase58(),
     serum_program_id: g.serum_program_id.toBase58(),
+    oracles: g.oracles.map((t) => oracleConfigToJson(t)),
     tokens: g.tokens.map((t) => tokenConfigToJson(t)),
   };
 }
@@ -77,8 +103,8 @@ export class Config {
     return this.groups.find((g) => g.cluster === cluster && g.name === name);
   }
 
-  public storeGroup(cluster: Cluster, group: GroupConfig) {
-    const _group = this.getGroup(cluster, group.name);
+  public storeGroup(group: GroupConfig) {
+    const _group = this.getGroup(group.cluster, group.name);
     if (_group) {
       Object.assign(_group, group);
     } else {
