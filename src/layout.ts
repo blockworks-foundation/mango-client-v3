@@ -31,9 +31,6 @@ class _I80F48Layout extends Blob {
   }
 
   encode(src, b, offset) {
-    if (src instanceof I80F48) {
-      src = src.getInternalValue();
-    }
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
