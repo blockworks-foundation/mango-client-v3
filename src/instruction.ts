@@ -330,8 +330,8 @@ export function makeAddSpotMarketInstruction(
   const data = encodeMerpsInstruction({
     AddSpotMarket: {
       marketIndex: new BN(marketIndex),
-      maintLeverage: maintLeverage.getInternalValue(),
-      initLeverage: initLeverage.getInternalValue(),
+      maintLeverage,
+      initLeverage,
     },
   });
 
@@ -508,7 +508,7 @@ export function makeSetOracleInstruction(
     { isSigner: true, isWritable: false, pubkey: adminPk },
   ];
   const data = encodeMerpsInstruction({
-    SetOracle: { price: price.getInternalValue() },
+    SetOracle: { price },
   });
 
   return new TransactionInstruction({
@@ -543,8 +543,8 @@ export function makeAddPerpMarketInstruction(
   const data = encodeMerpsInstruction({
     AddPerpMarket: {
       marketIndex,
-      maintLeverage: maintLeverage.getInternalValue(),
-      initLeverage: initLeverage.getInternalValue(),
+      maintLeverage,
+      initLeverage,
       baseLotSize,
       quoteLotSize,
     },

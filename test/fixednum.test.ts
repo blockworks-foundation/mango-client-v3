@@ -28,6 +28,19 @@ describe('fixednumTests', async () => {
     });
   });
 
+  describe('fromNumber', async () => {
+    it('should create the max value', async () => {
+      expect(I80F48.fromNumber(Number.MAX_SAFE_INTEGER).toString()).to.eq(
+        Number.MAX_SAFE_INTEGER.toString(),
+      );
+    });
+    it('should create the min value', async () => {
+      expect(I80F48.fromNumber(Number.MIN_SAFE_INTEGER).toString()).to.eq(
+        Number.MIN_SAFE_INTEGER.toString(),
+      );
+    });
+  });
+
   describe('fromString', async () => {
     // NOTE: The max number of I80 = 604462909807314587353087 <- ((2 ^ 80) / 2) - 1
     // NOTE: The max number of I80F48 = 604462909807314587353087.99999999999999644729 <- 604462909807314587353088 - (1 / (2 ^ 48))

@@ -945,7 +945,7 @@ export class MerpsClient {
       merpsGroupPk,
       oraclePk,
       admin.publicKey,
-      I80F48.fromString(price),
+      I80F48.fromNumber(price),
     );
 
     const transaction = new Transaction();
@@ -975,7 +975,7 @@ export class MerpsClient {
     const makeEventQueueAccountInstruction = await createAccountInstruction(
       this.connection,
       admin.publicKey,
-      PerpEventQueueLayout.span + (maxNumEvents - 1) * PerpEventLayout.span,
+      PerpEventQueueLayout.span + maxNumEvents * PerpEventLayout.span,
       this.programId,
     );
 
@@ -993,19 +993,6 @@ export class MerpsClient {
       this.programId,
     );
 
-    console.log(
-      marketIndex,
-      maintLeverage,
-      initLeverage,
-      baseLotSize,
-      quoteLotSize,
-    );
-
-    console.log(
-      I80F48.fromString(maintLeverage.toString()),
-      I80F48.fromString(initLeverage.toString()),
-    );
-
     const instruction = await makeAddPerpMarketInstruction(
       this.programId,
       merpsGroupPk,
@@ -1015,8 +1002,8 @@ export class MerpsClient {
       makeAskAccountInstruction.account.publicKey,
       admin.publicKey,
       new BN(marketIndex),
-      I80F48.fromString(maintLeverage.toString()),
-      I80F48.fromString(initLeverage.toString()),
+      I80F48.fromNumber(maintLeverage),
+      I80F48.fromNumber(initLeverage),
       new BN(baseLotSize),
       new BN(quoteLotSize),
     );

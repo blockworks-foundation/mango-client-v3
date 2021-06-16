@@ -110,7 +110,7 @@ async function test() {
       merpsGroup,
       btcOraclePk,
       payer,
-      I80F48.fromString('40000'),
+      I80F48.fromNumber(40000),
     );
   } catch (err) {
     console.log('Error on adding oracle', `${err}`);
@@ -126,8 +126,8 @@ async function test() {
     btcMint,
     payer,
     marketIndex,
-    I80F48.fromString(maintLeverage.toString()),
-    I80F48.fromString(initLeverage.toString()),
+    I80F48.fromNumber(maintLeverage),
+    I80F48.fromNumber(initLeverage),
   );
 
   await sleep(5000); // avoid devnet rate limit
