@@ -38,6 +38,15 @@ export default class MerpsGroup {
     Object.assign(this, decoded);
   }
 
+  getOracleIndex(oracle: PublicKey): number {
+    for (let i = 0; i < this.numOracles; i++) {
+      if (this.oracles[i].equals(oracle)) {
+        return i;
+      }
+    }
+    throw new Error('This Oracle does not belong to this MerpsGroup');
+  }
+
   getSpotMarketIndex(spotMarket: Market): number {
     for (let i = 0; i < this.numOracles; i++) {
       if (this.spotMarkets[i].spotMarket.equals(spotMarket.publicKey)) {
@@ -107,6 +116,7 @@ export default class MerpsGroup {
     quoteRootBank: RootBank | undefined;
     quoteNodeBank: NodeBank | undefined;
   }> {
+    // TODO only load the root bank for the spot mkt
     const rootBanks = await this.loadRootBanks(connection);
 
     const baseRootBank = rootBanks[spotMarketIndex];

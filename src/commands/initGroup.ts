@@ -51,6 +51,7 @@ export default async function initGroup(
     serum_program_id: serumProgramId,
     tokens: [tokenDesc],
     oracles: [],
+    perp_markets: [],
   };
   return groupDesc;
 }

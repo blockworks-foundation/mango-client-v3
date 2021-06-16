@@ -9,6 +9,8 @@ import {
   Structure,
   Layout,
   UInt,
+  blob,
+  nu64,
 } from 'buffer-layout';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
@@ -29,6 +31,9 @@ class _I80F48Layout extends Blob {
   }
 
   encode(src, b, offset) {
+    if (src instanceof I80F48) {
+      src = src.getInternalValue();
+    }
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
@@ -165,6 +170,13 @@ export function selfTradeBehaviorLayout(property) {
     property,
   );
 }
+
+export const ACCOUNT_LAYOUT = struct([
+  blob(32, 'mint'),
+  blob(32, 'owner'),
+  nu64('amount'),
+  blob(93),
+]);
 
 /**
  * Need to implement layouts for each of the structs found in state.rs
@@ -591,6 +603,28 @@ export class PerpMarket {
     Object.assign(this, decoded);
   }
 }
+
+export const PerpEventLayout = struct([
+  u8('eventType'),
+  seq(u8(), 87, 'padding'),
+]);
+
+export const PerpEventQueueLayout = struct([
+  metaDataLayout('metaData'),
+  u64('head'),
+  u64('count'),
+  u64('seqNum'),
+]);
+
+export const PerpBookSizeLayout = struct([
+  metaDataLayout('metaData'),
+  u64('bumpIndex'),
+  u64('freeListLen'),
+  u32('freeListHead'),
+  u32('rootNode'),
+  u64('leafCount'),
+  seq(u8(), 72 * 1024, 'nodes'),
+]);
 
 export class PriceCache {
   price!: I80F48;
