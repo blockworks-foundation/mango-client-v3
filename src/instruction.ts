@@ -301,6 +301,33 @@ export function makeCachePricesInstruction(
   });
 }
 
+export function makeCachePerpMarketInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsCachePk: PublicKey,
+  perpMarketPks: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    ...perpMarketPks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMerpsInstruction({
+    CachePerpMarkets: {},
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
 export function makeAddSpotMarketInstruction(
   programId: PublicKey,
   merpsGroupPk: PublicKey,
