@@ -9,7 +9,7 @@ yarn cli -- init-group merps_v1 8XywrZebqGoRTYgK1zLoESRdPx6gviRQe6hMonQZbt7M DES
 Add a stub oracle:
 
 ```
-yarn cli -- add-oracle merps_v1 BTC bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTP
+yarn cli -- add-oracle merps_v1 BTC
 ```
 
 Set stub oracle value = base_price \* quote_unit / base_unit:
