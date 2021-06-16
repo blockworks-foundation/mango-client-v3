@@ -517,11 +517,11 @@ export const MerpsAccountLayout = struct([
   publicKeyLayout('merpsGroup'),
   publicKeyLayout('owner'),
   seq(bool(), MAX_PAIRS, 'inBasket'),
+  seq(u8(), 1, 'padding'),
   seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
   seq(perpAccountLayout(), MAX_PAIRS, 'perpAccounts'),
-  seq(u8(), 1, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
