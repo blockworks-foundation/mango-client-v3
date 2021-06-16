@@ -43,6 +43,7 @@ import {
   makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
   makePlaceSpotOrderInstruction,
+  makeSetOracleInstruction,
   makeSettleFundsInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
@@ -475,6 +476,27 @@ export class MerpsClient {
       merpsGroup.publicKey,
       oracle,
       admin.publicKey,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async setOracle(
+    merpsGroup: MerpsGroup,
+    oracle: PublicKey,
+    admin: Account,
+    price: I80F48,
+  ): Promise<TransactionSignature> {
+    const instruction = makeSetOracleInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      oracle,
+      admin.publicKey,
+      price,
     );
 
     const transaction = new Transaction();

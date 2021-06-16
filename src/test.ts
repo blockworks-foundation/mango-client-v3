@@ -17,9 +17,9 @@ function assertEq(msg, a, b) {
 }
 
 const merpsProgramId = new PublicKey(
-  '8XywrZebqGoRTYgK1zLoESRdPx6gviRQe6hMonQZbt7M',
+  'BDNBBo2xcwudqDWzMdbxj4zvGSBGkvo8Ua5PkvW8MML5',
 );
-const dexProgramId = new PublicKey(
+const serumDexPk = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
 );
 const quoteMintKey = new PublicKey(
@@ -54,7 +54,7 @@ async function test() {
   const client = new MerpsClient(connection, merpsProgramId);
   const groupKey = await client.initMerpsGroup(
     quoteMintKey,
-    dexProgramId,
+    serumDexPk,
     500,
     payer,
   );
@@ -67,14 +67,14 @@ async function test() {
   );
   assertEq('admin', merpsGroup.admin.toBase58(), payer.publicKey.toBase58());
   assertEq(
-    'dexProgramId',
+    'serumDexPk',
     merpsGroup.dexProgramId.toBase58(),
-    dexProgramId.toBase58(),
+    serumDexPk.toBase58(),
   );
 
   const merpsAccountPk = await client.initMerpsAccount(merpsGroup, payer);
   await sleep(5000); // devnet rate limits
-  let merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
+  let merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
 
   await sleep(5000); // devnet rate limits
   let rootBanks = await merpsGroup.loadRootBanks(client.connection);
@@ -106,6 +106,12 @@ async function test() {
     console.log('= adding oracle =');
     btcOraclePk = await Test.createOracle(connection, merpsProgramId, payer);
     await client.addOracle(merpsGroup, btcOraclePk, payer);
+    await client.setOracle(
+      merpsGroup,
+      btcOraclePk,
+      payer,
+      I80F48.fromString('40000'),
+    );
   } catch (err) {
     console.log('Error on adding oracle', `${err}`);
   }
@@ -186,12 +192,12 @@ async function test() {
   );
 
   await sleep(5000); // devnet rate limits
-  merpsAccount = await client.getMerpsAccount(merpsAccountPk, dexProgramId);
+  merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
   const btcSpotMarket = await Market.load(
     connection,
     btcUsdSpotMarket,
     {},
-    dexProgramId,
+    serumDexPk,
   );
 
   try {
@@ -203,7 +209,7 @@ async function test() {
       btcSpotMarket,
       payer,
       'buy',
-      40000, // price
+      30000, // price
       0.0001, // size
       'limit',
     );
@@ -223,6 +229,19 @@ async function test() {
     0.5, // withdraw amount
     true, // allow borrow
   );
+
+  await sleep(5000);
+  merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
+  console.log('open orders accounts', merpsAccount.spotOpenOrdersAccounts);
+
+  console.log('= cancel order =');
+  // await client.cancelSpotOrder(
+  //   merpsGroup,
+  //   merpsAccount,
+  //   payer,
+  //   btcSpotMarket,
+  //   openOrdersAccounts[0],
+  // );
 }
 
 test();

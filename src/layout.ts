@@ -212,23 +212,24 @@ MerpsInstructionLayout.addVariant(
   'AddPerpMarket',
 );
 MerpsInstructionLayout.addVariant(
-  12,
+  13,
   struct([u64('client_order_id')]),
   'CancelPerpOrderByClientId',
 );
 MerpsInstructionLayout.addVariant(
-  13,
+  14,
   struct([i128('order_id'), sideLayout('side')]),
   'CancelPerpOrder',
 );
-MerpsInstructionLayout.addVariant(14, struct([u64('limit')]), 'ConsumeEvents');
-MerpsInstructionLayout.addVariant(15, struct([]), 'CachePerpMarkets');
-MerpsInstructionLayout.addVariant(16, struct([]), 'UpdateFunding');
+MerpsInstructionLayout.addVariant(15, struct([u64('limit')]), 'ConsumeEvents');
+MerpsInstructionLayout.addVariant(16, struct([]), 'CachePerpMarkets');
+MerpsInstructionLayout.addVariant(17, struct([]), 'UpdateFunding');
 MerpsInstructionLayout.addVariant(
-  17,
+  18,
   struct([I80F48Layout('price')]),
   'SetOracle',
 );
+MerpsInstructionLayout.addVariant(19, struct([]), 'SettleFunds');
 MerpsInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
 
 const instructionMaxSpan = Math.max(
