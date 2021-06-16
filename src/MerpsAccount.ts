@@ -103,8 +103,6 @@ export default class MerpsAccount {
     merpsCache: MerpsCache,
     healthType: HealthType,
   ): I80F48 {
-    // A loss is the delta between the position marked to current market price vs. quote position
-
     const quoteDeposits = this.getNativeDeposit(
       merpsCache.rootBankCache[QUOTE_INDEX],
       QUOTE_INDEX,

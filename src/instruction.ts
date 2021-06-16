@@ -581,3 +581,34 @@ export function makeAddPerpMarketInstruction(
     programId,
   });
 }
+
+export function makeSettlePnlInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsAccountAPk: PublicKey,
+  merpsAccountBPk: PublicKey,
+  merpsCachePk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBankPk: PublicKey,
+  marketIndex: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountAPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountBPk },
+    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
+  ];
+  const data = encodeMerpsInstruction({
+    AddPerpMarket: {
+      marketIndex,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

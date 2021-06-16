@@ -455,6 +455,12 @@ export class PerpAccount {
     Object.assign(this, decoded);
   }
 
+  getPnl(perpMarketInfo: PerpMarketInfo, price: I80F48): I80F48 {
+    return I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize))
+      .mul(price)
+      .add(this.quotePosition);
+  }
+
   simPositionHealth(
     perpMarketInfo: PerpMarketInfo,
     price: I80F48,
@@ -492,8 +498,6 @@ export class PerpAccount {
     longFunding: I80F48,
     shortFunding: I80F48,
   ): I80F48 {
-    // const bidsHealth = this.simPositionHealth();
-
     const bidsHealth = this.simPositionHealth(
       perpMarketInfo,
       price,
