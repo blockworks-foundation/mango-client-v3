@@ -1,6 +1,7 @@
 import BN from 'bn.js';
 import { PublicKey } from '@solana/web3.js';
-import { DataType } from './layout';
+import { DataType, PerpMarket } from './layout';
+import { I80F48 } from './fixednum';
 
 // All LeafNodes are orders stored on the book
 export type LeafNode = {
@@ -15,6 +16,7 @@ export type LeafNode = {
 export class BookSide {
   publicKey: PublicKey;
   isBids: boolean;
+  perpMarket: PerpMarket;
 
   bumpIndex!: number;
   freeListLen!: number;
@@ -23,9 +25,10 @@ export class BookSide {
   leafCount!: number;
   nodes!: any[]; // This is either AnyNode, FreeNode, InnerNode...
 
-  constructor(publicKey: PublicKey, decoded: any) {
+  constructor(publicKey: PublicKey, perpMarket: PerpMarket, decoded: any) {
     this.publicKey = publicKey;
     this.isBids = decoded.metaData.dataType === DataType.Bids;
+    this.perpMarket = perpMarket;
     Object.assign(this, decoded);
   }
 
@@ -56,8 +59,7 @@ export class BookSide {
     return this.items();
   }
 
-  getL2(depth: number): [BN, BN][] {
-    const descending = this.isBids;
+  getL2(depth: number): [I80F48, I80F48, BN, BN][] {
     const levels: [BN, BN][] = []; // (price, size)
     for (const { key, quantity } of this.items()) {
       const price = getPriceFromKey(key);
@@ -69,7 +71,12 @@ export class BookSide {
         levels.push([price, quantity]);
       }
     }
-    return levels.map(([priceLots, sizeLots]) => [priceLots, sizeLots]);
+    return levels.map(([priceLots, sizeLots]) => [
+      this.perpMarket.priceLotsToNative(priceLots),
+      this.perpMarket.baseLotsToNative(sizeLots),
+      priceLots,
+      sizeLots,
+    ]);
   }
 }
 
