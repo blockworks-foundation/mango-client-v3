@@ -23,8 +23,9 @@ function oracleConfigToJson(o: OracleConfig): any {
 }
 
 export interface SpotMarketConfig {
-  base_symbol: string;
+  name: string;
   key: PublicKey;
+  base_symbol: string;
   market_index: number;
 }
 
@@ -43,8 +44,9 @@ function spotMarketConfigToJson(p: SpotMarketConfig): any {
 }
 
 export interface PerpMarketConfig {
-  base_symbol: string;
+  name: string;
   key: PublicKey;
+  base_symbol: string;
   market_index: number;
 }
 
@@ -91,6 +93,7 @@ function tokenConfigToJson(t: TokenConfig): any {
 export interface GroupConfig {
   cluster: Cluster;
   name: string;
+  quote_symbol: string;
   key: PublicKey;
   merps_program_id: PublicKey;
   serum_program_id: PublicKey;
@@ -120,8 +123,9 @@ export type MarketKind = 'spot' | 'perp';
 
 export interface MarketConfig {
   kind: MarketKind;
-  base_symbol: string;
+  name: string;
   key: PublicKey;
+  base_symbol: string;
   market_index: number;
 }
 
@@ -134,7 +138,7 @@ export function getMarketByBaseSymbolAndKind(
     kind === 'spot'
       ? getSpotMarketByBaseSymbol(group, symbol)
       : getPerpMarketByBaseSymbol(group, symbol);
-  return { kind, ...market };
+  return { kind, ...market } as MarketConfig;
 }
 
 export function getTokenByMint(group: GroupConfig, mint: string | PublicKey) {

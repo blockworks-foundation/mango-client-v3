@@ -36,7 +36,7 @@ const keypairDesc: [string, Options] = [
   'keypair',
   {
     describe: 'the keypair used to sign all transactions',
-    default: os.homedir() + '/.config/solana/id.json',
+    default: os.homedir() + '/.config/solana/devnet.json',
     type: 'string',
   },
 ];
@@ -199,7 +199,6 @@ yargs(hideBin(process.argv))
         .positional(...groupDesc)
         .positional(...symbolDesc)
         .option('maint_leverage', {
-          describe: '',
           default: 20,
           type: 'number',
         })
@@ -249,7 +248,7 @@ yargs(hideBin(process.argv))
     },
   )
   .command(
-    'add-spot-market <group> <symbol> <market_pk>',
+    'add-spot-market <group> <symbol> <market_pk> <mint_pk>',
     'add a perp market to the group',
     (y) =>
       y
@@ -259,8 +258,11 @@ yargs(hideBin(process.argv))
           describe: 'the public key of the spot market',
           type: 'string',
         })
+        .positional('mint_pk', {
+          describe: 'the public key of the base token mint',
+          type: 'string',
+        })
         .option('maint_leverage', {
-          describe: '',
           default: 20,
           type: 'number',
         })
@@ -286,7 +288,8 @@ yargs(hideBin(process.argv))
         account,
         group,
         args.symbol as string,
-        args.market_pk as string,
+        new PublicKey(args.market_pk as string),
+        new PublicKey(args.mint_pk as string),
         args.maint_leverage as number,
         args.init_leverage as number,
       );

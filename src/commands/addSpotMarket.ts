@@ -2,7 +2,8 @@ import { Account, Connection, PublicKey } from '@solana/web3.js';
 import { MerpsClient } from '../client';
 import {
   getOracleBySymbol,
-  getPerpMarketByBaseSymbol,
+  getSpotMarketByBaseSymbol,
+  getTokenBySymbol,
   GroupConfig,
   OracleConfig,
 } from '../config';
@@ -12,7 +13,8 @@ export default async function addSpotMarket(
   payer: Account,
   groupConfig: GroupConfig,
   symbol: string,
-  spotMarket: string,
+  spotMarket: PublicKey,
+  baseMint: PublicKey,
   maintLeverage: number,
   initLeverage: number,
 ): Promise<GroupConfig> {
@@ -22,12 +24,10 @@ export default async function addSpotMarket(
   const oracleDesc = getOracleBySymbol(groupConfig, symbol) as OracleConfig;
   const marketIndex = group.getOracleIndex(oracleDesc.key);
 
-  console.log('maint leverage', maintLeverage, initLeverage);
-
   await client.addSpotMarket(
     group,
-    new PublicKey(spotMarket),
-    group.tokens[marketIndex].mint,
+    spotMarket,
+    baseMint,
     payer,
     marketIndex,
     maintLeverage,
@@ -35,14 +35,33 @@ export default async function addSpotMarket(
   );
 
   group = await client.getMerpsGroup(groupConfig.key);
+  const banks = await group.loadRootBanks(connection);
+  const tokenIndex = group.getTokenIndex(baseMint);
+  const nodeBanks = await banks[tokenIndex]?.loadNodeBanks(connection);
+
+  const tokenDesc = {
+    symbol,
+    mint_key: baseMint,
+    decimals: group.tokens[tokenIndex].decimals,
+    root_key: banks[tokenIndex]?.publicKey as PublicKey,
+    node_keys: nodeBanks?.map((n) => n?.publicKey) as PublicKey[],
+  };
+
+  const token = getTokenBySymbol(groupConfig, symbol);
+  if (token) {
+    Object.assign(token, tokenDesc);
+  } else {
+    groupConfig.tokens.push(tokenDesc);
+  }
 
   const marketDesc = {
     base_symbol: symbol,
-    key: group.spotMarkets[marketIndex].spotMarket,
+    key: spotMarket,
     market_index: marketIndex,
+    name: `${symbol}/${groupConfig.quote_symbol}`,
   };
 
-  const market = getPerpMarketByBaseSymbol(groupConfig, symbol);
+  const market = getSpotMarketByBaseSymbol(groupConfig, symbol);
   if (market) {
     Object.assign(market, marketDesc);
   } else {
