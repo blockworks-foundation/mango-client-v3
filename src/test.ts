@@ -38,7 +38,7 @@ const connection = new Connection(
   'processed' as Commitment,
 );
 
-const SLEEP_TIME = 2000;
+const SLEEP_TIME = 4000;
 
 const payer = new Account(
   JSON.parse(
@@ -67,6 +67,7 @@ async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
     merpsGroup.dexProgramId.toBase58(),
     serumDexPk.toBase58(),
   );
+  await sleep(SLEEP_TIME);
 
   let btcOraclePk;
   try {
@@ -82,7 +83,7 @@ async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
   } catch (err) {
     console.log('Error on adding oracle', `${err}`);
   }
-
+  await sleep(SLEEP_TIME);
   const initLeverage = 5;
   const maintLeverage = initLeverage * 2;
   const marketIndex = 0;
@@ -96,7 +97,7 @@ async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
     maintLeverage,
     initLeverage,
   );
-
+  await sleep(SLEEP_TIME);
   merpsGroup = await client.getMerpsGroup(groupKey);
   return merpsGroup;
 }
@@ -121,13 +122,11 @@ async function test_place_spot_order() {
   await sleep(SLEEP_TIME); // devnet rate limits
   let merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
 
-  await sleep(5000); // devnet rate limits
+  await sleep(SLEEP_TIME); // devnet rate limits
   let rootBanks = await merpsGroup.loadRootBanks(client.connection);
   const usdcRootBank = rootBanks[QUOTE_INDEX];
   if (!usdcRootBank) throw new Error('no root bank');
-  const quoteNodeBanks = await usdcRootBank.loadNodeBanks(client.connection);
-  const filteredQuoteNodeBanks = quoteNodeBanks.filter((bank) => !!bank);
-  if (!filteredQuoteNodeBanks[0]) throw new Error('node banks empty');
+  const quoteNodeBank = usdcRootBank.nodeBankAccounts[0];
 
   await sleep(SLEEP_TIME); // devnet rate limits
   try {
@@ -138,7 +137,7 @@ async function test_place_spot_order() {
       payer,
       merpsGroup.tokens[QUOTE_INDEX].rootBank,
       usdcRootBank.nodeBanks?.[0],
-      filteredQuoteNodeBanks[0].vault,
+      quoteNodeBank.vault,
       userQuoteTokenAcc.publicKey,
       1000, // quantity
     );
@@ -205,7 +204,7 @@ async function test_place_spot_order() {
   await client.updateRootBank(
     merpsGroup.publicKey,
     usdcRootBank.publicKey,
-    filteredQuoteNodeBanks.map((bank) => bank!.publicKey),
+    [quoteNodeBank.publicKey],
     payer,
   );
 

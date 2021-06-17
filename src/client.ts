@@ -62,10 +62,10 @@ import {
   getFeeTier,
   OpenOrders,
 } from '@project-serum/serum';
-// import { I80F48, ZERO_I80F48 } from './fixednum';
 import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 import { RootBank } from './RootBank';
+import { WalletAdapter } from './types';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -82,7 +82,7 @@ export class MerpsClient {
 
   async sendTransactions(
     transactions: Transaction[],
-    payer: Account,
+    payer: Account | WalletAdapter,
     additionalSigners: Account[],
     timeout = 30000,
     confirmLevel: TransactionConfirmationStatus = 'confirmed',
@@ -100,24 +100,36 @@ export class MerpsClient {
     );
   }
 
+  async signTransaction({ transaction, payer, signers }) {
+    transaction.recentBlockhash = (
+      await this.connection.getRecentBlockhash()
+    ).blockhash;
+    transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
+    if (signers.length > 0) {
+      transaction.partialSign(...signers);
+    }
+
+    if (payer?.connected) {
+      console.log('signing as wallet', payer.publicKey);
+      return await payer.signTransaction(transaction);
+    } else {
+      transaction.sign(...[payer].concat(signers));
+    }
+  }
+
   // TODO - switch Account to Keypair and switch off setSigners due to deprecated
   async sendTransaction(
     transaction: Transaction,
-    payer: Account,
+    payer: Account | WalletAdapter,
     additionalSigners: Account[],
     timeout = 30000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
-    // TODO - what if we can get recentBlockhas streamed on websocket so we avoid this call
-    transaction.recentBlockhash = (
-      await this.connection.getRecentBlockhash()
-    ).blockhash;
-    transaction.setSigners(
-      payer.publicKey,
-      ...additionalSigners.map((a) => a.publicKey),
-    );
-    const signers = [payer].concat(additionalSigners);
-    transaction.sign(...signers);
+    await this.signTransaction({
+      transaction,
+      payer,
+      signers: additionalSigners,
+    });
 
     const rawTransaction = transaction.serialize();
     const startTime = getUnixTs();
@@ -190,7 +202,7 @@ export class MerpsClient {
     quoteMint: PublicKey,
     dexProgram: PublicKey,
     validInterval: number,
-    payer: Account,
+    payer: Account | WalletAdapter,
   ): Promise<PublicKey> {
     const accountInstruction = await createAccountInstruction(
       this.connection,
@@ -401,7 +413,7 @@ export class MerpsClient {
     merpsGroup: PublicKey,
     merpsCache: PublicKey,
     rootBanks: PublicKey[],
-    payer: Account,
+    payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const cacheRootBanksInstruction = makeCacheRootBankInstruction(
       this.programId,
@@ -420,7 +432,7 @@ export class MerpsClient {
     merpsGroup: PublicKey,
     merpsCache: PublicKey,
     oracles: PublicKey[],
-    payer: Account,
+    payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const cachePricesInstruction = makeCachePricesInstruction(
       this.programId,
@@ -439,7 +451,7 @@ export class MerpsClient {
     merpsGroup: PublicKey,
     rootBank: PublicKey,
     nodeBanks: PublicKey[],
-    payer: Account,
+    payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const updateRootBanksInstruction = makeUpdateRootBankInstruction(
       this.programId,
