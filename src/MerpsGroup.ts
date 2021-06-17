@@ -98,6 +98,14 @@ export default class MerpsGroup {
     return rootBank.getBorrowRate(this);
   }
 
+  getDepositRate(tokenIndex: number): I80F48 {
+    const rootBank = this.rootBankAccounts[tokenIndex];
+    if (!rootBank)
+      throw new Error(`Root bank at index ${tokenIndex} is not loaded`);
+
+    return rootBank.getDepositRate(this);
+  }
+
   async loadCache(connection: Connection): Promise<MerpsCache> {
     const account = await connection.getAccountInfo(this.merpsCache);
     if (!account || !account?.data) throw new Error('Unable to load cache');

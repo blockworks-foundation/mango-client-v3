@@ -108,16 +108,18 @@ export class RootBank {
     }
   }
 
-  // getDepositRate(tokenIndex: number): number {
-  //   const borrowRate = this.getBorrowRate(tokenIndex)
-  //   const totalBorrows = this.getUiTotalBorrow(tokenIndex)
-  //   const totalDeposits = this.getUiTotalDeposit(tokenIndex)
-  //   if (totalDeposits === 0 && totalBorrows === 0) {
-  //     return 0
-  //   } else if (totalDeposits === 0) {
-  //     return MAX_RATE
-  //   }
-  //   const utilization = totalBorrows / totalDeposits
-  //   return utilization * borrowRate
-  // }
+  getDepositRate(merpsGroup: MerpsGroup): I80F48 {
+    const borrowRate = this.getBorrowRate(merpsGroup);
+    const totalBorrows = this.getUiTotalBorrow(merpsGroup);
+    const totalDeposits = this.getUiTotalDeposit(merpsGroup);
+
+    if (totalDeposits === ZERO_I80F48 && totalBorrows === ZERO_I80F48) {
+      return ZERO_I80F48;
+    } else if (totalDeposits === ZERO_I80F48) {
+      return MAX_RATE;
+    }
+
+    const utilization = totalBorrows.div(totalDeposits);
+    return utilization.mul(borrowRate);
+  }
 }
