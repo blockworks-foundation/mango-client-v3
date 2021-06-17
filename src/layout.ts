@@ -767,7 +767,7 @@ export const BookSideLayout = struct([
   u32('freeListHead'),
   u32('rootNode'),
   u64('leafCount'),
-  seq(u8(), BOOK_NODE_LAYOUT * MAX_BOOK_NODES, 'nodes'),
+  seq(u8(), BOOK_NODE_SIZE * MAX_BOOK_NODES, 'nodes'),
 ]);
 
 export class PriceCache {
