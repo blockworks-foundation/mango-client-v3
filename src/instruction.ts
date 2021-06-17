@@ -581,3 +581,33 @@ export function makeCachePerpMarketsInstruction(
     programId,
   });
 }
+
+export function makeConsumeEventsInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  perpMarketPk: PublicKey,
+  eventQueuePk: PublicKey,
+  merpsAccountPks: PublicKey[],
+  limit: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    ...merpsAccountPks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMerpsInstruction({
+    ConsumeEvents: { limit },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

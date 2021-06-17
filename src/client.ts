@@ -46,6 +46,7 @@ import {
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
   makeCancelOrderInstruction,
+  makeConsumeEventsInstruction,
   makeDepositInstruction,
   makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
@@ -458,6 +459,29 @@ export class MerpsClient {
       merpsGroup,
       rootBank,
       nodeBanks,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(updateRootBanksInstruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async consumeEvents(
+    merpsGroup: PublicKey,
+    perpMarket: PublicKey,
+    eventQueue: PublicKey,
+    merpsAccounts: PublicKey[],
+    payer: Account,
+    limit: BN,
+  ): Promise<TransactionSignature> {
+    const updateRootBanksInstruction = makeConsumeEventsInstruction(
+      this.programId,
+      merpsGroup,
+      perpMarket,
+      eventQueue,
+      merpsAccounts,
+      limit,
     );
 
     const transaction = new Transaction();
