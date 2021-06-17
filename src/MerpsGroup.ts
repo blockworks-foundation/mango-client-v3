@@ -127,6 +127,13 @@ export default class MerpsGroup {
       }
       return undefined;
     });
+
+    await Promise.all(
+      parsedRootBanks.map((rootBank) =>
+        rootBank ? rootBank.loadNodeBanks(connection) : promiseUndef(),
+      ),
+    );
+
     this.rootBankAccounts = parsedRootBanks;
     return parsedRootBanks;
   }
