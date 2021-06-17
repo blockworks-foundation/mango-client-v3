@@ -290,6 +290,18 @@ export function publicKeyLayout(property = '') {
   return new PublicKeyLayout(property);
 }
 
+export const DataType = {
+  MerpsGroup: 0,
+  MerpsAccount: 1,
+  RootBank: 2,
+  NodeBank: 3,
+  PerpMarket: 4,
+  Bids: 5,
+  Asks: 6,
+  MerpsCache: 7,
+  EventQueue: 8,
+};
+
 export class MetaData {
   dataType!: number;
   version!: number;
@@ -709,14 +721,42 @@ export const PerpEventQueueLayout = struct([
   u64('seqNum'),
 ]);
 
-export const PerpBookSideLayout = struct([
+const BOOK_NODE_SIZE = 72;
+const BOOK_NODE_LAYOUT = union(u32('tag'), blob(BOOK_NODE_SIZE - 4), 'node');
+BOOK_NODE_LAYOUT.addVariant(0, struct([]), 'uninitialized');
+BOOK_NODE_LAYOUT.addVariant(
+  1,
+  struct([
+    // Only the first prefixLen high-order bits of key are meaningful
+    u32('prefixLen'),
+    u128('key'),
+    seq(u32(), 2, 'children'),
+  ]),
+  'innerNode',
+);
+BOOK_NODE_LAYOUT.addVariant(
+  2,
+  struct([
+    u8('ownerSlot'), // Index into OPEN_ORDERS_LAYOUT.orders
+    blob(3),
+    u128('key'), // (price, seqNum)
+    publicKeyLayout('owner'), // Open orders account
+    u64('quantity'), // In units of lot size
+    u64('clientOrderId'),
+  ]),
+  'leafNode',
+);
+BOOK_NODE_LAYOUT.addVariant(3, struct([u32('next')]), 'freeNode');
+BOOK_NODE_LAYOUT.addVariant(4, struct([]), 'lastFreeNode');
+
+export const BookSideLayout = struct([
   metaDataLayout('metaData'),
   u64('bumpIndex'),
   u64('freeListLen'),
   u32('freeListHead'),
   u32('rootNode'),
   u64('leafCount'),
-  seq(u8(), 72 * MAX_BOOK_NODES, 'nodes'),
+  seq(u8(), BOOK_NODE_LAYOUT * MAX_BOOK_NODES, 'nodes'),
 ]);
 
 export class PriceCache {
