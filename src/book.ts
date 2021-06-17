@@ -61,6 +61,7 @@ export class BookSide {
 
   getL2(depth: number): [I80F48, I80F48, BN, BN][] {
     const levels: [BN, BN][] = []; // (price, size)
+    //@ts-ignore
     for (const { key, quantity } of this.items()) {
       const price = getPriceFromKey(key);
       if (levels.length > 0 && levels[levels.length - 1][0].eq(price)) {

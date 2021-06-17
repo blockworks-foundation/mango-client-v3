@@ -55,8 +55,14 @@ export class I80F48 {
     return this.toFixed();
   }
   toFixed(decimals?: number): string {
+    return this.toBig().toFixed(decimals);
+  }
+  toBig(): Big {
     const divider = new Big(2).pow(I80F48.FRACTIONS);
-    return new Big(this.data.toString()).div(divider).toFixed(decimals);
+    return new Big(this.data.toString()).div(divider);
+  }
+  toNumber(): number {
+    return this.toBig().toNumber();
   }
   static fromArray(src: Uint8Array): I80F48 {
     if (src.length !== 16) {
