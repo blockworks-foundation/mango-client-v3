@@ -92,26 +92,26 @@ export class Keeper {
         }),
       );
 
-      const perpMarkets = await merpsGroup.loadPerpMarkets(connection);
-      await Promise.all([
-        perpMarkets.map((perpMarket) => {
-          if (perpMarket) {
-            return client
-              .updateFunding(
-                merpsGroup.publicKey,
-                merpsGroup.merpsCache,
-                perpMarket.publicKey,
-                perpMarket.bids,
-                perpMarket.asks,
-                payer,
-              )
-              .catch((err) => {
-                console.error('Failed to update funding', err);
-                return err;
-              });
-          }
-        }),
-      ]);
+      // const perpMarkets = await merpsGroup.loadPerpMarkets(connection);
+      // await Promise.all([
+      //   perpMarkets.map((perpMarket) => {
+      //     if (perpMarket) {
+      //       return client
+      //         .updateFunding(
+      //           merpsGroup.publicKey,
+      //           merpsGroup.merpsCache,
+      //           perpMarket.publicKey,
+      //           perpMarket.bids,
+      //           perpMarket.asks,
+      //           payer,
+      //         )
+      //         .catch((err) => {
+      //           console.error('Failed to update funding', err);
+      //           return err;
+      //         });
+      //     }
+      //   }),
+      // ]);
 
       // TODO: consume events
       //
