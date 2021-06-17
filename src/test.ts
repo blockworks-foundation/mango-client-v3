@@ -4,11 +4,12 @@ import * as fs from 'fs';
 import { MerpsClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import MerpsGroup, { QUOTE_INDEX } from '../src/MerpsGroup';
-import { findLargestTokenAccountForOwner, sleep } from './utils';
+import { sleep } from './utils';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import * as Test from '../test/utils';
 import { u64 } from '@solana/spl-token';
+import { findLargestTokenAccountForOwner } from './TokenAccount';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -92,8 +93,8 @@ async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
     btcMint,
     payer,
     marketIndex,
-    I80F48.fromNumber(maintLeverage),
-    I80F48.fromNumber(initLeverage),
+    maintLeverage,
+    initLeverage,
   );
 
   merpsGroup = await client.getMerpsGroup(groupKey);

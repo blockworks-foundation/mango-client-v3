@@ -48,6 +48,7 @@ export default async function addPerpMarket(
     base_symbol: symbol,
     key: group.perpMarkets[marketIndex].perpMarket,
     market_index: marketIndex,
+    name: `${symbol}-PERP`,
   };
 
   const market = getPerpMarketByBaseSymbol(groupConfig, symbol);

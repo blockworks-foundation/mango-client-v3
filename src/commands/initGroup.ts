@@ -47,11 +47,13 @@ export default async function initGroup(
     cluster,
     name: groupName,
     key: groupKey,
+    quote_symbol: quoteSymbol,
     merps_program_id: merpsProgramId,
     serum_program_id: serumProgramId,
     tokens: [tokenDesc],
     oracles: [],
     perp_markets: [],
+    spot_markets: [],
   };
   return groupDesc;
 }

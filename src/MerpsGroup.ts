@@ -1,16 +1,19 @@
 import { Market } from '@project-serum/serum';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
+import { I80F48 } from './fixednum';
 import {
   MetaData,
-  RootBank,
   RootBankLayout,
   TokenInfo,
   SpotMarketInfo,
   PerpMarketInfo,
   NodeBank,
   PerpMarket,
+  MerpsCache,
+  MerpsCacheLayout,
 } from './layout';
+import { RootBank } from './RootBank';
 import { promiseUndef, zeroKey } from './utils';
 
 export const MAX_TOKENS = 32;
@@ -33,9 +36,13 @@ export default class MerpsGroup {
   merpsCache!: PublicKey;
   validInterval!: number[];
 
+  rootBankAccounts: (RootBank | undefined)[];
+
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
+
+    this.rootBankAccounts = new Array(MAX_TOKENS).fill(undefined);
   }
 
   getOracleIndex(oracle: PublicKey): number {
@@ -83,6 +90,30 @@ export default class MerpsGroup {
     throw new Error('This root bank does not belong in this MerpsGroup');
   }
 
+  getBorrowRate(tokenIndex: number): I80F48 {
+    const rootBank = this.rootBankAccounts[tokenIndex];
+    if (!rootBank)
+      throw new Error(`Root bank at index ${tokenIndex} is not loaded`);
+
+    return rootBank.getBorrowRate(this);
+  }
+
+  getDepositRate(tokenIndex: number): I80F48 {
+    const rootBank = this.rootBankAccounts[tokenIndex];
+    if (!rootBank)
+      throw new Error(`Root bank at index ${tokenIndex} is not loaded`);
+
+    return rootBank.getDepositRate(this);
+  }
+
+  async loadCache(connection: Connection): Promise<MerpsCache> {
+    const account = await connection.getAccountInfo(this.merpsCache);
+    if (!account || !account?.data) throw new Error('Unable to load cache');
+
+    const decoded = MerpsCacheLayout.decode(account.data);
+    return new MerpsCache(this.merpsCache, decoded);
+  }
+
   async loadRootBanks(
     connection: Connection,
   ): Promise<(RootBank | undefined)[]> {
@@ -97,14 +128,22 @@ export default class MerpsGroup {
     }
 
     const accounts = await Promise.all(promises);
-
-    return accounts.map((acc, i) => {
+    const parsedRootBanks = accounts.map((acc, i) => {
       if (acc && acc.data) {
         const decoded = RootBankLayout.decode(acc.data);
         return new RootBank(this.tokens[i].rootBank, decoded);
       }
       return undefined;
     });
+
+    await Promise.all(
+      parsedRootBanks.map((rootBank) =>
+        rootBank ? rootBank.loadNodeBanks(connection) : promiseUndef(),
+      ),
+    );
+
+    this.rootBankAccounts = parsedRootBanks;
+    return parsedRootBanks;
   }
 
   async loadBanksForSpotMarket(

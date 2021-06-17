@@ -8,6 +8,7 @@ import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 
 import {
   addPerpMarket,
+  addSpotMarket,
   addStubOracle,
   initGroup,
   setStubOracle,
@@ -35,7 +36,7 @@ const keypairDesc: [string, Options] = [
   'keypair',
   {
     describe: 'the keypair used to sign all transactions',
-    default: os.homedir() + '/.config/solana/id.json',
+    default: os.homedir() + '/.config/solana/devnet.json',
     type: 'string',
   },
 ];
@@ -198,7 +199,6 @@ yargs(hideBin(process.argv))
         .positional(...groupDesc)
         .positional(...symbolDesc)
         .option('maint_leverage', {
-          describe: '',
           default: 20,
           type: 'number',
         })
@@ -241,6 +241,57 @@ yargs(hideBin(process.argv))
         args.base_lot_size as number,
         args.quote_lot_size as number,
         args.max_num_events as number,
+      );
+      config.storeGroup(result);
+      writeConfig(args.config as string, config);
+      process.exit(0);
+    },
+  )
+  .command(
+    'add-spot-market <group> <symbol> <market_pk> <mint_pk>',
+    'add a perp market to the group',
+    (y) =>
+      y
+        .positional(...groupDesc)
+        .positional(...symbolDesc)
+        .positional('market_pk', {
+          describe: 'the public key of the spot market',
+          type: 'string',
+        })
+        .positional('mint_pk', {
+          describe: 'the public key of the base token mint',
+          type: 'string',
+        })
+        .option('maint_leverage', {
+          default: 20,
+          type: 'number',
+        })
+        .option('init_leverage', {
+          default: 10,
+          type: 'number',
+        })
+        .option(...clusterDesc)
+        .option(...configDesc)
+        .option(...keypairDesc),
+    async (args) => {
+      console.log('add-spot-market', args);
+      const account = readKeypair(args.keypair as string);
+      const config = readConfig(args.config as string);
+      const cluster = args.cluster as Cluster;
+      const connection = openConnection(config, cluster);
+      const group = config.getGroup(
+        cluster,
+        args.group as string,
+      ) as GroupConfig;
+      const result = await addSpotMarket(
+        connection,
+        account,
+        group,
+        args.symbol as string,
+        new PublicKey(args.market_pk as string),
+        new PublicKey(args.mint_pk as string),
+        args.maint_leverage as number,
+        args.init_leverage as number,
       );
       config.storeGroup(result);
       writeConfig(args.config as string, config);

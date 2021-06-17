@@ -18,6 +18,12 @@ Set stub oracle value = base_price \* quote_unit / base_unit:
 yarn cli -- set-oracle merps_v1 BTC 40000
 ```
 
+Add a spot-market
+
+```
+yarn cli -- add-spot-market merps_v1 BTC E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9 bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP
+```
+
 Enable a perp-maket
 
 ```

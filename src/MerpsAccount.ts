@@ -6,11 +6,11 @@ import {
   MerpsCache,
   MetaData,
   PerpAccount,
-  RootBank,
   RootBankCache,
 } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
+import { RootBank } from './RootBank';
 
 export default class MerpsAccount {
   publicKey: PublicKey;
@@ -38,7 +38,6 @@ export default class MerpsAccount {
     rootBank: RootBank | RootBankCache,
     tokenIndex: number,
   ): I80F48 {
-    // TODO maybe load rootBank here instead of passing in?
     return rootBank.depositIndex.mul(this.deposits[tokenIndex]);
   }
   getNativeBorrow(
@@ -47,11 +46,23 @@ export default class MerpsAccount {
   ): I80F48 {
     return rootBank.borrowIndex.mul(this.borrows[tokenIndex]);
   }
-  getUiDeposit(): number {
-    throw new Error('not implemented');
+  getUiDeposit(
+    rootBank: RootBank | RootBankCache,
+    merpsGroup: MerpsGroup,
+    tokenIndex: number,
+  ): I80F48 {
+    return this.getNativeDeposit(rootBank, tokenIndex).div(
+      I80F48.fromNumber(Math.pow(10, merpsGroup.tokens[tokenIndex].decimals)),
+    );
   }
-  getUiBorrow(): number {
-    throw new Error('not implemented');
+  getUiBorrow(
+    rootBank: RootBank | RootBankCache,
+    merpsGroup: MerpsGroup,
+    tokenIndex: number,
+  ): I80F48 {
+    return this.getNativeBorrow(rootBank, tokenIndex).div(
+      I80F48.fromNumber(Math.pow(10, merpsGroup.tokens[tokenIndex].decimals)),
+    );
   }
 
   async loadOpenOrders(
