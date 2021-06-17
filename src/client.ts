@@ -28,7 +28,6 @@ import {
   RootBankLayout,
   MerpsCacheLayout,
   MerpsAccountLayout,
-  RootBank,
   PerpMarket,
   StubOracleLayout,
   PerpMarketLayout,
@@ -66,6 +65,7 @@ import {
 // import { I80F48, ZERO_I80F48 } from './fixednum';
 import { I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
+import { RootBank } from './RootBank';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;

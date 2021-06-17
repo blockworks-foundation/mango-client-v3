@@ -6,11 +6,11 @@ import {
   MerpsCache,
   MetaData,
   PerpAccount,
-  RootBank,
   RootBankCache,
 } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
+import { RootBank } from './RootBank';
 
 export default class MerpsAccount {
   publicKey: PublicKey;

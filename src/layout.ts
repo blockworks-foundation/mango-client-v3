@@ -10,14 +10,18 @@ import {
   Layout,
   UInt,
 } from 'buffer-layout';
-import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import BN from 'bn.js';
-import { promiseUndef, zeroKey } from './utils';
+import { zeroKey } from './utils';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
+
+export const MAX_RATE = I80F48.fromString('3.0');
+export const OPTIMAL_UTIL = I80F48.fromString('0.7');
+export const OPTIMAL_RATE = I80F48.fromString('0.2');
 
 class _I80F48Layout extends Blob {
   constructor(property: string) {
@@ -830,41 +834,5 @@ export class NodeBank {
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
-  }
-}
-
-export class RootBank {
-  publicKey: PublicKey;
-
-  numNodeBanks!: number;
-  nodeBanks!: PublicKey[];
-  depositIndex!: I80F48;
-  borrowIndex!: I80F48;
-  lastUpdated!: BN;
-
-  constructor(publicKey: PublicKey, decoded: any) {
-    this.publicKey = publicKey;
-    Object.assign(this, decoded);
-  }
-
-  async loadNodeBanks(connection: Connection): Promise<NodeBank[]> {
-    const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
-
-    for (let i = 0; i < this.nodeBanks.length; i++) {
-      if (this.nodeBanks[i].equals(zeroKey)) {
-        promises.push(promiseUndef());
-      } else {
-        promises.push(connection.getAccountInfo(this.nodeBanks[i]));
-      }
-    }
-
-    const accounts = await Promise.all(promises);
-
-    return accounts
-      .filter((acc) => acc && acc.data)
-      .map((acc, i) => {
-        const decoded = NodeBankLayout.decode(acc?.data);
-        return new NodeBank(this.nodeBanks[i], decoded);
-      });
   }
 }
