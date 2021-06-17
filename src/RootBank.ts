@@ -88,15 +88,15 @@ export class RootBank {
     const totalBorrows = this.getUiTotalBorrow(merpsGroup);
     const totalDeposits = this.getUiTotalDeposit(merpsGroup);
 
-    if (totalDeposits === ZERO_I80F48 && totalBorrows === ZERO_I80F48) {
+    if (totalDeposits.eq(ZERO_I80F48) && totalBorrows.eq(ZERO_I80F48)) {
       return ZERO_I80F48;
     }
-    if (totalDeposits <= totalBorrows) {
+    if (totalDeposits.lte(totalBorrows)) {
       return MAX_RATE;
     }
 
     const utilization = totalBorrows.div(totalDeposits);
-    if (utilization > OPTIMAL_UTIL) {
+    if (utilization.gt(OPTIMAL_UTIL)) {
       const extraUtil = utilization.sub(OPTIMAL_UTIL);
       const slope = MAX_RATE.sub(OPTIMAL_RATE).div(
         I80F48.fromNumber(1).sub(OPTIMAL_UTIL),
@@ -116,9 +116,9 @@ export class RootBank {
     console.log('totalDeposits', totalDeposits, totalDeposits.toString());
     console.log('totalBorrows', totalBorrows, totalBorrows.toString());
 
-    if (totalDeposits === ZERO_I80F48 && totalBorrows === ZERO_I80F48) {
+    if (totalDeposits.eq(ZERO_I80F48) && totalBorrows.eq(ZERO_I80F48)) {
       return ZERO_I80F48;
-    } else if (totalDeposits === ZERO_I80F48) {
+    } else if (totalDeposits.eq(ZERO_I80F48)) {
       return MAX_RATE;
     }
 
