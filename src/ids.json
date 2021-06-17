@@ -30,7 +30,7 @@
       "perp_markets": [],
       "spot_markets": [
         {
-          "base_symbol": "BTC",
+          "base_symbol": "BTC/USDC",
           "key": "E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9",
           "market_index": 0
         }
