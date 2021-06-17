@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import { MerpsClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { sleep } from './utils';
-import { Config } from './config';
+import { Config, GroupConfig } from './config';
 
 export class Keeper {
   /**
@@ -20,7 +20,10 @@ export class Keeper {
     const interval = 5000;
     // eslint-disable-next-line
     while (true) {
-      const config = Config.ids().getGroup('devnet', 'merps_test_v1');
+      const config = Config.ids().getGroup(
+        'devnet',
+        'merps_test_v1',
+      ) as GroupConfig;
       await sleep(interval);
       // TODO: Get cluster and keypair from env
       const payer = new Account(
