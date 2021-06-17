@@ -50,19 +50,19 @@ export default class MerpsAccount {
     rootBank: RootBank | RootBankCache,
     merpsGroup: MerpsGroup,
     tokenIndex: number,
-  ): string {
-    return this.getNativeDeposit(rootBank, tokenIndex)
-      .div(I80F48.fromNumber(merpsGroup.tokens[tokenIndex].decimals))
-      .toString();
+  ): I80F48 {
+    return this.getNativeDeposit(rootBank, tokenIndex).div(
+      I80F48.fromNumber(merpsGroup.tokens[tokenIndex].decimals),
+    );
   }
   getUiBorrow(
     rootBank: RootBank | RootBankCache,
     merpsGroup: MerpsGroup,
     tokenIndex: number,
-  ): string {
-    return this.getNativeBorrow(rootBank, tokenIndex)
-      .div(I80F48.fromNumber(merpsGroup.tokens[tokenIndex].decimals))
-      .toString();
+  ): I80F48 {
+    return this.getNativeBorrow(rootBank, tokenIndex).div(
+      I80F48.fromNumber(merpsGroup.tokens[tokenIndex].decimals),
+    );
   }
 
   async loadOpenOrders(
