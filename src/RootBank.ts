@@ -113,9 +113,6 @@ export class RootBank {
     const totalBorrows = this.getUiTotalBorrow(merpsGroup);
     const totalDeposits = this.getUiTotalDeposit(merpsGroup);
 
-    console.log('totalDeposits', totalDeposits, totalDeposits.toString());
-    console.log('totalBorrows', totalBorrows, totalBorrows.toString());
-
     if (totalDeposits.eq(ZERO_I80F48) && totalBorrows.eq(ZERO_I80F48)) {
       return ZERO_I80F48;
     } else if (totalDeposits.eq(ZERO_I80F48)) {
