@@ -100,12 +100,52 @@ export interface GroupConfig {
   tokens: TokenConfig[];
 }
 
+export function getMarketIndexBySymbol(group: GroupConfig, symbol: string) {
+  return group.oracles.findIndex((o) => o.symbol === symbol);
+}
+
 export function getOracleBySymbol(group: GroupConfig, symbol: string) {
   return group.oracles.find((o) => o.symbol === symbol);
 }
 
 export function getPerpMarketByBaseSymbol(group: GroupConfig, symbol: string) {
   return group.perp_markets.find((p) => p.base_symbol === symbol);
+}
+
+export function getSpotMarketByBaseSymbol(group: GroupConfig, symbol: string) {
+  return group.spot_markets.find((p) => p.base_symbol === symbol);
+}
+
+export type MarketKind = 'spot' | 'perp';
+
+export interface MarketConfig {
+  kind: MarketKind;
+  base_symbol: string;
+  key: PublicKey;
+  market_index: number;
+}
+
+export function getMarketByBaseSymbolAndKind(
+  group: GroupConfig,
+  symbol: string,
+  kind: MarketKind,
+) {
+  const market =
+    kind === 'spot'
+      ? getSpotMarketByBaseSymbol(group, symbol)
+      : getPerpMarketByBaseSymbol(group, symbol);
+  return { kind, ...market };
+}
+
+export function getTokenByMint(group: GroupConfig, mint: string | PublicKey) {
+  if (mint instanceof PublicKey) {
+    mint = mint.toBase58();
+  }
+  return group.tokens.find((t) => t.mint_key.toBase58() === mint);
+}
+
+export function getTokenBySymbol(group: GroupConfig, symbol: string) {
+  return group.tokens.find((t) => t.symbol === symbol);
 }
 
 function groupConfigFromJson(j: any) {

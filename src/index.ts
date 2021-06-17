@@ -3,7 +3,7 @@ import MerpsGroup from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';
 
 export { MerpsClient } from './client';
-export { Config } from './config';
+export * from './config';
 export { MerpsAccountLayout, MerpsGroupLayout } from './layout';
 
 export * from './layout';
