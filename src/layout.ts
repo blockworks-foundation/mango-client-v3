@@ -707,6 +707,16 @@ export class PerpMarket {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
   }
+
+  priceLotsToNative(price: BN): I80F48 {
+    return I80F48.fromI64(this.quoteLotSize.mul(price)).div(
+      I80F48.fromI64(this.contractSize),
+    );
+  }
+
+  baseLotsToNative(quantity: BN): I80F48 {
+    return I80F48.fromI64(this.contractSize.mul(quantity));
+  }
 }
 
 export const PerpEventLayout = struct([
