@@ -1,10 +1,11 @@
 import { struct, blob, nu64 } from 'buffer-layout';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TokenInstructions } from '@project-serum/serum';
+import { publicKeyLayout } from './layout';
 
 export const TokenAccountLayout = struct([
-  blob(32, 'mint'),
-  blob(32, 'owner'),
+  publicKeyLayout('mint'),
+  publicKeyLayout('owner'),
   nu64('amount'),
   blob(93),
 ]);
