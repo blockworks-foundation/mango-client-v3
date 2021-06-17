@@ -29,7 +29,7 @@ import {
   MerpsCacheLayout,
   MerpsAccountLayout,
   RootBank,
-  // PerpMarket,
+  PerpMarket,
   StubOracleLayout,
   PerpMarketLayout,
   PerpBookSizeLayout,
