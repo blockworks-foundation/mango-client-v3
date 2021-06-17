@@ -1,6 +1,7 @@
 import {
   Account,
   Connection,
+  Keypair,
   PublicKey,
   SimulatedTransactionResponse,
   Transaction,
@@ -53,6 +54,7 @@ import {
   makePlaceSpotOrderInstruction,
   makeSetOracleInstruction,
   makeSettleFundsInstruction,
+  makeSettlePnlInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
 } from './instruction';
@@ -62,7 +64,7 @@ import {
   getFeeTier,
   OpenOrders,
 } from '@project-serum/serum';
-import { I80F48 } from './fixednum';
+import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 
 export const getUnixTs = () => {
@@ -850,10 +852,22 @@ export class MerpsClient {
     merpsGroup: MerpsGroup,
     merpsAccount: MerpsAccount,
     perpMarket: PerpMarket,
+    quoteRootBank: RootBank,
+    price: I80F48, // should be the MerpsCache price
     owner: Account,
-  ) {
+  ): Promise<TransactionSignature | null> {
     // fetch all MerpsAccounts filtered for having this perp market in basket
     const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
+    const perpMarketInfo = merpsGroup.perpMarkets[marketIndex];
+    let pnl = merpsAccount.perpAccounts[marketIndex].getPnl(
+      perpMarketInfo,
+      price,
+    );
+
+    // Can't settle pnl if there is no pnl
+    if (pnl.eq(ZERO_I80F48)) {
+      return null;
+    }
 
     const filter = {
       memcmp: {
@@ -864,7 +878,52 @@ export class MerpsClient {
 
     const merpsAccounts = await this.getAllMerpsAccounts(merpsGroup, [filter]);
 
-    throw new Error('Not Implemented');
+    const sign = pnl.gt(ZERO_I80F48) ? 1 : -1;
+
+    const accountsWithPnl = merpsAccounts
+      .map((m) => ({
+        account: m,
+        pnl: m.perpAccounts[marketIndex].getPnl(perpMarketInfo, price),
+      }))
+      .sort((a, b) => sign * a.pnl.cmp(b.pnl));
+
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
+
+    // TODO - make sure we limit number of instructions to not go over tx size limit
+    for (const account of accountsWithPnl) {
+      // if pnl has changed sign, then we're down
+      const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
+      if (remSign !== sign) {
+        break;
+      }
+
+      // Account pnl must have opposite signs
+      if (pnl.mul(account.pnl).gte(ZERO_I80F48)) {
+        break;
+      }
+
+      const instr = makeSettlePnlInstruction(
+        this.programId,
+        merpsGroup.publicKey,
+        merpsAccount.publicKey,
+        account.account.publicKey,
+        merpsGroup.merpsCache,
+        quoteRootBank.publicKey,
+        quoteRootBank.nodeBanks[0],
+        new BN(marketIndex),
+      );
+
+      transaction.add(instr);
+    }
+
+    return await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+      30000,
+      'processed',
+    );
 
     // Calculate the profit or loss per market
   }

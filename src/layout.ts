@@ -152,12 +152,12 @@ class EnumLayout extends UInt {
   }
 }
 
-export function sideLayout(property) {
-  return new EnumLayout({ buy: 0, sell: 1 }, 4, property);
+export function sideLayout(property, span) {
+  return new EnumLayout({ buy: 0, sell: 1 }, span, property);
 }
 
-export function orderTypeLayout(property) {
-  return new EnumLayout({ limit: 0, ioc: 1, postOnly: 2 }, 4, property);
+export function orderTypeLayout(property, span) {
+  return new EnumLayout({ limit: 0, ioc: 1, postOnly: 2 }, span, property);
 }
 
 export function selfTradeBehaviorLayout(property) {
@@ -207,12 +207,12 @@ MerpsInstructionLayout.addVariant(8, struct([]), 'CacheRootBanks');
 MerpsInstructionLayout.addVariant(
   9,
   struct([
-    sideLayout('side'),
+    sideLayout('side', 4),
     u64('limitPrice'),
     u64('maxBaseQuantity'),
     u64('maxQuoteQuantity'),
     selfTradeBehaviorLayout('selfTradeBehavior'),
-    orderTypeLayout('orderType'),
+    orderTypeLayout('orderType', 4),
     u64('clientId'),
     u16('limit'),
   ]),
@@ -231,13 +231,24 @@ MerpsInstructionLayout.addVariant(
   'AddPerpMarket',
 );
 MerpsInstructionLayout.addVariant(
+  14,
+  struct([
+    i64('price'),
+    i64('quantity'),
+    u64('clientOrderId'),
+    sideLayout('side', 1),
+    orderTypeLayout('orderType', 1),
+  ]),
+  'PlacePerpOrder',
+);
+MerpsInstructionLayout.addVariant(
   13,
   struct([u64('client_order_id')]),
   'CancelPerpOrderByClientId',
 );
 MerpsInstructionLayout.addVariant(
   14,
-  struct([i128('order_id'), sideLayout('side')]),
+  struct([i128('order_id'), sideLayout('side', 4)]),
   'CancelPerpOrder',
 );
 MerpsInstructionLayout.addVariant(15, struct([u64('limit')]), 'ConsumeEvents');
@@ -455,6 +466,12 @@ export class PerpAccount {
     Object.assign(this, decoded);
   }
 
+  getPnl(perpMarketInfo: PerpMarketInfo, price: I80F48): I80F48 {
+    return I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize))
+      .mul(price)
+      .add(this.quotePosition);
+  }
+
   simPositionHealth(
     perpMarketInfo: PerpMarketInfo,
     price: I80F48,
@@ -492,8 +509,6 @@ export class PerpAccount {
     longFunding: I80F48,
     shortFunding: I80F48,
   ): I80F48 {
-    // const bidsHealth = this.simPositionHealth();
-
     const bidsHealth = this.simPositionHealth(
       perpMarketInfo,
       price,
@@ -509,7 +524,7 @@ export class PerpAccount {
       liabWeight,
       this.openOrders.asksQuantity.neg(),
     );
-    let health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
+    const health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
     if (this.basePosition.gt(new BN(0))) {
       return health.sub(
         longFunding

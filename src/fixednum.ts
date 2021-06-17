@@ -129,4 +129,14 @@ export class I80F48 {
     // TODO make sure this works when they're diff signs or 0
     return this.data.cmp(x.getInternalValue());
   }
+  neg(): I80F48 {
+    return this.mul(NEG_ONE_I80F48);
+  }
+  isNeg(): boolean {
+    return this.data.isNeg();
+  }
 }
+
+export const ONE_I80F48 = I80F48.fromString('1');
+export const ZERO_I80F48 = I80F48.fromString('0');
+export const NEG_ONE_I80F48 = I80F48.fromString('-1');
