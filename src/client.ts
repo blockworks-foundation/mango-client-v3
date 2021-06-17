@@ -55,6 +55,7 @@ import {
   makeSetOracleInstruction,
   makeSettleFundsInstruction,
   makeSettlePnlInstruction,
+  makeUpdateFundingInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
 } from './instruction';
@@ -492,6 +493,29 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  async updateFunding(
+    merpsGroup: PublicKey,
+    merpsCache: PublicKey,
+    perpMarket: PublicKey,
+    bids: PublicKey,
+    asks: PublicKey,
+    payer: Account,
+  ): Promise<TransactionSignature> {
+    const updateFundingInstruction = makeUpdateFundingInstruction(
+      this.programId,
+      merpsGroup,
+      merpsCache,
+      perpMarket,
+      bids,
+      asks,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(updateFundingInstruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
   async placePerpOrder(): Promise<TransactionSignature[]> {
     throw new Error('Not Implemented');
   }
@@ -512,6 +536,24 @@ export class MerpsClient {
       if (acc) {
         const decoded = RootBankLayout.decode(acc.data);
         parsedRootBanks.push(new RootBank(rootBanks[i], decoded));
+      }
+    }
+
+    return parsedRootBanks;
+  }
+
+  async loadPerpMarkets(perpMarkets: PublicKey[]): Promise<PerpMarket[]> {
+    const accounts = await Promise.all(
+      perpMarkets.map((pk) => this.connection.getAccountInfo(pk)),
+    );
+
+    const parsedRootBanks: PerpMarket[] = [];
+
+    for (let i = 0; i < accounts.length; i++) {
+      const acc = accounts[i];
+      if (acc) {
+        const decoded = RootBankLayout.decode(acc.data);
+        parsedRootBanks.push(new PerpMarket(perpMarkets[i], decoded));
       }
     }
 

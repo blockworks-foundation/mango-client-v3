@@ -76,15 +76,44 @@ export class Keeper {
       await Promise.all(
         rootBanks.map((rootBank) => {
           if (rootBank) {
-            return client.updateRootBank(
-              merpsGroup.publicKey,
-              rootBank.publicKey,
-              rootBank.nodeBanks.slice(0, rootBank.numNodeBanks),
-              payer,
-            );
+            return client
+              .updateRootBank(
+                merpsGroup.publicKey,
+                rootBank.publicKey,
+                rootBank.nodeBanks.slice(0, rootBank.numNodeBanks),
+                payer,
+              )
+              .catch((err) => {
+                console.error('Failed to update rootbank', err);
+                return err;
+              });
           }
         }),
       );
+
+      const perpMarkets = await merpsGroup.loadPerpMarkets(connection);
+      await Promise.all([
+        perpMarkets.map((perpMarket) => {
+          if (perpMarket) {
+            return client
+              .updateFunding(
+                merpsGroup.publicKey,
+                merpsGroup.merpsCache,
+                perpMarket.publicKey,
+                perpMarket.bids,
+                perpMarket.asks,
+                payer,
+              )
+              .catch((err) => {
+                console.error('Failed to update funding', err);
+                return err;
+              });
+          }
+        }),
+      ]);
+
+      // TODO: consume events
+      //
     }
   }
 }

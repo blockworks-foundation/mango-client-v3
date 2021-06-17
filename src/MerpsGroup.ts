@@ -10,6 +10,7 @@ import {
   PerpMarketInfo,
   NodeBank,
   PerpMarket,
+  PerpMarketLayout,
 } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 
@@ -139,5 +140,34 @@ export default class MerpsGroup {
     );
 
     return { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank };
+  }
+
+  async loadPerpMarkets(
+    connection: Connection,
+  ): Promise<(PerpMarket | undefined)[]> {
+    const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
+
+    for (let i = 0; i < this.tokens.length; i++) {
+      if (
+        !this.perpMarkets[i] ||
+        this.perpMarkets[i].perpMarket.equals(zeroKey)
+      ) {
+        promises.push(promiseUndef());
+      } else {
+        promises.push(
+          connection.getAccountInfo(this.perpMarkets[i].perpMarket),
+        );
+      }
+    }
+
+    const accounts = await Promise.all(promises);
+
+    return accounts.map((acc, i) => {
+      if (acc && acc.data) {
+        const decoded = PerpMarketLayout.decode(acc.data);
+        return new PerpMarket(this.perpMarkets[i].perpMarket, decoded);
+      }
+      return undefined;
+    });
   }
 }

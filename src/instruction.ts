@@ -707,3 +707,29 @@ export function makePlacePerpOrderInstruction(
     programId,
   });
 }
+
+export function makeUpdateFundingInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsCachePk: PublicKey,
+  perpMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: false, pubkey: bidsPk },
+    { isSigner: false, isWritable: false, pubkey: asksPk },
+  ];
+
+  const data = encodeMerpsInstruction({
+    UpdateFunding: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
