@@ -52,6 +52,7 @@ export default async function initGroup(
     tokens: [tokenDesc],
     oracles: [],
     perp_markets: [],
+    spot_markets: [],
   };
   return groupDesc;
 }
