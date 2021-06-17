@@ -10,6 +10,7 @@ import * as fs from 'fs';
 import { MerpsClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { sleep } from './utils';
+import { Config } from './config';
 
 export class Keeper {
   /**
@@ -19,18 +20,9 @@ export class Keeper {
     const interval = 5000;
     // eslint-disable-next-line
     while (true) {
+      const config = Config.ids().getGroup('devnet', 'merps_test_v1');
       await sleep(interval);
-      // TODO: Fetch ids from ids.json
       // TODO: Get cluster and keypair from env
-      const merpsProgramId = new PublicKey(
-        '8XywrZebqGoRTYgK1zLoESRdPx6gviRQe6hMonQZbt7M',
-      );
-      // const dexProgramId = new PublicKey(
-      //   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
-      // );
-      const merpsGroupKey = new PublicKey(
-        'kLeipzWY2EqG9jFAiPmT2szU6evrQtce9CLDBccBWgo',
-      );
       const payer = new Account(
         JSON.parse(
           fs.readFileSync(
@@ -43,14 +35,14 @@ export class Keeper {
         'https://api.devnet.solana.com',
         'processed' as Commitment,
       );
-      const client = new MerpsClient(connection, merpsProgramId);
-      const merpsGroup = await client.getMerpsGroup(merpsGroupKey);
+      const client = new MerpsClient(connection, config.merps_program_id);
+      const merpsGroup = await client.getMerpsGroup(config.key);
 
       await client.cacheRootBanks(
         merpsGroup.publicKey,
         merpsGroup.merpsCache,
         [],
-        payer
+        payer,
       );
 
       const rootBanks = await merpsGroup.loadRootBanks(connection);
