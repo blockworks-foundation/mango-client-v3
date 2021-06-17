@@ -52,7 +52,7 @@ export default class MerpsAccount {
     tokenIndex: number,
   ): I80F48 {
     return this.getNativeDeposit(rootBank, tokenIndex).div(
-      I80F48.fromNumber(merpsGroup.tokens[tokenIndex].decimals),
+      I80F48.fromNumber(Math.pow(10, merpsGroup.tokens[tokenIndex].decimals)),
     );
   }
   getUiBorrow(
@@ -61,7 +61,7 @@ export default class MerpsAccount {
     tokenIndex: number,
   ): I80F48 {
     return this.getNativeBorrow(rootBank, tokenIndex).div(
-      I80F48.fromNumber(merpsGroup.tokens[tokenIndex].decimals),
+      I80F48.fromNumber(Math.pow(10, merpsGroup.tokens[tokenIndex].decimals)),
     );
   }
 

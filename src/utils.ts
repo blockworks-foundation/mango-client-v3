@@ -300,3 +300,29 @@ export async function findLargestTokenAccountForOwner(
     throw new Error('No accounts for this token');
   }
 }
+
+export async function getMultipleAccounts(
+  connection: Connection,
+  publicKeys: PublicKey[],
+  commitment?: Commitment,
+): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
+  const publickKeyStrs = publicKeys.map((pk) => pk.toBase58());
+
+  const args = commitment ? [publickKeyStrs, { commitment }] : [publickKeyStrs];
+  // @ts-ignore
+  const resp = await connection._rpcRequest('getMultipleAccounts', args);
+  if (resp.error) {
+    throw new Error(resp.error.message);
+  }
+  return resp.result.value.map(
+    ({ data, executable, lamports, owner }, i: number) => ({
+      publicKey: publicKeys[i],
+      accountInfo: {
+        data: Buffer.from(data[0], 'base64'),
+        executable,
+        owner: new PublicKey(owner),
+        lamports,
+      },
+    }),
+  );
+}
