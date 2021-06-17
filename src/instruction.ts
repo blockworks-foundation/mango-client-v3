@@ -554,3 +554,30 @@ export function makeAddPerpMarketInstruction(
     programId,
   });
 }
+
+export function makeCachePerpMarketsInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsCachePk: PublicKey,
+  perpMarkets: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    ...perpMarkets.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMerpsInstruction({
+    CachePerpMarkets: {},
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

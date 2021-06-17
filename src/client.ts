@@ -42,6 +42,7 @@ import {
   makeAddPerpMarketInstruction,
   makeAddSpotMarketInstruction,
   makeAddToBasketInstruction,
+  makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
   makeCancelOrderInstruction,
@@ -423,6 +424,25 @@ export class MerpsClient {
 
     const transaction = new Transaction();
     transaction.add(cachePricesInstruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async cachePerpMarkets(
+    merpsGroup: PublicKey,
+    merpsCache: PublicKey,
+    perpMarkets: PublicKey[],
+    payer: Account,
+  ): Promise<TransactionSignature> {
+    const cachePerpMarketsInstruction = makeCachePerpMarketsInstruction(
+      this.programId,
+      merpsGroup,
+      merpsCache,
+      perpMarkets,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(cachePerpMarketsInstruction);
 
     return await this.sendTransaction(transaction, payer, []);
   }

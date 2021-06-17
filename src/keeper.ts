@@ -10,6 +10,8 @@ import * as fs from 'fs';
 import { MerpsClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { sleep } from './utils';
+import configFile from './ids.json';
+import { Cluster, Config } from './config';
 
 export class Keeper {
   /**
@@ -20,17 +22,18 @@ export class Keeper {
     // eslint-disable-next-line
     while (true) {
       await sleep(interval);
-      // TODO: Fetch ids from ids.json
-      // TODO: Get cluster and keypair from env
-      const merpsProgramId = new PublicKey(
-        '8XywrZebqGoRTYgK1zLoESRdPx6gviRQe6hMonQZbt7M',
-      );
-      // const dexProgramId = new PublicKey(
-      //   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
-      // );
-      const merpsGroupKey = new PublicKey(
-        'kLeipzWY2EqG9jFAiPmT2szU6evrQtce9CLDBccBWgo',
-      );
+      const config = new Config(configFile);
+
+      const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
+      const groupName = process.env.GROUP || 'merps_v1';
+      const groupIds = config.getGroup(cluster, groupName);
+
+      if (!groupIds) {
+        throw new Error(`Group ${groupName} not found`);
+      }
+
+      const merpsProgramId = groupIds.merps_program_id;
+      const merpsGroupKey = groupIds.key;
       const payer = new Account(
         JSON.parse(
           fs.readFileSync(
@@ -40,30 +43,48 @@ export class Keeper {
         ),
       );
       const connection = new Connection(
-        'https://api.devnet.solana.com',
+        config.cluster_urls[cluster],
         'processed' as Commitment,
       );
       const client = new MerpsClient(connection, merpsProgramId);
       const merpsGroup = await client.getMerpsGroup(merpsGroupKey);
-
-      await client.cacheRootBanks(
-        merpsGroup.publicKey,
-        merpsGroup.merpsCache,
-        [],
-        payer
-      );
+      // TODO: roll these into single transaction?
+      await Promise.all([
+        client.cacheRootBanks(
+          merpsGroup.publicKey,
+          merpsGroup.merpsCache,
+          [],
+          payer,
+        ),
+        client.cachePrices(
+          merpsGroup.publicKey,
+          merpsGroup.merpsCache,
+          merpsGroup.oracles,
+          payer,
+        ),
+        client.cachePerpMarkets(
+          merpsGroup.publicKey,
+          merpsGroup.merpsCache,
+          merpsGroup.perpMarkets
+            .filter((pm) => !pm.isEmpty())
+            .map((pm) => pm.perpMarket),
+          payer,
+        ),
+      ]);
 
       const rootBanks = await merpsGroup.loadRootBanks(connection);
-      rootBanks.forEach(async (rootBank) => {
-        if (rootBank) {
-          await client.updateRootBank(
-            merpsGroup.publicKey,
-            rootBank.publicKey,
-            rootBank.nodeBanks.slice(0, rootBank.numNodeBanks),
-            payer,
-          );
-        }
-      });
+      await Promise.all(
+        rootBanks.map((rootBank) => {
+          if (rootBank) {
+            return client.updateRootBank(
+              merpsGroup.publicKey,
+              rootBank.publicKey,
+              rootBank.nodeBanks.slice(0, rootBank.numNodeBanks),
+              payer,
+            );
+          }
+        }),
+      );
     }
   }
 }

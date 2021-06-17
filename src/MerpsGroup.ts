@@ -36,6 +36,7 @@ export default class MerpsGroup {
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
+    this.oracles = this.oracles.filter((o) => !o.equals(zeroKey));
   }
 
   getOracleIndex(oracle: PublicKey): number {
