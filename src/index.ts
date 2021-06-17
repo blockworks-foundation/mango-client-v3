@@ -4,6 +4,7 @@ import MerpsAccount from './MerpsAccount';
 
 export { MerpsClient } from './client';
 export * from './config';
+export * from './TokenAccount';
 export { MerpsAccountLayout, MerpsGroupLayout } from './layout';
 
 export * from './layout';
