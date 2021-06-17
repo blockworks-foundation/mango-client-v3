@@ -51,6 +51,7 @@ import {
   makeDepositInstruction,
   makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
+  makePlacePerpOrderInstruction,
   makePlaceSpotOrderInstruction,
   makeSetOracleInstruction,
   makeSettleFundsInstruction,
@@ -101,39 +102,43 @@ export class MerpsClient {
     );
   }
 
+  // TODO - switch Account to Keypair and switch off setSigners due to deprecated
   async sendTransaction(
     transaction: Transaction,
     payer: Account,
     additionalSigners: Account[],
     timeout = 30000,
-    confirmLevel: TransactionConfirmationStatus = 'confirmed',
+    confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
+    // TODO - what if we can get recentBlockhas streamed on websocket so we avoid this call
     transaction.recentBlockhash = (
-      await this.connection.getRecentBlockhash('singleGossip')
+      await this.connection.getRecentBlockhash()
     ).blockhash;
     transaction.setSigners(
       payer.publicKey,
       ...additionalSigners.map((a) => a.publicKey),
     );
-
     const signers = [payer].concat(additionalSigners);
     transaction.sign(...signers);
+
     const rawTransaction = transaction.serialize();
     const startTime = getUnixTs();
-
     const txid: TransactionSignature = await this.connection.sendRawTransaction(
       rawTransaction,
       { skipPreflight: true },
     );
-
     console.log('Started awaiting confirmation for', txid);
+
     let done = false;
     (async () => {
+      // TODO - make sure this works well on mainnet
+      await sleep(2000);
       while (!done && getUnixTs() - startTime < timeout / 1000) {
+        console.log(new Date().toUTCString(), ' sending tx ', txid);
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(300);
+        await sleep(2000);
       }
     })();
 
@@ -516,8 +521,78 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
-  async placePerpOrder(): Promise<TransactionSignature[]> {
-    throw new Error('Not Implemented');
+  async getPerpMarket(perpMarketPk: PublicKey): Promise<PerpMarket> {
+    const acc = await this.connection.getAccountInfo(perpMarketPk);
+    const perpMarket = new PerpMarket(
+      perpMarketPk,
+      PerpMarketLayout.decode(acc == null ? undefined : acc.data),
+    );
+    return perpMarket;
+  }
+
+  async placePerpOrder(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    merpsCache: PublicKey,
+    perpMarket: PerpMarket,
+    owner: Account,
+
+    side: 'buy' | 'sell',
+    price: number,
+    quantity: number,
+    orderType?: 'limit' | 'ioc' | 'postOnly',
+    clientOrderId = 0,
+  ): Promise<TransactionSignature> {
+    const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
+
+    // TODO: this will not work for perp markets without spot market
+    const baseTokenInfo = merpsGroup.tokens[marketIndex];
+    const quoteTokenInfo = merpsGroup.tokens[QUOTE_INDEX];
+    const baseUnit = Math.pow(10, baseTokenInfo.decimals);
+    const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
+
+    const nativePrice = new BN(price * quoteUnit)
+      .mul(perpMarket.contractSize)
+      .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
+    const nativeQuantity = new BN(quantity * baseUnit).div(
+      perpMarket.contractSize,
+    );
+
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
+
+    if (!merpsAccount.inBasket[marketIndex]) {
+      // TODO: find out why this does not work
+      transaction.add(
+        makeAddToBasketInstruction(
+          this.programId,
+          merpsGroup.publicKey,
+          merpsAccount.publicKey,
+          owner.publicKey,
+          new BN(marketIndex),
+        ),
+      );
+    }
+
+    const instruction = makePlacePerpOrderInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      merpsAccount.publicKey,
+      owner.publicKey,
+      merpsCache,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      perpMarket.eventQueue,
+      nativePrice,
+      nativeQuantity,
+      new BN(clientOrderId),
+      side,
+      orderType,
+    );
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
   async cancelPerpOrder(): Promise<TransactionSignature[]> {
@@ -729,6 +804,19 @@ export class MerpsClient {
 
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
+
+    if (!merpsAccount.inBasket[spotMarketIndex]) {
+      // TODO: find out why this does not work
+      transaction.add(
+        makeAddToBasketInstruction(
+          this.programId,
+          merpsGroup.publicKey,
+          merpsAccount.publicKey,
+          owner.publicKey,
+          new BN(spotMarketIndex),
+        ),
+      );
+    }
 
     const openOrdersKeys: PublicKey[] = [];
     for (let i = 0; i < merpsAccount.spotOpenOrders.length; i++) {
