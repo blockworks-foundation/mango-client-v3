@@ -27,7 +27,13 @@
           "key": "J65LYhVkKBEoM5rv4efYsq9Nku6z9aKbVtpN9HaKNQET"
         }
       ],
-      "perp_markets": [],
+      "perp_markets": [
+        {
+          "base_symbol": "BTC",
+          "key": "BNySedrWddPySxXr92NVQm2cT8fB18mUwovQVtWGSBuZ",
+          "market_index": 0
+        }
+      ],
       "spot_markets": [
         {
           "base_symbol": "BTC/USDC",
