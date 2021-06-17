@@ -969,9 +969,27 @@ export class MerpsClient {
   //   // Calculate the profit or loss per market
   // }
 
+  getMarginAccountsForOwner(
+    merpsGroup: MerpsGroup,
+    owner: PublicKey,
+    includeOpenOrders = false,
+  ): Promise<MerpsAccount[]> {
+    const filters = [
+      {
+        memcmp: {
+          offset: MerpsAccountLayout.offsetOf('owner'),
+          bytes: owner.toBase58(),
+        },
+      },
+    ];
+
+    return this.getAllMerpsAccounts(merpsGroup, filters, includeOpenOrders);
+  }
+
   async getAllMerpsAccounts(
     merpsGroup: MerpsGroup,
-    filters?: [any],
+    filters?: any[],
+    includeOpenOrders = false,
   ): Promise<MerpsAccount[]> {
     const accountFilters = [
       {
@@ -1004,6 +1022,10 @@ export class MerpsClient {
           ),
       ),
     );
+
+    if (!includeOpenOrders) {
+      return await merpsAccountProms;
+    }
 
     const ordersFilters = [
       {
