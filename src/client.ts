@@ -1,7 +1,7 @@
 import {
   Account,
   Connection,
-  Keypair,
+  // Keypair,
   PublicKey,
   SimulatedTransactionResponse,
   Transaction,
@@ -28,11 +28,10 @@ import {
   RootBankLayout,
   MerpsCacheLayout,
   MerpsAccountLayout,
-  RootBank,
   PerpMarket,
   StubOracleLayout,
   PerpMarketLayout,
-  PerpBookSizeLayout,
+  BookSideLayout,
   PerpEventQueueLayout,
   PerpEventLayout,
 } from './layout';
@@ -66,8 +65,10 @@ import {
   getFeeTier,
   OpenOrders,
 } from '@project-serum/serum';
+// import { I80F48, ZERO_I80F48 } from './fixednum';
 import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
+import { RootBank } from './RootBank';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -682,8 +683,8 @@ export class MerpsClient {
     admin: Account,
 
     marketIndex: number,
-    maintLeverage: I80F48,
-    initLeverage: I80F48,
+    maintLeverage: number,
+    initLeverage: number,
   ): Promise<TransactionSignature> {
     const vaultAccount = new Account();
 
@@ -719,8 +720,8 @@ export class MerpsClient {
       rootBankAccountInstruction.account.publicKey,
       admin.publicKey,
       new BN(marketIndex),
-      maintLeverage,
-      initLeverage,
+      I80F48.fromNumber(maintLeverage),
+      I80F48.fromNumber(initLeverage),
     );
 
     const transaction = new Transaction();
@@ -989,7 +990,7 @@ export class MerpsClient {
     // fetch all MerpsAccounts filtered for having this perp market in basket
     const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
     const perpMarketInfo = merpsGroup.perpMarkets[marketIndex];
-    let pnl = merpsAccount.perpAccounts[marketIndex].getPnl(
+    const pnl = merpsAccount.perpAccounts[marketIndex].getPnl(
       perpMarketInfo,
       price,
     );
@@ -1047,20 +1048,32 @@ export class MerpsClient {
       transaction.add(instr);
     }
 
-    return await this.sendTransaction(
-      transaction,
-      owner,
-      additionalSigners,
-      30000,
-      'processed',
-    );
+    return await this.sendTransaction(transaction, owner, additionalSigners);
 
     // Calculate the profit or loss per market
   }
 
+  getMarginAccountsForOwner(
+    merpsGroup: MerpsGroup,
+    owner: PublicKey,
+    includeOpenOrders = false,
+  ): Promise<MerpsAccount[]> {
+    const filters = [
+      {
+        memcmp: {
+          offset: MerpsAccountLayout.offsetOf('owner'),
+          bytes: owner.toBase58(),
+        },
+      },
+    ];
+
+    return this.getAllMerpsAccounts(merpsGroup, filters, includeOpenOrders);
+  }
+
   async getAllMerpsAccounts(
     merpsGroup: MerpsGroup,
-    filters?: [any],
+    filters?: any[],
+    includeOpenOrders = false,
   ): Promise<MerpsAccount[]> {
     const accountFilters = [
       {
@@ -1093,6 +1106,10 @@ export class MerpsClient {
           ),
       ),
     );
+
+    if (!includeOpenOrders) {
+      return await merpsAccountProms;
+    }
 
     const ordersFilters = [
       {
@@ -1215,14 +1232,14 @@ export class MerpsClient {
     const makeBidAccountInstruction = await createAccountInstruction(
       this.connection,
       admin.publicKey,
-      PerpBookSizeLayout.span,
+      BookSideLayout.span,
       this.programId,
     );
 
     const makeAskAccountInstruction = await createAccountInstruction(
       this.connection,
       admin.publicKey,
-      PerpBookSizeLayout.span,
+      BookSideLayout.span,
       this.programId,
     );
 
@@ -1257,4 +1274,6 @@ export class MerpsClient {
 
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
+
+  async getOrderBook() {}
 }

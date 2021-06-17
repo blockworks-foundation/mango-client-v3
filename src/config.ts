@@ -1,4 +1,5 @@
 import { PublicKey } from '@solana/web3.js';
+import IDS from './ids.json';
 
 export type Cluster = 'devnet' | 'mainnet-beta' | 'localnet' | 'testnet';
 
@@ -21,9 +22,31 @@ function oracleConfigToJson(o: OracleConfig): any {
   };
 }
 
-export interface PerpMarketConfig {
-  base_symbol: string;
+export interface SpotMarketConfig {
+  name: string;
   key: PublicKey;
+  base_symbol: string;
+  market_index: number;
+}
+
+function spotMarketConfigFromJson(j: any) {
+  return {
+    ...j,
+    key: new PublicKey(j.key),
+  };
+}
+
+function spotMarketConfigToJson(p: SpotMarketConfig): any {
+  return {
+    ...p,
+    key: p.key.toBase58(),
+  };
+}
+
+export interface PerpMarketConfig {
+  name: string;
+  key: PublicKey;
+  base_symbol: string;
   market_index: number;
 }
 
@@ -70,12 +93,18 @@ function tokenConfigToJson(t: TokenConfig): any {
 export interface GroupConfig {
   cluster: Cluster;
   name: string;
+  quote_symbol: string;
   key: PublicKey;
   merps_program_id: PublicKey;
   serum_program_id: PublicKey;
   oracles: OracleConfig[];
   perp_markets: PerpMarketConfig[];
+  spot_markets: SpotMarketConfig[];
   tokens: TokenConfig[];
+}
+
+export function getMarketIndexBySymbol(group: GroupConfig, symbol: string) {
+  return group.oracles.findIndex((o) => o.symbol === symbol);
 }
 
 export function getOracleBySymbol(group: GroupConfig, symbol: string) {
@@ -86,6 +115,43 @@ export function getPerpMarketByBaseSymbol(group: GroupConfig, symbol: string) {
   return group.perp_markets.find((p) => p.base_symbol === symbol);
 }
 
+export function getSpotMarketByBaseSymbol(group: GroupConfig, symbol: string) {
+  return group.spot_markets.find((p) => p.base_symbol === symbol);
+}
+
+export type MarketKind = 'spot' | 'perp';
+
+export interface MarketConfig {
+  kind: MarketKind;
+  name: string;
+  key: PublicKey;
+  base_symbol: string;
+  market_index: number;
+}
+
+export function getMarketByBaseSymbolAndKind(
+  group: GroupConfig,
+  symbol: string,
+  kind: MarketKind,
+) {
+  const market =
+    kind === 'spot'
+      ? getSpotMarketByBaseSymbol(group, symbol)
+      : getPerpMarketByBaseSymbol(group, symbol);
+  return { kind, ...market } as MarketConfig;
+}
+
+export function getTokenByMint(group: GroupConfig, mint: string | PublicKey) {
+  if (mint instanceof PublicKey) {
+    mint = mint.toBase58();
+  }
+  return group.tokens.find((t) => t.mint_key.toBase58() === mint);
+}
+
+export function getTokenBySymbol(group: GroupConfig, symbol: string) {
+  return group.tokens.find((t) => t.symbol === symbol);
+}
+
 function groupConfigFromJson(j: any) {
   return {
     ...j,
@@ -94,6 +160,7 @@ function groupConfigFromJson(j: any) {
     serum_program_id: new PublicKey(j.serum_program_id),
     oracles: j.oracles.map((o) => oracleConfigFromJson(o)),
     perp_markets: j.perp_markets.map((p) => perpMarketConfigFromJson(p)),
+    spot_markets: j.spot_markets.map((p) => spotMarketConfigFromJson(p)),
     tokens: j.tokens.map((t) => tokenConfigFromJson(t)),
   } as GroupConfig;
 }
@@ -106,6 +173,7 @@ function groupConfigToJson(g: GroupConfig): any {
     serum_program_id: g.serum_program_id.toBase58(),
     oracles: g.oracles.map((o) => oracleConfigToJson(o)),
     perp_markets: g.perp_markets.map((p) => perpMarketConfigToJson(p)),
+    spot_markets: g.spot_markets.map((p) => spotMarketConfigToJson(p)),
     tokens: g.tokens.map((t) => tokenConfigToJson(t)),
   };
 }
@@ -117,6 +185,10 @@ export class Config {
   constructor(json: any) {
     this.cluster_urls = json.cluster_urls;
     this.groups = json.groups.map((g) => groupConfigFromJson(g));
+  }
+
+  public static ids() {
+    return staticConfig;
   }
 
   public toJson(): any {
@@ -139,3 +211,5 @@ export class Config {
     }
   }
 }
+
+const staticConfig = new Config(IDS);

@@ -2,9 +2,8 @@
   "name": "merps",
   "version": "0.0.0",
   "description": "Client to interact with the Merps program on Solana",
-  "main": "lib/index.js",
-  "source": "src/index.js",
-  "types": "lib/index.d.ts",
+  "main": "lib/src/index.js",
+  "types": "lib/src/index.d.ts",
   "repository": "git@github.com:blockworks-foundation/merps-ts.git",
   "author": {
     "name": "Blockworks Foundation",

@@ -5,21 +5,25 @@ import {
   u16,
   union,
   seq,
+  blob,
   Blob,
   Structure,
   Layout,
   UInt,
-  blob,
-  nu64,
 } from 'buffer-layout';
-import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import BN from 'bn.js';
-import { promiseUndef, zeroKey } from './utils';
+import { zeroKey } from './utils';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
+const MAX_BOOK_NODES = 1024;
+
+export const MAX_RATE = I80F48.fromString('3.0');
+export const OPTIMAL_UTIL = I80F48.fromString('0.7');
+export const OPTIMAL_RATE = I80F48.fromString('0.2');
 
 class _I80F48Layout extends Blob {
   constructor(property: string) {
@@ -168,13 +172,6 @@ export function selfTradeBehaviorLayout(property) {
   );
 }
 
-export const ACCOUNT_LAYOUT = struct([
-  blob(32, 'mint'),
-  blob(32, 'owner'),
-  nu64('amount'),
-  blob(93),
-]);
-
 /**
  * Need to implement layouts for each of the structs found in state.rs
  */
@@ -261,6 +258,11 @@ MerpsInstructionLayout.addVariant(
 );
 MerpsInstructionLayout.addVariant(19, struct([]), 'SettleFunds');
 MerpsInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
+MerpsInstructionLayout.addVariant(
+  22,
+  struct([u64('marketIndex')]),
+  'SettlePnl',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -288,6 +290,18 @@ export class PublicKeyLayout extends Blob {
 export function publicKeyLayout(property = '') {
   return new PublicKeyLayout(property);
 }
+
+export const DataType = {
+  MerpsGroup: 0,
+  MerpsAccount: 1,
+  RootBank: 2,
+  NodeBank: 3,
+  PerpMarket: 4,
+  Bids: 5,
+  Asks: 6,
+  MerpsCache: 7,
+  EventQueue: 8,
+};
 
 export class MetaData {
   dataType!: number;
@@ -694,6 +708,16 @@ export class PerpMarket {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
   }
+
+  priceLotsToNative(price: BN): I80F48 {
+    return I80F48.fromI64(this.quoteLotSize.mul(price)).div(
+      I80F48.fromI64(this.contractSize),
+    );
+  }
+
+  baseLotsToNative(quantity: BN): I80F48 {
+    return I80F48.fromI64(this.contractSize.mul(quantity));
+  }
 }
 
 export const PerpEventLayout = struct([
@@ -708,14 +732,42 @@ export const PerpEventQueueLayout = struct([
   u64('seqNum'),
 ]);
 
-export const PerpBookSizeLayout = struct([
+const BOOK_NODE_SIZE = 72;
+const BOOK_NODE_LAYOUT = union(u32('tag'), blob(BOOK_NODE_SIZE - 4), 'node');
+BOOK_NODE_LAYOUT.addVariant(0, struct([]), 'uninitialized');
+BOOK_NODE_LAYOUT.addVariant(
+  1,
+  struct([
+    // Only the first prefixLen high-order bits of key are meaningful
+    u32('prefixLen'),
+    u128('key'),
+    seq(u32(), 2, 'children'),
+  ]),
+  'innerNode',
+);
+BOOK_NODE_LAYOUT.addVariant(
+  2,
+  struct([
+    u8('ownerSlot'), // Index into OPEN_ORDERS_LAYOUT.orders
+    blob(3),
+    u128('key'), // (price, seqNum)
+    publicKeyLayout('owner'), // Open orders account
+    u64('quantity'), // In units of lot size
+    u64('clientOrderId'),
+  ]),
+  'leafNode',
+);
+BOOK_NODE_LAYOUT.addVariant(3, struct([u32('next')]), 'freeNode');
+BOOK_NODE_LAYOUT.addVariant(4, struct([]), 'lastFreeNode');
+
+export const BookSideLayout = struct([
   metaDataLayout('metaData'),
   u64('bumpIndex'),
   u64('freeListLen'),
   u32('freeListHead'),
   u32('rootNode'),
   u64('leafCount'),
-  seq(u8(), 72 * 1024, 'nodes'),
+  seq(u8(), BOOK_NODE_SIZE * MAX_BOOK_NODES, 'nodes'),
 ]);
 
 export class PriceCache {
@@ -839,41 +891,5 @@ export class NodeBank {
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
-  }
-}
-
-export class RootBank {
-  publicKey: PublicKey;
-
-  numNodeBanks!: number;
-  nodeBanks!: PublicKey[];
-  depositIndex!: I80F48;
-  borrowIndex!: I80F48;
-  lastUpdated!: BN;
-
-  constructor(publicKey: PublicKey, decoded: any) {
-    this.publicKey = publicKey;
-    Object.assign(this, decoded);
-  }
-
-  async loadNodeBanks(connection: Connection): Promise<NodeBank[]> {
-    const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
-
-    for (let i = 0; i < this.nodeBanks.length; i++) {
-      if (this.nodeBanks[i].equals(zeroKey)) {
-        promises.push(promiseUndef());
-      } else {
-        promises.push(connection.getAccountInfo(this.nodeBanks[i]));
-      }
-    }
-
-    const accounts = await Promise.all(promises);
-
-    return accounts
-      .filter((acc) => acc && acc.data)
-      .map((acc, i) => {
-        const decoded = NodeBankLayout.decode(acc?.data);
-        return new NodeBank(this.nodeBanks[i], decoded);
-      });
   }
 }

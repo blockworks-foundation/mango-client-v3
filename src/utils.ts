@@ -14,8 +14,6 @@ import {
   TransactionSignature,
 } from '@solana/web3.js';
 import { TokenInstructions } from '@project-serum/serum';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { ACCOUNT_LAYOUT } from './layout';
 
 export const zeroKey = new PublicKey(new Uint8Array(32));
 
@@ -252,51 +250,28 @@ export async function getFilteredProgramAccounts(
   );
 }
 
-export function parseTokenAccountData(data: Buffer): {
-  mint: PublicKey;
-  owner: PublicKey;
-  amount: number;
-} {
-  const { mint, owner, amount } = ACCOUNT_LAYOUT.decode(data);
-  return {
-    mint: new PublicKey(mint),
-    owner: new PublicKey(owner),
-    amount,
-  };
-}
-
-export async function findLargestTokenAccountForOwner(
+export async function getMultipleAccounts(
   connection: Connection,
-  owner: PublicKey,
-  mint: PublicKey,
-): Promise<{
-  publicKey: PublicKey;
-  tokenAccount: { mint: PublicKey; owner: PublicKey; amount: number };
-}> {
-  const response = await connection.getTokenAccountsByOwner(
-    owner,
-    { mint, programId: TOKEN_PROGRAM_ID },
-    connection.commitment,
-  );
-  let max = -1;
-  let maxTokenAccount: null | {
-    mint: PublicKey;
-    owner: PublicKey;
-    amount: number;
-  } = null;
-  let maxPubkey: null | PublicKey = null;
-  for (const { pubkey, account } of response.value) {
-    const tokenAccount = parseTokenAccountData(account.data);
-    if (tokenAccount.amount > max) {
-      maxTokenAccount = tokenAccount;
-      max = tokenAccount.amount;
-      maxPubkey = pubkey;
-    }
-  }
+  publicKeys: PublicKey[],
+  commitment?: Commitment,
+): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
+  const publickKeyStrs = publicKeys.map((pk) => pk.toBase58());
 
-  if (maxPubkey && maxTokenAccount) {
-    return { publicKey: maxPubkey, tokenAccount: maxTokenAccount };
-  } else {
-    throw new Error('No accounts for this token');
+  const args = commitment ? [publickKeyStrs, { commitment }] : [publickKeyStrs];
+  // @ts-ignore
+  const resp = await connection._rpcRequest('getMultipleAccounts', args);
+  if (resp.error) {
+    throw new Error(resp.error.message);
   }
+  return resp.result.value.map(
+    ({ data, executable, lamports, owner }, i: number) => ({
+      publicKey: publicKeys[i],
+      accountInfo: {
+        data: Buffer.from(data[0], 'base64'),
+        executable,
+        owner: new PublicKey(owner),
+        lamports,
+      },
+    }),
+  );
 }
