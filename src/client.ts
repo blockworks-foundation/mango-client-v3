@@ -32,7 +32,7 @@ import {
   PerpMarket,
   StubOracleLayout,
   PerpMarketLayout,
-  PerpBookSideLayout,
+  BookSideLayout,
   PerpEventQueueLayout,
   PerpEventLayout,
 } from './layout';
@@ -1123,14 +1123,14 @@ export class MerpsClient {
     const makeBidAccountInstruction = await createAccountInstruction(
       this.connection,
       admin.publicKey,
-      PerpBookSideLayout.span,
+      BookSideLayout.span,
       this.programId,
     );
 
     const makeAskAccountInstruction = await createAccountInstruction(
       this.connection,
       admin.publicKey,
-      PerpBookSideLayout.span,
+      BookSideLayout.span,
       this.programId,
     );
 
@@ -1165,4 +1165,6 @@ export class MerpsClient {
 
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
+
+  async getOrderBook() {}
 }

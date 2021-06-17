@@ -37,6 +37,8 @@ const connection = new Connection(
   'processed' as Commitment,
 );
 
+const SLEEP_TIME = 2000;
+
 const payer = new Account(
   JSON.parse(
     fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
@@ -115,7 +117,7 @@ async function test_place_spot_order() {
   );
 
   const merpsAccountPk = await client.initMerpsAccount(merpsGroup, payer);
-  await sleep(5000); // devnet rate limits
+  await sleep(SLEEP_TIME); // devnet rate limits
   let merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
 
   await sleep(5000); // devnet rate limits
@@ -126,7 +128,7 @@ async function test_place_spot_order() {
   const filteredQuoteNodeBanks = quoteNodeBanks.filter((bank) => !!bank);
   if (!filteredQuoteNodeBanks[0]) throw new Error('node banks empty');
 
-  await sleep(5000); // devnet rate limits
+  await sleep(SLEEP_TIME); // devnet rate limits
   try {
     console.log('= depositing =');
     await client.deposit(
@@ -145,13 +147,13 @@ async function test_place_spot_order() {
 
   const marketIndex = 0;
 
-  await sleep(10000); // avoid devnet rate limit
+  await sleep(SLEEP_TIME); // avoid devnet rate limit
   console.log('= adding to basket =');
 
   await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
 
   merpsGroup = await client.getMerpsGroup(merpsGroup.publicKey);
-  await sleep(5000); // avoid devnet rate limit
+  await sleep(SLEEP_TIME); // avoid devnet rate limit
 
   // run keeper fns
   const cacheRootBanksTxID = await client.cacheRootBanks(
@@ -172,7 +174,7 @@ async function test_place_spot_order() {
   console.log('= cache updated =', cacheRootBanksTxID);
 
   rootBanks = await merpsGroup.loadRootBanks(client.connection);
-  await sleep(5000); // avoid devnet rate limit
+  await sleep(SLEEP_TIME); // avoid devnet rate limit
 
   const btcRootBank = rootBanks[marketIndex];
   if (!btcRootBank) throw new Error('no root bank');
@@ -191,7 +193,7 @@ async function test_place_spot_order() {
     btcMint,
     new u64(btcAmount),
   );
-  sleep(5000);
+  sleep(SLEEP_TIME);
 
   await client.updateRootBank(
     merpsGroup.publicKey,
@@ -206,7 +208,7 @@ async function test_place_spot_order() {
     payer,
   );
 
-  await sleep(5000); // devnet rate limits
+  await sleep(SLEEP_TIME); // devnet rate limits
   merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
   const btcSpotMarket = await Market.load(
     connection,
@@ -232,7 +234,7 @@ async function test_place_spot_order() {
     console.log('Error placing order', `${e}`);
   }
 
-  await sleep(5000);
+  await sleep(SLEEP_TIME);
   merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
 
   console.log('= borrow and withdraw =');
