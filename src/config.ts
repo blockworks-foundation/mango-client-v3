@@ -1,4 +1,5 @@
 import { PublicKey } from '@solana/web3.js';
+import IDS from './ids.json';
 
 export type Cluster = 'devnet' | 'mainnet-beta' | 'localnet' | 'testnet';
 
@@ -142,6 +143,10 @@ export class Config {
     this.groups = json.groups.map((g) => groupConfigFromJson(g));
   }
 
+  public static ids() {
+    return staticConfig;
+  }
+
   public toJson(): any {
     return {
       ...this,
@@ -162,3 +167,5 @@ export class Config {
     }
   }
 }
+
+const staticConfig = new Config(IDS);
