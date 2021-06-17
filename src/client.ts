@@ -49,6 +49,7 @@ import {
   makeDepositInstruction,
   makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
+  makePlacePerpOrderInstruction,
   makePlaceSpotOrderInstruction,
   makeSetOracleInstruction,
   makeSettleFundsInstruction,
@@ -130,7 +131,7 @@ export class MerpsClient {
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(300);
+        await sleep(2000);
       }
     })();
 
@@ -448,8 +449,78 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
-  async placePerpOrder(): Promise<TransactionSignature[]> {
-    throw new Error('Not Implemented');
+  async getPerpMarket(perpMarketPk: PublicKey): Promise<PerpMarket> {
+    const acc = await this.connection.getAccountInfo(perpMarketPk);
+    const perpMarket = new PerpMarket(
+      perpMarketPk,
+      PerpMarketLayout.decode(acc == null ? undefined : acc.data),
+    );
+    return perpMarket;
+  }
+
+  async placePerpOrder(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    merpsCache: PublicKey,
+    perpMarket: PerpMarket,
+    owner: Account,
+
+    side: 'buy' | 'sell',
+    price: number,
+    quantity: number,
+    orderType?: 'limit' | 'ioc' | 'postOnly',
+    clientOrderId = 0,
+  ): Promise<TransactionSignature> {
+    const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
+
+    // TODO: this will not work for perp markets without spot market
+    const baseTokenInfo = merpsGroup.tokens[marketIndex];
+    const quoteTokenInfo = merpsGroup.tokens[QUOTE_INDEX];
+    const baseUnit = Math.pow(10, baseTokenInfo.decimals);
+    const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
+
+    const nativePrice = new BN(price * quoteUnit)
+      .mul(perpMarket.contractSize)
+      .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
+    const nativeQuantity = new BN(quantity * baseUnit).div(
+      perpMarket.contractSize,
+    );
+
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
+
+    if (!merpsAccount.inBasket[marketIndex]) {
+      // TODO: find out why this does not work
+      transaction.add(
+        makeAddToBasketInstruction(
+          this.programId,
+          merpsGroup.publicKey,
+          merpsAccount.publicKey,
+          owner.publicKey,
+          new BN(marketIndex),
+        ),
+      );
+    }
+
+    const instruction = makePlacePerpOrderInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      merpsAccount.publicKey,
+      owner.publicKey,
+      merpsCache,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      perpMarket.eventQueue,
+      nativePrice,
+      nativeQuantity,
+      new BN(clientOrderId),
+      side,
+      orderType,
+    );
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
   async cancelPerpOrder(): Promise<TransactionSignature[]> {
@@ -643,6 +714,19 @@ export class MerpsClient {
 
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
+
+    if (!merpsAccount.inBasket[spotMarketIndex]) {
+      // TODO: find out why this does not work
+      transaction.add(
+        makeAddToBasketInstruction(
+          this.programId,
+          merpsGroup.publicKey,
+          merpsAccount.publicKey,
+          owner.publicKey,
+          new BN(spotMarketIndex),
+        ),
+      );
+    }
 
     const openOrdersKeys: PublicKey[] = [];
     for (let i = 0; i < merpsAccount.spotOpenOrders.length; i++) {
