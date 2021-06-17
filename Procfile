@@ -1,1 +1,1 @@
-merps_test_v1: yarn run keeper
+merps_test_v1: node lib/src/keeper.js
