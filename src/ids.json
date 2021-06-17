@@ -18,13 +18,23 @@
           "mint_key": "EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK",
           "decimals": 9,
           "root_key": "HYaa91bKwHYXkW4ejznkAsPdgk2mYi5rEe4BEXbxkJAr",
-          "node_keys": [
-            "4BUXUzprBxfqkmsQJ1VVoifAqag2ALXvRZt9Tk232EUv"
-          ]
+          "node_keys": ["4BUXUzprBxfqkmsQJ1VVoifAqag2ALXvRZt9Tk232EUv"]
         }
       ],
-      "oracles": [],
-      "perp_markets": []
+      "oracles": [
+        {
+          "symbol": "BTC",
+          "key": "J65LYhVkKBEoM5rv4efYsq9Nku6z9aKbVtpN9HaKNQET"
+        }
+      ],
+      "perp_markets": [],
+      "spot_markets": [
+        {
+          "base_symbol": "BTC",
+          "key": "E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9",
+          "market_index": 0
+        }
+      ]
     }
   ]
 }

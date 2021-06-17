@@ -592,8 +592,8 @@ export class MerpsClient {
     admin: Account,
 
     marketIndex: number,
-    maintLeverage: I80F48,
-    initLeverage: I80F48,
+    maintLeverage: number,
+    initLeverage: number,
   ): Promise<TransactionSignature> {
     const vaultAccount = new Account();
 
@@ -629,8 +629,8 @@ export class MerpsClient {
       rootBankAccountInstruction.account.publicKey,
       admin.publicKey,
       new BN(marketIndex),
-      maintLeverage,
-      initLeverage,
+      I80F48.fromNumber(maintLeverage),
+      I80F48.fromNumber(initLeverage),
     );
 
     const transaction = new Transaction();

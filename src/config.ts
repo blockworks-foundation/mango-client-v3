@@ -21,6 +21,26 @@ function oracleConfigToJson(o: OracleConfig): any {
   };
 }
 
+export interface SpotMarketConfig {
+  base_symbol: string;
+  key: PublicKey;
+  market_index: number;
+}
+
+function spotMarketConfigFromJson(j: any) {
+  return {
+    ...j,
+    key: new PublicKey(j.key),
+  };
+}
+
+function spotMarketConfigToJson(p: SpotMarketConfig): any {
+  return {
+    ...p,
+    key: p.key.toBase58(),
+  };
+}
+
 export interface PerpMarketConfig {
   base_symbol: string;
   key: PublicKey;
@@ -75,6 +95,7 @@ export interface GroupConfig {
   serum_program_id: PublicKey;
   oracles: OracleConfig[];
   perp_markets: PerpMarketConfig[];
+  spot_markets: SpotMarketConfig[];
   tokens: TokenConfig[];
 }
 
@@ -94,6 +115,7 @@ function groupConfigFromJson(j: any) {
     serum_program_id: new PublicKey(j.serum_program_id),
     oracles: j.oracles.map((o) => oracleConfigFromJson(o)),
     perp_markets: j.perp_markets.map((p) => perpMarketConfigFromJson(p)),
+    spot_markets: j.spot_markets.map((p) => spotMarketConfigFromJson(p)),
     tokens: j.tokens.map((t) => tokenConfigFromJson(t)),
   } as GroupConfig;
 }
@@ -106,6 +128,7 @@ function groupConfigToJson(g: GroupConfig): any {
     serum_program_id: g.serum_program_id.toBase58(),
     oracles: g.oracles.map((o) => oracleConfigToJson(o)),
     perp_markets: g.perp_markets.map((p) => perpMarketConfigToJson(p)),
+    spot_markets: g.spot_markets.map((p) => spotMarketConfigToJson(p)),
     tokens: g.tokens.map((t) => tokenConfigToJson(t)),
   };
 }

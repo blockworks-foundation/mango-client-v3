@@ -90,8 +90,8 @@ async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
     btcMint,
     payer,
     marketIndex,
-    I80F48.fromNumber(maintLeverage),
-    I80F48.fromNumber(initLeverage),
+    maintLeverage,
+    initLeverage,
   );
 
   merpsGroup = await client.getMerpsGroup(groupKey);
