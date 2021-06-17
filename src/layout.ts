@@ -18,6 +18,7 @@ import { zeroKey } from './utils';
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
+const MAX_BOOK_NODES = 1024;
 
 export const MAX_RATE = I80F48.fromString('3.0');
 export const OPTIMAL_UTIL = I80F48.fromString('0.7');
@@ -256,6 +257,11 @@ MerpsInstructionLayout.addVariant(
 );
 MerpsInstructionLayout.addVariant(19, struct([]), 'SettleFunds');
 MerpsInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
+MerpsInstructionLayout.addVariant(
+  22,
+  struct([u64('marketIndex')]),
+  'SettlePnl',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -703,14 +709,14 @@ export const PerpEventQueueLayout = struct([
   u64('seqNum'),
 ]);
 
-export const PerpBookSizeLayout = struct([
+export const PerpBookSideLayout = struct([
   metaDataLayout('metaData'),
   u64('bumpIndex'),
   u64('freeListLen'),
   u32('freeListHead'),
   u32('rootNode'),
   u64('leafCount'),
-  seq(u8(), 72 * 1024, 'nodes'),
+  seq(u8(), 72 * MAX_BOOK_NODES, 'nodes'),
 ]);
 
 export class PriceCache {

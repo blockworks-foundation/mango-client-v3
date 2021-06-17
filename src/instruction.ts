@@ -597,7 +597,7 @@ export function makeSettlePnlInstruction(
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
   ];
   const data = encodeMerpsInstruction({
-    AddPerpMarket: {
+    SettlePnl: {
       marketIndex,
     },
   });

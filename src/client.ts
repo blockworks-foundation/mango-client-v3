@@ -31,7 +31,7 @@ import {
   PerpMarket,
   StubOracleLayout,
   PerpMarketLayout,
-  PerpBookSizeLayout,
+  PerpBookSideLayout,
   PerpEventQueueLayout,
   PerpEventLayout,
 } from './layout';
@@ -962,13 +962,7 @@ export class MerpsClient {
       transaction.add(instr);
     }
 
-    return await this.sendTransaction(
-      transaction,
-      owner,
-      additionalSigners,
-      30000,
-      'processed',
-    );
+    return await this.sendTransaction(transaction, owner, additionalSigners);
 
     // Calculate the profit or loss per market
   }
@@ -1152,14 +1146,14 @@ export class MerpsClient {
     const makeBidAccountInstruction = await createAccountInstruction(
       this.connection,
       admin.publicKey,
-      PerpBookSizeLayout.span,
+      PerpBookSideLayout.span,
       this.programId,
     );
 
     const makeAskAccountInstruction = await createAccountInstruction(
       this.connection,
       admin.publicKey,
-      PerpBookSizeLayout.span,
+      PerpBookSideLayout.span,
       this.programId,
     );
 
