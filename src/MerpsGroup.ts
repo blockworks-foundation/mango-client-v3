@@ -10,6 +10,9 @@ import {
   PerpMarketInfo,
   NodeBank,
   PerpMarket,
+  RootBankCache,
+  MerpsCache,
+  MerpsCacheLayout,
 } from './layout';
 import { promiseUndef, zeroKey } from './utils';
 
@@ -81,6 +84,68 @@ export default class MerpsGroup {
       }
     }
     throw new Error('This root bank does not belong in this MerpsGroup');
+  }
+
+  // getBorrowRate(tokenIndex: number): number {
+
+  //   const totalBorrows = this.getUiTotalBorrow(tokenIndex)
+  //   const totalDeposits = this.getUiTotalDeposit(tokenIndex)
+
+  //   if (totalDeposits === 0 && totalBorrows === 0) {
+  //     return 0
+  //   }
+  //   if (totalDeposits <= totalBorrows) {
+  //     return MAX_RATE
+  //   }
+
+  //   const utilization = totalBorrows / totalDeposits
+  //   if (utilization > OPTIMAL_UTIL) {
+  //     const extraUtil = utilization - OPTIMAL_UTIL
+  //     const slope = (MAX_RATE - OPTIMAL_RATE) / (1 - OPTIMAL_UTIL)
+  //     return OPTIMAL_RATE + slope * extraUtil
+  //   } else {
+  //     const slope = OPTIMAL_RATE / OPTIMAL_UTIL
+  //     return slope * utilization
+  //   }
+  // }
+  // getDepositRate(tokenIndex: number): number {
+  //   const borrowRate = this.getBorrowRate(tokenIndex)
+  //   const totalBorrows = this.getUiTotalBorrow(tokenIndex)
+  //   const totalDeposits = this.getUiTotalDeposit(tokenIndex)
+  //   if (totalDeposits === 0 && totalBorrows === 0) {
+  //     return 0
+  //   } else if (totalDeposits === 0) {
+  //     return MAX_RATE
+  //   }
+  //   const utilization = totalBorrows / totalDeposits
+  //   return utilization * borrowRate
+  // }
+
+  // getUiTotalDeposit(
+  //   rootBank: RootBank | RootBankCache,
+  //   tokenIndex: number,
+  // ): number {
+  //   return nativeToUi(
+  //     this.totalDeposits[tokenIndex] * this.indexes[tokenIndex].deposit,
+  //     this.tokens[tokenIndex].decimals,
+  //   );
+  // }
+  // getUiTotalBorrow(
+  //   rootBank: RootBank | RootBankCache,
+  //   tokenIndex: number,
+  // ): number {
+  //   return nativeToUi(
+  //     this.totalBorrows[tokenIndex] * this.indexes[tokenIndex].borrow,
+  //     this.tokens[tokenIndex].decimals,
+  //   );
+  // }
+
+  async loadCache(connection: Connection): Promise<MerpsCache> {
+    const account = await connection.getAccountInfo(this.merpsCache);
+    if (!account || !account?.data) throw new Error('Unable to load cache');
+
+    const decoded = MerpsCacheLayout.decode(account.data);
+    return new MerpsCache(this.merpsCache, decoded);
   }
 
   async loadRootBanks(
