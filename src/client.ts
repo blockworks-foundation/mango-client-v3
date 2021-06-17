@@ -100,35 +100,39 @@ export class MerpsClient {
     );
   }
 
+  // TODO - switch Account to Keypair and switch off setSigners due to deprecated
   async sendTransaction(
     transaction: Transaction,
     payer: Account,
     additionalSigners: Account[],
     timeout = 30000,
-    confirmLevel: TransactionConfirmationStatus = 'confirmed',
+    confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
+    // TODO - what if we can get recentBlockhas streamed on websocket so we avoid this call
     transaction.recentBlockhash = (
-      await this.connection.getRecentBlockhash('singleGossip')
+      await this.connection.getRecentBlockhash()
     ).blockhash;
     transaction.setSigners(
       payer.publicKey,
       ...additionalSigners.map((a) => a.publicKey),
     );
-
     const signers = [payer].concat(additionalSigners);
     transaction.sign(...signers);
+
     const rawTransaction = transaction.serialize();
     const startTime = getUnixTs();
-
     const txid: TransactionSignature = await this.connection.sendRawTransaction(
       rawTransaction,
       { skipPreflight: true },
     );
-
     console.log('Started awaiting confirmation for', txid);
+
     let done = false;
     (async () => {
+      // TODO - make sure this works well on mainnet
+      await sleep(2000);
       while (!done && getUnixTs() - startTime < timeout / 1000) {
+        console.log(new Date().toUTCString(), ' sending tx ', txid);
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
