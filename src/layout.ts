@@ -228,7 +228,7 @@ MerpsInstructionLayout.addVariant(
   'AddPerpMarket',
 );
 MerpsInstructionLayout.addVariant(
-  14,
+  12,
   struct([
     i64('price'),
     i64('quantity'),

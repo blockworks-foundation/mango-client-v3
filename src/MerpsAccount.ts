@@ -65,6 +65,7 @@ export default class MerpsAccount {
     );
   }
 
+  // TODO: use getMultipleAccounts instead
   async loadOpenOrders(
     connection: Connection,
     serumDexPk: PublicKey,
