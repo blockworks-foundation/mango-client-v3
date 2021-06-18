@@ -12,6 +12,7 @@ import {
   UInt,
   nu64,
   offset,
+  greedy,
 } from 'buffer-layout';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
@@ -727,15 +728,12 @@ export const PerpEventLayout = struct([
   seq(u8(), 87, 'padding'),
 ]);
 
-const count = u64('count');
-// TODO: will this always be 128?
-const events = seq(PerpEventLayout, 128, 'events');
 export const PerpEventQueueLayout = struct([
   metaDataLayout('metaData'),
   u64('head'),
-  count,
+  u64('count'),
   u64('seqNum'),
-  events,
+  seq(PerpEventLayout, greedy(PerpEventLayout.span), 'events'),
 ]);
 
 const BOOK_NODE_SIZE = 72;
