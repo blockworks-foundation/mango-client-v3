@@ -189,11 +189,11 @@ export function makeCancelSpotOrderInstruction(
   order: Order,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: merpsAccountPk },
     { isSigner: false, isWritable: false, pubkey: dexProgramId },
-    { isSigner: false, isWritable: false, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: true, pubkey: spotMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: true, pubkey: openOrdersPk },
