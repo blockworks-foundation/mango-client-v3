@@ -1,4 +1,3 @@
-import { Market } from '@project-serum/serum';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
 import { I80F48 } from './fixednum';

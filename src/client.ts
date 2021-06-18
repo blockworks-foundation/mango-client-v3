@@ -722,7 +722,7 @@ export class MerpsClient {
     }
     const selfTradeBehavior = 'decrementTake';
 
-    const spotMarketIndex = merpsGroup.getSpotMarketIndex(spotMarket);
+    const spotMarketIndex = merpsGroup.getSpotMarketIndex(spotMarket.publicKey);
 
     const { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank } =
       await merpsGroup.loadBanksForSpotMarket(this.connection, spotMarketIndex);
@@ -856,7 +856,7 @@ export class MerpsClient {
     owner: Account | WalletAdapter,
     spotMarket: Market,
   ): Promise<TransactionSignature> {
-    const marketIndex = merpsGroup.getSpotMarketIndex(spotMarket);
+    const marketIndex = merpsGroup.getSpotMarketIndex(spotMarket.publicKey);
     const dexSigner = await PublicKey.createProgramAddress(
       [
         spotMarket.publicKey.toBuffer(),
