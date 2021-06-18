@@ -174,7 +174,7 @@ export function makeSettleFundsInstruction(
   return new TransactionInstruction({ keys, data, programId });
 }
 
-export function makeCancelOrderInstruction(
+export function makeCancelSpotOrderInstruction(
   programId: PublicKey,
   merpsGroupPk: PublicKey,
   ownerPk: PublicKey,

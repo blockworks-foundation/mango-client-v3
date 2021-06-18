@@ -44,7 +44,7 @@ import {
   makeAddToBasketInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
-  makeCancelOrderInstruction,
+  makeCancelSpotOrderInstruction,
   makeDepositInstruction,
   makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
@@ -828,7 +828,7 @@ export class MerpsClient {
     spotMarket: Market,
     order: Order,
   ): Promise<TransactionSignature> {
-    const instruction = makeCancelOrderInstruction(
+    const instruction = makeCancelSpotOrderInstruction(
       this.programId,
       merpsGroup.publicKey,
       owner.publicKey,
