@@ -256,6 +256,8 @@ export async function getMultipleAccounts(
   commitment?: Commitment,
 ): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
   const publickKeyStrs = publicKeys.map((pk) => pk.toBase58());
+  // load connection commitment as a default
+  commitment ||= connection.commitment;
 
   const args = commitment ? [publickKeyStrs, { commitment }] : [publickKeyStrs];
   // @ts-ignore
@@ -263,6 +265,7 @@ export async function getMultipleAccounts(
   if (resp.error) {
     throw new Error(resp.error.message);
   }
+
   return resp.result.value.map(
     ({ data, executable, lamports, owner }, i: number) => ({
       publicKey: publicKeys[i],

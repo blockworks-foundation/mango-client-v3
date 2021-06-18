@@ -231,7 +231,7 @@ MerpsInstructionLayout.addVariant(
   'AddPerpMarket',
 );
 MerpsInstructionLayout.addVariant(
-  14,
+  12,
   struct([
     i64('price'),
     i64('quantity'),
@@ -260,6 +260,11 @@ MerpsInstructionLayout.addVariant(
   'SetOracle',
 );
 MerpsInstructionLayout.addVariant(19, struct([]), 'SettleFunds');
+MerpsInstructionLayout.addVariant(
+  20,
+  struct([sideLayout('side', 4), u128('orderId')]),
+  'CancelSpotOrder',
+);
 MerpsInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
 MerpsInstructionLayout.addVariant(
   22,

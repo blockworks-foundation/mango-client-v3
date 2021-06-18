@@ -1,4 +1,3 @@
-import { Market } from '@project-serum/serum';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
 import { I80F48 } from './fixednum';
@@ -56,9 +55,9 @@ export default class MerpsGroup {
     throw new Error('This Oracle does not belong to this MerpsGroup');
   }
 
-  getSpotMarketIndex(spotMarket: Market): number {
+  getSpotMarketIndex(spotMarket: PublicKey): number {
     for (let i = 0; i < this.numOracles; i++) {
-      if (this.spotMarkets[i].spotMarket.equals(spotMarket.publicKey)) {
+      if (this.spotMarkets[i].spotMarket.equals(spotMarket)) {
         return i;
       }
     }

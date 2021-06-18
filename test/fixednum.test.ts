@@ -30,13 +30,13 @@ describe('fixednumTests', async () => {
 
   describe('fromNumber', async () => {
     it('should create the max value', async () => {
-      expect(I80F48.fromNumber(Number.MAX_SAFE_INTEGER).toString()).to.eq(
-        Number.MAX_SAFE_INTEGER.toString(),
+      expect(I80F48.fromNumber(Number.MAX_SAFE_INTEGER).toNumber()).to.eq(
+        Number.MAX_SAFE_INTEGER,
       );
     });
     it('should create the min value', async () => {
-      expect(I80F48.fromNumber(Number.MIN_SAFE_INTEGER).toString()).to.eq(
-        Number.MIN_SAFE_INTEGER.toString(),
+      expect(I80F48.fromNumber(Number.MIN_SAFE_INTEGER).toNumber()).to.eq(
+        Number.MIN_SAFE_INTEGER,
       );
     });
   });

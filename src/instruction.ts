@@ -174,7 +174,7 @@ export function makeSettleFundsInstruction(
   return new TransactionInstruction({ keys, data, programId });
 }
 
-export function makeCancelOrderInstruction(
+export function makeCancelSpotOrderInstruction(
   programId: PublicKey,
   merpsGroupPk: PublicKey,
   ownerPk: PublicKey,
@@ -445,7 +445,7 @@ export function makePlaceSpotOrderInstruction(
     { isSigner: false, isWritable: false, pubkey: dexSignerPk },
     ...openOrders.map((pubkey) => ({
       isSigner: false,
-      isWritable: true,
+      isWritable: true, // TODO: only pass the one writable you are going to place the order on
       pubkey,
     })),
   ];
@@ -675,6 +675,7 @@ export function makePlacePerpOrderInstruction(
   bidsPk: PublicKey,
   asksPk: PublicKey,
   eventQueuePk: PublicKey,
+  openOrders: PublicKey[],
   price: BN,
   quantity: BN,
   clientOrderId: BN,
@@ -690,6 +691,11 @@ export function makePlacePerpOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    ...openOrders.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
   ];
   const data = encodeMerpsInstruction({
     PlacePerpOrder: {

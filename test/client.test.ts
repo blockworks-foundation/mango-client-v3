@@ -104,7 +104,7 @@ describe('MerpsClient', async () => {
 
         await client.deposit(
           group,
-          merpsAccount,
+          merpsAccount.publicKey,
           user,
           group.tokens[QUOTE_INDEX].rootBank,
           usdcRootBank.nodeBanks[0],

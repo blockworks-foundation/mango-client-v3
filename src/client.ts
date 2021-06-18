@@ -47,8 +47,8 @@ import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
-  makeCancelOrderInstruction,
   makeConsumeEventsInstruction,
+  makeCancelSpotOrderInstruction,
   makeDepositInstruction,
   makeInitMerpsAccountInstruction,
   makeInitMerpsGroupInstruction,
@@ -67,10 +67,10 @@ import {
   getFeeTier,
   OpenOrders,
 } from '@project-serum/serum';
-// import { I80F48, ZERO_I80F48 } from './fixednum';
 import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 import { RootBank } from './RootBank';
+import { WalletAdapter } from './types';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -87,7 +87,7 @@ export class MerpsClient {
 
   async sendTransactions(
     transactions: Transaction[],
-    payer: Account,
+    payer: Account | WalletAdapter,
     additionalSigners: Account[],
     timeout = 30000,
     confirmLevel: TransactionConfirmationStatus = 'confirmed',
@@ -105,24 +105,36 @@ export class MerpsClient {
     );
   }
 
+  async signTransaction({ transaction, payer, signers }) {
+    transaction.recentBlockhash = (
+      await this.connection.getRecentBlockhash()
+    ).blockhash;
+    transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
+    if (signers.length > 0) {
+      transaction.partialSign(...signers);
+    }
+
+    if (payer?.connected) {
+      console.log('signing as wallet', payer.publicKey);
+      return await payer.signTransaction(transaction);
+    } else {
+      transaction.sign(...[payer].concat(signers));
+    }
+  }
+
   // TODO - switch Account to Keypair and switch off setSigners due to deprecated
   async sendTransaction(
     transaction: Transaction,
-    payer: Account,
+    payer: Account | WalletAdapter,
     additionalSigners: Account[],
     timeout = 30000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
-    // TODO - what if we can get recentBlockhas streamed on websocket so we avoid this call
-    transaction.recentBlockhash = (
-      await this.connection.getRecentBlockhash()
-    ).blockhash;
-    transaction.setSigners(
-      payer.publicKey,
-      ...additionalSigners.map((a) => a.publicKey),
-    );
-    const signers = [payer].concat(additionalSigners);
-    transaction.sign(...signers);
+    await this.signTransaction({
+      transaction,
+      payer,
+      signers: additionalSigners,
+    });
 
     const rawTransaction = transaction.serialize();
     const startTime = getUnixTs();
@@ -195,7 +207,7 @@ export class MerpsClient {
     quoteMint: PublicKey,
     dexProgram: PublicKey,
     validInterval: number,
-    payer: Account,
+    payer: Account | WalletAdapter,
   ): Promise<PublicKey> {
     const accountInstruction = await createAccountInstruction(
       this.connection,
@@ -281,7 +293,7 @@ export class MerpsClient {
 
   async initMerpsAccount(
     merpsGroup: MerpsGroup,
-    owner: Account,
+    owner: Account | WalletAdapter,
   ): Promise<PublicKey> {
     const accountInstruction = await createAccountInstruction(
       this.connection,
@@ -326,8 +338,8 @@ export class MerpsClient {
 
   async deposit(
     merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
-    owner: Account,
+    merpsAccountPk: PublicKey,
+    owner: Account | WalletAdapter,
     rootBank: PublicKey,
     nodeBank: PublicKey,
     vault: PublicKey,
@@ -345,7 +357,7 @@ export class MerpsClient {
       this.programId,
       merpsGroup.publicKey,
       owner.publicKey,
-      merpsAccount.publicKey,
+      merpsAccountPk,
       rootBank,
       nodeBank,
       vault,
@@ -363,7 +375,7 @@ export class MerpsClient {
   async withdraw(
     merpsGroup: MerpsGroup,
     merpsAccount: MerpsAccount,
-    owner: Account,
+    owner: Account | WalletAdapter,
     rootBank: PublicKey,
     nodeBank: PublicKey,
     vault: PublicKey,
@@ -406,7 +418,7 @@ export class MerpsClient {
     merpsGroup: PublicKey,
     merpsCache: PublicKey,
     rootBanks: PublicKey[],
-    payer: Account,
+    payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const cacheRootBanksInstruction = makeCacheRootBankInstruction(
       this.programId,
@@ -425,7 +437,7 @@ export class MerpsClient {
     merpsGroup: PublicKey,
     merpsCache: PublicKey,
     oracles: PublicKey[],
-    payer: Account,
+    payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const cachePricesInstruction = makeCachePricesInstruction(
       this.programId,
@@ -463,7 +475,7 @@ export class MerpsClient {
     merpsGroup: PublicKey,
     rootBank: PublicKey,
     nodeBanks: PublicKey[],
-    payer: Account,
+    payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const updateRootBanksInstruction = makeUpdateRootBankInstruction(
       this.programId,
@@ -538,7 +550,7 @@ export class MerpsClient {
     merpsAccount: MerpsAccount,
     merpsCache: PublicKey,
     perpMarket: PerpMarket,
-    owner: Account,
+    owner: Account | WalletAdapter,
 
     side: 'buy' | 'sell',
     price: number,
@@ -587,6 +599,7 @@ export class MerpsClient {
       perpMarket.bids,
       perpMarket.asks,
       perpMarket.eventQueue,
+      merpsAccount.spotOpenOrders.filter((oo, i) => merpsAccount.inBasket[i]),
       nativePrice,
       nativeQuantity,
       new BN(clientOrderId),
@@ -743,7 +756,7 @@ export class MerpsClient {
   async addToBasket(
     merpsGroup: MerpsGroup,
     merpsAccount: MerpsAccount,
-    owner: Account,
+    owner: Account | WalletAdapter,
 
     marketIndex: number,
   ): Promise<TransactionSignature> {
@@ -767,7 +780,7 @@ export class MerpsClient {
     merpsAccount: MerpsAccount,
     merpsCache: PublicKey,
     spotMarket: Market,
-    owner: Account,
+    owner: Account | WalletAdapter,
 
     side: 'buy' | 'sell',
     price: number,
@@ -797,7 +810,7 @@ export class MerpsClient {
     }
     const selfTradeBehavior = 'decrementTake';
 
-    const spotMarketIndex = merpsGroup.getSpotMarketIndex(spotMarket);
+    const spotMarketIndex = merpsGroup.getSpotMarketIndex(spotMarket.publicKey);
 
     const { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank } =
       await merpsGroup.loadBanksForSpotMarket(this.connection, spotMarketIndex);
@@ -823,9 +836,6 @@ export class MerpsClient {
 
     const openOrdersKeys: PublicKey[] = [];
     for (let i = 0; i < merpsAccount.spotOpenOrders.length; i++) {
-      if (!merpsAccount.inBasket[i]) {
-        continue;
-      }
       if (
         i === spotMarketIndex &&
         merpsAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)
@@ -850,7 +860,7 @@ export class MerpsClient {
         transaction.add(accInstr.instruction);
         additionalSigners.push(accInstr.account);
         openOrdersKeys.push(accInstr.account.publicKey);
-      } else {
+      } else if (merpsAccount.inBasket[i]) {
         openOrdersKeys.push(merpsAccount.spotOpenOrders[i]);
       }
     }
@@ -902,11 +912,11 @@ export class MerpsClient {
   async cancelSpotOrder(
     merpsGroup: MerpsGroup,
     merpsAccount: MerpsAccount,
-    owner: Account,
+    owner: Account | WalletAdapter,
     spotMarket: Market,
     order: Order,
   ): Promise<TransactionSignature> {
-    const instruction = makeCancelOrderInstruction(
+    const instruction = makeCancelSpotOrderInstruction(
       this.programId,
       merpsGroup.publicKey,
       owner.publicKey,
@@ -931,10 +941,10 @@ export class MerpsClient {
   async settleFunds(
     merpsGroup: MerpsGroup,
     merpsAccount: MerpsAccount,
-    owner: Account,
+    owner: Account | WalletAdapter,
     spotMarket: Market,
   ): Promise<TransactionSignature> {
-    const marketIndex = merpsGroup.getSpotMarketIndex(spotMarket);
+    const marketIndex = merpsGroup.getSpotMarketIndex(spotMarket.publicKey);
     const dexSigner = await PublicKey.createProgramAddress(
       [
         spotMarket.publicKey.toBuffer(),
@@ -987,7 +997,7 @@ export class MerpsClient {
     perpMarket: PerpMarket,
     quoteRootBank: RootBank,
     price: I80F48, // should be the MerpsCache price
-    owner: Account,
+    owner: Account | WalletAdapter,
   ): Promise<TransactionSignature | null> {
     // fetch all MerpsAccounts filtered for having this perp market in basket
     const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
