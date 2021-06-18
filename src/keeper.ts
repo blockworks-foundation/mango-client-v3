@@ -73,24 +73,24 @@ export class Keeper {
         ),
       ]);
 
-      const rootBanks = await merpsGroup.loadRootBanks(connection);
-      await Promise.all(
-        rootBanks.map((rootBank) => {
-          if (rootBank) {
-            return client
-              .updateRootBank(
-                merpsGroup.publicKey,
-                rootBank.publicKey,
-                rootBank.nodeBanks.slice(0, rootBank.numNodeBanks),
-                payer,
-              )
-              .catch((err) => {
-                console.error('Failed to update rootbank', err);
-                return err;
-              });
-          }
-        }),
-      );
+      // const rootBanks = await merpsGroup.loadRootBanks(connection);
+      // await Promise.all(
+      //   rootBanks.map((rootBank) => {
+      //     if (rootBank) {
+      //       return client
+      //         .updateRootBank(
+      //           merpsGroup.publicKey,
+      //           rootBank.publicKey,
+      //           rootBank.nodeBanks.slice(0, rootBank.numNodeBanks),
+      //           payer,
+      //         )
+      //         .catch((err) => {
+      //           console.error('Failed to update rootbank', err);
+      //           return err;
+      //         });
+      //     }
+      //   }),
+      // );
 
       // const perpMarkets = await merpsGroup.loadPerpMarkets(connection);
       // await Promise.all([
