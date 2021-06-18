@@ -202,7 +202,7 @@ export function makeCancelSpotOrderInstruction(
   ];
 
   const data = encodeMerpsInstruction({
-    CancelOrder: {
+    CancelSpotOrder: {
       side: order.side,
       orderId: order.orderId,
     },
