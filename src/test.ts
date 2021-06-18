@@ -133,7 +133,7 @@ async function test_place_spot_order() {
     console.log('= depositing =');
     await client.deposit(
       merpsGroup,
-      merpsAccount,
+      merpsAccount.publicKey,
       payer,
       merpsGroup.tokens[QUOTE_INDEX].rootBank,
       usdcRootBank.nodeBanks?.[0],

@@ -333,7 +333,7 @@ export class MerpsClient {
 
   async deposit(
     merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
+    merpsAccountPk: PublicKey,
     owner: Account | WalletAdapter,
     rootBank: PublicKey,
     nodeBank: PublicKey,
@@ -352,7 +352,7 @@ export class MerpsClient {
       this.programId,
       merpsGroup.publicKey,
       owner.publicKey,
-      merpsAccount.publicKey,
+      merpsAccountPk,
       rootBank,
       nodeBank,
       vault,
