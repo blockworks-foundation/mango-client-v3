@@ -12,6 +12,7 @@ import {
   UInt,
   offset,
   greedy,
+  nu64,
 } from 'buffer-layout';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
@@ -770,12 +771,12 @@ BOOK_NODE_LAYOUT.addVariant(4, struct([]), 'lastFreeNode');
 
 export const BookSideLayout = struct([
   metaDataLayout('metaData'),
-  u64('bumpIndex'),
-  u64('freeListLen'),
+  nu64('bumpIndex'),
+  nu64('freeListLen'),
   u32('freeListHead'),
   u32('rootNode'),
-  u64('leafCount'),
-  seq(u8(), BOOK_NODE_SIZE * MAX_BOOK_NODES, 'nodes'),
+  nu64('leafCount'),
+  seq(BOOK_NODE_LAYOUT, MAX_BOOK_NODES, 'nodes'),
 ]);
 
 export class PriceCache {
