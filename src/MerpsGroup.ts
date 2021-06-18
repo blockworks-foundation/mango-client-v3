@@ -54,9 +54,9 @@ export default class MerpsGroup {
     throw new Error('This Oracle does not belong to this MerpsGroup');
   }
 
-  getSpotMarketIndex(spotMarket: Market): number {
+  getSpotMarketIndex(spotMarket: PublicKey): number {
     for (let i = 0; i < this.numOracles; i++) {
-      if (this.spotMarkets[i].spotMarket.equals(spotMarket.publicKey)) {
+      if (this.spotMarkets[i].spotMarket.equals(spotMarket)) {
         return i;
       }
     }
