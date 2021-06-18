@@ -599,7 +599,7 @@ export class MerpsClient {
       perpMarket.bids,
       perpMarket.asks,
       perpMarket.eventQueue,
-      merpsAccount.spotOpenOrders.filter((oo, i) => merpsAccount.inBasket[i]),
+      merpsAccount.spotOpenOrders,
       nativePrice,
       nativeQuantity,
       new BN(clientOrderId),
