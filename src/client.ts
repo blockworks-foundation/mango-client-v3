@@ -881,7 +881,7 @@ export class MerpsClient {
         transaction.add(accInstr.instruction);
         additionalSigners.push(accInstr.account);
         openOrdersKeys.push(accInstr.account.publicKey);
-      } else if (merpsAccount.inBasket[i]) {
+      } else {
         openOrdersKeys.push(merpsAccount.spotOpenOrders[i]);
       }
     }
