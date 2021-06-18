@@ -27,8 +27,7 @@
     "keeper": "ts-node src/keeper.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
     "test:build": "run-s build",
-    "test:lint": "eslint src",
-    "postinstall": "npm run build"
+    "test:lint": "eslint src"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
