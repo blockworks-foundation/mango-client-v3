@@ -935,3 +935,97 @@ export class RootBank {
       });
   }
 }
+
+export class EventQueueHeader {
+  metaData!: MetaData;
+  head!: number;
+  count!: number;
+  seqNum!: number;
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+export class EventQueueHeaderLayout extends Structure {
+  constructor(property) {
+    super(
+      [metaDataLayout('metaData'), u64('head'), u64('count'), u64('seqNum')],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new EventQueueHeader(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+export function eventQueueHeaderLayout(property = '') {
+  return new EventQueueHeaderLayout(property);
+}
+
+export enum EventType {
+  Fill,
+  Out,
+}
+export class AnyEvent {
+  eventType!: EventType;
+}
+export class AnyEventLayout extends Structure {
+  constructor(property) {
+    super([u8('eventType'), seq(u8(), 7, 'padding')], property);
+  }
+
+  decode(b, offset) {
+    return new EventQueueHeader(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+export function anyEventLayout(property = '') {
+  return new AnyEventLayout(property);
+}
+
+export class EventQueue {
+  metaData!: MetaData;
+  head!: number;
+  count!: number;
+  seqNum!: number;
+  buf!: AnyEvent[];
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+export class EventQueueLayout extends Structure {
+  constructor(property) {
+    //const headerLayout = eventQueueHeaderLayout('header');
+    const queueLength = u64('count');
+    console.log(queueLength);
+    super(
+      [
+        metaDataLayout('metaData'),
+        u64('head'),
+        queueLength,
+        u64('seqNum'),
+        seq(anyEventLayout(), offset(queueLength, -1), 'buf'),
+      ],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new EventQueue(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+export function eventQueueLayout(property = '') {
+  return new EventQueueLayout(property);
+}

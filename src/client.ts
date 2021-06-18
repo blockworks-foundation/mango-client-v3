@@ -34,6 +34,8 @@ import {
   BookSideLayout,
   PerpEventQueueLayout,
   PerpEventLayout,
+  EventQueue,
+  EventQueueLayout,
 } from './layout';
 import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
 import MerpsAccount from './MerpsAccount';

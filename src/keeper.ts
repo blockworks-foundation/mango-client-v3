@@ -12,13 +12,14 @@ import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { sleep } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
+import { QUOTE_INDEX } from '../src/MerpsGroup';
 
 export class Keeper {
   /**
    * Long running program that never exits except on keyboard interrupt
    */
   async run() {
-    const interval = 10000;
+    const interval = 3000;
     // eslint-disable-next-line
     while (true) {
       await sleep(interval);
@@ -54,7 +55,10 @@ export class Keeper {
         client.cacheRootBanks(
           merpsGroup.publicKey,
           merpsGroup.merpsCache,
-          [],
+          [
+            merpsGroup.tokens[0].rootBank,
+            merpsGroup.tokens[QUOTE_INDEX].rootBank,
+          ],
           payer,
         ),
         client.cachePrices(
