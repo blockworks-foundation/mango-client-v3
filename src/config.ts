@@ -115,6 +115,10 @@ export function getPerpMarketByBaseSymbol(group: GroupConfig, symbol: string) {
   return group.perp_markets.find((p) => p.base_symbol === symbol);
 }
 
+export function getPerpMarketByAddress(group: GroupConfig, address: PublicKey) {
+  return group.perp_markets.find((p) => p.key === address);
+}
+
 export function getSpotMarketByBaseSymbol(group: GroupConfig, symbol: string) {
   return group.spot_markets.find((p) => p.base_symbol === symbol);
 }

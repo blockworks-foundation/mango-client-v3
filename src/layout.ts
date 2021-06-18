@@ -16,6 +16,7 @@ import {
 } from 'buffer-layout';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
+import Big from 'big.js';
 import BN from 'bn.js';
 import { promiseUndef, zeroKey } from './utils';
 
@@ -699,6 +700,8 @@ export const PerpMarketLayout = struct([
 
 export class PerpMarket {
   publicKey: PublicKey;
+  baseDecimals: number;
+  quoteDecimals: number;
   merpsGroup!: PublicKey;
   bids!: PublicKey;
   asks!: PublicKey;
@@ -712,8 +715,15 @@ export class PerpMarket {
   seqNum!: BN;
   contractSize!: BN;
 
-  constructor(publicKey: PublicKey, decoded: any) {
+  constructor(
+    publicKey: PublicKey,
+    baseDecimals: number,
+    quoteDecimals: number,
+    decoded: any,
+  ) {
     this.publicKey = publicKey;
+    this.baseDecimals = baseDecimals;
+    this.quoteDecimals = quoteDecimals;
     Object.assign(this, decoded);
   }
 
@@ -725,6 +735,21 @@ export class PerpMarket {
 
   baseLotsToNative(quantity: BN): I80F48 {
     return I80F48.fromI64(this.contractSize.mul(quantity));
+  }
+
+  priceLotsToNumber(price: BN | number): number {
+    const nativeToUi = new Big(10).pow(this.baseDecimals - this.quoteDecimals);
+    const lotsToNative = new Big(this.quoteLotSize).div(
+      new Big(this.contractSize),
+    );
+    return new Big(price).mul(lotsToNative).mul(nativeToUi).toNumber();
+  }
+
+  baseLotsToNumber(quantity: BN | number): number {
+    return new Big(quantity)
+      .mul(new Big(this.contractSize))
+      .div(new Big(10).pow(this.baseDecimals))
+      .toNumber();
   }
 }
 

@@ -59,7 +59,7 @@ export class BookSide {
     return this.items();
   }
 
-  getL2(depth: number): [I80F48, I80F48, BN, BN][] {
+  getL2(depth: number): [number, number, BN, BN][] {
     const levels: [BN, BN][] = []; // (price, size)
     //@ts-ignore
     for (const { key, quantity } of this.items()) {
@@ -73,8 +73,8 @@ export class BookSide {
       }
     }
     return levels.map(([priceLots, sizeLots]) => [
-      this.perpMarket.priceLotsToNative(priceLots),
-      this.perpMarket.baseLotsToNative(sizeLots),
+      this.perpMarket.priceLotsToNumber(priceLots),
+      this.perpMarket.baseLotsToNumber(sizeLots),
       priceLots,
       sizeLots,
     ]);

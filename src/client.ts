@@ -550,10 +550,16 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
-  async getPerpMarket(perpMarketPk: PublicKey): Promise<PerpMarket> {
+  async getPerpMarket(
+    perpMarketPk: PublicKey,
+    baseDecimal: number,
+    quoteDecimal: number,
+  ): Promise<PerpMarket> {
     const acc = await this.connection.getAccountInfo(perpMarketPk);
     const perpMarket = new PerpMarket(
       perpMarketPk,
+      baseDecimal,
+      quoteDecimal,
       PerpMarketLayout.decode(acc == null ? undefined : acc.data),
     );
     return perpMarket;
@@ -647,23 +653,25 @@ export class MerpsClient {
     return parsedRootBanks;
   }
 
+  /*
   async loadPerpMarkets(perpMarkets: PublicKey[]): Promise<PerpMarket[]> {
     const accounts = await Promise.all(
       perpMarkets.map((pk) => this.connection.getAccountInfo(pk)),
     );
 
-    const parsedRootBanks: PerpMarket[] = [];
+    const parsedPerpMarkets: PerpMarket[] = [];
 
     for (let i = 0; i < accounts.length; i++) {
       const acc = accounts[i];
       if (acc) {
-        const decoded = RootBankLayout.decode(acc.data);
-        parsedRootBanks.push(new PerpMarket(perpMarkets[i], decoded));
+        const decoded = PerpMarketLayout.decode(acc.data);
+        parsedPerpMarkets.push(new PerpMarket(perpMarkets[i], decoded));
       }
     }
 
-    return parsedRootBanks;
+    return parsedPerpMarkets;
   }
+  */
 
   async addOracle(
     merpsGroup: MerpsGroup,
