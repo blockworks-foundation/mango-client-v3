@@ -10,11 +10,13 @@ import {
   Structure,
   Layout,
   UInt,
+  nu64,
+  offset,
 } from 'buffer-layout';
-import { PublicKey } from '@solana/web3.js';
+import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import BN from 'bn.js';
-import { zeroKey } from './utils';
+import { promiseUndef, zeroKey } from './utils';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
@@ -725,11 +727,15 @@ export const PerpEventLayout = struct([
   seq(u8(), 87, 'padding'),
 ]);
 
+const count = u64('count');
+// TODO: will this always be 128?
+const events = seq(PerpEventLayout, 128, 'events');
 export const PerpEventQueueLayout = struct([
   metaDataLayout('metaData'),
   u64('head'),
-  u64('count'),
+  count,
   u64('seqNum'),
+  events,
 ]);
 
 const BOOK_NODE_SIZE = 72;
@@ -891,5 +897,41 @@ export class NodeBank {
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
+  }
+}
+
+export class RootBank {
+  publicKey: PublicKey;
+
+  numNodeBanks!: number;
+  nodeBanks!: PublicKey[];
+  depositIndex!: I80F48;
+  borrowIndex!: I80F48;
+  lastUpdated!: BN;
+
+  constructor(publicKey: PublicKey, decoded: any) {
+    this.publicKey = publicKey;
+    Object.assign(this, decoded);
+  }
+
+  async loadNodeBanks(connection: Connection): Promise<NodeBank[]> {
+    const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
+
+    for (let i = 0; i < this.nodeBanks.length; i++) {
+      if (this.nodeBanks[i].equals(zeroKey)) {
+        promises.push(promiseUndef());
+      } else {
+        promises.push(connection.getAccountInfo(this.nodeBanks[i]));
+      }
+    }
+
+    const accounts = await Promise.all(promises);
+
+    return accounts
+      .filter((acc) => acc && acc.data)
+      .map((acc, i) => {
+        const decoded = NodeBankLayout.decode(acc?.data);
+        return new NodeBank(this.nodeBanks[i], decoded);
+      });
   }
 }

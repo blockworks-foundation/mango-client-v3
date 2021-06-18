@@ -112,6 +112,9 @@ export class Keeper {
       //     }
       //   }),
       // ]);
+      // console.log(perpMarkets[0]!.eventQueue.toBase58());
+      // const eventQueue = await client.getEventQueue(perpMarkets[0]!.eventQueue);
+      // console.log(eventQueue['events'][0]['padding']);
 
       // TODO: consume events
       //

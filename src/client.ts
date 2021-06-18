@@ -1276,4 +1276,15 @@ export class MerpsClient {
   }
 
   async getOrderBook() {}
+
+  async getEventQueue(eventQueue: PublicKey): Promise<EventQueue> {
+    const accountInfo = await this.connection.getAccountInfo(eventQueue);
+    EventQueueLayout;
+    const decoded = PerpEventQueueLayout.decode(
+      accountInfo == null ? undefined : accountInfo.data,
+      0,
+    );
+
+    return new EventQueue(decoded);
+  }
 }
