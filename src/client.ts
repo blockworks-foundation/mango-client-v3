@@ -338,7 +338,7 @@ export class MerpsClient {
 
   async deposit(
     merpsGroup: MerpsGroup,
-    merpsAccountPk: PublicKey,
+    merpsAccount: MerpsAccount,
     owner: Account | WalletAdapter,
     rootBank: PublicKey,
     nodeBank: PublicKey,
@@ -353,11 +353,26 @@ export class MerpsClient {
       merpsGroup.tokens[tokenIndex].decimals,
     );
 
+    const transaction = new Transaction();
+
+    if (!merpsAccount.inBasket[tokenIndex]) {
+      // TODO: find out why this does not work
+      transaction.add(
+        makeAddToBasketInstruction(
+          this.programId,
+          merpsGroup.publicKey,
+          merpsAccount.publicKey,
+          owner.publicKey,
+          new BN(tokenIndex),
+        ),
+      );
+    }
+
     const instruction = makeDepositInstruction(
       this.programId,
       merpsGroup.publicKey,
       owner.publicKey,
-      merpsAccountPk,
+      merpsAccount.publicKey,
       rootBank,
       nodeBank,
       vault,
@@ -365,7 +380,6 @@ export class MerpsClient {
       nativeQuantity,
     );
 
-    const transaction = new Transaction();
     transaction.add(instruction);
 
     const additionalSigners = [];

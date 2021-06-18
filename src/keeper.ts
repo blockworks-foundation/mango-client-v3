@@ -8,13 +8,7 @@ This will be very similar to the crank in serum dex.
 import * as os from 'os';
 import * as fs from 'fs';
 import { MerpsClient } from './client';
-import {
-  Account,
-  Commitment,
-  Connection,
-  PublicKey,
-  Transaction,
-} from '@solana/web3.js';
+import { Account, Commitment, Connection, Transaction } from '@solana/web3.js';
 import { sleep } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
@@ -25,7 +19,6 @@ import {
   makeCacheRootBankInstruction,
   makeUpdateRootBankInstruction,
 } from './instruction';
-import { group } from 'yargs';
 
 export class Keeper {
   /**
