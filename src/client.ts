@@ -747,9 +747,6 @@ export class MerpsClient {
 
     const openOrdersKeys: PublicKey[] = [];
     for (let i = 0; i < merpsAccount.spotOpenOrders.length; i++) {
-      if (!merpsAccount.inBasket[i]) {
-        continue;
-      }
       if (
         i === spotMarketIndex &&
         merpsAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)
@@ -774,7 +771,7 @@ export class MerpsClient {
         transaction.add(accInstr.instruction);
         additionalSigners.push(accInstr.account);
         openOrdersKeys.push(accInstr.account.publicKey);
-      } else {
+      } else if (merpsAccount.inBasket[i]) {
         openOrdersKeys.push(merpsAccount.spotOpenOrders[i]);
       }
     }
