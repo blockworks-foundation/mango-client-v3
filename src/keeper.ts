@@ -19,7 +19,7 @@ export class Keeper {
    * Long running program that never exits except on keyboard interrupt
    */
   async run() {
-    const interval = 5000;
+    const interval = process.env.INTERVAL || 5000;
     // eslint-disable-next-line
     while (true) {
       await sleep(interval);
