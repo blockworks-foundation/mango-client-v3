@@ -23,7 +23,9 @@ import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
+  makeUpdateRootBankInstruction,
 } from './instruction';
+import { group } from 'yargs';
 
 export class Keeper {
   /**
@@ -95,24 +97,18 @@ export class Keeper {
       );
       await client.sendTransaction(cacheTransaction, payer, []);
 
-      // const rootBanks = await merpsGroup.loadRootBanks(connection);
-      // await Promise.all(
-      //   rootBanks.map((rootBank) => {
-      //     if (rootBank) {
-      //       return client
-      //         .updateRootBank(
-      //           merpsGroup.publicKey,
-      //           rootBank.publicKey,
-      //           rootBank.nodeBanks.slice(0, rootBank.numNodeBanks),
-      //           payer,
-      //         )
-      //         .catch((err) => {
-      //           console.error('Failed to update rootbank', err);
-      //           return err;
-      //         });
-      //     }
-      //   }),
-      // );
+      const updateRootBankTransaction = new Transaction();
+      groupIds.tokens.forEach((token) => {
+        updateRootBankTransaction.add(
+          makeUpdateRootBankInstruction(
+            merpsProgramId,
+            merpsGroup.publicKey,
+            token.root_key,
+            token.node_keys,
+          ),
+        );
+      });
+      await client.sendTransaction(updateRootBankTransaction, payer, []);
 
       // const perpMarkets = await merpsGroup.loadPerpMarkets(connection);
       // await Promise.all([
