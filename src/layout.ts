@@ -10,7 +10,6 @@ import {
   Structure,
   Layout,
   UInt,
-  nu64,
   offset,
   greedy,
 } from 'buffer-layout';
