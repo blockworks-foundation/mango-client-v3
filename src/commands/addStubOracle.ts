@@ -15,13 +15,13 @@ export default async function addStubOracle(
     symbol,
   });
 
-  const client = new MerpsClient(connection, groupConfig.merps_program_id);
-  await client.addStubOracle(groupConfig.key, payer);
-  const group = await client.getMerpsGroup(groupConfig.key);
+  const client = new MerpsClient(connection, groupConfig.merpsProgramId);
+  await client.addStubOracle(groupConfig.publicKey, payer);
+  const group = await client.getMerpsGroup(groupConfig.publicKey);
 
   const oracle = {
     symbol: symbol,
-    key: group.oracles[group.numOracles - 1],
+    publicKey: group.oracles[group.numOracles - 1],
   };
 
   const _oracle = getOracleBySymbol(groupConfig, symbol);

@@ -36,8 +36,8 @@ export class Keeper {
       throw new Error(`Group ${groupName} not found`);
     }
 
-    const merpsProgramId = groupIds.merps_program_id;
-    const merpsGroupKey = groupIds.key;
+    const merpsProgramId = groupIds.merpsProgramId;
+    const merpsGroupKey = groupIds.publicKey;
     const payer = new Account(
       JSON.parse(
         process.env.KEYPAIR ||
@@ -96,8 +96,8 @@ export class Keeper {
           makeUpdateRootBankInstruction(
             merpsProgramId,
             merpsGroup.publicKey,
-            token.root_key,
-            token.node_keys,
+            token.rootKey,
+            token.nodeKeys,
           ),
         );
       });

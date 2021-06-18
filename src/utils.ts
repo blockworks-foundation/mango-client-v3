@@ -255,11 +255,11 @@ export async function getMultipleAccounts(
   publicKeys: PublicKey[],
   commitment?: Commitment,
 ): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
-  const publickKeyStrs = publicKeys.map((pk) => pk.toBase58());
+  const publicKeyStrs = publicKeys.map((pk) => pk.toBase58());
   // load connection commitment as a default
   commitment ||= connection.commitment;
 
-  const args = commitment ? [publickKeyStrs, { commitment }] : [publickKeyStrs];
+  const args = commitment ? [publicKeyStrs, { commitment }] : [publicKeyStrs];
   // @ts-ignore
   const resp = await connection._rpcRequest('getMultipleAccounts', args);
   if (resp.error) {

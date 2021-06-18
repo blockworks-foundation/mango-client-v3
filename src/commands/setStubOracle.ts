@@ -9,7 +9,12 @@ export default async function setStubOracle(
   symbol: string,
   value: number,
 ) {
-  const client = new MerpsClient(connection, groupConfig.merps_program_id);
+  const client = new MerpsClient(connection, groupConfig.merpsProgramId);
   const oracle = getOracleBySymbol(groupConfig, symbol) as OracleConfig;
-  await client.setStubOracle(groupConfig.key, oracle.key, payer, value);
+  await client.setStubOracle(
+    groupConfig.publicKey,
+    oracle.publicKey,
+    payer,
+    value,
+  );
 }

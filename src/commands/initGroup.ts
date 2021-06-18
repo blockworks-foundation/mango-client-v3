@@ -38,22 +38,22 @@ export default async function initGroup(
 
   const tokenDesc = {
     symbol: quoteSymbol,
-    mint_key: quoteMint,
+    mintKey: quoteMint,
     decimals: group.tokens[tokenIndex].decimals,
-    root_key: banks[tokenIndex]?.publicKey as PublicKey,
-    node_keys: nodeBanks?.map((n) => n?.publicKey) as PublicKey[],
+    rootKey: banks[tokenIndex]?.publicKey as PublicKey,
+    nodeKeys: nodeBanks?.map((n) => n?.publicKey) as PublicKey[],
   };
   const groupDesc = {
     cluster,
     name: groupName,
-    key: groupKey,
-    quote_symbol: quoteSymbol,
-    merps_program_id: merpsProgramId,
-    serum_program_id: serumProgramId,
+    publicKey: groupKey,
+    quoteSymbol: quoteSymbol,
+    merpsProgramId: merpsProgramId,
+    serumProgramId: serumProgramId,
     tokens: [tokenDesc],
     oracles: [],
-    perp_markets: [],
-    spot_markets: [],
+    perpMarkets: [],
+    spotMarkets: [],
   };
   return groupDesc;
 }

@@ -71,16 +71,16 @@ export function writeConfig(configPath: string, config: Config) {
 //@ts-ignore
 yargs(hideBin(process.argv))
   .command(
-    'init-group <group> <merps_program_id> <serum_program_id> <quote_mint>',
+    'init-group <group> <merpsProgramId> <serumProgramId> <quote_mint>',
     'initialize a new group',
     (y) =>
       y
         .positional(...groupDesc)
-        .positional('merps_program_id', {
+        .positional('merpsProgramId', {
           describe: 'the program id of the merps smart contract',
           type: 'string',
         })
-        .positional('serum_program_id', {
+        .positional('serumProgramId', {
           describe: 'the program id of the serum dex smart contract',
           type: 'string',
         })
@@ -98,8 +98,8 @@ yargs(hideBin(process.argv))
         .option(...keypairDesc),
     async (args) => {
       console.log('init_group', args);
-      const merpsProgramId = new PublicKey(args.merps_program_id as string);
-      const serumProgramId = new PublicKey(args.serum_program_id as string);
+      const merpsProgramId = new PublicKey(args.merpsProgramId as string);
+      const serumProgramId = new PublicKey(args.serumProgramId as string);
       const quoteMint = new PublicKey(args.quote_mint as string);
       const account = readKeypair(args.keypair as string);
       const config = readConfig(args.config as string);

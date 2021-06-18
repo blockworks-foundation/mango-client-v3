@@ -597,7 +597,6 @@ export class MerpsClient {
     const additionalSigners: Account[] = [];
 
     if (!merpsAccount.inBasket[marketIndex]) {
-      // TODO: find out why this does not work
       transaction.add(
         makeAddToBasketInstruction(
           this.programId,

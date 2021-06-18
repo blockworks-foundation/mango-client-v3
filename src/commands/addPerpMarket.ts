@@ -3,6 +3,7 @@ import { MerpsClient } from '../client';
 import {
   getOracleBySymbol,
   getPerpMarketByBaseSymbol,
+  getTokenBySymbol,
   GroupConfig,
   OracleConfig,
 } from '../config';
@@ -25,14 +26,14 @@ export default async function addPerpMarket(
     symbol,
   });
 
-  const client = new MerpsClient(connection, groupConfig.merps_program_id);
+  const client = new MerpsClient(connection, groupConfig.merpsProgramId);
 
-  let group = await client.getMerpsGroup(groupConfig.key);
+  let group = await client.getMerpsGroup(groupConfig.publicKey);
   const oracleDesc = getOracleBySymbol(groupConfig, symbol) as OracleConfig;
-  const marketIndex = group.getOracleIndex(oracleDesc.key);
+  const marketIndex = group.getOracleIndex(oracleDesc.publicKey);
 
   await client.addPerpMarket(
-    groupConfig.key,
+    groupConfig.publicKey,
     payer,
     marketIndex,
     maintLeverage,
@@ -42,20 +43,35 @@ export default async function addPerpMarket(
     maxNumEvents,
   );
 
-  group = await client.getMerpsGroup(groupConfig.key);
+  group = await client.getMerpsGroup(groupConfig.publicKey);
+  const marketPk = group.perpMarkets[marketIndex].perpMarket;
+  const baseDecimals = getTokenBySymbol(groupConfig, symbol)
+    ?.decimals as number;
+  const quoteDecimals = getTokenBySymbol(groupConfig, groupConfig.quoteSymbol)
+    ?.decimals as number;
+  const market = await client.getPerpMarket(
+    marketPk,
+    baseDecimals,
+    quoteDecimals,
+  );
 
   const marketDesc = {
-    base_symbol: symbol,
-    key: group.perpMarkets[marketIndex].perpMarket,
-    market_index: marketIndex,
     name: `${symbol}-PERP`,
+    publicKey: marketPk,
+    baseSymbol: symbol,
+    baseDecimals,
+    quoteDecimals,
+    marketIndex,
+    bidsKey: market.bids,
+    asksKey: market.asks,
+    eventsKey: market.eventQueue,
   };
 
-  const market = getPerpMarketByBaseSymbol(groupConfig, symbol);
-  if (market) {
-    Object.assign(market, marketDesc);
+  const marketConfig = getPerpMarketByBaseSymbol(groupConfig, symbol);
+  if (marketConfig) {
+    Object.assign(marketConfig, marketDesc);
   } else {
-    groupConfig.perp_markets.push(marketDesc);
+    groupConfig.perpMarkets.push(marketDesc);
   }
 
   return groupConfig;

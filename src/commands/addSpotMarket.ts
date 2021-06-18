@@ -1,3 +1,4 @@
+import { Market } from '@project-serum/serum';
 import { Account, Connection, PublicKey } from '@solana/web3.js';
 import { MerpsClient } from '../client';
 import {
@@ -18,11 +19,11 @@ export default async function addSpotMarket(
   maintLeverage: number,
   initLeverage: number,
 ): Promise<GroupConfig> {
-  const client = new MerpsClient(connection, groupConfig.merps_program_id);
+  const client = new MerpsClient(connection, groupConfig.merpsProgramId);
 
-  let group = await client.getMerpsGroup(groupConfig.key);
+  let group = await client.getMerpsGroup(groupConfig.publicKey);
   const oracleDesc = getOracleBySymbol(groupConfig, symbol) as OracleConfig;
-  const marketIndex = group.getOracleIndex(oracleDesc.key);
+  const marketIndex = group.getOracleIndex(oracleDesc.publicKey);
 
   await client.addSpotMarket(
     group,
@@ -34,17 +35,23 @@ export default async function addSpotMarket(
     initLeverage,
   );
 
-  group = await client.getMerpsGroup(groupConfig.key);
+  group = await client.getMerpsGroup(groupConfig.publicKey);
+  const market = await Market.load(
+    connection,
+    spotMarket,
+    undefined,
+    groupConfig.serumProgramId,
+  );
   const banks = await group.loadRootBanks(connection);
   const tokenIndex = group.getTokenIndex(baseMint);
   const nodeBanks = await banks[tokenIndex]?.loadNodeBanks(connection);
 
   const tokenDesc = {
     symbol,
-    mint_key: baseMint,
+    mintKey: baseMint,
     decimals: group.tokens[tokenIndex].decimals,
-    root_key: banks[tokenIndex]?.publicKey as PublicKey,
-    node_keys: nodeBanks?.map((n) => n?.publicKey) as PublicKey[],
+    rootKey: banks[tokenIndex]?.publicKey as PublicKey,
+    nodeKeys: nodeBanks?.map((n) => n?.publicKey) as PublicKey[],
   };
 
   const token = getTokenBySymbol(groupConfig, symbol);
@@ -55,17 +62,22 @@ export default async function addSpotMarket(
   }
 
   const marketDesc = {
-    base_symbol: symbol,
-    key: spotMarket,
-    market_index: marketIndex,
-    name: `${symbol}/${groupConfig.quote_symbol}`,
+    name: `${symbol}/${groupConfig.quoteSymbol}`,
+    publicKey: spotMarket,
+    baseSymbol: symbol,
+    baseDecimals: market['_baseSplTokenDecimals'],
+    quoteDecimals: market['_quoteSplTokenDecimals'],
+    marketIndex,
+    bidsKey: market.bidsAddress,
+    asksKey: market.asksAddress,
+    eventsKey: market['_decoded'].eventQueue,
   };
 
-  const market = getSpotMarketByBaseSymbol(groupConfig, symbol);
-  if (market) {
-    Object.assign(market, marketDesc);
+  const marketConfig = getSpotMarketByBaseSymbol(groupConfig, symbol);
+  if (marketConfig) {
+    Object.assign(marketConfig, marketDesc);
   } else {
-    groupConfig.spot_markets.push(marketDesc);
+    groupConfig.spotMarkets.push(marketDesc);
   }
 
   return groupConfig;
