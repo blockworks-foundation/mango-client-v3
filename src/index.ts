@@ -8,6 +8,7 @@ export * from './config';
 export * from './TokenAccount';
 export { MerpsAccountLayout, MerpsGroupLayout } from './layout';
 
+export * from './instruction';
 export * from './layout';
 export * from './utils';
 export { IDS, MerpsGroup, MerpsAccount };
