@@ -1153,15 +1153,15 @@ export class MerpsClient {
       this.programId,
       accountFilters,
     ).then((accounts) =>
-      accounts.map(
-        ({ publicKey, accountInfo }) =>
-          new MerpsAccount(
-            publicKey,
-            MerpsAccountLayout.decode(
-              accountInfo == null ? undefined : accountInfo.data,
-            ),
+      accounts.map(({ publicKey, accountInfo }) => {
+        console.log('merpsAcc', accountInfo.data);
+        return new MerpsAccount(
+          publicKey,
+          MerpsAccountLayout.decode(
+            accountInfo == null ? undefined : accountInfo.data,
           ),
-      ),
+        );
+      }),
     );
 
     if (!includeOpenOrders) {
