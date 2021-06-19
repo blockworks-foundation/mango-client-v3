@@ -156,6 +156,18 @@ export interface MarketConfig {
   eventsKey: PublicKey;
 }
 
+export function getAllMarkets(group: GroupConfig) {
+  const spotMarkets = group.spotMarkets.map<MarketConfig>((m) => ({
+    kind: 'spot',
+    ...m,
+  }));
+  const perpMarkets = group.perpMarkets.map<MarketConfig>((m) => ({
+    kind: 'perp',
+    ...m,
+  }));
+  return spotMarkets.concat(perpMarkets);
+}
+
 export function getMarketByBaseSymbolAndKind(
   group: GroupConfig,
   symbol: string,
