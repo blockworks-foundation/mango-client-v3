@@ -8,8 +8,8 @@
   "groups": [
     {
       "cluster": "devnet",
-      "name": "merps_test_v2.1",
-      "publicKey": "BiR8MY1zBJAL9uVhe368ULiPSM7duMrhQBiowMjFUMNq",
+      "name": "merps_test_v2.2",
+      "publicKey": "BeUPf2mRjbxoC1H9UPxMq1jDmBxMmJ15f7DweTTrSmp8",
       "quoteSymbol": "USDC",
       "merpsProgramId": "66DFouNQBY1EWyBed3WPicjhwD1FoyTtNCzAowcR8vad",
       "serumProgramId": "DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY",
@@ -18,38 +18,38 @@
           "symbol": "USDC",
           "mintKey": "EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK",
           "decimals": 9,
-          "rootKey": "FLEzr2tB3h9WGdkpBQViNLAWqeLaADfE1ezqjuuwXGfu",
+          "rootKey": "GG7Jqeg1kht1Jw3rjnLf8tvy1kajdhCiPAw6NXRM3wHe",
           "nodeKeys": [
-            "3FWEVa6z5SeJ7Si6zxNgNzFndPBwSoyazYp2rNLGc2Et"
+            "GqkavwMHKG8V1YzwCeWJUo5jamsxEyWqegRGsCtCNrX"
           ]
         },
         {
           "symbol": "BTC",
           "mintKey": "bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP",
           "decimals": 6,
-          "rootKey": "U72nrz54JAaWimed8neqe3wuYbYicSxgiBcLJMyQsLF",
+          "rootKey": "4iossCDg94P19NzKzSFU9bQ3UAR6CzVabjBZLHMpGcrR",
           "nodeKeys": [
-            "3vrE7nnSs1Nxyc1NJuvr3roctbPg1UADu1MGdv5YvUpz"
+            "GXt9sgFxjmHTi2e9xPVoFUxrVftxqyJGJt9MkN5m4jGz"
           ]
         }
       ],
       "oracles": [
         {
           "symbol": "BTC",
-          "publicKey": "AuLrg5mtfWZmJAxwKnQvU5YzJbsTNvCdrgzmjFizziTt"
+          "publicKey": "Fc3vkEE8eiZAZYBXy7n7W8mdLD71qg9oqYe9fA7TUa9s"
         }
       ],
       "perpMarkets": [
         {
           "name": "BTC-PERP",
-          "publicKey": "6wJ8adu137ny8NBianiy3asCUAXZm9tFn3AzJqGvmHT2",
+          "publicKey": "3UqNZaecdLpshieKNvvGkyCMR8Dr5HePEcZQ6N5vRbJB",
           "baseSymbol": "BTC",
           "baseDecimals": 6,
           "quoteDecimals": 9,
           "marketIndex": 0,
-          "bidsKey": "5XmYsThCrDVfGVaeMZ9gTMraHP8TH6a7jZwuucxyoApW",
-          "asksKey": "EUCPm3P2AfkesEV3Yve5a22jhKtsyki9En7rMZ5286o",
-          "eventsKey": "HHfXMybWyVHkLshgJrTPaWjCMUbWWbM67SNGE8K43ezP"
+          "bidsKey": "3ac9yvKu7zom7UzTHQNTH7Tz7pvabM7bDrxfiiwdSXTW",
+          "asksKey": "HDY2DT614BCsFuDhoz33SVbKRK2XJwrHJDb9oYNRCjg4",
+          "eventsKey": "FdwzWEZMaGYB1djpdf4z1kD7XPfEvrdDonrYhyF4jE17"
         }
       ],
       "spotMarkets": [
