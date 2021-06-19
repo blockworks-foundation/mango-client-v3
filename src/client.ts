@@ -1154,7 +1154,7 @@ export class MerpsClient {
       accountFilters,
     ).then((accounts) =>
       accounts.map(({ publicKey, accountInfo }) => {
-        console.log('merpsAcc', accountInfo.data);
+        console.log('merpsAcc', accountInfo.data.toString('base64'));
         return new MerpsAccount(
           publicKey,
           MerpsAccountLayout.decode(
