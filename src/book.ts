@@ -12,7 +12,7 @@ export type LeafNode = {
   clientOrderId: BN;
 };
 
-export interface Order {
+export interface PerpOrder {
   orderId: BN;
   owner: PublicKey;
   openOrdersSlot: number;
@@ -45,7 +45,7 @@ export class BookSide {
     Object.assign(this, decoded);
   }
 
-  *items(): Generator<Order> {
+  *items(): Generator<PerpOrder> {
     if (this.leafCount === 0) {
       return;
     }

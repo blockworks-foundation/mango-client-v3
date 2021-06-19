@@ -60,6 +60,7 @@ import {
   makeUpdateFundingInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
+  makeCancelPerpOrderInstruction,
 } from './instruction';
 import {
   Market,
@@ -71,6 +72,7 @@ import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 import { RootBank } from './RootBank';
 import { WalletAdapter } from './types';
+import { PerpOrder } from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -630,8 +632,30 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
-  async cancelPerpOrder(): Promise<TransactionSignature[]> {
-    throw new Error('Not Implemented');
+  async cancelPerpOrder(
+    merpsGroup: MerpsGroup,
+    merpsAccount: MerpsAccount,
+    owner: Account | WalletAdapter,
+    perpMarket: PerpMarket,
+    order: PerpOrder,
+  ): Promise<TransactionSignature> {
+    const instruction = makeCancelPerpOrderInstruction(
+      this.programId,
+      merpsGroup.publicKey,
+      merpsAccount.publicKey,
+      owner.publicKey,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      perpMarket.eventQueue,
+      order,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
   async loadRootBanks(rootBanks: PublicKey[]): Promise<RootBank[]> {

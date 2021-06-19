@@ -9,6 +9,7 @@ import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
 import { I80F48 } from './fixednum';
+import { PerpOrder } from '.';
 
 export function makeInitMerpsGroupInstruction(
   programId: PublicKey,
@@ -205,6 +206,65 @@ export function makeCancelSpotOrderInstruction(
     CancelSpotOrder: {
       side: order.side,
       orderId: order.orderId,
+    },
+  });
+  return new TransactionInstruction({ keys, data, programId });
+}
+
+export function makeCancelPerpOrderInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  perpMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  eventQueuePk: PublicKey,
+  order: PerpOrder,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+  ];
+
+  const data = encodeMerpsInstruction({
+    CancelPerpOrder: {
+      orderId: order.orderId,
+      side: order.side,
+    },
+  });
+  return new TransactionInstruction({ keys, data, programId });
+}
+
+export function makeCancelPerpOrderByClientIdInstruction(
+  programId: PublicKey,
+  merpsGroupPk: PublicKey,
+  merpsAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  perpMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  eventQueuePk: PublicKey,
+  clientOrderId: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+  ];
+
+  const data = encodeMerpsInstruction({
+    CancelPerpOrderByClientId: {
+      client_order_id: clientOrderId,
     },
   });
   return new TransactionInstruction({ keys, data, programId });
