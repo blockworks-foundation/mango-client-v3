@@ -244,12 +244,12 @@ MerpsInstructionLayout.addVariant(
 );
 MerpsInstructionLayout.addVariant(
   13,
-  struct([u64('client_order_id')]),
+  struct([u64('clientOrderId')]),
   'CancelPerpOrderByClientId',
 );
 MerpsInstructionLayout.addVariant(
   14,
-  struct([i128('order_id'), sideLayout('side', 4)]),
+  struct([i128('orderId'), sideLayout('side', 4)]),
   'CancelPerpOrder',
 );
 MerpsInstructionLayout.addVariant(15, struct([u64('limit')]), 'ConsumeEvents');

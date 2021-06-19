@@ -267,7 +267,7 @@ export function makeCancelPerpOrderByClientIdInstruction(
 
   const data = encodeMerpsInstruction({
     CancelPerpOrderByClientId: {
-      client_order_id: clientOrderId,
+      clientOrderId,
     },
   });
   return new TransactionInstruction({ keys, data, programId });
