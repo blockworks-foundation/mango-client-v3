@@ -12,6 +12,19 @@ export type LeafNode = {
   clientOrderId: BN;
 };
 
+export interface Order {
+  orderId: BN;
+  owner: PublicKey;
+  openOrdersSlot: number;
+  price: number;
+  priceLots: BN;
+  size: number;
+  feeTier: number;
+  sizeLots: BN;
+  side: 'buy' | 'sell';
+  clientId?: BN;
+}
+
 // TODO - maybe store ref inside PerpMarket class
 export class BookSide {
   publicKey: PublicKey;
@@ -32,7 +45,7 @@ export class BookSide {
     Object.assign(this, decoded);
   }
 
-  *items(): Generator<LeafNode> {
+  *items(): Generator<Order> {
     if (this.leafCount === 0) {
       return;
     }
@@ -44,7 +57,19 @@ export class BookSide {
       const { leafNode, innerNode } = this.nodes[index]; // we know index is undefined
 
       if (leafNode) {
-        yield leafNode;
+        const price = getPriceFromKey(leafNode.key);
+        yield {
+          orderId: leafNode.key,
+          clientId: leafNode.clientOrderId,
+          owner: leafNode.owner,
+          openOrdersSlot: leafNode.ownerSlot,
+          feeTier: 0,
+          price: this.perpMarket.priceLotsToNumber(price),
+          priceLots: price,
+          size: this.perpMarket.baseLotsToNumber(leafNode.quantity),
+          sizeLots: leafNode.quantity,
+          side: (this.isBids ? 'buy' : 'sell') as 'buy' | 'sell',
+        };
       } else if (innerNode) {
         if (this.isBids) {
           stack.push(innerNode.children[0], innerNode.children[1]);
@@ -62,14 +87,13 @@ export class BookSide {
   getL2(depth: number): [number, number, BN, BN][] {
     const levels: [BN, BN][] = []; // (price, size)
     //@ts-ignore
-    for (const { key, quantity } of this.items()) {
-      const price = getPriceFromKey(key);
-      if (levels.length > 0 && levels[levels.length - 1][0].eq(price)) {
-        levels[levels.length - 1][1].iadd(quantity);
+    for (const { priceLots, sizeLots } of this.items()) {
+      if (levels.length > 0 && levels[levels.length - 1][0].eq(priceLots)) {
+        levels[levels.length - 1][1].iadd(sizeLots);
       } else if (levels.length === depth) {
         break;
       } else {
-        levels.push([price, quantity]);
+        levels.push([priceLots, sizeLots]);
       }
     }
     return levels.map(([priceLots, sizeLots]) => [
