@@ -751,12 +751,56 @@ export class PerpMarket {
       .div(new Big(10).pow(this.baseDecimals))
       .toNumber();
   }
+
+  async loadEventQueue(connection: Connection): Promise<PerpEventQueue> {
+    const acc = await connection.getAccountInfo(this.eventQueue);
+    const parsed = PerpEventQueueLayout.decode(acc?.data);
+    return new PerpEventQueue(parsed);
+  }
 }
 
-export const PerpEventLayout = struct([
-  u8('eventType'),
-  seq(u8(), 87, 'padding'),
-]);
+export const PerpEventLayout = union(u8('eventType'), blob(87), 'event');
+PerpEventLayout.addVariant(0, struct([]), 'uninitialized');
+PerpEventLayout.addVariant(
+  1,
+  struct([
+    bool('maker'),
+    seq(u8(), 6),
+    publicKeyLayout('owner'),
+    i64('baseChange'),
+    i64('quoteChange'),
+    I80F48Layout('longFunding'),
+    I80F48Layout('shortFunding'),
+  ]),
+  'fill',
+);
+PerpEventLayout.addVariant(
+  2,
+  struct([
+    sideLayout('side', 1),
+    u8('slot'),
+    seq(u8(), 5),
+    publicKeyLayout('owner'),
+    i64('quantity'),
+  ]),
+  'out',
+);
+
+export interface FillEvent {
+  maker: boolean;
+  owner: PublicKey;
+  baseChange: BN;
+  quoteChange: BN;
+  longFunding: I80F48;
+  shortFunding: I80F48;
+}
+
+export interface OutEvent {
+  side: 'buy' | 'sell';
+  slot: number;
+  owner: PublicKey;
+  quantity: BN;
+}
 
 export const PerpEventQueueLayout = struct([
   metaDataLayout('metaData'),
@@ -765,6 +809,65 @@ export const PerpEventQueueLayout = struct([
   u64('seqNum'),
   seq(PerpEventLayout, greedy(PerpEventLayout.span), 'events'),
 ]);
+
+export class PerpEventQueue {
+  head!: BN;
+  count!: BN;
+  seqNum!: BN;
+  events!: any[];
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+
+  eventsSince(lastSeqNum: BN): { fill?: FillEvent; out?: OutEvent }[] {
+    const modulo64Uint = new BN('10000000000000000', 'hex');
+    let missedEvents = this.seqNum
+      .add(modulo64Uint)
+      .sub(lastSeqNum)
+      .mod(modulo64Uint);
+
+    /*
+    console.log({
+      last: lastSeqNum.toString(),
+      now: this.seqNum.toString(),
+      missed: missedEvents.toString(),
+      mod: modulo64Uint.toString(),
+    });
+    */
+
+    const bufferLength = new BN(this.events.length);
+    if (missedEvents.gte(bufferLength)) {
+      missedEvents = bufferLength.sub(new BN(1));
+    }
+
+    const endIndex = this.head.add(this.count).mod(bufferLength);
+    const startIndex = endIndex
+      .add(bufferLength)
+      .sub(missedEvents)
+      .mod(bufferLength);
+
+    /*
+    console.log({
+      bufLength: bufferLength.toString(),
+      missed: missedEvents.toString(),
+      head: this.head.toString(),
+      count: this.count.toString(),
+      end: endIndex.toString(),
+      start: startIndex.toString(),
+    });
+    */
+
+    const results: { fill?: FillEvent; out?: OutEvent }[] = [];
+    let index = startIndex;
+    while (!index.eq(endIndex)) {
+      const event = this.events[index.toNumber()];
+      if (event.fill || event.out) results.push(event);
+      index = index.add(new BN(1)).mod(bufferLength);
+    }
+    return results;
+  }
+}
 
 const BOOK_NODE_SIZE = 72;
 const BOOK_NODE_LAYOUT = union(u32('tag'), blob(BOOK_NODE_SIZE - 4), 'node');

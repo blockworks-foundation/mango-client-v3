@@ -562,7 +562,7 @@ export class MerpsClient {
       perpMarketPk,
       baseDecimal,
       quoteDecimal,
-      PerpMarketLayout.decode(acc == null ? undefined : acc.data),
+      PerpMarketLayout.decode(acc?.data),
     );
     return perpMarket;
   }

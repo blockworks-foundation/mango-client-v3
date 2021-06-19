@@ -180,6 +180,18 @@ export default class MerpsGroup {
     return { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank };
   }
 
+  async loadPerpMarket(
+    connection: Connection,
+    marketIndex: number,
+    baseDecimals: number,
+    quoteDecimals: number,
+  ): Promise<PerpMarket> {
+    const pk = this.perpMarkets[marketIndex].perpMarket;
+    const acc = await connection.getAccountInfo(pk);
+    const decoded = PerpMarketLayout.decode(acc?.data);
+    return new PerpMarket(pk, baseDecimals, quoteDecimals, decoded);
+  }
+
   /*
   async loadPerpMarkets(
     connection: Connection,
