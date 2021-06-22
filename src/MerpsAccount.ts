@@ -3,6 +3,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import {
   MAX_PAIRS,
+  MerpsAccountLayout,
   MerpsCache,
   MetaData,
   PerpAccount,
@@ -32,6 +33,12 @@ export default class MerpsAccount {
     this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);
 
     Object.assign(this, decoded);
+  }
+
+  async reload(connection: Connection): Promise<MerpsAccount> {
+    const acc = await connection.getAccountInfo(this.publicKey);
+    Object.assign(this, MerpsAccountLayout.decode(acc?.data));
+    return this;
   }
 
   getNativeDeposit(

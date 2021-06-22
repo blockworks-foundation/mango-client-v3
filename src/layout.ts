@@ -19,6 +19,8 @@ import { I80F48 } from './fixednum';
 import Big from 'big.js';
 import BN from 'bn.js';
 import { promiseUndef, zeroKey } from './utils';
+import { BookSide } from './book';
+import MerpsAccount from './MerpsAccount';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
@@ -756,6 +758,44 @@ export class PerpMarket {
     const acc = await connection.getAccountInfo(this.eventQueue);
     const parsed = PerpEventQueueLayout.decode(acc?.data);
     return new PerpEventQueue(parsed);
+  }
+
+  async loadFills(connection: Connection): Promise<FillEvent[]> {
+    const q = await this.loadEventQueue(connection);
+    return q
+      .eventsSince(new BN(0))
+      .map((e) => e.fill)
+      .filter((e) => !!e) as FillEvent[];
+  }
+
+  async loadBids(connection: Connection): Promise<BookSide> {
+    const acc = await connection.getAccountInfo(this.bids);
+    const book = new BookSide(
+      this.bids,
+      this,
+      BookSideLayout.decode(acc?.data),
+    );
+    return book;
+  }
+
+  async loadAsks(connection: Connection): Promise<BookSide> {
+    const acc = await connection.getAccountInfo(this.asks);
+    const book = new BookSide(
+      this.asks,
+      this,
+      BookSideLayout.decode(acc?.data),
+    );
+    return book;
+  }
+
+  async loadOrdersForAccount(connection: Connection, account: MerpsAccount) {
+    const [bids, asks] = await Promise.all([
+      this.loadBids(connection),
+      this.loadAsks(connection),
+    ]);
+    return [...bids, ...asks].filter(
+      (order) => order.owner === account.publicKey,
+    );
   }
 }
 
