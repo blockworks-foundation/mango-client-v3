@@ -8,7 +8,13 @@ This will be very similar to the crank in serum dex.
 import * as os from 'os';
 import * as fs from 'fs';
 import { MerpsClient } from './client';
-import { Account, Commitment, Connection, Transaction } from '@solana/web3.js';
+import {
+  Account,
+  Commitment,
+  Connection,
+  PublicKey,
+  Transaction,
+} from '@solana/web3.js';
 import { sleep } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
@@ -17,8 +23,10 @@ import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
+  makeUpdateFundingInstruction,
   makeUpdateRootBankInstruction,
 } from './instruction';
+import BN from 'bn.js';
 
 export class Keeper {
   /**
@@ -29,7 +37,7 @@ export class Keeper {
     const config = new Config(configFile);
 
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const groupName = process.env.GROUP || 'merps_test_v2';
+    const groupName = process.env.GROUP || 'merps_test_v2.2';
     const groupIds = config.getGroup(cluster, groupName);
 
     if (!groupIds) {
@@ -53,6 +61,21 @@ export class Keeper {
     );
     const client = new MerpsClient(connection, merpsProgramId);
     const merpsGroup = await client.getMerpsGroup(merpsGroupKey);
+    const perpMarkets = await Promise.all(
+      groupIds.perpMarkets.map((m, i) => {
+        return merpsGroup.loadPerpMarket(
+          connection,
+          i,
+          m.baseDecimals,
+          m.quoteDecimals,
+        );
+      }),
+    );
+
+    let lastSeqNums = {};
+    perpMarkets.forEach((m) => {
+      lastSeqNums[m.publicKey.toBase58()] = new BN(0);
+    });
 
     // eslint-disable-next-line
     while (true) {
@@ -88,7 +111,6 @@ export class Keeper {
             .map((pm) => pm.perpMarket),
         ),
       );
-      await client.sendTransaction(cacheTransaction, payer, []);
 
       const updateRootBankTransaction = new Transaction();
       groupIds.tokens.forEach((token) => {
@@ -101,34 +123,61 @@ export class Keeper {
           ),
         );
       });
-      await client.sendTransaction(updateRootBankTransaction, payer, []);
 
-      // const perpMarkets = await merpsGroup.loadPerpMarkets(connection);
-      // await Promise.all([
-      //   perpMarkets.map((perpMarket) => {
-      //     if (perpMarket) {
-      //       return client
-      //         .updateFunding(
-      //           merpsGroup.publicKey,
-      //           merpsGroup.merpsCache,
-      //           perpMarket.publicKey,
-      //           perpMarket.bids,
-      //           perpMarket.asks,
-      //           payer,
-      //         )
-      //         .catch((err) => {
-      //           console.error('Failed to update funding', err);
-      //           return err;
-      //         });
-      //     }
-      //   }),
-      // ]);
-      // console.log(perpMarkets[0]!.eventQueue.toBase58());
-      // const eventQueue = await client.getEventQueue(perpMarkets[0]!.eventQueue);
-      // console.log(eventQueue['events'][0]['padding']);
+      const updateFundingTransaction = new Transaction();
+      perpMarkets.forEach((market) => {
+        if (market) {
+          updateFundingTransaction.add(
+            makeUpdateFundingInstruction(
+              merpsProgramId,
+              merpsGroup.publicKey,
+              merpsGroup.merpsCache,
+              market.publicKey,
+              market.bids,
+              market.asks,
+            ),
+          );
+        }
+      });
 
-      // TODO: consume events
-      //
+      if (process.env.CONSUME_EVENTS == 'true') {
+        await Promise.all(
+          perpMarkets.map((m) => {
+            return m.loadEventQueue(connection).then((queue) => {
+              const accounts: PublicKey[] = [];
+              const events = queue.eventsSince(
+                lastSeqNums[m.publicKey.toBase58()],
+              );
+
+              events.forEach((ev) => {
+                if (ev.fill) {
+                  accounts.push(ev.fill.owner);
+                }
+                if (ev.out) {
+                  accounts.push(ev.out.owner);
+                }
+              });
+
+              client.consumeEvents(
+                merpsGroup.publicKey,
+                m.publicKey,
+                m.eventQueue,
+                accounts,
+                payer,
+                new BN(events.length),
+              );
+              console.log(`Consumed ${events.length} events:`, events);
+              lastSeqNums[m.publicKey.toBase58()] = queue.seqNum;
+            });
+          }),
+        );
+      }
+
+      await Promise.all([
+        client.sendTransaction(cacheTransaction, payer, []),
+        client.sendTransaction(updateRootBankTransaction, payer, []),
+        client.sendTransaction(updateFundingTransaction, payer, []),
+      ]);
     }
   }
 }
