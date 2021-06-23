@@ -57,16 +57,13 @@ class BNLayout extends Blob {
   }
 
   decode(b, offset) {
-    if (this.signed) {
-      return new BN(super.decode(b, offset), 10, 'le').toTwos(
-        Math.pow(2, this['length']),
-      );
-    } else {
-      return new BN(super.decode(b, offset), 10, 'le');
-    }
+    let result = new BN(super.decode(b, offset), 10, 'le');
+    if (this.signed) result = result.fromTwos(8 * this['length']);
+    return result;
   }
 
   encode(src, b, offset) {
+    if (this.signed) src = src.toTwos(8 * this['length']);
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
@@ -504,7 +501,6 @@ export class PerpAccount {
     baseChange: BN,
   ): I80F48 {
     const newBase = this.basePosition.add(baseChange);
-
     let health = this.quotePosition.sub(
       I80F48.fromI64(baseChange.mul(perpMarketInfo.baseLotSize)).mul(price),
     );
