@@ -166,7 +166,7 @@ export class Keeper {
                 payer,
                 new BN(events.length),
               );
-              console.log(`Consumed ${events.length} events:`, events);
+              console.log(`Consumed ${events.length} events`);
               lastSeqNums[m.publicKey.toBase58()] = queue.seqNum;
             });
           }),

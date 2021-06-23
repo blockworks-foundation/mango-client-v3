@@ -800,9 +800,8 @@ export class PerpMarket {
 }
 
 export const PerpEventLayout = union(u8('eventType'), blob(87), 'event');
-PerpEventLayout.addVariant(0, struct([]), 'uninitialized');
 PerpEventLayout.addVariant(
-  1,
+  0,
   struct([
     bool('maker'),
     seq(u8(), 6),
@@ -815,7 +814,7 @@ PerpEventLayout.addVariant(
   'fill',
 );
 PerpEventLayout.addVariant(
-  2,
+  1,
   struct([
     sideLayout('side', 1),
     u8('slot'),
