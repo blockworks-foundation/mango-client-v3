@@ -19,7 +19,8 @@ export default class MangoAccount {
   mangoGroup!: PublicKey;
   owner!: PublicKey;
 
-  inBasket!: boolean[];
+  inMarginBasket!: boolean[];
+  numInMarginBasket!: number;
   deposits!: I80F48[];
   borrows!: I80F48[];
 
@@ -27,6 +28,9 @@ export default class MangoAccount {
   spotOpenOrdersAccounts: (OpenOrders | undefined)[];
 
   perpAccounts!: PerpAccount[];
+
+  beingLiquidated!: boolean;
+
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
@@ -134,10 +138,6 @@ export default class MangoAccount {
     let health = quoteDeposits.sub(quoteBorrows);
 
     for (let i = 0; i < mangoGroup.numOracles; i++) {
-      if (!this.inBasket[i]) {
-        continue;
-      }
-
       const spotMarket = mangoGroup.spotMarkets[i];
       const perpMarket = mangoGroup.perpMarkets[i];
       const [spotAssetWeight, spotLiabWeight, perpAssetWeight, perpLiabWeight] =

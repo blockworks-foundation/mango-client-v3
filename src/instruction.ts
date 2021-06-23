@@ -277,6 +277,7 @@ export function makeDepositInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   ownerPk: PublicKey,
+  merpsCachePk: PublicKey,
   mangoAccountPk: PublicKey,
   rootBankPk: PublicKey,
   nodeBankPk: PublicKey,
@@ -289,6 +290,7 @@ export function makeDepositInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
     { isSigner: false, isWritable: false, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
     { isSigner: false, isWritable: true, pubkey: vaultPk },
@@ -428,29 +430,29 @@ export function makeAddSpotMarketInstruction(
   });
 }
 
-export function makeAddToBasketInstruction(
-  programId: PublicKey,
-  mangoGroupPk: PublicKey,
-  mangoAccountPk: PublicKey,
-  ownerPk: PublicKey,
-  marketIndex: BN,
-): TransactionInstruction {
-  const keys = [
-    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
-    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
-    { isSigner: true, isWritable: false, pubkey: ownerPk },
-  ];
-
-  const data = encodeMangoInstruction({
-    AddToBasket: { marketIndex },
-  });
-
-  return new TransactionInstruction({
-    keys,
-    data,
-    programId,
-  });
-}
+// export function makeAddToBasketInstruction(
+//   programId: PublicKey,
+//   mangoGroupPk: PublicKey,
+//   mangoAccountPk: PublicKey,
+//   ownerPk: PublicKey,
+//   marketIndex: BN,
+// ): TransactionInstruction {
+//   const keys = [
+//     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+//     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+//     { isSigner: true, isWritable: false, pubkey: ownerPk },
+//   ];
+//
+//   const data = encodeMangoInstruction({
+//     AddToBasket: { marketIndex },
+//   });
+//
+//   return new TransactionInstruction({
+//     keys,
+//     data,
+//     programId,
+//   });
+// }
 
 export function makePlaceSpotOrderInstruction(
   programId: PublicKey,

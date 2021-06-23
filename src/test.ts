@@ -18,7 +18,7 @@ function assertEq(msg, a, b) {
 }
 
 const mangoProgramId = new PublicKey(
-  'viQTKtBmaGvx3nugHcvijedy9ApbDowqiGYq35qAJqq',
+  '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt',
 );
 const serumDexPk = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -38,7 +38,7 @@ const connection = new Connection(
   'processed' as Commitment,
 );
 
-const SLEEP_TIME = 4000;
+const SLEEP_TIME = 2000;
 
 const payer = new Account(
   JSON.parse(
@@ -128,6 +128,19 @@ async function test_place_spot_order() {
   if (!usdcRootBank) throw new Error('no root bank');
   const quoteNodeBank = usdcRootBank.nodeBankAccounts[0];
 
+  const marketIndex = 0;
+
+  // run keeper fns
+  await client.cacheRootBanks(
+    mangoGroup.publicKey,
+    mangoGroup.mangoCache,
+    [
+      mangoGroup.tokens[marketIndex].rootBank,
+      mangoGroup.tokens[QUOTE_INDEX].rootBank,
+    ],
+    payer,
+  );
+
   await sleep(SLEEP_TIME); // devnet rate limits
   try {
     console.log('= depositing =');
@@ -145,12 +158,11 @@ async function test_place_spot_order() {
     console.log('Error on deposit', `${err}`);
   }
 
-  const marketIndex = 0;
 
   await sleep(SLEEP_TIME); // avoid devnet rate limit
   console.log('= adding to basket =');
 
-  await client.addToBasket(mangoGroup, mangoAccount, payer, marketIndex);
+  // await client.addToBasket(mangoGroup, mangoAccount, payer, marketIndex);
 
   mangoGroup = await client.getMangoGroup(mangoGroup.publicKey);
   await sleep(SLEEP_TIME); // avoid devnet rate limit
