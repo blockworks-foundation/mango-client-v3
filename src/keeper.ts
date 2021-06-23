@@ -33,7 +33,7 @@ export class Keeper {
    * Long running program that never exits except on keyboard interrupt
    */
   async run() {
-    const interval = process.env.INTERVAL || 5000;
+    const interval = process.env.INTERVAL || 3500;
     const config = new Config(configFile);
 
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;

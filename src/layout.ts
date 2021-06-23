@@ -34,10 +34,13 @@ class _I80F48Layout extends Blob {
   }
 
   decode(b, offset) {
-    return new I80F48(new BN(super.decode(b, offset), 10, 'le'));
+    let result = new BN(super.decode(b, offset), 10, 'le');
+    result = result.fromTwos(8 * this['length']);
+    return new I80F48(result);
   }
 
   encode(src, b, offset) {
+    src = src.toTwos(8 * this['length']);
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
@@ -657,7 +660,7 @@ export const MangoAccountLayout = struct([
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
   seq(perpAccountLayout(), MAX_PAIRS, 'perpAccounts'),
   bool('beingLiquidated'),
-  seq(u8(), 7, 'padding')
+  seq(u8(), 7, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
