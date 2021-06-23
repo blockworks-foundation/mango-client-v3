@@ -1,7 +1,7 @@
 import BN from 'bn.js';
 import { PublicKey } from '@solana/web3.js';
-import { DataType, PerpMarket } from './layout';
-import { I80F48 } from './fixednum';
+import { DataType } from './layout';
+import PerpMarket from './PerpMarket';
 
 // All LeafNodes are orders stored on the book
 export type LeafNode = {

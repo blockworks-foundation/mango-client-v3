@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as os from 'os';
 import * as fs from 'fs';
-import { MerpsClient } from './client';
+import { MangoClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
-import MerpsGroup, { QUOTE_INDEX } from '../src/MerpsGroup';
+import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
 import { sleep } from './utils';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import * as Test from '../test/utils';
 import { u64 } from '@solana/spl-token';
-import { findLargestTokenAccountForOwner } from './TokenAccount';
+import { findLargestTokenAccountForOwner } from './token';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -17,7 +17,7 @@ function assertEq(msg, a, b) {
   }
 }
 
-const merpsProgramId = new PublicKey(
+const mangoProgramId = new PublicKey(
   'viQTKtBmaGvx3nugHcvijedy9ApbDowqiGYq35qAJqq',
 );
 const serumDexPk = new PublicKey(
@@ -45,26 +45,26 @@ const payer = new Account(
     fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
   ),
 );
-const client = new MerpsClient(connection, merpsProgramId);
+const client = new MangoClient(connection, mangoProgramId);
 
-async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
-  const groupKey = await client.initMerpsGroup(
+async function init_mango_group_and_spot_market(): Promise<MangoGroup> {
+  const groupKey = await client.initMangoGroup(
     quoteMintKey,
     serumDexPk,
     500,
     payer,
   );
-  console.log('= merps group created =');
-  let merpsGroup = await client.getMerpsGroup(groupKey);
+  console.log('= mango group created =');
+  let mangoGroup = await client.getMangoGroup(groupKey);
   assertEq(
     'quoteMint',
-    merpsGroup.tokens[QUOTE_INDEX].mint.toBase58(),
+    mangoGroup.tokens[QUOTE_INDEX].mint.toBase58(),
     quoteMintKey.toBase58(),
   );
-  assertEq('admin', merpsGroup.admin.toBase58(), payer.publicKey.toBase58());
+  assertEq('admin', mangoGroup.admin.toBase58(), payer.publicKey.toBase58());
   assertEq(
     'serumDexPk',
-    merpsGroup.dexProgramId.toBase58(),
+    mangoGroup.dexProgramId.toBase58(),
     serumDexPk.toBase58(),
   );
   await sleep(SLEEP_TIME);
@@ -72,10 +72,10 @@ async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
   let btcOraclePk;
   try {
     console.log('= adding oracle =');
-    btcOraclePk = await Test.createOracle(connection, merpsProgramId, payer);
-    await client.addOracle(merpsGroup, btcOraclePk, payer);
+    btcOraclePk = await Test.createOracle(connection, mangoProgramId, payer);
+    await client.addOracle(mangoGroup, btcOraclePk, payer);
     await client.setOracle(
-      merpsGroup,
+      mangoGroup,
       btcOraclePk,
       payer,
       I80F48.fromNumber(40000),
@@ -89,7 +89,7 @@ async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
   const marketIndex = 0;
   console.log('= adding spot market =');
   await client.addSpotMarket(
-    merpsGroup,
+    mangoGroup,
     btcUsdSpotMarket,
     btcMint,
     payer,
@@ -98,14 +98,14 @@ async function init_merps_group_and_spot_market(): Promise<MerpsGroup> {
     initLeverage,
   );
   await sleep(SLEEP_TIME);
-  merpsGroup = await client.getMerpsGroup(groupKey);
-  return merpsGroup;
+  mangoGroup = await client.getMangoGroup(groupKey);
+  return mangoGroup;
 }
 
 async function test_place_spot_order() {
   console.log('= starting =');
 
-  let merpsGroup = await init_merps_group_and_spot_market();
+  let mangoGroup = await init_mango_group_and_spot_market();
 
   const userQuoteTokenAcc = await findLargestTokenAccountForOwner(
     connection,
@@ -118,12 +118,12 @@ async function test_place_spot_order() {
     btcMint,
   );
 
-  const merpsAccountPk = await client.initMerpsAccount(merpsGroup, payer);
+  const mangoAccountPk = await client.initMangoAccount(mangoGroup, payer);
   await sleep(SLEEP_TIME); // devnet rate limits
-  let merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
+  let mangoAccount = await client.getMangoAccount(mangoAccountPk, serumDexPk);
 
   await sleep(SLEEP_TIME); // devnet rate limits
-  let rootBanks = await merpsGroup.loadRootBanks(client.connection);
+  let rootBanks = await mangoGroup.loadRootBanks(client.connection);
   const usdcRootBank = rootBanks[QUOTE_INDEX];
   if (!usdcRootBank) throw new Error('no root bank');
   const quoteNodeBank = usdcRootBank.nodeBankAccounts[0];
@@ -132,10 +132,10 @@ async function test_place_spot_order() {
   try {
     console.log('= depositing =');
     await client.deposit(
-      merpsGroup,
-      merpsAccount,
+      mangoGroup,
+      mangoAccount,
       payer,
-      merpsGroup.tokens[QUOTE_INDEX].rootBank,
+      mangoGroup.tokens[QUOTE_INDEX].rootBank,
       usdcRootBank.nodeBanks?.[0],
       quoteNodeBank.vault,
       userQuoteTokenAcc.publicKey,
@@ -150,30 +150,30 @@ async function test_place_spot_order() {
   await sleep(SLEEP_TIME); // avoid devnet rate limit
   console.log('= adding to basket =');
 
-  await client.addToBasket(merpsGroup, merpsAccount, payer, marketIndex);
+  await client.addToBasket(mangoGroup, mangoAccount, payer, marketIndex);
 
-  merpsGroup = await client.getMerpsGroup(merpsGroup.publicKey);
+  mangoGroup = await client.getMangoGroup(mangoGroup.publicKey);
   await sleep(SLEEP_TIME); // avoid devnet rate limit
 
   // run keeper fns
   const cacheRootBanksTxID = await client.cacheRootBanks(
-    merpsGroup.publicKey,
-    merpsGroup.merpsCache,
+    mangoGroup.publicKey,
+    mangoGroup.mangoCache,
     [
-      merpsGroup.tokens[marketIndex].rootBank,
-      merpsGroup.tokens[QUOTE_INDEX].rootBank,
+      mangoGroup.tokens[marketIndex].rootBank,
+      mangoGroup.tokens[QUOTE_INDEX].rootBank,
     ],
     payer,
   );
   await client.cachePrices(
-    merpsGroup.publicKey,
-    merpsGroup.merpsCache,
-    [merpsGroup.oracles[marketIndex]],
+    mangoGroup.publicKey,
+    mangoGroup.mangoCache,
+    [mangoGroup.oracles[marketIndex]],
     payer,
   );
   console.log('= cache updated =', cacheRootBanksTxID);
 
-  rootBanks = await merpsGroup.loadRootBanks(client.connection);
+  rootBanks = await mangoGroup.loadRootBanks(client.connection);
   await sleep(SLEEP_TIME); // avoid devnet rate limit
 
   const btcRootBank = rootBanks[marketIndex];
@@ -196,20 +196,20 @@ async function test_place_spot_order() {
   sleep(SLEEP_TIME);
 
   await client.updateRootBank(
-    merpsGroup.publicKey,
+    mangoGroup.publicKey,
     btcRootBank.publicKey,
     filteredBtcNodeBanks.map((bank) => bank!.publicKey),
     payer,
   );
   await client.updateRootBank(
-    merpsGroup.publicKey,
+    mangoGroup.publicKey,
     usdcRootBank.publicKey,
     [quoteNodeBank.publicKey],
     payer,
   );
 
   await sleep(SLEEP_TIME); // devnet rate limits
-  merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
+  mangoAccount = await client.getMangoAccount(mangoAccountPk, serumDexPk);
   const btcSpotMarket = await Market.load(
     connection,
     btcUsdSpotMarket,
@@ -220,9 +220,9 @@ async function test_place_spot_order() {
   try {
     console.log('= placing spot order =');
     await client.placeSpotOrder(
-      merpsGroup,
-      merpsAccount,
-      merpsGroup.merpsCache,
+      mangoGroup,
+      mangoAccount,
+      mangoGroup.mangoCache,
       btcSpotMarket,
       payer,
       'buy',
@@ -235,14 +235,14 @@ async function test_place_spot_order() {
   }
 
   await sleep(SLEEP_TIME);
-  merpsAccount = await client.getMerpsAccount(merpsAccountPk, serumDexPk);
+  mangoAccount = await client.getMangoAccount(mangoAccountPk, serumDexPk);
 
   console.log('= borrow and withdraw =');
   await client.withdraw(
-    merpsGroup,
-    merpsAccount,
+    mangoGroup,
+    mangoAccount,
     payer,
-    merpsGroup.tokens[marketIndex].rootBank,
+    mangoGroup.tokens[marketIndex].rootBank,
     btcRootBank.nodeBanks?.[0],
     filteredBtcNodeBanks[0].vault,
     userBtcTokenAcc.publicKey,
@@ -252,8 +252,8 @@ async function test_place_spot_order() {
 
   // console.log('= cancel order =');
   // await client.cancelSpotOrder(
-  //   merpsGroup,
-  //   merpsAccount,
+  //   mangoGroup,
+  //   mangoAccount,
   //   payer,
   //   btcSpotMarket,
   //   openOrdersAccounts[0],

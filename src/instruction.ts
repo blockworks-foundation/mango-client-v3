@@ -4,42 +4,42 @@ import {
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { encodeMerpsInstruction } from './layout';
+import { encodeMangoInstruction } from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
 import { I80F48 } from './fixednum';
 import { PerpOrder } from '.';
 
-export function makeInitMerpsGroupInstruction(
+export function makeInitMangoGroupInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   signerKey: PublicKey,
   payerPk: PublicKey,
   quoteMintPk: PublicKey,
   quoteVaultPk: PublicKey,
   quoteNodeBankPk: PublicKey,
   quoteRootBankPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoCachePk: PublicKey,
   dexProgramPk: PublicKey,
 
   signerNonce: BN,
   validInterval: BN,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: signerKey },
     { isSigner: true, isWritable: false, pubkey: payerPk },
     { isSigner: false, isWritable: false, pubkey: quoteMintPk },
     { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
     { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteRootBankPk },
-    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: true, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: dexProgramPk },
   ];
 
-  const data = encodeMerpsInstruction({
-    InitMerpsGroup: {
+  const data = encodeMangoInstruction({
+    InitMangoGroup: {
       signerNonce,
       validInterval,
     },
@@ -52,19 +52,19 @@ export function makeInitMerpsGroupInstruction(
   });
 }
 
-export function makeInitMerpsAccountInstruction(
+export function makeInitMangoAccountInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
   ownerPk: PublicKey,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
   ];
 
-  const data = encodeMerpsInstruction({ InitMerpsAccount: {} });
+  const data = encodeMangoInstruction({ InitMangoAccount: {} });
   return new TransactionInstruction({
     keys,
     data,
@@ -74,15 +74,15 @@ export function makeInitMerpsAccountInstruction(
 
 export function makeTestMultiTxInstruction(
   programId: PublicKey,
-  merpsGroup: PublicKey,
+  mangoGroup: PublicKey,
   index: BN,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: true, pubkey: merpsGroup },
+    { isSigner: false, isWritable: true, pubkey: mangoGroup },
     { isSigner: false, isWritable: false, pubkey: SYSVAR_CLOCK_PUBKEY },
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     TestMultiTx: { index },
   });
 
@@ -91,10 +91,10 @@ export function makeTestMultiTxInstruction(
 
 export function makeWithdrawInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
   walletPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoCachePk: PublicKey,
   rootBankPk: PublicKey,
   nodeBankPk: PublicKey,
   vaultPk: PublicKey,
@@ -106,10 +106,10 @@ export function makeWithdrawInstruction(
   allowBorrow: boolean,
 ): TransactionInstruction {
   const withdrawKeys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: walletPk },
-    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
     { isSigner: false, isWritable: true, pubkey: vaultPk },
@@ -122,7 +122,7 @@ export function makeWithdrawInstruction(
       pubkey,
     })),
   ];
-  const withdrawData = encodeMerpsInstruction({
+  const withdrawData = encodeMangoInstruction({
     Withdraw: { quantity: nativeQuantity, allowBorrow },
   });
   return new TransactionInstruction({
@@ -134,9 +134,9 @@ export function makeWithdrawInstruction(
 
 export function makeSettleFundsInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   ownerPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoAccountPk: PublicKey,
   dexProgramId: PublicKey,
   spotMarketPk: PublicKey,
   openOrdersPk: PublicKey,
@@ -152,9 +152,9 @@ export function makeSettleFundsInstruction(
   dexSignerKey: PublicKey,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: false, isWritable: false, pubkey: dexProgramId },
     { isSigner: false, isWritable: true, pubkey: spotMarketPk },
     { isSigner: false, isWritable: true, pubkey: openOrdersPk },
@@ -170,16 +170,16 @@ export function makeSettleFundsInstruction(
     { isSigner: false, isWritable: false, pubkey: dexSignerKey },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
   ];
-  const data = encodeMerpsInstruction({ SettleFunds: {} });
+  const data = encodeMangoInstruction({ SettleFunds: {} });
 
   return new TransactionInstruction({ keys, data, programId });
 }
 
 export function makeCancelSpotOrderInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   ownerPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoAccountPk: PublicKey,
   dexProgramId: PublicKey,
   spotMarketPk: PublicKey,
   bidsPk: PublicKey,
@@ -190,9 +190,9 @@ export function makeCancelSpotOrderInstruction(
   order: Order,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: mangoAccountPk },
     { isSigner: false, isWritable: false, pubkey: dexProgramId },
     { isSigner: false, isWritable: true, pubkey: spotMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
@@ -202,7 +202,7 @@ export function makeCancelSpotOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     CancelSpotOrder: {
       side: order.side,
       orderId: order.orderId,
@@ -213,8 +213,8 @@ export function makeCancelSpotOrderInstruction(
 
 export function makeCancelPerpOrderInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
   ownerPk: PublicKey,
   perpMarketPk: PublicKey,
   bidsPk: PublicKey,
@@ -223,8 +223,8 @@ export function makeCancelPerpOrderInstruction(
   order: PerpOrder,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
@@ -232,7 +232,7 @@ export function makeCancelPerpOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     CancelPerpOrder: {
       orderId: order.orderId,
       side: order.side,
@@ -246,8 +246,8 @@ export function makeCancelPerpOrderInstruction(
 
 export function makeCancelPerpOrderByClientIdInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
   ownerPk: PublicKey,
   perpMarketPk: PublicKey,
   bidsPk: PublicKey,
@@ -256,8 +256,8 @@ export function makeCancelPerpOrderByClientIdInstruction(
   clientOrderId: BN,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
@@ -265,7 +265,7 @@ export function makeCancelPerpOrderByClientIdInstruction(
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     CancelPerpOrderByClientId: {
       clientOrderId,
     },
@@ -275,9 +275,9 @@ export function makeCancelPerpOrderByClientIdInstruction(
 
 export function makeDepositInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   ownerPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoAccountPk: PublicKey,
   rootBankPk: PublicKey,
   nodeBankPk: PublicKey,
   vaultPk: PublicKey,
@@ -286,8 +286,8 @@ export function makeDepositInstruction(
   nativeQuantity: BN,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
     { isSigner: false, isWritable: false, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
@@ -295,7 +295,7 @@ export function makeDepositInstruction(
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
     { isSigner: false, isWritable: true, pubkey: tokenAccPk },
   ];
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     Deposit: { quantity: nativeQuantity },
   });
 
@@ -308,13 +308,13 @@ export function makeDepositInstruction(
 
 export function makeCacheRootBankInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
   rootBanks: PublicKey[],
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoCachePk },
     ...rootBanks.map((pubkey) => ({
       isSigner: false,
       isWritable: true,
@@ -322,7 +322,7 @@ export function makeCacheRootBankInstruction(
     })),
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     CacheRootBanks: {},
   });
 
@@ -335,13 +335,13 @@ export function makeCacheRootBankInstruction(
 
 export function makeCachePricesInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
   oracles: PublicKey[],
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoCachePk },
     ...oracles.map((pubkey) => ({
       isSigner: false,
       isWritable: false,
@@ -349,7 +349,7 @@ export function makeCachePricesInstruction(
     })),
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     CachePrices: {},
   });
 
@@ -362,13 +362,13 @@ export function makeCachePricesInstruction(
 
 export function makeCachePerpMarketInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
   perpMarketPks: PublicKey[],
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoCachePk },
     ...perpMarketPks.map((pubkey) => ({
       isSigner: false,
       isWritable: false,
@@ -376,7 +376,7 @@ export function makeCachePerpMarketInstruction(
     })),
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     CachePerpMarkets: {},
   });
 
@@ -389,7 +389,7 @@ export function makeCachePerpMarketInstruction(
 
 export function makeAddSpotMarketInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   spotMarketPk: PublicKey,
   serumDexPk: PublicKey,
   mintPk: PublicKey,
@@ -403,7 +403,7 @@ export function makeAddSpotMarketInstruction(
   initLeverage: I80F48,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: spotMarketPk },
     { isSigner: false, isWritable: false, pubkey: serumDexPk },
     { isSigner: false, isWritable: false, pubkey: mintPk },
@@ -413,7 +413,7 @@ export function makeAddSpotMarketInstruction(
     { isSigner: true, isWritable: false, pubkey: adminPk },
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     AddSpotMarket: {
       marketIndex,
       maintLeverage,
@@ -430,18 +430,18 @@ export function makeAddSpotMarketInstruction(
 
 export function makeAddToBasketInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
   ownerPk: PublicKey,
   marketIndex: BN,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     AddToBasket: { marketIndex },
   });
 
@@ -454,10 +454,10 @@ export function makeAddToBasketInstruction(
 
 export function makePlaceSpotOrderInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
   ownerPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoCachePk: PublicKey,
   serumDexPk: PublicKey,
   spotMarketPk: PublicKey,
   bidsPk: PublicKey,
@@ -484,10 +484,10 @@ export function makePlaceSpotOrderInstruction(
   orderType?: 'limit' | 'ioc' | 'postOnly',
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: serumDexPk },
     { isSigner: false, isWritable: true, pubkey: spotMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
@@ -513,7 +513,7 @@ export function makePlaceSpotOrderInstruction(
     })),
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     PlaceSpotOrder: {
       side,
       limitPrice,
@@ -534,12 +534,12 @@ export function makePlaceSpotOrderInstruction(
 
 export function makeUpdateRootBankInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   rootBankPk: PublicKey,
   nodeBanks: PublicKey[],
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: rootBankPk },
     ...nodeBanks.map((pubkey) => ({
       isSigner: false,
@@ -548,7 +548,7 @@ export function makeUpdateRootBankInstruction(
     })),
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     UpdateRootBank: {},
   });
 
@@ -561,16 +561,16 @@ export function makeUpdateRootBankInstruction(
 
 export function makeAddOracleInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   oraclePk: PublicKey,
   adminPk: PublicKey,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: oraclePk },
     { isSigner: true, isWritable: false, pubkey: adminPk },
   ];
-  const data = encodeMerpsInstruction({ AddOracle: {} });
+  const data = encodeMangoInstruction({ AddOracle: {} });
 
   return new TransactionInstruction({
     keys,
@@ -581,17 +581,17 @@ export function makeAddOracleInstruction(
 
 export function makeSetOracleInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   oraclePk: PublicKey,
   adminPk: PublicKey,
   price: I80F48,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: oraclePk },
     { isSigner: true, isWritable: false, pubkey: adminPk },
   ];
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     SetOracle: { price },
   });
 
@@ -604,7 +604,7 @@ export function makeSetOracleInstruction(
 
 export function makeAddPerpMarketInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   perpMarketPk: PublicKey,
   eventQueuePk: PublicKey,
   bidsPk: PublicKey,
@@ -617,14 +617,14 @@ export function makeAddPerpMarketInstruction(
   quoteLotSize: BN,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: true, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: true, isWritable: false, pubkey: adminPk },
   ];
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     AddPerpMarket: {
       marketIndex,
       maintLeverage,
@@ -643,13 +643,13 @@ export function makeAddPerpMarketInstruction(
 
 export function makeCachePerpMarketsInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
   perpMarkets: PublicKey[],
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoCachePk },
     ...perpMarkets.map((pubkey) => ({
       isSigner: false,
       isWritable: false,
@@ -657,7 +657,7 @@ export function makeCachePerpMarketsInstruction(
     })),
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     CachePerpMarkets: {},
   });
 
@@ -670,23 +670,23 @@ export function makeCachePerpMarketsInstruction(
 
 export function makeSettlePnlInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsAccountAPk: PublicKey,
-  merpsAccountBPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountAPk: PublicKey,
+  mangoAccountBPk: PublicKey,
+  mangoCachePk: PublicKey,
   rootBankPk: PublicKey,
   nodeBankPk: PublicKey,
   marketIndex: BN,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountAPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountBPk },
-    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountAPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountBPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
   ];
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     SettlePnl: {
       marketIndex,
     },
@@ -701,24 +701,24 @@ export function makeSettlePnlInstruction(
 
 export function makeConsumeEventsInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
+  mangoGroupPk: PublicKey,
   perpMarketPk: PublicKey,
   eventQueuePk: PublicKey,
-  merpsAccountPks: PublicKey[],
+  mangoAccountPks: PublicKey[],
   limit: BN,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
-    ...merpsAccountPks.map((pubkey) => ({
+    ...mangoAccountPks.map((pubkey) => ({
       isSigner: false,
       isWritable: true,
       pubkey,
     })),
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     ConsumeEvents: { limit },
   });
   return new TransactionInstruction({
@@ -730,10 +730,10 @@ export function makeConsumeEventsInstruction(
 
 export function makePlacePerpOrderInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsAccountPk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
   ownerPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoCachePk: PublicKey,
   perpMarketPk: PublicKey,
   bidsPk: PublicKey,
   asksPk: PublicKey,
@@ -746,10 +746,10 @@ export function makePlacePerpOrderInstruction(
   orderType?: 'limit' | 'ioc' | 'postOnly',
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: true, pubkey: merpsAccountPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
@@ -760,7 +760,7 @@ export function makePlacePerpOrderInstruction(
       pubkey,
     })),
   ];
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     PlacePerpOrder: {
       price,
       quantity,
@@ -779,21 +779,21 @@ export function makePlacePerpOrderInstruction(
 
 export function makeUpdateFundingInstruction(
   programId: PublicKey,
-  merpsGroupPk: PublicKey,
-  merpsCachePk: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
   perpMarketPk: PublicKey,
   bidsPk: PublicKey,
   asksPk: PublicKey,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: merpsGroupPk },
-    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: false, pubkey: bidsPk },
     { isSigner: false, isWritable: false, pubkey: asksPk },
   ];
 
-  const data = encodeMerpsInstruction({
+  const data = encodeMangoInstruction({
     UpdateFunding: {},
   });
   return new TransactionInstruction({

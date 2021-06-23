@@ -1,14 +1,16 @@
 import IDS from './ids.json';
-import MerpsGroup from './MerpsGroup';
-import MerpsAccount from './MerpsAccount';
+import MangoAccount from './MangoAccount';
+import MangoGroup from './MangoGroup';
+import PerpMarket from './PerpMarket';
+import RootBank from './RootBank';
+export { IDS, MangoAccount, MangoGroup, PerpMarket, RootBank };
 
-export { MerpsClient } from './client';
 export * from './book';
+export * from './client';
 export * from './config';
-export * from './TokenAccount';
-export { MerpsAccountLayout, MerpsGroupLayout } from './layout';
-
+export * from './fixednum';
 export * from './instruction';
 export * from './layout';
+export * from './token';
+export * from './types';
 export * from './utils';
-export { IDS, MerpsGroup, MerpsAccount };

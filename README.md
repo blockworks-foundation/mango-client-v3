@@ -1,4 +1,4 @@
-# Mango v3 TS Client Library
+# Mango v3 Client Library
 
 JavaScript client library for interacting with Mango Markets DEX v3.
 
@@ -7,13 +7,13 @@ JavaScript client library for interacting with Mango Markets DEX v3.
 Using npm:
 
 ```
-npm install @solana/web3.js @project-serum/serum @blockworks-foundation/mango-client-ts
+npm install @solana/web3.js @project-serum/serum @blockworks-foundation/mango-client
 ```
 
 Using yarn:
 
 ```
-yarn add @solana/web3.js @project-serum/serum @blockworks-foundation/mango-client-ts
+yarn add @solana/web3.js @project-serum/serum @blockworks-foundation/mango-client
 ```
 
 ## Usage Example
@@ -43,9 +43,9 @@ for (const order of asks) {
 
 // Place order
 await client.placePerpOrder(
-  merpsGroup,
+  mangoGroup,
   mangoAccount,
-  merpsGroup.merpsCache,
+  mangoGroup.mangoCache,
   perpMarket,
   owner,
   'buy', // or 'sell'
@@ -63,7 +63,7 @@ const openOrders = await perpMarket.loadOrdersForAccount(
 // cancel orders
 for (const order of openOrders) {
   await client.cancelPerpOrder(
-    merpsGroup,
+    mangoGroup,
     mangoAccount,
     owner,
     perpMarket,
@@ -86,32 +86,32 @@ for (const fill of await perpMarket.loadFills(connection)) {
 
 ## CLI for testing
 
-Create a new merps group on devnet:
+Create a new mango group on devnet:
 
 ```
-yarn cli -- init-group merps_test_v2.2 66DFouNQBY1EWyBed3WPicjhwD1FoyTtNCzAowcR8vad DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK
+yarn cli init-group mango_test_v2.2 66DFouNQBY1EWyBed3WPicjhwD1FoyTtNCzAowcR8vad DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK
 ```
 
 Add a stub oracle:
 
 ```
-yarn cli -- add-oracle merps_test_v2.2 BTC
+yarn cli add-oracle mango_test_v2.2 BTC
 ```
 
 Set stub oracle value = base_price \* quote_unit / base_unit:
 
 ```
-yarn cli -- set-oracle merps_test_v2.2 BTC 40000
+yarn cli set-oracle mango_test_v2.2 BTC 40000
 ```
 
 Add a spot-market
 
 ```
-yarn cli -- add-spot-market merps_test_v2.2 BTC E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9 bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP
+yarn cli add-spot-market mango_test_v2.2 BTC E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9 bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP
 ```
 
 Enable a perp-maket
 
 ```
-yarn cli -- add-perp-market merps_test_v2.2 BTC
+yarn cli add-perp-market mango_test_v2.2 BTC
 ```

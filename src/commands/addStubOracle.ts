@@ -1,5 +1,5 @@
 import { Account, Connection } from '@solana/web3.js';
-import { MerpsClient } from '../client';
+import { MangoClient } from '../client';
 import { getOracleBySymbol, GroupConfig } from '../config';
 
 export default async function addStubOracle(
@@ -15,9 +15,9 @@ export default async function addStubOracle(
     symbol,
   });
 
-  const client = new MerpsClient(connection, groupConfig.merpsProgramId);
+  const client = new MangoClient(connection, groupConfig.mangoProgramId);
   await client.addStubOracle(groupConfig.publicKey, payer);
-  const group = await client.getMerpsGroup(groupConfig.publicKey);
+  const group = await client.getMangoGroup(groupConfig.publicKey);
 
   const oracle = {
     symbol: symbol,

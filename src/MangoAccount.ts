@@ -3,20 +3,20 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import {
   MAX_PAIRS,
-  MerpsAccountLayout,
-  MerpsCache,
+  MangoAccountLayout,
+  MangoCache,
   MetaData,
   PerpAccount,
   RootBankCache,
 } from './layout';
 import { promiseUndef, zeroKey } from './utils';
-import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
-import { RootBank } from './RootBank';
+import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
+import RootBank from './RootBank';
 
-export default class MerpsAccount {
+export default class MangoAccount {
   publicKey: PublicKey;
   metaData!: MetaData;
-  merpsGroup!: PublicKey;
+  mangoGroup!: PublicKey;
   owner!: PublicKey;
 
   inBasket!: boolean[];
@@ -35,9 +35,9 @@ export default class MerpsAccount {
     Object.assign(this, decoded);
   }
 
-  async reload(connection: Connection): Promise<MerpsAccount> {
+  async reload(connection: Connection): Promise<MangoAccount> {
     const acc = await connection.getAccountInfo(this.publicKey);
-    Object.assign(this, MerpsAccountLayout.decode(acc?.data));
+    Object.assign(this, MangoAccountLayout.decode(acc?.data));
     return this;
   }
 
@@ -55,20 +55,20 @@ export default class MerpsAccount {
   }
   getUiDeposit(
     rootBank: RootBank | RootBankCache,
-    merpsGroup: MerpsGroup,
+    mangoGroup: MangoGroup,
     tokenIndex: number,
   ): I80F48 {
     return this.getNativeDeposit(rootBank, tokenIndex).div(
-      I80F48.fromNumber(Math.pow(10, merpsGroup.tokens[tokenIndex].decimals)),
+      I80F48.fromNumber(Math.pow(10, mangoGroup.tokens[tokenIndex].decimals)),
     );
   }
   getUiBorrow(
     rootBank: RootBank | RootBankCache,
-    merpsGroup: MerpsGroup,
+    mangoGroup: MangoGroup,
     tokenIndex: number,
   ): I80F48 {
     return this.getNativeBorrow(rootBank, tokenIndex).div(
-      I80F48.fromNumber(Math.pow(10, merpsGroup.tokens[tokenIndex].decimals)),
+      I80F48.fromNumber(Math.pow(10, mangoGroup.tokens[tokenIndex].decimals)),
     );
   }
 
@@ -93,9 +93,9 @@ export default class MerpsAccount {
     return this.spotOpenOrdersAccounts;
   }
 
-  getSpotHealth(merpsCache, marketIndex, assetWeight, liabWeight): I80F48 {
-    const bankCache = merpsCache.rootBankCache[marketIndex];
-    const price = merpsCache.priceCache[marketIndex].price;
+  getSpotHealth(mangoCache, marketIndex, assetWeight, liabWeight): I80F48 {
+    const bankCache = mangoCache.rootBankCache[marketIndex];
+    const price = mangoCache.priceCache[marketIndex].price;
 
     let [ooBase, ooQuote] = [I80F48.fromString('0'), I80F48.fromString('0')];
     const oo = this.spotOpenOrdersAccounts[marketIndex];
@@ -118,28 +118,28 @@ export default class MerpsAccount {
       .add(ooQuote);
   }
   getHealth(
-    merpsGroup: MerpsGroup,
-    merpsCache: MerpsCache,
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
     healthType: HealthType,
   ): I80F48 {
     const quoteDeposits = this.getNativeDeposit(
-      merpsCache.rootBankCache[QUOTE_INDEX],
+      mangoCache.rootBankCache[QUOTE_INDEX],
       QUOTE_INDEX,
     );
     const quoteBorrows = this.getNativeBorrow(
-      merpsCache.rootBankCache[QUOTE_INDEX],
+      mangoCache.rootBankCache[QUOTE_INDEX],
       QUOTE_INDEX,
     );
 
     let health = quoteDeposits.sub(quoteBorrows);
 
-    for (let i = 0; i < merpsGroup.numOracles; i++) {
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
       if (!this.inBasket[i]) {
         continue;
       }
 
-      const spotMarket = merpsGroup.spotMarkets[i];
-      const perpMarket = merpsGroup.perpMarkets[i];
+      const spotMarket = mangoGroup.spotMarkets[i];
+      const perpMarket = mangoGroup.perpMarkets[i];
       const [spotAssetWeight, spotLiabWeight, perpAssetWeight, perpLiabWeight] =
         healthType === 'Maint'
           ? [
@@ -155,18 +155,18 @@ export default class MerpsAccount {
               perpMarket.initLiabWeight,
             ];
 
-      if (!merpsGroup.spotMarkets[i].isEmpty()) {
+      if (!mangoGroup.spotMarkets[i].isEmpty()) {
         health = health.add(
-          this.getSpotHealth(merpsCache, i, spotAssetWeight, spotLiabWeight),
+          this.getSpotHealth(mangoCache, i, spotAssetWeight, spotLiabWeight),
         );
       }
 
-      if (!merpsGroup.perpMarkets[i].isEmpty()) {
-        const perpsCache = merpsCache.perpMarketCache[i];
+      if (!mangoGroup.perpMarkets[i].isEmpty()) {
+        const perpsCache = mangoCache.perpMarketCache[i];
         health = health.add(
           this.perpAccounts[i].getHealth(
             perpMarket,
-            merpsCache.priceCache[i].price,
+            mangoCache.priceCache[i].price,
             perpAssetWeight,
             perpLiabWeight,
             perpsCache.longFunding,

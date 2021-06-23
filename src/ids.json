@@ -8,10 +8,10 @@
   "groups": [
     {
       "cluster": "devnet",
-      "name": "merps_test_v2.2",
+      "name": "mango_test_v2.2",
       "publicKey": "BeUPf2mRjbxoC1H9UPxMq1jDmBxMmJ15f7DweTTrSmp8",
       "quoteSymbol": "USDC",
-      "merpsProgramId": "66DFouNQBY1EWyBed3WPicjhwD1FoyTtNCzAowcR8vad",
+      "mangoProgramId": "66DFouNQBY1EWyBed3WPicjhwD1FoyTtNCzAowcR8vad",
       "serumProgramId": "DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY",
       "tokens": [
         {
@@ -19,18 +19,14 @@
           "mintKey": "EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK",
           "decimals": 9,
           "rootKey": "GG7Jqeg1kht1Jw3rjnLf8tvy1kajdhCiPAw6NXRM3wHe",
-          "nodeKeys": [
-            "GqkavwMHKG8V1YzwCeWJUo5jamsxEyWqegRGsCtCNrX"
-          ]
+          "nodeKeys": ["GqkavwMHKG8V1YzwCeWJUo5jamsxEyWqegRGsCtCNrX"]
         },
         {
           "symbol": "BTC",
           "mintKey": "bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP",
           "decimals": 6,
           "rootKey": "4iossCDg94P19NzKzSFU9bQ3UAR6CzVabjBZLHMpGcrR",
-          "nodeKeys": [
-            "GXt9sgFxjmHTi2e9xPVoFUxrVftxqyJGJt9MkN5m4jGz"
-          ]
+          "nodeKeys": ["GXt9sgFxjmHTi2e9xPVoFUxrVftxqyJGJt9MkN5m4jGz"]
         }
       ],
       "oracles": [

@@ -16,11 +16,8 @@ import {
 } from 'buffer-layout';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
-import Big from 'big.js';
 import BN from 'bn.js';
 import { promiseUndef, zeroKey } from './utils';
-import { BookSide } from './book';
-import MerpsAccount from './MerpsAccount';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
@@ -181,33 +178,33 @@ export function selfTradeBehaviorLayout(property) {
 /**
  * Need to implement layouts for each of the structs found in state.rs
  */
-export const MerpsInstructionLayout = union(u32('instruction'));
-MerpsInstructionLayout.addVariant(
+export const MangoInstructionLayout = union(u32('instruction'));
+MangoInstructionLayout.addVariant(
   0,
   struct([u64('signerNonce'), u64('validInterval')]),
-  'InitMerpsGroup',
+  'InitMangoGroup',
 );
-MerpsInstructionLayout.addVariant(1, struct([]), 'InitMerpsAccount');
-MerpsInstructionLayout.addVariant(2, struct([u64('quantity')]), 'Deposit');
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(1, struct([]), 'InitMangoAccount');
+MangoInstructionLayout.addVariant(2, struct([u64('quantity')]), 'Deposit');
+MangoInstructionLayout.addVariant(
   3,
   struct([u64('quantity'), u8('allowBorrow')]),
   'Withdraw',
 );
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(
   4,
   struct([u64('marketIndex'), u128('maintLeverage'), u128('initLeverage')]),
   'AddSpotMarket',
 );
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(
   5,
   struct([u64('marketIndex')]),
   'AddToBasket',
 );
-MerpsInstructionLayout.addVariant(6, struct([u64('quantity')]), 'Borrow');
-MerpsInstructionLayout.addVariant(7, struct([]), 'CachePrices');
-MerpsInstructionLayout.addVariant(8, struct([]), 'CacheRootBanks');
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(6, struct([u64('quantity')]), 'Borrow');
+MangoInstructionLayout.addVariant(7, struct([]), 'CachePrices');
+MangoInstructionLayout.addVariant(8, struct([]), 'CacheRootBanks');
+MangoInstructionLayout.addVariant(
   9,
   struct([
     sideLayout('side', 4),
@@ -221,8 +218,8 @@ MerpsInstructionLayout.addVariant(
   ]),
   'PlaceSpotOrder',
 );
-MerpsInstructionLayout.addVariant(10, struct([]), 'AddOracle');
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(10, struct([]), 'AddOracle');
+MangoInstructionLayout.addVariant(
   11,
   struct([
     u64('marketIndex'),
@@ -233,7 +230,7 @@ MerpsInstructionLayout.addVariant(
   ]),
   'AddPerpMarket',
 );
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(
   12,
   struct([
     i64('price'),
@@ -244,32 +241,32 @@ MerpsInstructionLayout.addVariant(
   ]),
   'PlacePerpOrder',
 );
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(
   13,
   struct([u64('clientOrderId')]),
   'CancelPerpOrderByClientId',
 );
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(
   14,
   struct([i128('orderId'), sideLayout('side', 4)]),
   'CancelPerpOrder',
 );
-MerpsInstructionLayout.addVariant(15, struct([u64('limit')]), 'ConsumeEvents');
-MerpsInstructionLayout.addVariant(16, struct([]), 'CachePerpMarkets');
-MerpsInstructionLayout.addVariant(17, struct([]), 'UpdateFunding');
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(15, struct([u64('limit')]), 'ConsumeEvents');
+MangoInstructionLayout.addVariant(16, struct([]), 'CachePerpMarkets');
+MangoInstructionLayout.addVariant(17, struct([]), 'UpdateFunding');
+MangoInstructionLayout.addVariant(
   18,
   struct([I80F48Layout('price')]),
   'SetOracle',
 );
-MerpsInstructionLayout.addVariant(19, struct([]), 'SettleFunds');
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(19, struct([]), 'SettleFunds');
+MangoInstructionLayout.addVariant(
   20,
   struct([sideLayout('side', 4), u128('orderId')]),
   'CancelSpotOrder',
 );
-MerpsInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
-MerpsInstructionLayout.addVariant(
+MangoInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
+MangoInstructionLayout.addVariant(
   22,
   struct([u64('marketIndex')]),
   'SettlePnl',
@@ -277,11 +274,11 @@ MerpsInstructionLayout.addVariant(
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
-  ...Object.values(MerpsInstructionLayout.registry).map((r) => r.span),
+  ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
 );
-export function encodeMerpsInstruction(data) {
+export function encodeMangoInstruction(data) {
   const b = Buffer.alloc(instructionMaxSpan);
-  const span = MerpsInstructionLayout.encode(data, b);
+  const span = MangoInstructionLayout.encode(data, b);
   return b.slice(0, span);
 }
 
@@ -303,14 +300,14 @@ export function publicKeyLayout(property = '') {
 }
 
 export const DataType = {
-  MerpsGroup: 0,
-  MerpsAccount: 1,
+  MangoGroup: 0,
+  MangoAccount: 1,
   RootBank: 2,
   NodeBank: 3,
   PerpMarket: 4,
   Bids: 5,
   Asks: 6,
-  MerpsCache: 7,
+  MangoCache: 7,
   EventQueue: 8,
 };
 
@@ -633,7 +630,7 @@ export function perpOpenOrdersLayout(property = '') {
   return new PerpOpenOrdersLayout(property);
 }
 
-export const MerpsGroupLayout = struct([
+export const MangoGroupLayout = struct([
   metaDataLayout('metaData'),
   u64('numOracles'), //usize?
 
@@ -647,13 +644,13 @@ export const MerpsGroupLayout = struct([
   publicKeyLayout('signerKey'),
   publicKeyLayout('admin'),
   publicKeyLayout('dexProgramId'),
-  publicKeyLayout('merpsCache'),
+  publicKeyLayout('mangoCache'),
   u64('validInterval'),
 ]);
 
-export const MerpsAccountLayout = struct([
+export const MangoAccountLayout = struct([
   metaDataLayout('metaData'),
-  publicKeyLayout('merpsGroup'),
+  publicKeyLayout('mangoGroup'),
   publicKeyLayout('owner'),
   seq(bool(), MAX_TOKENS, 'inBasket'),
   seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
@@ -685,7 +682,7 @@ export const StubOracleLayout = struct([
 
 export const PerpMarketLayout = struct([
   metaDataLayout('metaData'),
-  publicKeyLayout('merpsGroup'),
+  publicKeyLayout('mangoGroup'),
   publicKeyLayout('bids'),
   publicKeyLayout('asks'),
   publicKeyLayout('eventQueue'),
@@ -699,105 +696,6 @@ export const PerpMarketLayout = struct([
   u64('seqNum'),
   i64('contractSize'),
 ]);
-
-export class PerpMarket {
-  publicKey: PublicKey;
-  baseDecimals: number;
-  quoteDecimals: number;
-  merpsGroup!: PublicKey;
-  bids!: PublicKey;
-  asks!: PublicKey;
-  eventQueue!: PublicKey;
-  longFunding!: I80F48;
-  shortFunding!: I80F48;
-  openInterest!: BN;
-  quoteLotSize!: BN;
-  indexOracle!: PublicKey;
-  lastUpdated!: BN;
-  seqNum!: BN;
-  contractSize!: BN;
-
-  constructor(
-    publicKey: PublicKey,
-    baseDecimals: number,
-    quoteDecimals: number,
-    decoded: any,
-  ) {
-    this.publicKey = publicKey;
-    this.baseDecimals = baseDecimals;
-    this.quoteDecimals = quoteDecimals;
-    Object.assign(this, decoded);
-  }
-
-  priceLotsToNative(price: BN): I80F48 {
-    return I80F48.fromI64(this.quoteLotSize.mul(price)).div(
-      I80F48.fromI64(this.contractSize),
-    );
-  }
-
-  baseLotsToNative(quantity: BN): I80F48 {
-    return I80F48.fromI64(this.contractSize.mul(quantity));
-  }
-
-  priceLotsToNumber(price: BN | number): number {
-    const nativeToUi = new Big(10).pow(this.baseDecimals - this.quoteDecimals);
-    const lotsToNative = new Big(this.quoteLotSize).div(
-      new Big(this.contractSize),
-    );
-    return new Big(price).mul(lotsToNative).mul(nativeToUi).toNumber();
-  }
-
-  baseLotsToNumber(quantity: BN | number): number {
-    return new Big(quantity)
-      .mul(new Big(this.contractSize))
-      .div(new Big(10).pow(this.baseDecimals))
-      .toNumber();
-  }
-
-  async loadEventQueue(connection: Connection): Promise<PerpEventQueue> {
-    const acc = await connection.getAccountInfo(this.eventQueue);
-    const parsed = PerpEventQueueLayout.decode(acc?.data);
-    return new PerpEventQueue(parsed);
-  }
-
-  async loadFills(connection: Connection): Promise<FillEvent[]> {
-    const q = await this.loadEventQueue(connection);
-    return q
-      .eventsSince(new BN(0))
-      .map((e) => e.fill)
-      .filter((e) => !!e) as FillEvent[];
-  }
-
-  async loadBids(connection: Connection): Promise<BookSide> {
-    const acc = await connection.getAccountInfo(this.bids);
-    const book = new BookSide(
-      this.bids,
-      this,
-      BookSideLayout.decode(acc?.data),
-    );
-    return book;
-  }
-
-  async loadAsks(connection: Connection): Promise<BookSide> {
-    const acc = await connection.getAccountInfo(this.asks);
-    const book = new BookSide(
-      this.asks,
-      this,
-      BookSideLayout.decode(acc?.data),
-    );
-    return book;
-  }
-
-  async loadOrdersForAccount(connection: Connection, account: MerpsAccount) {
-    const [bids, asks] = await Promise.all([
-      this.loadBids(connection),
-      this.loadAsks(connection),
-    ]);
-    return [...bids, ...asks].filter(
-      (order) => order.owner === account.publicKey,
-    );
-  }
-}
 
 export const PerpEventLayout = union(u8('eventType'), blob(87), 'event');
 PerpEventLayout.addVariant(
@@ -1038,14 +936,14 @@ export function perpMarketCacheLayout(property = '') {
   return new PerpMarketCacheLayout(property);
 }
 
-export const MerpsCacheLayout = struct([
+export const MangoCacheLayout = struct([
   metaDataLayout('metaData'),
   seq(priceCacheLayout(), MAX_PAIRS, 'priceCache'),
   seq(rootBankCacheLayout(), MAX_TOKENS, 'rootBankCache'),
   seq(perpMarketCacheLayout(), MAX_PAIRS, 'perpMarketCache'),
 ]);
 
-export class MerpsCache {
+export class MangoCache {
   publicKey: PublicKey;
 
   priceCache!: PriceCache[];
@@ -1057,6 +955,7 @@ export class MerpsCache {
     Object.assign(this, decoded);
   }
 }
+
 export class NodeBank {
   publicKey: PublicKey;
 
@@ -1067,42 +966,6 @@ export class NodeBank {
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
-  }
-}
-
-export class RootBank {
-  publicKey: PublicKey;
-
-  numNodeBanks!: number;
-  nodeBanks!: PublicKey[];
-  depositIndex!: I80F48;
-  borrowIndex!: I80F48;
-  lastUpdated!: BN;
-
-  constructor(publicKey: PublicKey, decoded: any) {
-    this.publicKey = publicKey;
-    Object.assign(this, decoded);
-  }
-
-  async loadNodeBanks(connection: Connection): Promise<NodeBank[]> {
-    const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
-
-    for (let i = 0; i < this.nodeBanks.length; i++) {
-      if (this.nodeBanks[i].equals(zeroKey)) {
-        promises.push(promiseUndef());
-      } else {
-        promises.push(connection.getAccountInfo(this.nodeBanks[i]));
-      }
-    }
-
-    const accounts = await Promise.all(promises);
-
-    return accounts
-      .filter((acc) => acc && acc.data)
-      .map((acc, i) => {
-        const decoded = NodeBankLayout.decode(acc?.data);
-        return new NodeBank(this.nodeBanks[i], decoded);
-      });
   }
 }
 

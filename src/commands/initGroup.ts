@@ -1,5 +1,5 @@
 import { Account, Connection, PublicKey } from '@solana/web3.js';
-import { MerpsClient } from '../client';
+import { MangoClient } from '../client';
 import { Cluster, GroupConfig } from '../config';
 
 export default async function initGroup(
@@ -7,7 +7,7 @@ export default async function initGroup(
   payer: Account,
   cluster: Cluster,
   groupName: string,
-  merpsProgramId: PublicKey,
+  mangoProgramId: PublicKey,
   serumProgramId: PublicKey,
   quoteSymbol: string,
   quoteMint: PublicKey,
@@ -17,21 +17,21 @@ export default async function initGroup(
     connection,
     payer,
     groupName,
-    merpsProgramId,
+    mangoProgramId,
     serumProgramId,
     quoteSymbol,
     quoteMint,
     validInterval,
   });
 
-  const client = new MerpsClient(connection, merpsProgramId);
-  const groupKey = await client.initMerpsGroup(
+  const client = new MangoClient(connection, mangoProgramId);
+  const groupKey = await client.initMangoGroup(
     quoteMint,
     serumProgramId,
     validInterval,
     payer,
   );
-  const group = await client.getMerpsGroup(groupKey);
+  const group = await client.getMangoGroup(groupKey);
   const banks = await group.loadRootBanks(connection);
   const tokenIndex = group.getTokenIndex(quoteMint);
   const nodeBanks = await banks[tokenIndex]?.loadNodeBanks(connection);
@@ -48,7 +48,7 @@ export default async function initGroup(
     name: groupName,
     publicKey: groupKey,
     quoteSymbol: quoteSymbol,
-    merpsProgramId: merpsProgramId,
+    mangoProgramId: mangoProgramId,
     serumProgramId: serumProgramId,
     tokens: [tokenDesc],
     oracles: [],

@@ -1,31 +1,9 @@
 import * as os from 'os';
 import * as fs from 'fs';
-import { MerpsClient } from './client';
-import {
-  Account,
-  Commitment,
-  Connection,
-  PublicKey,
-  Transaction,
-} from '@solana/web3.js';
-import { sleep } from './utils';
+import { MangoClient } from './client';
+import { Account, Commitment, Connection } from '@solana/web3.js';
 import configFile from './ids.json';
-import {
-  Cluster,
-  Config,
-  getMarketByBaseSymbolAndKind,
-  GroupConfig,
-} from './config';
-import { QUOTE_INDEX } from '../src/MerpsGroup';
-import {
-  makeCachePerpMarketsInstruction,
-  makeCachePricesInstruction,
-  makeCacheRootBankInstruction,
-  makeUpdateFundingInstruction,
-  makeUpdateRootBankInstruction,
-} from './instruction';
-import BN from 'bn.js';
-import { Market } from '@project-serum/serum';
+import { Config, getMarketByBaseSymbolAndKind, GroupConfig } from './config';
 
 function readKeypair() {
   return JSON.parse(
@@ -39,13 +17,13 @@ async function example() {
   const config = new Config(configFile);
   const groupConfig = config.getGroup(
     'devnet',
-    'merps_test_v2.2',
+    'mango_test_v2.2',
   ) as GroupConfig;
   const connection = new Connection(
     'https://api.devnet.solana.com',
     'processed' as Commitment,
   );
-  const client = new MerpsClient(connection, groupConfig.merpsProgramId);
+  const client = new MangoClient(connection, groupConfig.mangoProgramId);
 
   // load group & market
   const perpMarketConfig = getMarketByBaseSymbolAndKind(
@@ -53,8 +31,8 @@ async function example() {
     'BTC',
     'perp',
   );
-  const merpsGroup = await client.getMerpsGroup(groupConfig.publicKey);
-  const perpMarket = await merpsGroup.loadPerpMarket(
+  const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+  const perpMarket = await mangoGroup.loadPerpMarket(
     connection,
     perpMarketConfig.marketIndex,
     perpMarketConfig.baseDecimals,
@@ -84,12 +62,12 @@ async function example() {
   // Place order
   const owner = new Account(readKeypair());
   const mangoAccount = (
-    await client.getMarginAccountsForOwner(merpsGroup, owner.publicKey)
+    await client.getMarginAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
   await client.placePerpOrder(
-    merpsGroup,
+    mangoGroup,
     mangoAccount,
-    merpsGroup.merpsCache,
+    mangoGroup.mangoCache,
     perpMarket,
     owner,
     'buy', // or 'sell'
@@ -107,7 +85,7 @@ async function example() {
   // cancel orders
   for (const order of openOrders) {
     await client.cancelPerpOrder(
-      merpsGroup,
+      mangoGroup,
       mangoAccount,
       owner,
       perpMarket,

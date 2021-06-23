@@ -1,6 +1,6 @@
 import * as os from 'os';
 import * as fs from 'fs';
-import { MerpsClient } from './client';
+import { MangoClient } from './client';
 import { Account, Commitment, Connection } from '@solana/web3.js';
 import { sleep } from './utils';
 import configFile from './ids.json';
@@ -16,15 +16,15 @@ export class Fetcher {
     const config = new Config(configFile);
 
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const groupName = process.env.GROUP || 'merps_test_v2.2';
+    const groupName = process.env.GROUP || 'mango_test_v2.2';
     const groupIds = config.getGroup(cluster, groupName);
 
     if (!groupIds) {
       throw new Error(`Group ${groupName} not found`);
     }
 
-    const merpsProgramId = groupIds.merpsProgramId;
-    const merpsGroupKey = groupIds.publicKey;
+    const mangoProgramId = groupIds.mangoProgramId;
+    const mangoGroupKey = groupIds.publicKey;
     const payer = new Account(
       JSON.parse(
         process.env.KEYPAIR ||
@@ -38,10 +38,10 @@ export class Fetcher {
       config.cluster_urls[cluster],
       'processed' as Commitment,
     );
-    const client = new MerpsClient(connection, merpsProgramId);
-    const merpsGroup = await client.getMerpsGroup(merpsGroupKey);
+    const client = new MangoClient(connection, mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(mangoGroupKey);
     const mk = groupIds.perpMarkets[0];
-    const perpMarket = await merpsGroup.loadPerpMarket(
+    const perpMarket = await mangoGroup.loadPerpMarket(
       connection,
       mk.marketIndex,
       mk.baseDecimals,
