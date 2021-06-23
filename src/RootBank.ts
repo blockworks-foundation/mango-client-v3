@@ -9,9 +9,9 @@ import {
 } from './layout';
 import { getMultipleAccounts, zeroKey } from './utils';
 import BN from 'bn.js';
-import MerpsGroup from './MerpsGroup';
+import MangoGroup from './MangoGroup';
 
-export class RootBank {
+export default class RootBank {
   publicKey: PublicKey;
 
   numNodeBanks!: number;
@@ -68,25 +68,25 @@ export class RootBank {
     return this.depositIndex.mul(totalBorrow);
   }
 
-  getUiTotalDeposit(merpsGroup: MerpsGroup): I80F48 {
-    const tokenIndex = merpsGroup.getRootBankIndex(this.publicKey);
+  getUiTotalDeposit(mangoGroup: MangoGroup): I80F48 {
+    const tokenIndex = mangoGroup.getRootBankIndex(this.publicKey);
 
     return this.getNativeTotalDeposit().div(
-      I80F48.fromNumber(merpsGroup.tokens[tokenIndex].decimals),
+      I80F48.fromNumber(mangoGroup.tokens[tokenIndex].decimals),
     );
   }
 
-  getUiTotalBorrow(merpsGroup: MerpsGroup): I80F48 {
-    const tokenIndex = merpsGroup.getRootBankIndex(this.publicKey);
+  getUiTotalBorrow(mangoGroup: MangoGroup): I80F48 {
+    const tokenIndex = mangoGroup.getRootBankIndex(this.publicKey);
 
     return this.getNativeTotalBorrow().div(
-      I80F48.fromNumber(merpsGroup.tokens[tokenIndex].decimals),
+      I80F48.fromNumber(mangoGroup.tokens[tokenIndex].decimals),
     );
   }
 
-  getBorrowRate(merpsGroup: MerpsGroup): I80F48 {
-    const totalBorrows = this.getUiTotalBorrow(merpsGroup);
-    const totalDeposits = this.getUiTotalDeposit(merpsGroup);
+  getBorrowRate(mangoGroup: MangoGroup): I80F48 {
+    const totalBorrows = this.getUiTotalBorrow(mangoGroup);
+    const totalDeposits = this.getUiTotalDeposit(mangoGroup);
 
     if (totalDeposits.eq(ZERO_I80F48) && totalBorrows.eq(ZERO_I80F48)) {
       return ZERO_I80F48;
@@ -108,10 +108,10 @@ export class RootBank {
     }
   }
 
-  getDepositRate(merpsGroup: MerpsGroup): I80F48 {
-    const borrowRate = this.getBorrowRate(merpsGroup);
-    const totalBorrows = this.getUiTotalBorrow(merpsGroup);
-    const totalDeposits = this.getUiTotalDeposit(merpsGroup);
+  getDepositRate(mangoGroup: MangoGroup): I80F48 {
+    const borrowRate = this.getBorrowRate(mangoGroup);
+    const totalBorrows = this.getUiTotalBorrow(mangoGroup);
+    const totalDeposits = this.getUiTotalDeposit(mangoGroup);
 
     if (totalDeposits.eq(ZERO_I80F48) && totalBorrows.eq(ZERO_I80F48)) {
       return ZERO_I80F48;

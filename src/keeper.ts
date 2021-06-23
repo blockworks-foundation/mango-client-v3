@@ -7,7 +7,7 @@ This will be very similar to the crank in serum dex.
  */
 import * as os from 'os';
 import * as fs from 'fs';
-import { MerpsClient } from './client';
+import { MangoClient } from './client';
 import {
   Account,
   Commitment,
@@ -18,7 +18,7 @@ import {
 import { sleep } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
-import { QUOTE_INDEX } from '../src/MerpsGroup';
+import { QUOTE_INDEX } from '../src/MangoGroup';
 import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
@@ -37,15 +37,15 @@ export class Keeper {
     const config = new Config(configFile);
 
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const groupName = process.env.GROUP || 'merps_test_v2.2';
+    const groupName = process.env.GROUP || 'mango_test_v2.2';
     const groupIds = config.getGroup(cluster, groupName);
 
     if (!groupIds) {
       throw new Error(`Group ${groupName} not found`);
     }
 
-    const merpsProgramId = groupIds.merpsProgramId;
-    const merpsGroupKey = groupIds.publicKey;
+    const mangoProgramId = groupIds.mangoProgramId;
+    const mangoGroupKey = groupIds.publicKey;
     const payer = new Account(
       JSON.parse(
         process.env.KEYPAIR ||
@@ -59,11 +59,11 @@ export class Keeper {
       config.cluster_urls[cluster],
       'processed' as Commitment,
     );
-    const client = new MerpsClient(connection, merpsProgramId);
-    const merpsGroup = await client.getMerpsGroup(merpsGroupKey);
+    const client = new MangoClient(connection, mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(mangoGroupKey);
     const perpMarkets = await Promise.all(
       groupIds.perpMarkets.map((m, i) => {
-        return merpsGroup.loadPerpMarket(
+        return mangoGroup.loadPerpMarket(
           connection,
           i,
           m.baseDecimals,
@@ -84,29 +84,29 @@ export class Keeper {
       const cacheTransaction = new Transaction();
       cacheTransaction.add(
         makeCacheRootBankInstruction(
-          merpsProgramId,
-          merpsGroup.publicKey,
-          merpsGroup.merpsCache,
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
           [
-            merpsGroup.tokens[0].rootBank,
-            merpsGroup.tokens[QUOTE_INDEX].rootBank,
+            mangoGroup.tokens[0].rootBank,
+            mangoGroup.tokens[QUOTE_INDEX].rootBank,
           ],
         ),
       );
       cacheTransaction.add(
         makeCachePricesInstruction(
-          merpsProgramId,
-          merpsGroup.publicKey,
-          merpsGroup.merpsCache,
-          merpsGroup.oracles,
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          mangoGroup.oracles,
         ),
       );
       cacheTransaction.add(
         makeCachePerpMarketsInstruction(
-          merpsProgramId,
-          merpsGroup.publicKey,
-          merpsGroup.merpsCache,
-          merpsGroup.perpMarkets
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          mangoGroup.perpMarkets
             .filter((pm) => !pm.isEmpty())
             .map((pm) => pm.perpMarket),
         ),
@@ -116,8 +116,8 @@ export class Keeper {
       groupIds.tokens.forEach((token) => {
         updateRootBankTransaction.add(
           makeUpdateRootBankInstruction(
-            merpsProgramId,
-            merpsGroup.publicKey,
+            mangoProgramId,
+            mangoGroup.publicKey,
             token.rootKey,
             token.nodeKeys,
           ),
@@ -129,9 +129,9 @@ export class Keeper {
         if (market) {
           updateFundingTransaction.add(
             makeUpdateFundingInstruction(
-              merpsProgramId,
-              merpsGroup.publicKey,
-              merpsGroup.merpsCache,
+              mangoProgramId,
+              mangoGroup.publicKey,
+              mangoGroup.mangoCache,
               market.publicKey,
               market.bids,
               market.asks,
@@ -159,7 +159,7 @@ export class Keeper {
               });
 
               client.consumeEvents(
-                merpsGroup.publicKey,
+                mangoGroup.publicKey,
                 m.publicKey,
                 m.eventQueue,
                 [...new Map(accounts.map((a) => [a.toBase58(), a])).values()],

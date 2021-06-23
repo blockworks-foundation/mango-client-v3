@@ -1,5 +1,5 @@
 import { Account, Connection } from '@solana/web3.js';
-import { MerpsClient } from '../client';
+import { MangoClient } from '../client';
 import {
   getOracleBySymbol,
   getPerpMarketByBaseSymbol,
@@ -26,9 +26,9 @@ export default async function addPerpMarket(
     symbol,
   });
 
-  const client = new MerpsClient(connection, groupConfig.merpsProgramId);
+  const client = new MangoClient(connection, groupConfig.mangoProgramId);
 
-  let group = await client.getMerpsGroup(groupConfig.publicKey);
+  let group = await client.getMangoGroup(groupConfig.publicKey);
   const oracleDesc = getOracleBySymbol(groupConfig, symbol) as OracleConfig;
   const marketIndex = group.getOracleIndex(oracleDesc.publicKey);
 
@@ -43,7 +43,7 @@ export default async function addPerpMarket(
     maxNumEvents,
   );
 
-  group = await client.getMerpsGroup(groupConfig.publicKey);
+  group = await client.getMangoGroup(groupConfig.publicKey);
   const marketPk = group.perpMarkets[marketIndex].perpMarket;
   const baseDecimals = getTokenBySymbol(groupConfig, symbol)
     ?.decimals as number;

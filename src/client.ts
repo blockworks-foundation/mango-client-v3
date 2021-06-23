@@ -23,12 +23,11 @@ import {
   getFilteredProgramAccounts,
 } from './utils';
 import {
-  MerpsGroupLayout,
+  MangoGroupLayout,
   NodeBankLayout,
   RootBankLayout,
-  MerpsCacheLayout,
-  MerpsAccountLayout,
-  PerpMarket,
+  MangoCacheLayout,
+  MangoAccountLayout,
   StubOracleLayout,
   PerpMarketLayout,
   BookSideLayout,
@@ -37,8 +36,10 @@ import {
   EventQueue,
   EventQueueLayout,
 } from './layout';
-import MerpsGroup, { QUOTE_INDEX } from './MerpsGroup';
-import MerpsAccount from './MerpsAccount';
+import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
+import MangoAccount from './MangoAccount';
+import PerpMarket from './PerpMarket';
+import RootBank from './RootBank';
 import {
   makeAddOracleInstruction,
   makeAddPerpMarketInstruction,
@@ -50,8 +51,8 @@ import {
   makeConsumeEventsInstruction,
   makeCancelSpotOrderInstruction,
   makeDepositInstruction,
-  makeInitMerpsAccountInstruction,
-  makeInitMerpsGroupInstruction,
+  makeInitMangoAccountInstruction,
+  makeInitMangoGroupInstruction,
   makePlacePerpOrderInstruction,
   makePlaceSpotOrderInstruction,
   makeSetOracleInstruction,
@@ -70,15 +71,15 @@ import {
 } from '@project-serum/serum';
 import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
-import { RootBank } from './RootBank';
+
 import { WalletAdapter } from './types';
-import { PerpOrder } from '.';
+import { PerpOrder } from './book';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
 };
 
-export class MerpsClient {
+export class MangoClient {
   connection: Connection;
   programId: PublicKey;
 
@@ -205,7 +206,7 @@ export class MerpsClient {
     return txid;
   }
 
-  async initMerpsGroup(
+  async initMangoGroup(
     quoteMint: PublicKey,
     dexProgram: PublicKey,
     validInterval: number,
@@ -214,7 +215,7 @@ export class MerpsClient {
     const accountInstruction = await createAccountInstruction(
       this.connection,
       payer.publicKey,
-      MerpsGroupLayout.span,
+      MangoGroupLayout.span,
       this.programId,
     );
     const { signerKey, signerNonce } = await createSignerKeyAndNonce(
@@ -246,11 +247,11 @@ export class MerpsClient {
     const cacheAccountInstruction = await createAccountInstruction(
       this.connection,
       payer.publicKey,
-      MerpsCacheLayout.span,
+      MangoCacheLayout.span,
       this.programId,
     );
 
-    const initMerpsGroupInstruction = makeInitMerpsGroupInstruction(
+    const initMangoGroupInstruction = makeInitMangoGroupInstruction(
       this.programId,
       accountInstruction.account.publicKey,
       signerKey,
@@ -271,7 +272,7 @@ export class MerpsClient {
     transaction.add(quoteNodeBankAccountInstruction.instruction);
     transaction.add(quoteRootBankAccountInstruction.instruction);
     transaction.add(cacheAccountInstruction.instruction);
-    transaction.add(initMerpsGroupInstruction);
+    transaction.add(initMangoGroupInstruction);
 
     await this.sendTransaction(transaction, payer, [
       accountInstruction.account,
@@ -284,29 +285,29 @@ export class MerpsClient {
     return accountInstruction.account.publicKey;
   }
 
-  async getMerpsGroup(merpsGroup: PublicKey): Promise<MerpsGroup> {
-    const accountInfo = await this.connection.getAccountInfo(merpsGroup);
-    const decoded = MerpsGroupLayout.decode(
+  async getMangoGroup(mangoGroup: PublicKey): Promise<MangoGroup> {
+    const accountInfo = await this.connection.getAccountInfo(mangoGroup);
+    const decoded = MangoGroupLayout.decode(
       accountInfo == null ? undefined : accountInfo.data,
     );
 
-    return new MerpsGroup(merpsGroup, decoded);
+    return new MangoGroup(mangoGroup, decoded);
   }
 
-  async initMerpsAccount(
-    merpsGroup: MerpsGroup,
+  async initMangoAccount(
+    mangoGroup: MangoGroup,
     owner: Account | WalletAdapter,
   ): Promise<PublicKey> {
     const accountInstruction = await createAccountInstruction(
       this.connection,
       owner.publicKey,
-      MerpsAccountLayout.span,
+      MangoAccountLayout.span,
       this.programId,
     );
 
-    const initMerpsAccountInstruction = makeInitMerpsAccountInstruction(
+    const initMangoAccountInstruction = makeInitMangoAccountInstruction(
       this.programId,
-      merpsGroup.publicKey,
+      mangoGroup.publicKey,
       accountInstruction.account.publicKey,
       owner.publicKey,
     );
@@ -314,7 +315,7 @@ export class MerpsClient {
     // Add all instructions to one atomic transaction
     const transaction = new Transaction();
     transaction.add(accountInstruction.instruction);
-    transaction.add(initMerpsAccountInstruction);
+    transaction.add(initMangoAccountInstruction);
 
     const additionalSigners = [accountInstruction.account];
     await this.sendTransaction(transaction, owner, additionalSigners);
@@ -322,25 +323,25 @@ export class MerpsClient {
     return accountInstruction.account.publicKey;
   }
 
-  async getMerpsAccount(
-    merpsAccountPk: PublicKey,
+  async getMangoAccount(
+    mangoAccountPk: PublicKey,
     dexProgramId: PublicKey,
-  ): Promise<MerpsAccount> {
+  ): Promise<MangoAccount> {
     const acc = await this.connection.getAccountInfo(
-      merpsAccountPk,
+      mangoAccountPk,
       'singleGossip',
     );
-    const merpsAccount = new MerpsAccount(
-      merpsAccountPk,
-      MerpsAccountLayout.decode(acc == null ? undefined : acc.data),
+    const mangoAccount = new MangoAccount(
+      mangoAccountPk,
+      MangoAccountLayout.decode(acc == null ? undefined : acc.data),
     );
-    await merpsAccount.loadOpenOrders(this.connection, dexProgramId);
-    return merpsAccount;
+    await mangoAccount.loadOpenOrders(this.connection, dexProgramId);
+    return mangoAccount;
   }
 
   async deposit(
-    merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
     owner: Account | WalletAdapter,
     rootBank: PublicKey,
     nodeBank: PublicKey,
@@ -349,21 +350,21 @@ export class MerpsClient {
 
     quantity: number,
   ): Promise<TransactionSignature> {
-    const tokenIndex = merpsGroup.getRootBankIndex(rootBank);
+    const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
     const nativeQuantity = uiToNative(
       quantity,
-      merpsGroup.tokens[tokenIndex].decimals,
+      mangoGroup.tokens[tokenIndex].decimals,
     );
 
     const transaction = new Transaction();
 
-    if (!merpsAccount.inBasket[tokenIndex]) {
+    if (!mangoAccount.inBasket[tokenIndex]) {
       // TODO: find out why this does not work
       transaction.add(
         makeAddToBasketInstruction(
           this.programId,
-          merpsGroup.publicKey,
-          merpsAccount.publicKey,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
           owner.publicKey,
           new BN(tokenIndex),
         ),
@@ -372,9 +373,9 @@ export class MerpsClient {
 
     const instruction = makeDepositInstruction(
       this.programId,
-      merpsGroup.publicKey,
+      mangoGroup.publicKey,
       owner.publicKey,
-      merpsAccount.publicKey,
+      mangoAccount.publicKey,
       rootBank,
       nodeBank,
       vault,
@@ -389,8 +390,8 @@ export class MerpsClient {
   }
 
   async withdraw(
-    merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
     owner: Account | WalletAdapter,
     rootBank: PublicKey,
     nodeBank: PublicKey,
@@ -400,24 +401,24 @@ export class MerpsClient {
     quantity: number,
     allowBorrow: boolean,
   ): Promise<TransactionSignature> {
-    const tokenIndex = merpsGroup.getRootBankIndex(rootBank);
+    const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
     const nativeQuantity = uiToNative(
       quantity,
-      merpsGroup.tokens[tokenIndex].decimals,
+      mangoGroup.tokens[tokenIndex].decimals,
     );
 
     const instruction = makeWithdrawInstruction(
       this.programId,
-      merpsGroup.publicKey,
-      merpsAccount.publicKey,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
       owner.publicKey,
-      merpsGroup.merpsCache,
+      mangoGroup.mangoCache,
       rootBank,
       nodeBank,
       vault,
       tokenAcc,
-      merpsGroup.signerKey,
-      merpsAccount.spotOpenOrders,
+      mangoGroup.signerKey,
+      mangoAccount.spotOpenOrders,
       nativeQuantity,
       allowBorrow,
     );
@@ -431,15 +432,15 @@ export class MerpsClient {
 
   // Keeper functions
   async cacheRootBanks(
-    merpsGroup: PublicKey,
-    merpsCache: PublicKey,
+    mangoGroup: PublicKey,
+    mangoCache: PublicKey,
     rootBanks: PublicKey[],
     payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const cacheRootBanksInstruction = makeCacheRootBankInstruction(
       this.programId,
-      merpsGroup,
-      merpsCache,
+      mangoGroup,
+      mangoCache,
       rootBanks,
     );
 
@@ -450,15 +451,15 @@ export class MerpsClient {
   }
 
   async cachePrices(
-    merpsGroup: PublicKey,
-    merpsCache: PublicKey,
+    mangoGroup: PublicKey,
+    mangoCache: PublicKey,
     oracles: PublicKey[],
     payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const cachePricesInstruction = makeCachePricesInstruction(
       this.programId,
-      merpsGroup,
-      merpsCache,
+      mangoGroup,
+      mangoCache,
       oracles,
     );
 
@@ -469,15 +470,15 @@ export class MerpsClient {
   }
 
   async cachePerpMarkets(
-    merpsGroup: PublicKey,
-    merpsCache: PublicKey,
+    mangoGroup: PublicKey,
+    mangoCache: PublicKey,
     perpMarkets: PublicKey[],
     payer: Account,
   ): Promise<TransactionSignature> {
     const cachePerpMarketsInstruction = makeCachePerpMarketsInstruction(
       this.programId,
-      merpsGroup,
-      merpsCache,
+      mangoGroup,
+      mangoCache,
       perpMarkets,
     );
 
@@ -488,14 +489,14 @@ export class MerpsClient {
   }
 
   async updateRootBank(
-    merpsGroup: PublicKey,
+    mangoGroup: PublicKey,
     rootBank: PublicKey,
     nodeBanks: PublicKey[],
     payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const updateRootBanksInstruction = makeUpdateRootBankInstruction(
       this.programId,
-      merpsGroup,
+      mangoGroup,
       rootBank,
       nodeBanks,
     );
@@ -507,19 +508,19 @@ export class MerpsClient {
   }
 
   async consumeEvents(
-    merpsGroup: PublicKey,
+    mangoGroup: PublicKey,
     perpMarket: PublicKey,
     eventQueue: PublicKey,
-    merpsAccounts: PublicKey[],
+    mangoAccounts: PublicKey[],
     payer: Account,
     limit: BN,
   ): Promise<TransactionSignature> {
     const updateRootBanksInstruction = makeConsumeEventsInstruction(
       this.programId,
-      merpsGroup,
+      mangoGroup,
       perpMarket,
       eventQueue,
-      merpsAccounts,
+      mangoAccounts,
       limit,
     );
 
@@ -530,8 +531,8 @@ export class MerpsClient {
   }
 
   async updateFunding(
-    merpsGroup: PublicKey,
-    merpsCache: PublicKey,
+    mangoGroup: PublicKey,
+    mangoCache: PublicKey,
     perpMarket: PublicKey,
     bids: PublicKey,
     asks: PublicKey,
@@ -539,8 +540,8 @@ export class MerpsClient {
   ): Promise<TransactionSignature> {
     const updateFundingInstruction = makeUpdateFundingInstruction(
       this.programId,
-      merpsGroup,
-      merpsCache,
+      mangoGroup,
+      mangoCache,
       perpMarket,
       bids,
       asks,
@@ -568,9 +569,9 @@ export class MerpsClient {
   }
 
   async placePerpOrder(
-    merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
-    merpsCache: PublicKey,
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    mangoCache: PublicKey,
     perpMarket: PerpMarket,
     owner: Account | WalletAdapter,
 
@@ -580,11 +581,11 @@ export class MerpsClient {
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId = 0,
   ): Promise<TransactionSignature> {
-    const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket);
 
     // TODO: this will not work for perp markets without spot market
-    const baseTokenInfo = merpsGroup.tokens[marketIndex];
-    const quoteTokenInfo = merpsGroup.tokens[QUOTE_INDEX];
+    const baseTokenInfo = mangoGroup.tokens[marketIndex];
+    const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
     const baseUnit = Math.pow(10, baseTokenInfo.decimals);
     const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
 
@@ -598,12 +599,12 @@ export class MerpsClient {
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
-    if (!merpsAccount.inBasket[marketIndex]) {
+    if (!mangoAccount.inBasket[marketIndex]) {
       transaction.add(
         makeAddToBasketInstruction(
           this.programId,
-          merpsGroup.publicKey,
-          merpsAccount.publicKey,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
           owner.publicKey,
           new BN(marketIndex),
         ),
@@ -612,15 +613,15 @@ export class MerpsClient {
 
     const instruction = makePlacePerpOrderInstruction(
       this.programId,
-      merpsGroup.publicKey,
-      merpsAccount.publicKey,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
       owner.publicKey,
-      merpsCache,
+      mangoCache,
       perpMarket.publicKey,
       perpMarket.bids,
       perpMarket.asks,
       perpMarket.eventQueue,
-      merpsAccount.spotOpenOrders,
+      mangoAccount.spotOpenOrders,
       nativePrice,
       nativeQuantity,
       new BN(clientOrderId),
@@ -633,16 +634,16 @@ export class MerpsClient {
   }
 
   async cancelPerpOrder(
-    merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
     owner: Account | WalletAdapter,
     perpMarket: PerpMarket,
     order: PerpOrder,
   ): Promise<TransactionSignature> {
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
-      merpsGroup.publicKey,
-      merpsAccount.publicKey,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
       owner.publicKey,
       perpMarket.publicKey,
       perpMarket.bids,
@@ -679,13 +680,13 @@ export class MerpsClient {
   */
 
   async addOracle(
-    merpsGroup: MerpsGroup,
+    mangoGroup: MangoGroup,
     oracle: PublicKey,
     admin: Account,
   ): Promise<TransactionSignature> {
     const instruction = makeAddOracleInstruction(
       this.programId,
-      merpsGroup.publicKey,
+      mangoGroup.publicKey,
       oracle,
       admin.publicKey,
     );
@@ -698,14 +699,14 @@ export class MerpsClient {
   }
 
   async setOracle(
-    merpsGroup: MerpsGroup,
+    mangoGroup: MangoGroup,
     oracle: PublicKey,
     admin: Account,
     price: I80F48,
   ): Promise<TransactionSignature> {
     const instruction = makeSetOracleInstruction(
       this.programId,
-      merpsGroup.publicKey,
+      mangoGroup.publicKey,
       oracle,
       admin.publicKey,
       price,
@@ -719,7 +720,7 @@ export class MerpsClient {
   }
 
   async addSpotMarket(
-    merpsGroup: MerpsGroup,
+    mangoGroup: MangoGroup,
     spotMarket: PublicKey,
     mint: PublicKey,
     admin: Account,
@@ -735,7 +736,7 @@ export class MerpsClient {
       admin.publicKey,
       vaultAccount.publicKey,
       mint,
-      merpsGroup.signerKey,
+      mangoGroup.signerKey,
     );
 
     const nodeBankAccountInstruction = await createAccountInstruction(
@@ -753,9 +754,9 @@ export class MerpsClient {
 
     const instruction = makeAddSpotMarketInstruction(
       this.programId,
-      merpsGroup.publicKey,
+      mangoGroup.publicKey,
       spotMarket,
-      merpsGroup.dexProgramId,
+      mangoGroup.dexProgramId,
       mint,
       nodeBankAccountInstruction.account.publicKey,
       vaultAccount.publicKey,
@@ -781,16 +782,16 @@ export class MerpsClient {
   }
 
   async addToBasket(
-    merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
     owner: Account | WalletAdapter,
 
     marketIndex: number,
   ): Promise<TransactionSignature> {
     const instruction = makeAddToBasketInstruction(
       this.programId,
-      merpsGroup.publicKey,
-      merpsAccount.publicKey,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
       owner.publicKey,
       new BN(marketIndex),
     );
@@ -803,9 +804,9 @@ export class MerpsClient {
   }
 
   async placeSpotOrder(
-    merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
-    merpsCache: PublicKey,
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    mangoCache: PublicKey,
     spotMarket: Market,
     owner: Account | WalletAdapter,
 
@@ -818,7 +819,7 @@ export class MerpsClient {
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
 
     // TODO implement srm vault fee discount
-    // const feeTier = getFeeTier(0, nativeToUi(merpsGroup.nativeSrm || 0, SRM_DECIMALS));
+    // const feeTier = getFeeTier(0, nativeToUi(mangoGroup.nativeSrm || 0, SRM_DECIMALS));
     const feeTier = getFeeTier(0, nativeToUi(0, 0));
     const rates = getFeeRates(feeTier);
     const maxQuoteQuantity = new BN(
@@ -837,9 +838,9 @@ export class MerpsClient {
     }
     const selfTradeBehavior = 'decrementTake';
 
-    const spotMarketIndex = merpsGroup.getSpotMarketIndex(spotMarket.publicKey);
+    const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
 
-    const rootBanks = await merpsGroup.loadRootBanks(this.connection);
+    const rootBanks = await mangoGroup.loadRootBanks(this.connection);
     const baseRootBank = rootBanks[0];
     const quoteRootBank = rootBanks[QUOTE_INDEX];
     const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
@@ -852,13 +853,13 @@ export class MerpsClient {
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
-    if (!merpsAccount.inBasket[spotMarketIndex]) {
+    if (!mangoAccount.inBasket[spotMarketIndex]) {
       // TODO: find out why this does not work
       transaction.add(
         makeAddToBasketInstruction(
           this.programId,
-          merpsGroup.publicKey,
-          merpsAccount.publicKey,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
           owner.publicKey,
           new BN(spotMarketIndex),
         ),
@@ -866,14 +867,14 @@ export class MerpsClient {
     }
 
     const openOrdersKeys: PublicKey[] = [];
-    for (let i = 0; i < merpsAccount.spotOpenOrders.length; i++) {
+    for (let i = 0; i < mangoAccount.spotOpenOrders.length; i++) {
       if (
         i === spotMarketIndex &&
-        merpsAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)
+        mangoAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)
       ) {
         // open orders missing for this market; create a new one now
         const openOrdersSpace = OpenOrders.getLayout(
-          merpsGroup.dexProgramId,
+          mangoGroup.dexProgramId,
         ).span;
         const openOrdersLamports =
           await this.connection.getMinimumBalanceForRentExemption(
@@ -884,7 +885,7 @@ export class MerpsClient {
           this.connection,
           owner.publicKey,
           openOrdersSpace,
-          merpsGroup.dexProgramId,
+          mangoGroup.dexProgramId,
           openOrdersLamports,
         );
 
@@ -892,7 +893,7 @@ export class MerpsClient {
         additionalSigners.push(accInstr.account);
         openOrdersKeys.push(accInstr.account.publicKey);
       } else {
-        openOrdersKeys.push(merpsAccount.spotOpenOrders[i]);
+        openOrdersKeys.push(mangoAccount.spotOpenOrders[i]);
       }
     }
 
@@ -906,10 +907,10 @@ export class MerpsClient {
 
     const placeOrderInstruction = makePlaceSpotOrderInstruction(
       this.programId,
-      merpsGroup.publicKey,
-      merpsAccount.publicKey,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
       owner.publicKey,
-      merpsCache,
+      mangoCache,
       spotMarket.programId,
       spotMarket.publicKey,
       spotMarket['_decoded'].bids,
@@ -924,7 +925,7 @@ export class MerpsClient {
       quoteNodeBank.publicKey,
       quoteNodeBank.vault,
       baseNodeBank.vault,
-      merpsGroup.signerKey,
+      mangoGroup.signerKey,
       dexSigner,
       openOrdersKeys,
 
@@ -941,23 +942,23 @@ export class MerpsClient {
   }
 
   async cancelSpotOrder(
-    merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
     owner: Account | WalletAdapter,
     spotMarket: Market,
     order: Order,
   ): Promise<TransactionSignature> {
     const instruction = makeCancelSpotOrderInstruction(
       this.programId,
-      merpsGroup.publicKey,
+      mangoGroup.publicKey,
       owner.publicKey,
-      merpsAccount.publicKey,
+      mangoAccount.publicKey,
       spotMarket.programId,
       spotMarket.publicKey,
       spotMarket['_decoded'].bids,
       spotMarket['_decoded'].asks,
       order.openOrdersAddress,
-      merpsGroup.signerKey,
+      mangoGroup.signerKey,
       spotMarket['_decoded'].eventQueue,
       order,
     );
@@ -970,12 +971,12 @@ export class MerpsClient {
   }
 
   async settleFunds(
-    merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
     owner: Account | WalletAdapter,
     spotMarket: Market,
   ): Promise<TransactionSignature> {
-    const marketIndex = merpsGroup.getSpotMarketIndex(spotMarket.publicKey);
+    const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
     const dexSigner = await PublicKey.createProgramAddress(
       [
         spotMarket.publicKey.toBuffer(),
@@ -984,7 +985,7 @@ export class MerpsClient {
       spotMarket.programId,
     );
 
-    const rootBanks = await merpsGroup.loadRootBanks(this.connection);
+    const rootBanks = await mangoGroup.loadRootBanks(this.connection);
     const baseRootBank = rootBanks[0];
     const quoteRootBank = rootBanks[QUOTE_INDEX];
     const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
@@ -996,18 +997,18 @@ export class MerpsClient {
 
     const instruction = makeSettleFundsInstruction(
       this.programId,
-      merpsGroup.publicKey,
+      mangoGroup.publicKey,
       owner.publicKey,
-      merpsAccount.publicKey,
+      mangoAccount.publicKey,
       spotMarket.programId,
       spotMarket.publicKey,
-      merpsAccount.spotOpenOrders[marketIndex],
-      merpsGroup.signerKey,
+      mangoAccount.spotOpenOrders[marketIndex],
+      mangoGroup.signerKey,
       spotMarket['_decoded'].baseVault,
       spotMarket['_decoded'].quoteVault,
-      merpsGroup.tokens[marketIndex].rootBank,
+      mangoGroup.tokens[marketIndex].rootBank,
       baseNodeBank.publicKey,
-      merpsGroup.tokens[QUOTE_INDEX].rootBank,
+      mangoGroup.tokens[QUOTE_INDEX].rootBank,
       quoteNodeBank.publicKey,
       baseNodeBank.vault,
       quoteNodeBank.vault,
@@ -1022,21 +1023,21 @@ export class MerpsClient {
   }
 
   /**
-   * Automatically fetch MerpsAccounts for this PerpMarket
-   * Pick enough MerpsAccounts that have opposite sign and send them in to get settled
+   * Automatically fetch MangoAccounts for this PerpMarket
+   * Pick enough MangoAccounts that have opposite sign and send them in to get settled
    */
   async settlePnl(
-    merpsGroup: MerpsGroup,
-    merpsAccount: MerpsAccount,
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
     perpMarket: PerpMarket,
     quoteRootBank: RootBank,
-    price: I80F48, // should be the MerpsCache price
+    price: I80F48, // should be the MangoCache price
     owner: Account | WalletAdapter,
   ): Promise<TransactionSignature | null> {
-    // fetch all MerpsAccounts filtered for having this perp market in basket
-    const marketIndex = merpsGroup.getPerpMarketIndex(perpMarket);
-    const perpMarketInfo = merpsGroup.perpMarkets[marketIndex];
-    const pnl = merpsAccount.perpAccounts[marketIndex].getPnl(
+    // fetch all MangoAccounts filtered for having this perp market in basket
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket);
+    const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
+    const pnl = mangoAccount.perpAccounts[marketIndex].getPnl(
       perpMarketInfo,
       price,
     );
@@ -1048,16 +1049,16 @@ export class MerpsClient {
 
     const filter = {
       memcmp: {
-        offset: MerpsAccountLayout.offsetOf('inBasket') + marketIndex,
+        offset: MangoAccountLayout.offsetOf('inBasket') + marketIndex,
         bytes: '2', // TODO - check if this actually works; needs to be base58 encoding of true byte
       },
     };
 
-    const merpsAccounts = await this.getAllMerpsAccounts(merpsGroup, [filter]);
+    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [filter]);
 
     const sign = pnl.gt(ZERO_I80F48) ? 1 : -1;
 
-    const accountsWithPnl = merpsAccounts
+    const accountsWithPnl = mangoAccounts
       .map((m) => ({
         account: m,
         pnl: m.perpAccounts[marketIndex].getPnl(perpMarketInfo, price),
@@ -1082,10 +1083,10 @@ export class MerpsClient {
 
       const instr = makeSettlePnlInstruction(
         this.programId,
-        merpsGroup.publicKey,
-        merpsAccount.publicKey,
+        mangoGroup.publicKey,
+        mangoAccount.publicKey,
         account.account.publicKey,
-        merpsGroup.merpsCache,
+        mangoGroup.mangoCache,
         quoteRootBank.publicKey,
         quoteRootBank.nodeBanks[0],
         new BN(marketIndex),
@@ -1100,36 +1101,36 @@ export class MerpsClient {
   }
 
   getMarginAccountsForOwner(
-    merpsGroup: MerpsGroup,
+    mangoGroup: MangoGroup,
     owner: PublicKey,
     includeOpenOrders = false,
-  ): Promise<MerpsAccount[]> {
+  ): Promise<MangoAccount[]> {
     const filters = [
       {
         memcmp: {
-          offset: MerpsAccountLayout.offsetOf('owner'),
+          offset: MangoAccountLayout.offsetOf('owner'),
           bytes: owner.toBase58(),
         },
       },
     ];
 
-    return this.getAllMerpsAccounts(merpsGroup, filters, includeOpenOrders);
+    return this.getAllMangoAccounts(mangoGroup, filters, includeOpenOrders);
   }
 
-  async getAllMerpsAccounts(
-    merpsGroup: MerpsGroup,
+  async getAllMangoAccounts(
+    mangoGroup: MangoGroup,
     filters?: any[],
     includeOpenOrders = false,
-  ): Promise<MerpsAccount[]> {
+  ): Promise<MangoAccount[]> {
     const accountFilters = [
       {
         memcmp: {
-          offset: MerpsAccountLayout.offsetOf('merpsGroup'),
-          bytes: merpsGroup.publicKey.toBase58(),
+          offset: MangoAccountLayout.offsetOf('mangoGroup'),
+          bytes: mangoGroup.publicKey.toBase58(),
         },
       },
       {
-        dataSize: MerpsAccountLayout.span,
+        dataSize: MangoAccountLayout.span,
       },
     ];
 
@@ -1137,15 +1138,15 @@ export class MerpsClient {
       accountFilters.push(...filters);
     }
 
-    const merpsAccountProms = getFilteredProgramAccounts(
+    const mangoAccountProms = getFilteredProgramAccounts(
       this.connection,
       this.programId,
       accountFilters,
     ).then((accounts) =>
       accounts.map(({ publicKey, accountInfo }) => {
-        return new MerpsAccount(
+        return new MangoAccount(
           publicKey,
-          MerpsAccountLayout.decode(
+          MangoAccountLayout.decode(
             accountInfo == null ? undefined : accountInfo.data,
           ),
         );
@@ -1153,38 +1154,38 @@ export class MerpsClient {
     );
 
     if (!includeOpenOrders) {
-      return await merpsAccountProms;
+      return await mangoAccountProms;
     }
 
     const ordersFilters = [
       {
         memcmp: {
-          offset: OpenOrders.getLayout(merpsGroup.dexProgramId).offsetOf(
+          offset: OpenOrders.getLayout(mangoGroup.dexProgramId).offsetOf(
             'owner',
           ),
-          bytes: merpsGroup.signerKey.toBase58(),
+          bytes: mangoGroup.signerKey.toBase58(),
         },
       },
       {
-        dataSize: OpenOrders.getLayout(merpsGroup.dexProgramId).span,
+        dataSize: OpenOrders.getLayout(mangoGroup.dexProgramId).span,
       },
     ];
 
     const openOrdersProms = getFilteredProgramAccounts(
       this.connection,
-      merpsGroup.dexProgramId,
+      mangoGroup.dexProgramId,
       ordersFilters,
     ).then((accounts) =>
       accounts.map(({ publicKey, accountInfo }) =>
         OpenOrders.fromAccountInfo(
           publicKey,
           accountInfo,
-          merpsGroup.dexProgramId,
+          mangoGroup.dexProgramId,
         ),
       ),
     );
 
-    const merpsAccounts = await merpsAccountProms;
+    const mangoAccounts = await mangoAccountProms;
     const openOrders = await openOrdersProms;
 
     const pkToOpenOrdersAccount = {};
@@ -1194,7 +1195,7 @@ export class MerpsClient {
           openOrdersAccount),
     );
 
-    for (const ma of merpsAccounts) {
+    for (const ma of mangoAccounts) {
       for (let i = 0; i < ma.spotOpenOrders.length; i++) {
         if (ma.spotOpenOrders[i].toBase58() in pkToOpenOrdersAccount) {
           ma.spotOpenOrdersAccounts[i] =
@@ -1203,10 +1204,10 @@ export class MerpsClient {
       }
     }
 
-    return merpsAccounts;
+    return mangoAccounts;
   }
 
-  async addStubOracle(merpsGroupPk: PublicKey, admin: Account) {
+  async addStubOracle(mangoGroupPk: PublicKey, admin: Account) {
     const createOracleAccountInstruction = await createAccountInstruction(
       this.connection,
       admin.publicKey,
@@ -1216,7 +1217,7 @@ export class MerpsClient {
 
     const instruction = makeAddOracleInstruction(
       this.programId,
-      merpsGroupPk,
+      mangoGroupPk,
       createOracleAccountInstruction.account.publicKey,
       admin.publicKey,
     );
@@ -1230,14 +1231,14 @@ export class MerpsClient {
   }
 
   async setStubOracle(
-    merpsGroupPk: PublicKey,
+    mangoGroupPk: PublicKey,
     oraclePk: PublicKey,
     admin: Account,
     price: number,
   ) {
     const instruction = makeSetOracleInstruction(
       this.programId,
-      merpsGroupPk,
+      mangoGroupPk,
       oraclePk,
       admin.publicKey,
       I80F48.fromNumber(price),
@@ -1251,7 +1252,7 @@ export class MerpsClient {
   }
 
   async addPerpMarket(
-    merpsGroupPk: PublicKey,
+    mangoGroupPk: PublicKey,
     admin: Account,
     marketIndex: number,
     maintLeverage: number,
@@ -1290,7 +1291,7 @@ export class MerpsClient {
 
     const instruction = await makeAddPerpMarketInstruction(
       this.programId,
-      merpsGroupPk,
+      mangoGroupPk,
       makePerpMarketAccountInstruction.account.publicKey,
       makeEventQueueAccountInstruction.account.publicKey,
       makeBidAccountInstruction.account.publicKey,

@@ -117,7 +117,7 @@ export interface GroupConfig {
   name: string;
   quoteSymbol: string;
   publicKey: PublicKey;
-  merpsProgramId: PublicKey;
+  mangoProgramId: PublicKey;
   serumProgramId: PublicKey;
   oracles: OracleConfig[];
   perpMarkets: PerpMarketConfig[];
@@ -219,7 +219,7 @@ function groupConfigFromJson(j: any) {
   return {
     ...j,
     publicKey: new PublicKey(j.publicKey),
-    merpsProgramId: new PublicKey(j.merpsProgramId),
+    mangoProgramId: new PublicKey(j.mangoProgramId),
     serumProgramId: new PublicKey(j.serumProgramId),
     oracles: j.oracles.map((o) => oracleConfigFromJson(o)),
     perpMarkets: j.perpMarkets.map((p) => perpMarketConfigFromJson(p)),
@@ -232,7 +232,7 @@ function groupConfigToJson(g: GroupConfig): any {
   return {
     ...g,
     publicKey: g.publicKey.toBase58(),
-    merpsProgramId: g.merpsProgramId.toBase58(),
+    mangoProgramId: g.mangoProgramId.toBase58(),
     serumProgramId: g.serumProgramId.toBase58(),
     oracles: g.oracles.map((o) => oracleConfigToJson(o)),
     perpMarkets: g.perpMarkets.map((p) => perpMarketConfigToJson(p)),

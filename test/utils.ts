@@ -13,7 +13,7 @@ import {
 import { StubOracleLayout } from '../src/layout';
 import { createAccountInstruction, sleep } from '../src/utils';
 
-export const MerpsProgramId = new PublicKey(
+export const MangoProgramId = new PublicKey(
   'Hc12EyQQ3XVNEE5URg7XjjtZA8sbUPnMeT1CXGbwN6ei',
 );
 export const DexProgramId = new PublicKey(

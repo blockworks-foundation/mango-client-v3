@@ -7,13 +7,12 @@ import {
   TokenInfo,
   SpotMarketInfo,
   PerpMarketInfo,
-  NodeBank,
-  PerpMarket,
   PerpMarketLayout,
-  MerpsCache,
-  MerpsCacheLayout,
+  MangoCache,
+  MangoCacheLayout,
 } from './layout';
-import { RootBank } from './RootBank';
+import PerpMarket from './PerpMarket';
+import RootBank from './RootBank';
 import { promiseUndef, zeroKey } from './utils';
 
 export const MAX_TOKENS = 32;
@@ -21,7 +20,7 @@ export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
 export const QUOTE_INDEX = MAX_TOKENS - 1;
 
-export default class MerpsGroup {
+export default class MangoGroup {
   publicKey: PublicKey;
   metaData!: MetaData;
   numOracles!: number;
@@ -33,7 +32,7 @@ export default class MerpsGroup {
   signerKey!: PublicKey;
   admin!: PublicKey;
   dexProgramId!: PublicKey;
-  merpsCache!: PublicKey;
+  mangoCache!: PublicKey;
   validInterval!: number[];
 
   rootBankAccounts: (RootBank | undefined)[];
@@ -52,7 +51,7 @@ export default class MerpsGroup {
         return i;
       }
     }
-    throw new Error('This Oracle does not belong to this MerpsGroup');
+    throw new Error('This Oracle does not belong to this MangoGroup');
   }
 
   getSpotMarketIndex(spotMarket: PublicKey): number {
@@ -61,7 +60,7 @@ export default class MerpsGroup {
         return i;
       }
     }
-    throw new Error('This Market does not belong to this MerpsGroup');
+    throw new Error('This Market does not belong to this MangoGroup');
   }
 
   getPerpMarketIndex(perpMarket: PerpMarket): number {
@@ -70,7 +69,7 @@ export default class MerpsGroup {
         return i;
       }
     }
-    throw new Error('This PerpMarket does not belong to this MerpsGroup');
+    throw new Error('This PerpMarket does not belong to this MangoGroup');
   }
 
   getTokenIndex(token: PublicKey): number {
@@ -79,7 +78,7 @@ export default class MerpsGroup {
         return i;
       }
     }
-    throw new Error('This token does not belong in this MerpsGroup');
+    throw new Error('This token does not belong in this MangoGroup');
   }
 
   getRootBankIndex(rootBank: PublicKey): number {
@@ -88,7 +87,7 @@ export default class MerpsGroup {
         return i;
       }
     }
-    throw new Error('This root bank does not belong in this MerpsGroup');
+    throw new Error('This root bank does not belong in this MangoGroup');
   }
 
   getBorrowRate(tokenIndex: number): I80F48 {
@@ -107,12 +106,12 @@ export default class MerpsGroup {
     return rootBank.getDepositRate(this);
   }
 
-  async loadCache(connection: Connection): Promise<MerpsCache> {
-    const account = await connection.getAccountInfo(this.merpsCache);
+  async loadCache(connection: Connection): Promise<MangoCache> {
+    const account = await connection.getAccountInfo(this.mangoCache);
     if (!account || !account?.data) throw new Error('Unable to load cache');
 
-    const decoded = MerpsCacheLayout.decode(account.data);
-    return new MerpsCache(this.merpsCache, decoded);
+    const decoded = MangoCacheLayout.decode(account.data);
+    return new MangoCache(this.mangoCache, decoded);
   }
 
   async loadRootBanks(
@@ -158,35 +157,4 @@ export default class MerpsGroup {
     const decoded = PerpMarketLayout.decode(acc?.data);
     return new PerpMarket(pk, baseDecimals, quoteDecimals, decoded);
   }
-
-  /*
-  async loadPerpMarkets(
-    connection: Connection,
-  ): Promise<(PerpMarket | undefined)[]> {
-    const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
-
-    for (let i = 0; i < this.tokens.length; i++) {
-      if (
-        !this.perpMarkets[i] ||
-        this.perpMarkets[i].perpMarket.equals(zeroKey)
-      ) {
-        promises.push(promiseUndef());
-      } else {
-        promises.push(
-          connection.getAccountInfo(this.perpMarkets[i].perpMarket),
-        );
-      }
-    }
-
-    const accounts = await Promise.all(promises);
-
-    return accounts.map((acc, i) => {
-      if (acc && acc.data) {
-        const decoded = PerpMarketLayout.decode(acc.data);
-        return new PerpMarket(this.perpMarkets[i].perpMarket, decoded);
-      }
-      return undefined;
-    });
-  }
-  */
 }

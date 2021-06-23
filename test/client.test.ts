@@ -2,33 +2,33 @@
 import { Account } from '@solana/web3.js';
 import { expect } from 'chai';
 import * as Test from './utils';
-import { MerpsClient } from '../src';
-import MerpsGroup, { QUOTE_INDEX } from '../src/MerpsGroup';
+import { MangoClient } from '../src';
+import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
 import { sleep, zeroKey } from '../src/utils';
-import MerpsAccount from '../src/MerpsAccount';
+import MangoAccount from '../src/MangoAccount';
 
-describe('MerpsClient', async () => {
-  let client: MerpsClient;
+describe('MangoClient', async () => {
+  let client: MangoClient;
   let payer: Account;
   const connection = Test.createDevnetConnection();
 
   before(async () => {
-    client = new MerpsClient(connection, Test.MerpsProgramId);
+    client = new MangoClient(connection, Test.MangoProgramId);
     sleep(2000); // sleeping because devnet rate limits suck
     payer = await Test.createAccount(connection);
     sleep(2000); // sleeping because devnet rate limits suck
   });
 
-  describe('initMerpsGroup', async () => {
-    it('should successfully create a MerpsGroup', async () => {
+  describe('initMangoGroup', async () => {
+    it('should successfully create a MangoGroup', async () => {
       sleep(1000); // sleeping because devnet rate limits suck
-      const groupKey = await client.initMerpsGroup(
+      const groupKey = await client.initMangoGroup(
         Test.USDCMint,
         Test.DexProgramId,
         5,
         payer,
       );
-      const group = await client.getMerpsGroup(groupKey);
+      const group = await client.getMangoGroup(groupKey);
       expect(groupKey).to.not.be.undefined;
       expect(group).to.not.be.undefined;
       expect(group.tokens[QUOTE_INDEX].mint.toBase58(), 'quoteMint').to.equal(
@@ -44,16 +44,16 @@ describe('MerpsClient', async () => {
   });
 
   describe('cacheRootBanks', async () => {
-    let group: MerpsGroup;
+    let group: MangoGroup;
 
     before(async () => {
-      const groupKey = await client.initMerpsGroup(
+      const groupKey = await client.initMangoGroup(
         Test.USDCMint,
         Test.DexProgramId,
         5,
         payer,
       );
-      group = await client.getMerpsGroup(groupKey);
+      group = await client.getMangoGroup(groupKey);
     });
 
     it('should successfully update the cache', async () => {
@@ -63,31 +63,31 @@ describe('MerpsClient', async () => {
 
       await client.cacheRootBanks(
         group.publicKey,
-        group.merpsCache,
+        group.mangoCache,
         rootBankPks,
         payer,
       );
     });
   });
 
-  describe.skip('initMerpsAccount, deposit, and withdraw', async () => {
-    let group: MerpsGroup;
+  describe.skip('initMangoAccount, deposit, and withdraw', async () => {
+    let group: MangoGroup;
     let user: Account;
-    let merpsAccount: MerpsAccount;
+    let mangoAccount: MangoAccount;
     let userTokenAcc: Account;
 
     before(async () => {
-      const groupKey = await client.initMerpsGroup(
+      const groupKey = await client.initMangoGroup(
         Test.USDCMint,
         Test.DexProgramId,
         5,
         payer,
       );
-      group = await client.getMerpsGroup(groupKey);
+      group = await client.getMangoGroup(groupKey);
       user = await Test.createAccount(connection, 5);
-      const merpsAccountPk = await client.initMerpsAccount(group, user);
-      merpsAccount = await client.getMerpsAccount(
-        merpsAccountPk,
+      const mangoAccountPk = await client.initMangoAccount(group, user);
+      mangoAccount = await client.getMangoAccount(
+        mangoAccountPk,
         Test.DexProgramId,
       );
     });
@@ -104,7 +104,7 @@ describe('MerpsClient', async () => {
 
         await client.deposit(
           group,
-          merpsAccount.publicKey,
+          mangoAccount.publicKey,
           user,
           group.tokens[QUOTE_INDEX].rootBank,
           usdcRootBank.nodeBanks[0],

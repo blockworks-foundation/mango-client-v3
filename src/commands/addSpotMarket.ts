@@ -1,6 +1,6 @@
 import { Market } from '@project-serum/serum';
 import { Account, Connection, PublicKey } from '@solana/web3.js';
-import { MerpsClient } from '../client';
+import { MangoClient } from '../client';
 import {
   getOracleBySymbol,
   getSpotMarketByBaseSymbol,
@@ -19,9 +19,9 @@ export default async function addSpotMarket(
   maintLeverage: number,
   initLeverage: number,
 ): Promise<GroupConfig> {
-  const client = new MerpsClient(connection, groupConfig.merpsProgramId);
+  const client = new MangoClient(connection, groupConfig.mangoProgramId);
 
-  let group = await client.getMerpsGroup(groupConfig.publicKey);
+  let group = await client.getMangoGroup(groupConfig.publicKey);
   const oracleDesc = getOracleBySymbol(groupConfig, symbol) as OracleConfig;
   const marketIndex = group.getOracleIndex(oracleDesc.publicKey);
 
@@ -35,7 +35,7 @@ export default async function addSpotMarket(
     initLeverage,
   );
 
-  group = await client.getMerpsGroup(groupConfig.publicKey);
+  group = await client.getMangoGroup(groupConfig.publicKey);
   const market = await Market.load(
     connection,
     spotMarket,
