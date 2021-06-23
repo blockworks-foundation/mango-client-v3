@@ -162,7 +162,7 @@ export class Keeper {
                 merpsGroup.publicKey,
                 m.publicKey,
                 m.eventQueue,
-                accounts,
+                [...new Map(accounts.map((a) => [a.toBase58(), a])).values()],
                 payer,
                 new BN(events.length),
               );
