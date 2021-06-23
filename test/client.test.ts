@@ -104,7 +104,7 @@ describe('MangoClient', async () => {
 
         await client.deposit(
           group,
-          mangoAccount.publicKey,
+          mangoAccount,
           user,
           group.tokens[QUOTE_INDEX].rootBank,
           usdcRootBank.nodeBanks[0],
