@@ -658,24 +658,6 @@ export class MerpsClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
-  async loadRootBanks(rootBanks: PublicKey[]): Promise<RootBank[]> {
-    const accounts = await Promise.all(
-      rootBanks.map((pk) => this.connection.getAccountInfo(pk)),
-    );
-
-    const parsedRootBanks: RootBank[] = [];
-
-    for (let i = 0; i < accounts.length; i++) {
-      const acc = accounts[i];
-      if (acc) {
-        const decoded = RootBankLayout.decode(acc.data);
-        parsedRootBanks.push(new RootBank(rootBanks[i], decoded));
-      }
-    }
-
-    return parsedRootBanks;
-  }
-
   /*
   async loadPerpMarkets(perpMarkets: PublicKey[]): Promise<PerpMarket[]> {
     const accounts = await Promise.all(
@@ -857,11 +839,15 @@ export class MerpsClient {
 
     const spotMarketIndex = merpsGroup.getSpotMarketIndex(spotMarket.publicKey);
 
-    const { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank } =
-      await merpsGroup.loadBanksForSpotMarket(this.connection, spotMarketIndex);
+    const rootBanks = await merpsGroup.loadRootBanks(this.connection);
+    const baseRootBank = rootBanks[0];
+    const quoteRootBank = rootBanks[QUOTE_INDEX];
+    const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
+    const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
 
-    if (!baseRootBank || !baseNodeBank || !quoteRootBank || !quoteNodeBank)
-      throw new Error('Empty banks');
+    if (!baseRootBank || !quoteRootBank || !baseNodeBank || !quoteNodeBank) {
+      throw new Error('Invalid or missing banks');
+    }
 
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
@@ -998,8 +984,11 @@ export class MerpsClient {
       spotMarket.programId,
     );
 
-    const { baseNodeBank, quoteNodeBank } =
-      await merpsGroup.loadBanksForSpotMarket(this.connection, marketIndex);
+    const rootBanks = await merpsGroup.loadRootBanks(this.connection);
+    const baseRootBank = rootBanks[0];
+    const quoteRootBank = rootBanks[QUOTE_INDEX];
+    const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
+    const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
 
     if (!baseNodeBank || !quoteNodeBank) {
       throw new Error('Invalid or missing node banks');

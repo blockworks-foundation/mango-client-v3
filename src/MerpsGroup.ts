@@ -147,39 +147,6 @@ export default class MerpsGroup {
     return parsedRootBanks;
   }
 
-  async loadBanksForSpotMarket(
-    connection: Connection,
-    spotMarketIndex: number,
-  ): Promise<{
-    baseRootBank: RootBank | undefined;
-    baseNodeBank: NodeBank | undefined;
-    quoteRootBank: RootBank | undefined;
-    quoteNodeBank: NodeBank | undefined;
-  }> {
-    // TODO only load the root bank for the spot mkt
-    const rootBanks = await this.loadRootBanks(connection);
-
-    const baseRootBank = rootBanks[spotMarketIndex];
-    const quoteRootBank = rootBanks[QUOTE_INDEX];
-
-    // TODO need to handle multiple node banks
-    const nodeBankIndex = 0;
-    const baseNodeBankPk = baseRootBank?.nodeBanks[nodeBankIndex];
-    const quoteNodeBankPk = quoteRootBank?.nodeBanks[nodeBankIndex];
-
-    const baseNodeBanks = await baseRootBank?.loadNodeBanks(connection);
-    const quoteNodeBanks = await quoteRootBank?.loadNodeBanks(connection);
-
-    const baseNodeBank = baseNodeBanks?.find(
-      (nodeBank) => nodeBank?.publicKey == baseNodeBankPk,
-    );
-    const quoteNodeBank = quoteNodeBanks?.find(
-      (nodeBank) => nodeBank?.publicKey == quoteNodeBankPk,
-    );
-
-    return { baseRootBank, baseNodeBank, quoteRootBank, quoteNodeBank };
-  }
-
   async loadPerpMarket(
     connection: Connection,
     marketIndex: number,
