@@ -115,3 +115,10 @@ Enable a perp-maket
 ```
 yarn cli add-perp-market mango_test_v2.2 BTC
 ```
+
+## Run the Keeper
+Update the `groupName` in `src/keeper.ts` and then run:
+
+```
+yarn keeper
+```
