@@ -65,6 +65,30 @@ export default class PerpMarket {
       .toNumber();
   }
 
+  parseFillEvent(event) {
+    let size, price, side, priceBeforeFees;
+
+    if (event.quoteChange.negative == 1) {
+      // bid
+      side = 'buy';
+      priceBeforeFees = event.quoteChange;
+      price = this.priceLotsToNumber(priceBeforeFees);
+      size = this.baseLotsToNumber(event.baseChange);
+    } else {
+      // ask
+      side = 'sell';
+      priceBeforeFees = event.quoteChange;
+      price = this.priceLotsToNumber(priceBeforeFees);
+      size = this.baseLotsToNumber(event.baseChange);
+    }
+    return {
+      ...event,
+      side,
+      price,
+      size,
+    };
+  }
+
   async loadEventQueue(connection: Connection): Promise<PerpEventQueue> {
     const acc = await connection.getAccountInfo(this.eventQueue);
     const parsed = PerpEventQueueLayout.decode(acc?.data);
@@ -76,7 +100,8 @@ export default class PerpMarket {
     return q
       .eventsSince(new BN(0))
       .map((e) => e.fill)
-      .filter((e) => !!e) as FillEvent[];
+      .filter((e) => !!e)
+      .map(this.parseFillEvent.bind(this)) as FillEvent[];
   }
 
   async loadBids(connection: Connection): Promise<BookSide> {
