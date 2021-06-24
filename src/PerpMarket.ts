@@ -104,6 +104,7 @@ export default class PerpMarket {
       this.loadBids(connection),
       this.loadAsks(connection),
     ]);
+    // @ts-ignore
     return [...bids, ...asks].filter(
       (order) => order.owner === account.publicKey,
     );
