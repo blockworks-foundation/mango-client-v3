@@ -7,13 +7,13 @@ JavaScript client library for interacting with Mango Markets DEX v3.
 Using npm:
 
 ```
-npm install @solana/web3.js @project-serum/serum @blockworks-foundation/mango-client
+npm install @blockworks-foundation/mango-client
 ```
 
 Using yarn:
 
 ```
-yarn add @solana/web3.js @project-serum/serum @blockworks-foundation/mango-client
+yarn add @blockworks-foundation/mango-client
 ```
 
 ## Usage Example

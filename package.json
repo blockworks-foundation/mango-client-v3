@@ -1,10 +1,10 @@
 {
-  "name": "mango-client",
-  "version": "3.0.0",
+  "name": "@blockworks-foundation/mango-client",
+  "version": "3.0.1",
   "description": "Client to interact with the Mango program on Solana",
   "main": "lib/src/index.js",
   "types": "lib/src/index.d.ts",
-  "repository": "git@github.com:blockworks-foundation/mango-ts.git",
+  "repository": "https://github.com/blockworks-foundation/mango-client-v3",
   "author": {
     "name": "Blockworks Foundation",
     "email": "hello@blockworks.foundation",
