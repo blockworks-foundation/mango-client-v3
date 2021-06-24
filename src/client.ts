@@ -966,7 +966,7 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     spotMarkets: Market[],
-    owner: Account,
+    owner: Account | WalletAdapter,
   ): Promise<TransactionSignature | null> {
     const transaction = new Transaction();
 
