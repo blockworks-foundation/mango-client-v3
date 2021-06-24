@@ -35,6 +35,7 @@ import {
   PerpEventLayout,
   EventQueue,
   EventQueueLayout,
+  MAX_TOKENS,
 } from './layout';
 import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
 import MangoAccount from './MangoAccount';
@@ -959,6 +960,85 @@ export class MangoClient {
 
     const additionalSigners = [];
     return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async settleAll(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    spotMarkets: Market[],
+    owner: Account,
+  ): Promise<TransactionSignature | null> {
+    const transaction = new Transaction();
+
+    const assetGains: number[] = new Array(MAX_TOKENS).fill(0);
+
+    for (let i = 0; i < spotMarkets.length; i++) {
+      const openOrdersAccount = mangoAccount.spotOpenOrdersAccounts[i];
+      if (openOrdersAccount === undefined) {
+        continue;
+      } else if (
+        openOrdersAccount.quoteTokenFree.toNumber() +
+          openOrdersAccount['referrerRebatesAccrued'].toNumber() ===
+          0 &&
+        openOrdersAccount.baseTokenFree.toNumber() === 0
+      ) {
+        continue;
+      }
+
+      assetGains[i] += openOrdersAccount.baseTokenFree.toNumber();
+      assetGains[MAX_TOKENS - 1] +=
+        openOrdersAccount.quoteTokenFree.toNumber() +
+        openOrdersAccount['referrerRebatesAccrued'].toNumber();
+
+      const spotMarket = spotMarkets[i];
+      const dexSigner = await PublicKey.createProgramAddress(
+        [
+          spotMarket.publicKey.toBuffer(),
+          spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+        ],
+        spotMarket.programId,
+      );
+
+      const rootBanks = await mangoGroup.loadRootBanks(this.connection);
+      const baseRootBank = rootBanks[0];
+      const quoteRootBank = rootBanks[QUOTE_INDEX];
+      const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
+      const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
+
+      if (!baseNodeBank || !quoteNodeBank) {
+        throw new Error('Invalid or missing node banks');
+      }
+
+      const instruction = makeSettleFundsInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        owner.publicKey,
+        mangoAccount.publicKey,
+        spotMarket.programId,
+        spotMarket.publicKey,
+        mangoAccount.spotOpenOrders[i],
+        mangoGroup.signerKey,
+        spotMarket['_decoded'].baseVault,
+        spotMarket['_decoded'].quoteVault,
+        mangoGroup.tokens[i].rootBank,
+        baseNodeBank.publicKey,
+        mangoGroup.tokens[QUOTE_INDEX].rootBank,
+        quoteNodeBank.publicKey,
+        baseNodeBank.vault,
+        quoteNodeBank.vault,
+        dexSigner,
+      );
+
+      const transaction = new Transaction();
+      transaction.add(instruction);
+    }
+
+    const additionalSigners = [];
+    if (transaction.instructions.length == 0) {
+      return null;
+    } else {
+      return await this.sendTransaction(transaction, owner, additionalSigners);
+    }
   }
 
   /**
