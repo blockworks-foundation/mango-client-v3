@@ -1029,7 +1029,6 @@ export class MangoClient {
         dexSigner,
       );
 
-      const transaction = new Transaction();
       transaction.add(instruction);
     }
 
