@@ -66,26 +66,18 @@ export default class PerpMarket {
   }
 
   parseFillEvent(event) {
-    let size, price, side, priceBeforeFees;
+    let side;
 
     if (event.quoteChange.negative == 1) {
-      // bid
       side = 'buy';
-      priceBeforeFees = event.quoteChange;
-      price = this.priceLotsToNumber(priceBeforeFees);
-      size = this.baseLotsToNumber(event.baseChange);
     } else {
-      // ask
       side = 'sell';
-      priceBeforeFees = event.quoteChange;
-      price = this.priceLotsToNumber(priceBeforeFees);
-      size = this.baseLotsToNumber(event.baseChange);
     }
     return {
       ...event,
       side,
-      price,
-      size,
+      price: Math.abs(this.priceLotsToNumber(event.quoteChange)),
+      size: Math.abs(this.baseLotsToNumber(event.baseChange)),
     };
   }
 
