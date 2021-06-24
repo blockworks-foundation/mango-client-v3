@@ -34,10 +34,13 @@ class _I80F48Layout extends Blob {
   }
 
   decode(b, offset) {
-    return new I80F48(new BN(super.decode(b, offset), 10, 'le'));
+    let result = new BN(super.decode(b, offset), 10, 'le');
+    result = result.fromTwos(8 * this['length']);
+    return new I80F48(result);
   }
 
   encode(src, b, offset) {
+    src = src.toTwos(8 * this['length']);
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
@@ -389,6 +392,7 @@ export class SpotMarketInfo {
   initAssetWeight!: I80F48;
   maintLiabWeight!: I80F48;
   initLiabWeight!: I80F48;
+  liquidationFee!: I80F48;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -408,6 +412,7 @@ export class SpotMarketInfoLayout extends Structure {
         I80F48Layout('initAssetWeight'),
         I80F48Layout('maintLiabWeight'),
         I80F48Layout('initLiabWeight'),
+        I80F48Layout('liquidationFee'),
       ],
       property,
     );
@@ -648,11 +653,14 @@ export const MangoAccountLayout = struct([
   metaDataLayout('metaData'),
   publicKeyLayout('mangoGroup'),
   publicKeyLayout('owner'),
-  seq(bool(), MAX_TOKENS, 'inBasket'),
+  seq(bool(), MAX_PAIRS, 'inMarginBasket'),
+  u8('numInMarginBasket'),
   seq(I80F48Layout(), MAX_TOKENS, 'deposits'),
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
   seq(perpAccountLayout(), MAX_PAIRS, 'perpAccounts'),
+  bool('beingLiquidated'),
+  seq(u8(), 7, 'padding'),
 ]);
 
 export const RootBankLayout = struct([

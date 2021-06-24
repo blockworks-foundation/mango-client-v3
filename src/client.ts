@@ -44,7 +44,6 @@ import {
   makeAddOracleInstruction,
   makeAddPerpMarketInstruction,
   makeAddSpotMarketInstruction,
-  makeAddToBasketInstruction,
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
@@ -358,23 +357,11 @@ export class MangoClient {
 
     const transaction = new Transaction();
 
-    if (!mangoAccount.inBasket[tokenIndex]) {
-      // TODO: find out why this does not work
-      transaction.add(
-        makeAddToBasketInstruction(
-          this.programId,
-          mangoGroup.publicKey,
-          mangoAccount.publicKey,
-          owner.publicKey,
-          new BN(tokenIndex),
-        ),
-      );
-    }
-
     const instruction = makeDepositInstruction(
       this.programId,
       mangoGroup.publicKey,
       owner.publicKey,
+      mangoGroup.mangoCache,
       mangoAccount.publicKey,
       rootBank,
       nodeBank,
@@ -599,18 +586,6 @@ export class MangoClient {
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
-    if (!mangoAccount.inBasket[marketIndex]) {
-      transaction.add(
-        makeAddToBasketInstruction(
-          this.programId,
-          mangoGroup.publicKey,
-          mangoAccount.publicKey,
-          owner.publicKey,
-          new BN(marketIndex),
-        ),
-      );
-    }
-
     const instruction = makePlacePerpOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -781,28 +756,6 @@ export class MangoClient {
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 
-  async addToBasket(
-    mangoGroup: MangoGroup,
-    mangoAccount: MangoAccount,
-    owner: Account | WalletAdapter,
-
-    marketIndex: number,
-  ): Promise<TransactionSignature> {
-    const instruction = makeAddToBasketInstruction(
-      this.programId,
-      mangoGroup.publicKey,
-      mangoAccount.publicKey,
-      owner.publicKey,
-      new BN(marketIndex),
-    );
-
-    const transaction = new Transaction();
-    transaction.add(instruction);
-
-    const additionalSigners = [];
-    return await this.sendTransaction(transaction, owner, additionalSigners);
-  }
-
   async placeSpotOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -852,20 +805,6 @@ export class MangoClient {
 
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
-
-    if (!mangoAccount.inBasket[spotMarketIndex]) {
-      // TODO: find out why this does not work
-      transaction.add(
-        makeAddToBasketInstruction(
-          this.programId,
-          mangoGroup.publicKey,
-          mangoAccount.publicKey,
-          owner.publicKey,
-          new BN(spotMarketIndex),
-        ),
-      );
-    }
-
     const openOrdersKeys: PublicKey[] = [];
     for (let i = 0; i < mangoAccount.spotOpenOrders.length; i++) {
       if (
@@ -1047,15 +986,7 @@ export class MangoClient {
       return null;
     }
 
-    const filter = {
-      memcmp: {
-        offset: MangoAccountLayout.offsetOf('inBasket') + marketIndex,
-        bytes: '2', // TODO - check if this actually works; needs to be base58 encoding of true byte
-      },
-    };
-
-    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [filter]);
-
+    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
     const sign = pnl.gt(ZERO_I80F48) ? 1 : -1;
 
     const accountsWithPnl = mangoAccounts

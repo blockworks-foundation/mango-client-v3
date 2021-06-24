@@ -263,11 +263,11 @@ yargs(hideBin(process.argv))
           type: 'string',
         })
         .option('maint_leverage', {
-          default: 20,
+          default: 10,
           type: 'number',
         })
         .option('init_leverage', {
-          default: 10,
+          default: 5,
           type: 'number',
         })
         .option(...clusterDesc)
