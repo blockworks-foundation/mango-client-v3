@@ -129,29 +129,29 @@
     {
       "cluster": "devnet",
       "name": "mango_test_v3.1",
-      "publicKey": "AfdA3gjST5W8KS4ceCjWzHSBNYcwqMRrdvSQgctbJuXF",
+      "publicKey": "5v95G3z5wxA9DLUCYgaSFGR3opBaRZa3zMh2ZKHJGK3x",
       "quoteSymbol": "USDC",
       "mangoProgramId": "Hm3U4wFaR66SmuXj66u9AuUNUqa6T8Ldb5D9uHBs3SHd",
       "serumProgramId": "DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY",
       "tokens": [
         {
           "symbol": "USDC",
-          "mintKey": "EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK",
-          "decimals": 9,
-          "rootKey": "3XR3xU8s98unNDqvb8ogtQsVDwpDMXEnj7EBUgkkssm9",
+          "mintKey": "3u7PfrgTAKgEtNhNdAD4DDmNGfYfv5djGAPixGgepsPp",
+          "decimals": 6,
+          "rootKey": "9CkoHoJaKDYwppb3AgWqoayTm43YKmJqzf8VaimekYEW",
           "nodeKeys": [
-            "De4mJBM7EmFKpkozjbnwSzPRnKH5rehLhxMD5SBjPDcM"
+            "CE5oyjg3LA39RrhvHX6BUwgvzpvvrMRW4RHNqgDWidDm"
           ]
         }
       ],
       "oracles": [
         {
-          "symbol": "BTC",
-          "publicKey": "HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J"
+          "symbol": "SOL",
+          "publicKey": "GSeQEiqdzsNXintpsADjzcpaUgn3o1YApHbCWvZzC2DM"
         },
         {
-          "symbol": "SOL",
-          "publicKey": "BYC71sDEKp5NiP1r3CjUTG9PC4ioJqKxfYpQvaRktuTi"
+          "symbol": "BTC",
+          "publicKey": "HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J"
         }
       ],
       "perpMarkets": [],
