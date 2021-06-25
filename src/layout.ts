@@ -680,6 +680,7 @@ export const NodeBankLayout = struct([
 ]);
 
 export const StubOracleLayout = struct([
+  seq(u8(), 8),
   I80F48Layout('price'),
   u64('lastUpdate'),
 ]);
