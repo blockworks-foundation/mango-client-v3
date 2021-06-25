@@ -270,7 +270,7 @@ export class Config {
     if (_group) {
       Object.assign(_group, group);
     } else {
-      this.groups.push(group);
+      this.groups.unshift(group);
     }
   }
 }
