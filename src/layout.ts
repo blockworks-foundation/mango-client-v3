@@ -14,10 +14,10 @@ import {
   greedy,
   nu64,
 } from 'buffer-layout';
-import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import BN from 'bn.js';
-import { promiseUndef, zeroKey } from './utils';
+import { zeroKey } from './utils';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;

@@ -72,7 +72,7 @@ export class Keeper {
       }),
     );
 
-    let lastSeqNums = {};
+    const lastSeqNums = {};
     perpMarkets.forEach((m) => {
       lastSeqNums[m.publicKey.toBase58()] = new BN(0);
     });
