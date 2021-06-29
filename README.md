@@ -92,10 +92,22 @@ Create a new mango group on devnet:
 yarn cli init-group mango_test_v2.2 66DFouNQBY1EWyBed3WPicjhwD1FoyTtNCzAowcR8vad DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK
 ```
 
+Create a new mango group on devnet with new USDC:
+
+```
+yarn cli init-group mango_test_v3.1 Hm3U4wFaR66SmuXj66u9AuUNUqa6T8Ldb5D9uHBs3SHd DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY 3u7PfrgTAKgEtNhNdAD4DDmNGfYfv5djGAPixGgepsPp
+```
+
 Add a stub oracle:
 
 ```
 yarn cli add-oracle mango_test_v2.2 BTC
+```
+
+Add a pyth oracle:
+
+```
+yarn cli add-oracle mango_test_v3.1 BTC --provider pyth
 ```
 
 Set stub oracle value = base_price \* quote_unit / base_unit:

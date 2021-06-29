@@ -51,6 +51,9 @@ export class I80F48 {
   static fromU64(x: BN): I80F48 {
     return this.fromString(x.toString());
   }
+  toTwos(): BN {
+    return this.data.toTwos(I80F48.MAX_SIZE);
+  }
   toString(): string {
     return this.toFixed();
   }

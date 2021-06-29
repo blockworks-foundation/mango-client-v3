@@ -129,62 +129,33 @@
     {
       "cluster": "devnet",
       "name": "mango_test_v3.1",
-      "publicKey": "ECAikQUnS8HGLnzGrqEYA6Daz8nRRu9GsbfLbwMfK23P",
+      "publicKey": "5v95G3z5wxA9DLUCYgaSFGR3opBaRZa3zMh2ZKHJGK3x",
       "quoteSymbol": "USDC",
-      "mangoProgramId": "32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt",
+      "mangoProgramId": "Hm3U4wFaR66SmuXj66u9AuUNUqa6T8Ldb5D9uHBs3SHd",
       "serumProgramId": "DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY",
       "tokens": [
         {
           "symbol": "USDC",
-          "mintKey": "EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK",
-          "decimals": 9,
-          "rootKey": "3PsKwGDZ5gmaD1A4WGshqV1QNMFaGUwbCfUHqNPsdEDu",
-          "nodeKeys": [
-            "5APQkwB51781DdrDDz6WyAf2aVSCB6VYes5By1AzhaBS"
-          ]
-        },
-        {
-          "symbol": "BTC",
-          "mintKey": "bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP",
+          "mintKey": "3u7PfrgTAKgEtNhNdAD4DDmNGfYfv5djGAPixGgepsPp",
           "decimals": 6,
-          "rootKey": "5PQtg8yKbe24T2BwkwjG8sypHcUrXqMjfZZXox2kwzz3",
+          "rootKey": "9CkoHoJaKDYwppb3AgWqoayTm43YKmJqzf8VaimekYEW",
           "nodeKeys": [
-            "7AhVZ8vsu4rvKFFCS8aapUa7wJSZBHjU217B9GZxtsiA"
+            "CE5oyjg3LA39RrhvHX6BUwgvzpvvrMRW4RHNqgDWidDm"
           ]
         }
       ],
       "oracles": [
         {
+          "symbol": "SOL",
+          "publicKey": "GSeQEiqdzsNXintpsADjzcpaUgn3o1YApHbCWvZzC2DM"
+        },
+        {
           "symbol": "BTC",
-          "publicKey": "FarMfhHNeADpP2Qe3SPEQCeSZFwnPVPgrgWrHYVzpbht"
+          "publicKey": "HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J"
         }
       ],
-      "perpMarkets": [
-        {
-          "name": "BTC-PERP",
-          "publicKey": "6VedaWmmN41KqphpXU2jKAa1QVVVVavzcQxFfSHhApzn",
-          "baseSymbol": "BTC",
-          "baseDecimals": 6,
-          "quoteDecimals": 9,
-          "marketIndex": 0,
-          "bidsKey": "6u92ay9UxJmE9YmNrUfuNkfJ8UgfXJwhrkEWah816KVM",
-          "asksKey": "GCs3usb9kFrnvP62G8QFdckbbAQJ1LvbsxGWPgFKen5U",
-          "eventsKey": "8ubk1RG7t9678e4eNqAzCbiM7jbmfptYCEEtCiwktRGy"
-        }
-      ],
-      "spotMarkets": [
-        {
-          "name": "BTC/USDC",
-          "publicKey": "E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9",
-          "baseSymbol": "BTC",
-          "baseDecimals": 6,
-          "quoteDecimals": 9,
-          "marketIndex": 0,
-          "bidsKey": "8ovMqp4Tb7xe4r3bXdeyzzucMQfemcn2Wi2j55aYS2rR",
-          "asksKey": "GJ5PKrUkGrjHRhP1kNztgfHixYXyNpsRy8S2StBQ171n",
-          "eventsKey": "4xJ5T9c7m5wyt9Xw4PnP6yAU1sdqaegsiyGC6CvG2mUJ"
-        }
-      ]
+      "perpMarkets": [],
+      "spotMarkets": []
     }
   ]
 }

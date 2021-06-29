@@ -647,6 +647,7 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('dexProgramId'),
   publicKeyLayout('mangoCache'),
   u64('validInterval'),
+  publicKeyLayout('insuranceVault'),
 ]);
 
 export const MangoAccountLayout = struct([
@@ -660,7 +661,8 @@ export const MangoAccountLayout = struct([
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
   seq(perpAccountLayout(), MAX_PAIRS, 'perpAccounts'),
   bool('beingLiquidated'),
-  seq(u8(), 7, 'padding'),
+  bool('isBankrupt'),
+  seq(u8(), 6, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
@@ -680,6 +682,7 @@ export const NodeBankLayout = struct([
 ]);
 
 export const StubOracleLayout = struct([
+  seq(u8(), 8),
   I80F48Layout('price'),
   u64('lastUpdate'),
 ]);

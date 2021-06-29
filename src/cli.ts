@@ -10,6 +10,7 @@ import {
   addPerpMarket,
   addSpotMarket,
   addStubOracle,
+  addPythOracle,
   initGroup,
   setStubOracle,
 } from './commands';
@@ -130,7 +131,7 @@ yargs(hideBin(process.argv))
         .option('provider', {
           describe: 'oracle provider',
           default: 'stub',
-          choices: ['stub' /*, 'pyth'*/],
+          choices: ['stub' , 'pyth'],
         })
         .option(...clusterDesc)
         .option(...configDesc)
@@ -145,12 +146,24 @@ yargs(hideBin(process.argv))
         cluster,
         args.group as string,
       ) as GroupConfig;
-      const result = await addStubOracle(
-        connection,
-        account,
-        group,
-        args.symbol as string,
-      );
+      let result: any;
+      if (args.provider === 'pyth') {
+        result = await addPythOracle(
+          connection,
+          account,
+          group,
+          args.symbol as string,
+        );
+      } else if (args.provider === 'stub') {
+        result = await addStubOracle(
+          connection,
+          account,
+          group,
+          args.symbol as string,
+        );
+      } else {
+        throw new Error();
+      }
       config.storeGroup(result);
       writeConfig(args.config as string, config);
       process.exit(0);
