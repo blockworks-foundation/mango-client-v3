@@ -40,6 +40,7 @@
           "name": "BTC-PERP",
           "publicKey": "7hei6GvQPpkPcJGjELXKZP5fpZSdKbfFMFWN43zi76V9",
           "baseSymbol": "BTC",
+          "baseDecimals": 6,
           "quoteDecimals": 9,
           "marketIndex": 0,
           "bidsKey": "5yzvc5oNWsRWj6aaGzMmtdDSxtD6upfkX67NtE59HrVn",
