@@ -14,6 +14,7 @@ import {
   TransactionSignature,
 } from '@solana/web3.js';
 import { TokenInstructions } from '@project-serum/serum';
+import { I80F48 } from './fixednum';
 
 export const zeroKey = new PublicKey(new Uint8Array(32));
 
@@ -27,6 +28,10 @@ export function uiToNative(amount: number, decimals: number): BN {
 
 export function nativeToUi(amount: number, decimals: number): number {
   return amount / Math.pow(10, decimals);
+}
+
+export function nativeI80F48ToUi(amount: I80F48, decimals: number): I80F48 {
+  return amount.div(I80F48.fromNumber(Math.pow(10, decimals)));
 }
 
 export async function awaitTransactionSignatureConfirmation(

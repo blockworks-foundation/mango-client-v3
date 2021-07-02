@@ -7,7 +7,7 @@ import {
   OPTIMAL_RATE,
   OPTIMAL_UTIL,
 } from './layout';
-import { getMultipleAccounts, zeroKey } from './utils';
+import { getMultipleAccounts, nativeI80F48ToUi, zeroKey } from './utils';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 
@@ -71,16 +71,18 @@ export default class RootBank {
   getUiTotalDeposit(mangoGroup: MangoGroup): I80F48 {
     const tokenIndex = mangoGroup.getRootBankIndex(this.publicKey);
 
-    return this.getNativeTotalDeposit().div(
-      I80F48.fromNumber(mangoGroup.tokens[tokenIndex].decimals),
+    return nativeI80F48ToUi(
+      this.getNativeTotalDeposit(),
+      mangoGroup.tokens[tokenIndex].decimals,
     );
   }
 
   getUiTotalBorrow(mangoGroup: MangoGroup): I80F48 {
     const tokenIndex = mangoGroup.getRootBankIndex(this.publicKey);
 
-    return this.getNativeTotalBorrow().div(
-      I80F48.fromNumber(mangoGroup.tokens[tokenIndex].decimals),
+    return nativeI80F48ToUi(
+      this.getNativeTotalBorrow(),
+      mangoGroup.tokens[tokenIndex].decimals,
     );
   }
 
