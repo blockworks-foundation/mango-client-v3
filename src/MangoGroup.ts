@@ -54,18 +54,18 @@ export default class MangoGroup {
     throw new Error('This Oracle does not belong to this MangoGroup');
   }
 
-  getSpotMarketIndex(spotMarket: PublicKey): number {
+  getSpotMarketIndex(spotMarketPk: PublicKey): number {
     for (let i = 0; i < this.numOracles; i++) {
-      if (this.spotMarkets[i].spotMarket.equals(spotMarket)) {
+      if (this.spotMarkets[i].spotMarket.equals(spotMarketPk)) {
         return i;
       }
     }
     throw new Error('This Market does not belong to this MangoGroup');
   }
 
-  getPerpMarketIndex(perpMarket: PerpMarket): number {
+  getPerpMarketIndex(perpMarketPk: PublicKey): number {
     for (let i = 0; i < this.numOracles; i++) {
-      if (this.perpMarkets[i].perpMarket.equals(perpMarket.publicKey)) {
+      if (this.perpMarkets[i].perpMarket.equals(perpMarketPk)) {
         return i;
       }
     }
@@ -104,6 +104,12 @@ export default class MangoGroup {
       throw new Error(`Root bank at index ${tokenIndex} is not loaded`);
 
     return rootBank.getDepositRate(this);
+  }
+
+  getPrice(tokenIndex: number, mangoCache: MangoCache): I80F48 {
+    return mangoCache.priceCache[tokenIndex]?.price
+      .mul(I80F48.fromNumber(Math.pow(10, this.tokens[tokenIndex].decimals)))
+      .div(I80F48.fromNumber(Math.pow(10, this.tokens[QUOTE_INDEX].decimals)));
   }
 
   async loadCache(connection: Connection): Promise<MangoCache> {

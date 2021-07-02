@@ -1,6 +1,6 @@
 import { OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { I80F48 } from './fixednum';
+import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import {
   MAX_PAIRS,
   MangoAccountLayout,
@@ -9,7 +9,7 @@ import {
   PerpAccount,
   RootBankCache,
 } from './layout';
-import { promiseUndef, zeroKey } from './utils';
+import { nativeToUi, promiseUndef, zeroKey } from './utils';
 import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
 import RootBank from './RootBank';
 
@@ -31,7 +31,6 @@ export default class MangoAccount {
 
   beingLiquidated!: boolean;
 
-
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);
@@ -43,6 +42,27 @@ export default class MangoAccount {
     const acc = await connection.getAccountInfo(this.publicKey);
     Object.assign(this, MangoAccountLayout.decode(acc?.data));
     return this;
+  }
+
+  // TODO: use getMultipleAccounts instead
+  async loadOpenOrders(
+    connection: Connection,
+    serumDexPk: PublicKey,
+  ): Promise<(OpenOrders | undefined)[]> {
+    const promises: Promise<OpenOrders | undefined>[] = [];
+
+    for (let i = 0; i < this.spotOpenOrders.length; i++) {
+      if (this.spotOpenOrders[i].equals(zeroKey)) {
+        promises.push(promiseUndef());
+      } else {
+        promises.push(
+          OpenOrders.load(connection, this.spotOpenOrders[i], serumDexPk),
+        );
+      }
+    }
+
+    this.spotOpenOrdersAccounts = await Promise.all(promises);
+    return this.spotOpenOrdersAccounts;
   }
 
   getNativeDeposit(
@@ -76,32 +96,144 @@ export default class MangoAccount {
     );
   }
 
-  // TODO: use getMultipleAccounts instead
-  async loadOpenOrders(
-    connection: Connection,
-    serumDexPk: PublicKey,
-  ): Promise<(OpenOrders | undefined)[]> {
-    const promises: Promise<OpenOrders | undefined>[] = [];
+  getSpotVal(mangoGroup, mangoCache, index, assetWeight) {
+    let assetsVal = ZERO_I80F48;
+    const price = mangoGroup.getPrice(index, mangoCache);
 
-    for (let i = 0; i < this.spotOpenOrders.length; i++) {
-      if (this.spotOpenOrders[i].equals(zeroKey)) {
-        promises.push(promiseUndef());
-      } else {
-        promises.push(
-          OpenOrders.load(connection, this.spotOpenOrders[i], serumDexPk),
-        );
-      }
+    const depositVal = this.getUiDeposit(
+      mangoCache.rootBankCache[index],
+      mangoGroup,
+      index,
+    )
+      .mul(price)
+      .mul(assetWeight);
+    assetsVal = assetsVal.add(depositVal);
+
+    const openOrdersAccount = this.spotOpenOrdersAccounts[index];
+    if (openOrdersAccount !== undefined) {
+      assetsVal = assetsVal.add(
+        I80F48.fromNumber(
+          nativeToUi(
+            openOrdersAccount.baseTokenTotal.toNumber(),
+            mangoGroup.tokens[index].decimals,
+          ),
+        )
+          .mul(price)
+          .mul(assetWeight),
+      );
+      assetsVal = assetsVal.add(
+        I80F48.fromNumber(
+          nativeToUi(
+            openOrdersAccount.quoteTokenTotal.toNumber() +
+              openOrdersAccount['referrerRebatesAccrued'].toNumber(),
+            mangoGroup.tokens[QUOTE_INDEX].decimals,
+          ),
+        ),
+      );
     }
 
-    this.spotOpenOrdersAccounts = await Promise.all(promises);
-    return this.spotOpenOrdersAccounts;
+    return assetsVal;
+  }
+
+  getAssetsVal(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    healthType?: HealthType,
+  ): I80F48 {
+    let assetsVal = ZERO_I80F48;
+
+    // quote currency deposits
+    assetsVal = assetsVal.add(
+      this.getUiDeposit(
+        mangoCache.rootBankCache[QUOTE_INDEX],
+        mangoGroup,
+        QUOTE_INDEX,
+      ),
+    );
+
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      let assetWeight = ONE_I80F48;
+      if (healthType === 'Maint') {
+        assetWeight = mangoGroup.spotMarkets[i].maintAssetWeight;
+      } else if (healthType === 'Init') {
+        assetWeight = mangoGroup.spotMarkets[i].initAssetWeight;
+      }
+
+      const spotVal = this.getSpotVal(mangoGroup, mangoCache, i, assetWeight);
+      assetsVal = assetsVal.add(spotVal);
+
+      // TODO get perp value
+    }
+
+    return assetsVal;
+  }
+
+  getLiabsVal(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    healthType?: HealthType,
+  ): I80F48 {
+    let liabsVal = ZERO_I80F48;
+
+    liabsVal = liabsVal.add(
+      this.getUiBorrow(
+        mangoCache.rootBankCache[QUOTE_INDEX],
+        mangoGroup,
+        QUOTE_INDEX,
+      ),
+    );
+
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      let liabWeight = ONE_I80F48;
+      if (healthType === 'Maint') {
+        liabWeight = mangoGroup.spotMarkets[i].maintLiabWeight;
+      } else if (healthType === 'Init') {
+        liabWeight = mangoGroup.spotMarkets[i].initLiabWeight;
+      }
+
+      liabsVal = liabsVal.add(
+        this.getUiBorrow(mangoCache.rootBankCache[i], mangoGroup, i).mul(
+          mangoGroup.getPrice(i, mangoCache).mul(liabWeight),
+        ),
+      );
+    }
+    return liabsVal;
+  }
+
+  getNativeLiabsVal(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    healthType?: HealthType,
+  ): I80F48 {
+    let liabsVal = ZERO_I80F48;
+
+    liabsVal = liabsVal.add(
+      this.getNativeBorrow(mangoCache.rootBankCache[QUOTE_INDEX], QUOTE_INDEX),
+    );
+
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      const price = mangoCache.priceCache[i].price;
+      let liabWeight = ONE_I80F48;
+      if (healthType === 'Maint') {
+        liabWeight = mangoGroup.spotMarkets[i].maintLiabWeight;
+      } else if (healthType === 'Init') {
+        liabWeight = mangoGroup.spotMarkets[i].initLiabWeight;
+      }
+
+      liabsVal = liabsVal.add(
+        this.getNativeBorrow(mangoCache.rootBankCache[i], i).mul(
+          price.mul(liabWeight),
+        ),
+      );
+    }
+    return liabsVal;
   }
 
   getSpotHealth(mangoCache, marketIndex, assetWeight, liabWeight): I80F48 {
     const bankCache = mangoCache.rootBankCache[marketIndex];
     const price = mangoCache.priceCache[marketIndex].price;
 
-    let [ooBase, ooQuote] = [I80F48.fromString('0'), I80F48.fromString('0')];
+    let [ooBase, ooQuote] = [ZERO_I80F48, ZERO_I80F48];
     const oo = this.spotOpenOrdersAccounts[marketIndex];
     if (oo !== undefined) {
       [ooBase, ooQuote] = [
@@ -121,6 +253,7 @@ export default class MangoAccount {
       .mul(price)
       .add(ooQuote);
   }
+
   getHealth(
     mangoGroup: MangoGroup,
     mangoCache: MangoCache,
@@ -156,9 +289,14 @@ export default class MangoAccount {
             ];
 
       if (!mangoGroup.spotMarkets[i].isEmpty()) {
-        health = health.add(
-          this.getSpotHealth(mangoCache, i, spotAssetWeight, spotLiabWeight),
+        const spotHealth = this.getSpotHealth(
+          mangoCache,
+          i,
+          spotAssetWeight,
+          spotLiabWeight,
         );
+
+        health = health.add(spotHealth);
       }
 
       if (!mangoGroup.perpMarkets[i].isEmpty()) {
@@ -177,6 +315,59 @@ export default class MangoAccount {
     }
 
     return health;
+  }
+
+  computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
+    let value = ZERO_I80F48;
+
+    value = value.add(
+      this.getUiDeposit(
+        mangoCache.rootBankCache[QUOTE_INDEX],
+        mangoGroup,
+        QUOTE_INDEX,
+      ).sub(
+        this.getUiBorrow(
+          mangoCache.rootBankCache[QUOTE_INDEX],
+          mangoGroup,
+          QUOTE_INDEX,
+        ),
+      ),
+    );
+
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      value = value.add(
+        this.getUiDeposit(mangoCache.rootBankCache[i], mangoGroup, i)
+          .sub(this.getUiBorrow(mangoCache.rootBankCache[i], mangoGroup, i))
+          .mul(mangoGroup.getPrice(i, mangoCache)),
+      );
+    }
+
+    // TODO add perp vals
+
+    for (let i = 0; i < this.spotOpenOrdersAccounts.length; i++) {
+      const oos = this.spotOpenOrdersAccounts[i];
+      if (oos != undefined) {
+        value = value.add(
+          I80F48.fromNumber(
+            nativeToUi(
+              oos.baseTokenTotal.toNumber(),
+              mangoGroup.tokens[i].decimals,
+            ),
+          ).mul(mangoGroup.getPrice(i, mangoCache)),
+        );
+        value = value.add(
+          I80F48.fromNumber(
+            nativeToUi(
+              oos.quoteTokenTotal.toNumber() +
+                oos['referrerRebatesAccrued'].toNumber(),
+              mangoGroup.tokens[QUOTE_INDEX].decimals,
+            ),
+          ),
+        );
+      }
+    }
+
+    return value;
   }
 }
 

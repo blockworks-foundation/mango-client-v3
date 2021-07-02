@@ -569,7 +569,7 @@ export class MangoClient {
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId = 0,
   ): Promise<TransactionSignature> {
-    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket);
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
 
     // TODO: this will not work for perp markets without spot market
     const baseTokenInfo = mangoGroup.tokens[marketIndex];
@@ -1053,7 +1053,7 @@ export class MangoClient {
     owner: Account | WalletAdapter,
   ): Promise<TransactionSignature | null> {
     // fetch all MangoAccounts filtered for having this perp market in basket
-    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket);
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
     const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
     const pnl = mangoAccount.perpAccounts[marketIndex].getPnl(
       perpMarketInfo,
