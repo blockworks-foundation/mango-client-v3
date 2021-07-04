@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// @ts-nocheck
+
 import * as fs from 'fs';
 import * as os from 'os';
 import yargs from 'yargs/yargs';

@@ -151,7 +151,8 @@ export class Keeper {
 
               events.forEach((ev) => {
                 if (ev.fill) {
-                  accounts.push(ev.fill.owner);
+                  accounts.push(ev.fill.maker);
+                  accounts.push(ev.fill.taker);
                 }
                 if (ev.out) {
                   accounts.push(ev.out.owner);

@@ -726,13 +726,11 @@ export const PerpEventLayout = union(u8('eventType'), blob(87), 'event');
 PerpEventLayout.addVariant(
   0,
   struct([
-    bool('maker'),
-    seq(u8(), 6),
-    publicKeyLayout('owner'),
+    seq(u8(), 7),
+    publicKeyLayout('maker'),
+    publicKeyLayout('taker'),
     i64('baseChange'),
     i64('quoteChange'),
-    I80F48Layout('longFunding'),
-    I80F48Layout('shortFunding'),
   ]),
   'fill',
 );
@@ -749,12 +747,10 @@ PerpEventLayout.addVariant(
 );
 
 export interface FillEvent {
-  maker: boolean;
-  owner: PublicKey;
+  maker: PublicKey;
+  taker: PublicKey;
   baseChange: BN;
   quoteChange: BN;
-  longFunding: I80F48;
-  shortFunding: I80F48;
 }
 
 export interface OutEvent {
