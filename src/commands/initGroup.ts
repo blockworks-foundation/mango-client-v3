@@ -11,7 +11,10 @@ export default async function initGroup(
   serumProgramId: PublicKey,
   quoteSymbol: string,
   quoteMint: PublicKey,
-  validInterval = 5,
+  validInterval: number,
+  quoteOptimalUtil: number,
+  quoteOptimalRate: number,
+  quoteMaxRate: number,
 ): Promise<GroupConfig> {
   console.log({
     connection,
@@ -29,6 +32,9 @@ export default async function initGroup(
     quoteMint,
     serumProgramId,
     validInterval,
+    quoteOptimalUtil,
+    quoteOptimalRate,
+    quoteMaxRate,
     payer,
   );
   const group = await client.getMangoGroup(groupKey);

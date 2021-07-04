@@ -24,10 +24,6 @@ export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
 const MAX_BOOK_NODES = 1024;
 
-export const MAX_RATE = I80F48.fromString('3.0');
-export const OPTIMAL_UTIL = I80F48.fromString('0.7');
-export const OPTIMAL_RATE = I80F48.fromString('0.2');
-
 class _I80F48Layout extends Blob {
   constructor(property: string) {
     super(16, property);
@@ -181,7 +177,13 @@ export function selfTradeBehaviorLayout(property) {
 export const MangoInstructionLayout = union(u32('instruction'));
 MangoInstructionLayout.addVariant(
   0,
-  struct([u64('signerNonce'), u64('validInterval')]),
+  struct([
+    u64('signerNonce'),
+    u64('validInterval'),
+    I80F48Layout('quoteOptimalUtil'),
+    I80F48Layout('quoteOptimalRate'),
+    I80F48Layout('quoteMaxRate'),
+  ]),
   'InitMangoGroup',
 );
 MangoInstructionLayout.addVariant(1, struct([]), 'InitMangoAccount');
@@ -193,7 +195,14 @@ MangoInstructionLayout.addVariant(
 );
 MangoInstructionLayout.addVariant(
   4,
-  struct([u64('marketIndex'), u128('maintLeverage'), u128('initLeverage')]),
+  struct([
+    u64('marketIndex'),
+    u128('maintLeverage'),
+    u128('initLeverage'),
+    I80F48Layout('optimalUtil'),
+    I80F48Layout('optimalRate'),
+    I80F48Layout('maxRate'),
+  ]),
   'AddSpotMarket',
 );
 MangoInstructionLayout.addVariant(
@@ -225,6 +234,8 @@ MangoInstructionLayout.addVariant(
     u64('marketIndex'),
     I80F48Layout('maintLeverage'),
     I80F48Layout('initLeverage'),
+    I80F48Layout('makerFee'),
+    I80F48Layout('takerFee'),
     i64('baseLotSize'),
     i64('quoteLotSize'),
   ]),
@@ -438,6 +449,8 @@ export class PerpMarketInfo {
   maintLiabWeight!: I80F48;
   initLiabWeight!: I80F48;
   liquidationFee!: I80F48;
+  makerFee!: I80F48;
+  takerFee!: I80F48;
   baseLotSize!: BN;
   quoteLotSize!: BN;
 
@@ -459,6 +472,8 @@ export class PerpMarketInfoLayout extends Structure {
         I80F48Layout('maintLiabWeight'),
         I80F48Layout('initLiabWeight'),
         I80F48Layout('liquidationFee'),
+        I80F48Layout('makerFee'),
+        I80F48Layout('takerFee'),
         i64('baseLotSize'),
         i64('quoteLotSize'),
       ],
@@ -647,7 +662,7 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('dexProgramId'),
   publicKeyLayout('mangoCache'),
   u64('validInterval'),
-  publicKeyLayout('insuranceVault'),
+  publicKeyLayout('daoVault'),
 ]);
 
 export const MangoAccountLayout = struct([
@@ -667,6 +682,9 @@ export const MangoAccountLayout = struct([
 
 export const RootBankLayout = struct([
   metaDataLayout('metaData'),
+  I80F48Layout('optimalUtil'),
+  I80F48Layout('optimalRate'),
+  I80F48Layout('maxRate'),
   u64('numNodeBanks'), // usize?
   seq(publicKeyLayout(), MAX_NODE_BANKS, 'nodeBanks'),
   I80F48Layout('depositIndex'),

@@ -20,11 +20,15 @@ export function makeInitMangoGroupInstruction(
   quoteVaultPk: PublicKey,
   quoteNodeBankPk: PublicKey,
   quoteRootBankPk: PublicKey,
+  daoVaultPk: PublicKey,
   mangoCachePk: PublicKey,
   dexProgramPk: PublicKey,
 
   signerNonce: BN,
   validInterval: BN,
+  quoteOptimalUtil: I80F48,
+  quoteOptimalRate: I80F48,
+  quoteMaxRate: I80F48,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -34,6 +38,7 @@ export function makeInitMangoGroupInstruction(
     { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
     { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: false, pubkey: daoVaultPk },
     { isSigner: false, isWritable: true, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: dexProgramPk },
   ];
@@ -42,6 +47,9 @@ export function makeInitMangoGroupInstruction(
     InitMangoGroup: {
       signerNonce,
       validInterval,
+      quoteOptimalUtil,
+      quoteOptimalRate,
+      quoteMaxRate,
     },
   });
 
@@ -219,7 +227,6 @@ export function makeCancelPerpOrderInstruction(
   perpMarketPk: PublicKey,
   bidsPk: PublicKey,
   asksPk: PublicKey,
-  eventQueuePk: PublicKey,
   order: PerpOrder,
 ): TransactionInstruction {
   const keys = [
@@ -229,7 +236,6 @@ export function makeCancelPerpOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
-    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
   ];
 
   const data = encodeMangoInstruction({
@@ -252,7 +258,6 @@ export function makeCancelPerpOrderByClientIdInstruction(
   perpMarketPk: PublicKey,
   bidsPk: PublicKey,
   asksPk: PublicKey,
-  eventQueuePk: PublicKey,
   clientOrderId: BN,
 ): TransactionInstruction {
   const keys = [
@@ -262,7 +267,6 @@ export function makeCancelPerpOrderByClientIdInstruction(
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
-    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
   ];
 
   const data = encodeMangoInstruction({
@@ -403,6 +407,9 @@ export function makeAddSpotMarketInstruction(
   marketIndex: BN,
   maintLeverage: I80F48,
   initLeverage: I80F48,
+  optimalUtil: I80F48,
+  optimalRate: I80F48,
+  maxRate: I80F48,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -420,6 +427,9 @@ export function makeAddSpotMarketInstruction(
       marketIndex,
       maintLeverage,
       initLeverage,
+      optimalUtil,
+      optimalRate,
+      maxRate,
     },
   });
 
@@ -615,6 +625,8 @@ export function makeAddPerpMarketInstruction(
   marketIndex: BN,
   maintLeverage: I80F48,
   initLeverage: I80F48,
+  makerFee: I80F48,
+  takerFee: I80F48,
   baseLotSize: BN,
   quoteLotSize: BN,
 ): TransactionInstruction {
@@ -631,6 +643,8 @@ export function makeAddPerpMarketInstruction(
       marketIndex,
       maintLeverage,
       initLeverage,
+      makerFee,
+      takerFee,
       baseLotSize,
       quoteLotSize,
     },

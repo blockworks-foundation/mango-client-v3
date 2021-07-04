@@ -210,6 +210,9 @@ export class MangoClient {
     quoteMint: PublicKey,
     dexProgram: PublicKey,
     validInterval: number,
+    quoteOptimalUtil: number,
+    quoteOptimalRate: number,
+    quoteMaxRate: number,
     payer: Account | WalletAdapter,
   ): Promise<PublicKey> {
     const accountInstruction = await createAccountInstruction(
@@ -228,6 +231,15 @@ export class MangoClient {
       this.connection,
       payer.publicKey,
       quoteVaultAccount.publicKey,
+      quoteMint,
+      signerKey,
+    );
+
+    const daoVaultAccount = new Account();
+    const daoVaultAccountInstructions = await createTokenAccountInstructions(
+      this.connection,
+      payer.publicKey,
+      daoVaultAccount.publicKey,
       quoteMint,
       signerKey,
     );
@@ -260,15 +272,20 @@ export class MangoClient {
       quoteVaultAccount.publicKey,
       quoteNodeBankAccountInstruction.account.publicKey,
       quoteRootBankAccountInstruction.account.publicKey,
+      daoVaultAccount.publicKey,
       cacheAccountInstruction.account.publicKey,
       dexProgram,
       new BN(signerNonce),
       new BN(validInterval),
+      I80F48.fromNumber(quoteOptimalUtil),
+      I80F48.fromNumber(quoteOptimalRate),
+      I80F48.fromNumber(quoteMaxRate),
     );
 
     const transaction = new Transaction();
     transaction.add(accountInstruction.instruction);
     transaction.add(...quoteVaultAccountInstructions);
+    transaction.add(...daoVaultAccountInstructions);
     transaction.add(quoteNodeBankAccountInstruction.instruction);
     transaction.add(quoteRootBankAccountInstruction.instruction);
     transaction.add(cacheAccountInstruction.instruction);
@@ -624,7 +641,6 @@ export class MangoClient {
       perpMarket.publicKey,
       perpMarket.bids,
       perpMarket.asks,
-      perpMarket.eventQueue,
       order,
     );
 
@@ -704,6 +720,9 @@ export class MangoClient {
     marketIndex: number,
     maintLeverage: number,
     initLeverage: number,
+    optimalUtil: number,
+    optimalRate: number,
+    maxRate: number,
   ): Promise<TransactionSignature> {
     const vaultAccount = new Account();
 
@@ -741,8 +760,10 @@ export class MangoClient {
       new BN(marketIndex),
       I80F48.fromNumber(maintLeverage),
       I80F48.fromNumber(initLeverage),
+      I80F48.fromNumber(optimalUtil),
+      I80F48.fromNumber(optimalRate),
+      I80F48.fromNumber(maxRate),
     );
-
     const transaction = new Transaction();
     transaction.add(...vaultAccountInstructions);
     transaction.add(nodeBankAccountInstruction.instruction);
@@ -1267,6 +1288,8 @@ export class MangoClient {
     marketIndex: number,
     maintLeverage: number,
     initLeverage: number,
+    makerFee: number,
+    takerFee: number,
     baseLotSize: number,
     quoteLotSize: number,
     maxNumEvents: number,
@@ -1310,6 +1333,8 @@ export class MangoClient {
       new BN(marketIndex),
       I80F48.fromNumber(maintLeverage),
       I80F48.fromNumber(initLeverage),
+      I80F48.fromNumber(makerFee),
+      I80F48.fromNumber(takerFee),
       new BN(baseLotSize),
       new BN(quoteLotSize),
     );

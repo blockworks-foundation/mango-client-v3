@@ -30,6 +30,7 @@ export default class MangoAccount {
   perpAccounts!: PerpAccount[];
 
   beingLiquidated!: boolean;
+  isBankrupt!: boolean;
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;

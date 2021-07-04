@@ -1,18 +1,15 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { I80F48, ZERO_I80F48 } from './fixednum';
-import {
-  MAX_RATE,
-  NodeBank,
-  NodeBankLayout,
-  OPTIMAL_RATE,
-  OPTIMAL_UTIL,
-} from './layout';
+import { NodeBank, NodeBankLayout } from './layout';
 import { getMultipleAccounts, nativeI80F48ToUi, zeroKey } from './utils';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 
 export default class RootBank {
   publicKey: PublicKey;
+  optimalUtil!: I80F48;
+  optimalRate!: I80F48;
+  maxRate!: I80F48;
 
   numNodeBanks!: number;
   nodeBanks!: PublicKey[];
@@ -94,18 +91,18 @@ export default class RootBank {
       return ZERO_I80F48;
     }
     if (totalDeposits.lte(totalBorrows)) {
-      return MAX_RATE;
+      return this.maxRate;
     }
 
     const utilization = totalBorrows.div(totalDeposits);
-    if (utilization.gt(OPTIMAL_UTIL)) {
-      const extraUtil = utilization.sub(OPTIMAL_UTIL);
-      const slope = MAX_RATE.sub(OPTIMAL_RATE).div(
-        I80F48.fromNumber(1).sub(OPTIMAL_UTIL),
-      );
-      return OPTIMAL_RATE.add(slope.mul(extraUtil));
+    if (utilization.gt(this.optimalUtil)) {
+      const extraUtil = utilization.sub(this.optimalUtil);
+      const slope = this.maxRate
+        .sub(this.optimalRate)
+        .div(I80F48.fromNumber(1).sub(this.optimalUtil));
+      return this.optimalRate.add(slope.mul(extraUtil));
     } else {
-      const slope = OPTIMAL_RATE.div(OPTIMAL_UTIL);
+      const slope = this.optimalRate.div(this.optimalUtil);
       return slope.mul(utilization);
     }
   }
@@ -118,7 +115,7 @@ export default class RootBank {
     if (totalDeposits.eq(ZERO_I80F48) && totalBorrows.eq(ZERO_I80F48)) {
       return ZERO_I80F48;
     } else if (totalDeposits.eq(ZERO_I80F48)) {
-      return MAX_RATE;
+      return this.maxRate;
     }
 
     const utilization = totalBorrows.div(totalDeposits);
