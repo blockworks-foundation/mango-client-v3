@@ -112,6 +112,22 @@ export default class MangoGroup {
       .div(I80F48.fromNumber(Math.pow(10, this.tokens[QUOTE_INDEX].decimals)));
   }
 
+  getUiTotalDeposit(tokenIndex: number): I80F48 {
+    const rootBank = this.rootBankAccounts[tokenIndex];
+    if (!rootBank)
+      throw new Error(`Root bank at index ${tokenIndex} is not loaded`);
+
+    return rootBank.getUiTotalDeposit(this);
+  }
+
+  getUiTotalBorrow(tokenIndex: number): I80F48 {
+    const rootBank = this.rootBankAccounts[tokenIndex];
+    if (!rootBank)
+      throw new Error(`Root bank at index ${tokenIndex} is not loaded`);
+
+    return rootBank.getUiTotalBorrow(this);
+  }
+
   async loadCache(connection: Connection): Promise<MangoCache> {
     const account = await connection.getAccountInfo(this.mangoCache);
     if (!account || !account?.data) throw new Error('Unable to load cache');
