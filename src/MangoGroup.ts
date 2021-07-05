@@ -1,6 +1,6 @@
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
-import { I80F48 } from './fixednum';
+import { I80F48, ONE_I80F48 } from './fixednum';
 import {
   MetaData,
   RootBankLayout,
@@ -107,9 +107,27 @@ export default class MangoGroup {
   }
 
   getPrice(tokenIndex: number, mangoCache: MangoCache): I80F48 {
+    if (tokenIndex === QUOTE_INDEX) return ONE_I80F48;
+
     return mangoCache.priceCache[tokenIndex]?.price
       .mul(I80F48.fromNumber(Math.pow(10, this.tokens[tokenIndex].decimals)))
       .div(I80F48.fromNumber(Math.pow(10, this.tokens[QUOTE_INDEX].decimals)));
+  }
+
+  getUiTotalDeposit(tokenIndex: number): I80F48 {
+    const rootBank = this.rootBankAccounts[tokenIndex];
+    if (!rootBank)
+      throw new Error(`Root bank at index ${tokenIndex} is not loaded`);
+
+    return rootBank.getUiTotalDeposit(this);
+  }
+
+  getUiTotalBorrow(tokenIndex: number): I80F48 {
+    const rootBank = this.rootBankAccounts[tokenIndex];
+    if (!rootBank)
+      throw new Error(`Root bank at index ${tokenIndex} is not loaded`);
+
+    return rootBank.getUiTotalBorrow(this);
   }
 
   async loadCache(connection: Connection): Promise<MangoCache> {
