@@ -19,15 +19,14 @@ export default class PerpMarket {
   bids!: PublicKey;
   asks!: PublicKey;
   eventQueue!: PublicKey;
+  quoteLotSize!: BN;
+  baseLotSize!: BN;
   longFunding!: I80F48;
   shortFunding!: I80F48;
   openInterest!: BN;
-  quoteLotSize!: BN;
-  indexOracle!: PublicKey;
   lastUpdated!: BN;
   seqNum!: BN;
-  contractSize!: BN;
-
+  feesAccrued!: I80F48;
   constructor(
     publicKey: PublicKey,
     baseDecimals: number,
@@ -42,25 +41,25 @@ export default class PerpMarket {
 
   priceLotsToNative(price: BN): I80F48 {
     return I80F48.fromI64(this.quoteLotSize.mul(price)).div(
-      I80F48.fromI64(this.contractSize),
+      I80F48.fromI64(this.baseLotSize),
     );
   }
 
   baseLotsToNative(quantity: BN): I80F48 {
-    return I80F48.fromI64(this.contractSize.mul(quantity));
+    return I80F48.fromI64(this.baseLotSize.mul(quantity));
   }
 
   priceLotsToNumber(price: BN | number): number {
     const nativeToUi = new Big(10).pow(this.baseDecimals - this.quoteDecimals);
     const lotsToNative = new Big(this.quoteLotSize).div(
-      new Big(this.contractSize),
+      new Big(this.baseLotSize),
     );
     return new Big(price).mul(lotsToNative).mul(nativeToUi).toNumber();
   }
 
   baseLotsToNumber(quantity: BN | number): number {
     return new Big(quantity)
-      .mul(new Big(this.contractSize))
+      .mul(new Big(this.baseLotSize))
       .div(new Big(10).pow(this.baseDecimals))
       .toNumber();
   }

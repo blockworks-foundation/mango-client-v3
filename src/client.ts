@@ -595,10 +595,10 @@ export class MangoClient {
     const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
 
     const nativePrice = new BN(price * quoteUnit)
-      .mul(perpMarket.contractSize)
+      .mul(perpMarket.baseLotSize)
       .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
     const nativeQuantity = new BN(quantity * baseUnit).div(
-      perpMarket.contractSize,
+      perpMarket.baseLotSize,
     );
 
     const transaction = new Transaction();

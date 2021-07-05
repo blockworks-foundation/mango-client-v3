@@ -711,15 +711,15 @@ export const PerpMarketLayout = struct([
   publicKeyLayout('bids'),
   publicKeyLayout('asks'),
   publicKeyLayout('eventQueue'),
+  i64('quoteLotSize'),
+  i64('baseLotSize'),
 
   I80F48Layout('longFunding'),
   I80F48Layout('shortFunding'),
   i64('openInterest'),
-  i64('quoteLotSize'),
-  publicKeyLayout('indexOracle'),
   u64('lastUpdated'),
   u64('seqNum'),
-  i64('contractSize'),
+  I80F48Layout('feesAccrued'),
 ]);
 
 export const PerpEventLayout = union(u8('eventType'), blob(87), 'event');
