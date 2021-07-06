@@ -9,7 +9,7 @@ import {
   PerpAccount,
   RootBankCache,
 } from './layout';
-import { nativeToUi, promiseUndef, zeroKey } from './utils';
+import { nativeI80F48ToUi, nativeToUi, promiseUndef, zeroKey } from './utils';
 import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
 import RootBank from './RootBank';
 
@@ -83,8 +83,9 @@ export default class MangoAccount {
     mangoGroup: MangoGroup,
     tokenIndex: number,
   ): I80F48 {
-    return this.getNativeDeposit(rootBank, tokenIndex).div(
-      I80F48.fromNumber(Math.pow(10, mangoGroup.tokens[tokenIndex].decimals)),
+    return nativeI80F48ToUi(
+      this.getNativeDeposit(rootBank, tokenIndex),
+      mangoGroup.tokens[tokenIndex].decimals,
     );
   }
   getUiBorrow(
@@ -92,8 +93,9 @@ export default class MangoAccount {
     mangoGroup: MangoGroup,
     tokenIndex: number,
   ): I80F48 {
-    return this.getNativeBorrow(rootBank, tokenIndex).div(
-      I80F48.fromNumber(Math.pow(10, mangoGroup.tokens[tokenIndex].decimals)),
+    return nativeI80F48ToUi(
+      this.getNativeBorrow(rootBank, tokenIndex),
+      mangoGroup.tokens[tokenIndex].decimals,
     );
   }
 
@@ -316,6 +318,22 @@ export default class MangoAccount {
     }
 
     return health;
+  }
+
+  getHealthRatio(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    healthType: HealthType,
+  ): number {
+    const health = this.getHealth(mangoGroup, mangoCache, healthType);
+    const liabsVal = this.getNativeLiabsVal(mangoGroup, mangoCache, healthType);
+
+    let healthRatio = 100;
+    if (liabsVal.gt(ZERO_I80F48)) {
+      healthRatio = health.div(liabsVal).toNumber() * 100;
+    }
+
+    return Math.max(healthRatio, 0);
   }
 
   computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
