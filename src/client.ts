@@ -1303,6 +1303,8 @@ export class MangoClient {
     baseLotSize: number,
     quoteLotSize: number,
     maxNumEvents: number,
+    maxDepthBps: number, // liquidity incentive params. Set scaler == 0 if no liquidity incentives
+    scaler: number,
   ) {
     const makePerpMarketAccountInstruction = await createAccountInstruction(
       this.connection,
@@ -1347,6 +1349,8 @@ export class MangoClient {
       I80F48.fromNumber(takerFee),
       new BN(baseLotSize),
       new BN(quoteLotSize),
+      I80F48.fromNumber(maxDepthBps),
+      I80F48.fromNumber(scaler),
     );
 
     const transaction = new Transaction();

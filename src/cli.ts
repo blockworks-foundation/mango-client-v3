@@ -263,6 +263,15 @@ yargs(hideBin(process.argv))
           default: 128,
           type: 'number',
         })
+        .option('max_depth_bps', {
+          default: 200,
+          type: 'number',
+        })
+        .option('scaler', {
+          default: 1,
+          type: 'number',
+        })
+
         .option(...clusterDesc)
         .option(...configDesc)
         .option(...keypairDesc);
@@ -289,6 +298,8 @@ yargs(hideBin(process.argv))
         args.base_lot_size as number,
         args.quote_lot_size as number,
         args.max_num_events as number,
+        args.max_depth_bps as number,
+        args.scaler as number,
       );
       config.storeGroup(result);
       writeConfig(args.config as string, config);

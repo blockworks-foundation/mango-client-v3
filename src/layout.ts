@@ -238,6 +238,8 @@ MangoInstructionLayout.addVariant(
     I80F48Layout('takerFee'),
     i64('baseLotSize'),
     i64('quoteLotSize'),
+    I80F48Layout('maxDepthBps'),
+    I80F48Layout('scaler'),
   ]),
   'AddPerpMarket',
 );

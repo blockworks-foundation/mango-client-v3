@@ -629,6 +629,8 @@ export function makeAddPerpMarketInstruction(
   takerFee: I80F48,
   baseLotSize: BN,
   quoteLotSize: BN,
+  maxDepthBps: I80F48,
+  scaler: I80F48,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -647,6 +649,8 @@ export function makeAddPerpMarketInstruction(
       takerFee,
       baseLotSize,
       quoteLotSize,
+      maxDepthBps,
+      scaler,
     },
   });
 
