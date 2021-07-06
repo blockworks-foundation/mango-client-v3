@@ -3,15 +3,6 @@ import { PublicKey } from '@solana/web3.js';
 import { DataType } from './layout';
 import PerpMarket from './PerpMarket';
 
-// All LeafNodes are orders stored on the book
-export type LeafNode = {
-  ownerSlot: number;
-  key: BN;
-  owner: PublicKey;
-  quantity: BN;
-  clientOrderId: BN;
-};
-
 export interface PerpOrder {
   orderId: BN;
   owner: PublicKey;
@@ -23,6 +14,8 @@ export interface PerpOrder {
   sizeLots: BN;
   side: 'buy' | 'sell';
   clientId?: BN;
+  bestInitial: BN;
+  timestamp: BN;
 }
 
 // TODO - maybe store ref inside PerpMarket class
@@ -69,6 +62,8 @@ export class BookSide {
           size: this.perpMarket.baseLotsToNumber(leafNode.quantity),
           sizeLots: leafNode.quantity,
           side: (this.isBids ? 'buy' : 'sell') as 'buy' | 'sell',
+          bestInitial: leafNode.bestInitial,
+          timestamp: leafNode.timestamp,
         };
       } else if (innerNode) {
         if (this.isBids) {

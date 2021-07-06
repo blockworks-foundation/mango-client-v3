@@ -325,7 +325,7 @@ export const DataType = {
 export const enum AssetType {
   Token = 0,
   Perp = 1,
-};
+}
 
 export class MetaData {
   dataType!: number;
@@ -505,6 +505,7 @@ export class PerpAccount {
   longSettledFunding!: I80F48;
   shortSettledFunding!: I80F48;
   openOrders!: PerpOpenOrders;
+  liquidityPoints!: I80F48;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -593,6 +594,7 @@ export class PerpAccountLayout extends Structure {
         I80F48Layout('longSettledFunding'),
         I80F48Layout('shortSettledFunding'),
         perpOpenOrdersLayout('openOrders'),
+        I80F48Layout('liquidityPoints'),
       ],
       property,
     );
@@ -725,17 +727,31 @@ export const PerpMarketLayout = struct([
   u64('lastUpdated'),
   u64('seqNum'),
   I80F48Layout('feesAccrued'),
+  I80F48Layout('maxDepthBps'),
+  I80F48Layout('scaler'),
+  I80F48Layout('totalLiquidityPoints'),
 ]);
 
-export const PerpEventLayout = union(u8('eventType'), blob(87), 'event');
+export const PerpEventLayout = union(u8('eventType'), blob(151), 'event');
 PerpEventLayout.addVariant(
   0,
   struct([
-    seq(u8(), 7),
+    sideLayout('side', 1),
+    u8('makerSlot'),
+    bool('makerOut'),
+    seq(u8(), 4),
     publicKeyLayout('maker'),
+    i128('makerOrderId'),
+    u64('makerClientOrderId'),
+    i64('bestInitial'),
+    u64('timestamp'),
+
     publicKeyLayout('taker'),
-    i64('baseChange'),
-    i64('quoteChange'),
+    i128('takerOrderId'),
+    u64('takerClientOrderId'),
+
+    i64('price'),
+    i64('quantity'),
   ]),
   'fill',
 );
@@ -752,10 +768,21 @@ PerpEventLayout.addVariant(
 );
 
 export interface FillEvent {
+  side: 'buy' | 'sell';
+  makerSlot: number;
+  makerOut: boolean;
   maker: PublicKey;
+  makerOrderId: BN;
+  makerClientOrderId: BN;
+  bestInitial: BN;
+  timestamp: BN;
+
   taker: PublicKey;
-  baseChange: BN;
-  quoteChange: BN;
+  takerOrderId: BN;
+  takerClientOrderId: BN;
+
+  price: BN;
+  quantity: BN;
 }
 
 export interface OutEvent {
@@ -832,7 +859,7 @@ export class PerpEventQueue {
   }
 }
 
-const BOOK_NODE_SIZE = 72;
+const BOOK_NODE_SIZE = 88;
 const BOOK_NODE_LAYOUT = union(u32('tag'), blob(BOOK_NODE_SIZE - 4), 'node');
 BOOK_NODE_LAYOUT.addVariant(0, struct([]), 'uninitialized');
 BOOK_NODE_LAYOUT.addVariant(
@@ -854,6 +881,8 @@ BOOK_NODE_LAYOUT.addVariant(
     publicKeyLayout('owner'), // Open orders account
     u64('quantity'), // In units of lot size
     u64('clientOrderId'),
+    u64('bestInitial'),
+    u64('timestamp'),
   ]),
   'leafNode',
 );

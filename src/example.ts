@@ -101,8 +101,8 @@ async function examplePerp() {
     console.log(
       fill.maker.toBase58(),
       fill.taker.toBase58(),
-      fill.baseChange.toNumber(),
-      fill.quoteChange.toNumber(),
+      fill.price.toNumber(),
+      fill.quantity.toNumber(),
     );
   }
 }
