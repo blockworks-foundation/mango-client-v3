@@ -322,6 +322,11 @@ export const DataType = {
   EventQueue: 8,
 };
 
+export const enum AssetType {
+  Token = 0,
+  Perp = 1,
+};
+
 export class MetaData {
   dataType!: number;
   version!: number;

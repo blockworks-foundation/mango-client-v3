@@ -33,6 +33,7 @@ export default class MangoGroup {
   admin!: PublicKey;
   dexProgramId!: PublicKey;
   mangoCache!: PublicKey;
+  daoVault!: PublicKey;
   validInterval!: number[];
 
   rootBankAccounts: (RootBank | undefined)[];
