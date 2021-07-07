@@ -699,6 +699,7 @@ export const RootBankLayout = struct([
   I80F48Layout('depositIndex'),
   I80F48Layout('borrowIndex'),
   u64('lastUpdated'),
+  seq(u8(), 64, 'padding'),
 ]);
 
 export const NodeBankLayout = struct([
