@@ -18,11 +18,13 @@ export default class RootBank {
   lastUpdated!: BN;
 
   nodeBankAccounts: NodeBank[];
+  //mintKey: PublicKey;
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
     this.nodeBankAccounts = [];
+    //this.mintKey = tokenMint;
   }
 
   async loadNodeBanks(connection: Connection): Promise<NodeBank[]> {
