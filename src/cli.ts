@@ -308,7 +308,7 @@ yargs(hideBin(process.argv))
   )
   .command(
     'add-spot-market <group> <symbol> <market_pk> <mint_pk>',
-    'add a perp market to the group',
+    'add a spot market to the group',
     (y) => {
       return y
         .positional(...groupDesc)

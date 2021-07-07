@@ -1397,7 +1397,7 @@ export class MangoClient {
     limit: BN,
   ) {
     const baseNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
-    const quoteNodeBanks = await quoteRootBank.loadNodeBanks(this.connection);
+    const quoteNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
 
     const dexSigner = await PublicKey.createProgramAddress(
       [
