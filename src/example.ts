@@ -99,12 +99,10 @@ async function examplePerp() {
   // Retrieve fills
   for (const fill of await perpMarket.loadFills(connection)) {
     console.log(
-      fill.owner.toBase58(),
-      fill.maker ? 'maker' : 'taker',
-      fill.baseChange.toNumber(),
-      fill.quoteChange.toNumber(),
-      fill.longFunding.toFixed(3),
-      fill.shortFunding.toFixed(3),
+      fill.maker.toBase58(),
+      fill.taker.toBase58(),
+      fill.price.toNumber(),
+      fill.quantity.toNumber(),
     );
   }
 }

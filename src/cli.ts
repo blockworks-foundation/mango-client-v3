@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// @ts-nocheck
+
 import * as fs from 'fs';
 import * as os from 'os';
 import yargs from 'yargs/yargs';
@@ -69,13 +71,13 @@ export function writeConfig(configPath: string, config: Config) {
   fs.writeFileSync(configPath, JSON.stringify(config.toJson(), null, 2));
 }
 
-//@ts-ignore
+// @ts-ignore
 yargs(hideBin(process.argv))
   .command(
     'init-group <group> <mangoProgramId> <serumProgramId> <quote_mint>',
     'initialize a new group',
-    (y) =>
-      y
+    (y) => {
+      return y
         .positional(...groupDesc)
         .positional('mangoProgramId', {
           describe: 'the program id of the mango smart contract',
@@ -89,6 +91,22 @@ yargs(hideBin(process.argv))
           describe: 'the mint of the quote currency 💵',
           type: 'string',
         })
+        .option('quote_optimal_util', {
+          describe:
+            'optimal utilization interest rate param for quote currency',
+          default: 0.7,
+          type: 'number',
+        })
+        .option('quote_optimal_rate', {
+          describe: 'optimal interest rate param for quote currency',
+          default: 0.06,
+          type: 'number',
+        })
+        .option('quote_max_rate', {
+          describe: 'max interest rate param for quote currency',
+          default: 1.5,
+          type: 'number',
+        })
         .option('symbol', {
           describe: 'the quote symbol',
           default: 'USDC',
@@ -96,7 +114,8 @@ yargs(hideBin(process.argv))
         })
         .option(...clusterDesc)
         .option(...configDesc)
-        .option(...keypairDesc),
+        .option(...keypairDesc);
+    },
     async (args) => {
       console.log('init_group', args);
       const mangoProgramId = new PublicKey(args.mangoProgramId as string);
@@ -115,6 +134,10 @@ yargs(hideBin(process.argv))
         serumProgramId,
         args.symbol as string,
         quoteMint,
+        5,
+        args.quote_optimal_util as number,
+        args.quote_optimal_rate as number,
+        args.quote_max_rate as number,
       );
       config.storeGroup(result);
       writeConfig(args.config as string, config);
@@ -131,7 +154,7 @@ yargs(hideBin(process.argv))
         .option('provider', {
           describe: 'oracle provider',
           default: 'stub',
-          choices: ['stub' , 'pyth'],
+          choices: ['stub', 'pyth'],
         })
         .option(...clusterDesc)
         .option(...configDesc)
@@ -172,8 +195,8 @@ yargs(hideBin(process.argv))
   .command(
     'set-oracle <group> <symbol> <value>',
     'set stub oracle to given value',
-    (y) =>
-      y
+    (y) => {
+      return y
         .positional(...groupDesc)
         .positional(...symbolDesc)
         .positional('value', {
@@ -182,7 +205,8 @@ yargs(hideBin(process.argv))
         })
         .option(...clusterDesc)
         .option(...configDesc)
-        .option(...keypairDesc),
+        .option(...keypairDesc);
+    },
     async (args) => {
       console.log('set_oracle', args);
       const account = readKeypair(args.keypair as string);
@@ -207,8 +231,8 @@ yargs(hideBin(process.argv))
   .command(
     'add-perp-market <group> <symbol>',
     'add a perp market to the group',
-    (y) =>
-      y
+    (y) => {
+      return y
         .positional(...groupDesc)
         .positional(...symbolDesc)
         .option('maint_leverage', {
@@ -217,6 +241,14 @@ yargs(hideBin(process.argv))
         })
         .option('init_leverage', {
           default: 10,
+          type: 'number',
+        })
+        .option('maker_fee', {
+          default: 0.0,
+          type: 'number',
+        })
+        .option('taker_fee', {
+          default: 0.0001,
           type: 'number',
         })
         .option('base_lot_size', {
@@ -231,9 +263,19 @@ yargs(hideBin(process.argv))
           default: 128,
           type: 'number',
         })
+        .option('max_depth_bps', {
+          default: 200,
+          type: 'number',
+        })
+        .option('scaler', {
+          default: 1,
+          type: 'number',
+        })
+
         .option(...clusterDesc)
         .option(...configDesc)
-        .option(...keypairDesc),
+        .option(...keypairDesc);
+    },
     async (args) => {
       console.log('add-perp-market', args);
       const account = readKeypair(args.keypair as string);
@@ -251,9 +293,13 @@ yargs(hideBin(process.argv))
         args.symbol as string,
         args.maint_leverage as number,
         args.init_leverage as number,
+        args.maker_fee as number,
+        args.taker_fee as number,
         args.base_lot_size as number,
         args.quote_lot_size as number,
         args.max_num_events as number,
+        args.max_depth_bps as number,
+        args.scaler as number,
       );
       config.storeGroup(result);
       writeConfig(args.config as string, config);
@@ -263,8 +309,8 @@ yargs(hideBin(process.argv))
   .command(
     'add-spot-market <group> <symbol> <market_pk> <mint_pk>',
     'add a perp market to the group',
-    (y) =>
-      y
+    (y) => {
+      return y
         .positional(...groupDesc)
         .positional(...symbolDesc)
         .positional('market_pk', {
@@ -283,9 +329,26 @@ yargs(hideBin(process.argv))
           default: 5,
           type: 'number',
         })
+        .option('optimal_util', {
+          describe: 'optimal utilization interest rate param',
+          default: 0.7,
+          type: 'number',
+        })
+        .option('optimal_rate', {
+          describe: 'optimal interest rate param',
+          default: 0.06,
+          type: 'number',
+        })
+        .option('max_rate', {
+          describe: 'max interest rate param',
+          default: 1.5,
+          type: 'number',
+        })
+
         .option(...clusterDesc)
         .option(...configDesc)
-        .option(...keypairDesc),
+        .option(...keypairDesc);
+    },
     async (args) => {
       console.log('add-spot-market', args);
       const account = readKeypair(args.keypair as string);
@@ -305,6 +368,9 @@ yargs(hideBin(process.argv))
         new PublicKey(args.mint_pk as string),
         args.maint_leverage as number,
         args.init_leverage as number,
+        args.optimal_util as number,
+        args.optimal_rate as number,
+        args.max_rate as number,
       );
       config.storeGroup(result);
       writeConfig(args.config as string, config);

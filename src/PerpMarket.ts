@@ -19,14 +19,17 @@ export default class PerpMarket {
   bids!: PublicKey;
   asks!: PublicKey;
   eventQueue!: PublicKey;
+  quoteLotSize!: BN;
+  baseLotSize!: BN;
   longFunding!: I80F48;
   shortFunding!: I80F48;
   openInterest!: BN;
-  quoteLotSize!: BN;
-  indexOracle!: PublicKey;
   lastUpdated!: BN;
   seqNum!: BN;
-  contractSize!: BN;
+  feesAccrued!: I80F48;
+  maxDepthBps!: I80F48;
+  scaler!: I80F48;
+  totalLiquidityPoints!: I80F48;
 
   constructor(
     publicKey: PublicKey,
@@ -42,43 +45,27 @@ export default class PerpMarket {
 
   priceLotsToNative(price: BN): I80F48 {
     return I80F48.fromI64(this.quoteLotSize.mul(price)).div(
-      I80F48.fromI64(this.contractSize),
+      I80F48.fromI64(this.baseLotSize),
     );
   }
 
   baseLotsToNative(quantity: BN): I80F48 {
-    return I80F48.fromI64(this.contractSize.mul(quantity));
+    return I80F48.fromI64(this.baseLotSize.mul(quantity));
   }
 
   priceLotsToNumber(price: BN | number): number {
     const nativeToUi = new Big(10).pow(this.baseDecimals - this.quoteDecimals);
     const lotsToNative = new Big(this.quoteLotSize).div(
-      new Big(this.contractSize),
+      new Big(this.baseLotSize),
     );
     return new Big(price).mul(lotsToNative).mul(nativeToUi).toNumber();
   }
 
   baseLotsToNumber(quantity: BN | number): number {
     return new Big(quantity)
-      .mul(new Big(this.contractSize))
+      .mul(new Big(this.baseLotSize))
       .div(new Big(10).pow(this.baseDecimals))
       .toNumber();
-  }
-
-  parseFillEvent(event) {
-    let side;
-
-    if (event.quoteChange.negative == 1) {
-      side = 'buy';
-    } else {
-      side = 'sell';
-    }
-    return {
-      ...event,
-      side,
-      price: Math.abs(this.priceLotsToNumber(event.quoteChange)),
-      size: Math.abs(this.baseLotsToNumber(event.baseChange)),
-    };
   }
 
   async loadEventQueue(connection: Connection): Promise<PerpEventQueue> {
@@ -89,11 +76,11 @@ export default class PerpMarket {
 
   async loadFills(connection: Connection): Promise<FillEvent[]> {
     const q = await this.loadEventQueue(connection);
+    // TODO - verify this works
     return q
       .eventsSince(new BN(0))
       .map((e) => e.fill)
-      .filter((e) => !!e)
-      .map(this.parseFillEvent.bind(this)) as FillEvent[];
+      .filter((e) => !!e) as FillEvent[];
   }
 
   async loadBids(connection: Connection): Promise<BookSide> {

@@ -38,6 +38,10 @@ const connection = new Connection(
   'processed' as Commitment,
 );
 
+const MAX_RATE = 1.5;
+const OPTIMAL_UTIL = 0.7;
+const OPTIMAL_RATE = 0.06;
+
 const SLEEP_TIME = 2000;
 
 const payer = new Account(
@@ -52,6 +56,9 @@ async function init_mango_group_and_spot_market(): Promise<MangoGroup> {
     quoteMintKey,
     serumDexPk,
     500,
+    OPTIMAL_UTIL,
+    OPTIMAL_RATE,
+    MAX_RATE,
     payer,
   );
   console.log('= mango group created =');
@@ -96,6 +103,9 @@ async function init_mango_group_and_spot_market(): Promise<MangoGroup> {
     marketIndex,
     maintLeverage,
     initLeverage,
+    OPTIMAL_UTIL,
+    OPTIMAL_RATE,
+    MAX_RATE,
   );
   await sleep(SLEEP_TIME);
   mangoGroup = await client.getMangoGroup(groupKey);
@@ -157,7 +167,6 @@ async function test_place_spot_order() {
   } catch (err) {
     console.log('Error on deposit', `${err}`);
   }
-
 
   await sleep(SLEEP_TIME); // avoid devnet rate limit
   console.log('= adding to basket =');

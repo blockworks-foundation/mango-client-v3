@@ -36,6 +36,7 @@ import {
   EventQueue,
   EventQueueLayout,
   MAX_TOKENS,
+  AssetType,
 } from './layout';
 import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
 import MangoAccount from './MangoAccount';
@@ -62,6 +63,14 @@ import {
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
   makeCancelPerpOrderInstruction,
+  makeForceCancelSpotOrdersInstruction,
+  makeForceCancelPerpOrdersInstruction,
+  makeLiquidateTokenAndTokenInstruction,
+  makeLiquidateTokenAndPerpInstruction,
+  makeLiquidatePerpMarketInstruction,
+  makeResolvePerpBankruptcyInstruction,
+  makeSettleFeesInstruction,
+  makeResolveTokenBankruptcyInstruction,
 } from './instruction';
 import {
   Market,
@@ -74,6 +83,7 @@ import { Order } from '@project-serum/serum/lib/market';
 
 import { WalletAdapter } from './types';
 import { PerpOrder } from './book';
+import { SpotMarketConfig } from './config';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -210,6 +220,9 @@ export class MangoClient {
     quoteMint: PublicKey,
     dexProgram: PublicKey,
     validInterval: number,
+    quoteOptimalUtil: number,
+    quoteOptimalRate: number,
+    quoteMaxRate: number,
     payer: Account | WalletAdapter,
   ): Promise<PublicKey> {
     const accountInstruction = await createAccountInstruction(
@@ -228,6 +241,15 @@ export class MangoClient {
       this.connection,
       payer.publicKey,
       quoteVaultAccount.publicKey,
+      quoteMint,
+      signerKey,
+    );
+
+    const daoVaultAccount = new Account();
+    const daoVaultAccountInstructions = await createTokenAccountInstructions(
+      this.connection,
+      payer.publicKey,
+      daoVaultAccount.publicKey,
       quoteMint,
       signerKey,
     );
@@ -260,27 +282,35 @@ export class MangoClient {
       quoteVaultAccount.publicKey,
       quoteNodeBankAccountInstruction.account.publicKey,
       quoteRootBankAccountInstruction.account.publicKey,
+      daoVaultAccount.publicKey,
       cacheAccountInstruction.account.publicKey,
       dexProgram,
       new BN(signerNonce),
       new BN(validInterval),
+      I80F48.fromNumber(quoteOptimalUtil),
+      I80F48.fromNumber(quoteOptimalRate),
+      I80F48.fromNumber(quoteMaxRate),
     );
 
-    const transaction = new Transaction();
-    transaction.add(accountInstruction.instruction);
-    transaction.add(...quoteVaultAccountInstructions);
-    transaction.add(quoteNodeBankAccountInstruction.instruction);
-    transaction.add(quoteRootBankAccountInstruction.instruction);
-    transaction.add(cacheAccountInstruction.instruction);
-    transaction.add(initMangoGroupInstruction);
-
-    await this.sendTransaction(transaction, payer, [
+    const createAccountsTransaction = new Transaction();
+    createAccountsTransaction.add(accountInstruction.instruction);
+    createAccountsTransaction.add(...quoteVaultAccountInstructions);
+    createAccountsTransaction.add(quoteNodeBankAccountInstruction.instruction);
+    createAccountsTransaction.add(quoteRootBankAccountInstruction.instruction);
+    createAccountsTransaction.add(cacheAccountInstruction.instruction);
+    createAccountsTransaction.add(...daoVaultAccountInstructions);
+    await this.sendTransaction(createAccountsTransaction, payer, [
       accountInstruction.account,
       quoteVaultAccount,
       quoteNodeBankAccountInstruction.account,
       quoteRootBankAccountInstruction.account,
       cacheAccountInstruction.account,
+      daoVaultAccount,
     ]);
+
+    const initMangoGroupTransaction = new Transaction();
+    initMangoGroupTransaction.add(initMangoGroupInstruction);
+    await this.sendTransaction(initMangoGroupTransaction, payer, []);
 
     return accountInstruction.account.publicKey;
   }
@@ -578,10 +608,10 @@ export class MangoClient {
     const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
 
     const nativePrice = new BN(price * quoteUnit)
-      .mul(perpMarket.contractSize)
+      .mul(perpMarket.baseLotSize)
       .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
     const nativeQuantity = new BN(quantity * baseUnit).div(
-      perpMarket.contractSize,
+      perpMarket.baseLotSize,
     );
 
     const transaction = new Transaction();
@@ -624,7 +654,6 @@ export class MangoClient {
       perpMarket.publicKey,
       perpMarket.bids,
       perpMarket.asks,
-      perpMarket.eventQueue,
       order,
     );
 
@@ -704,6 +733,9 @@ export class MangoClient {
     marketIndex: number,
     maintLeverage: number,
     initLeverage: number,
+    optimalUtil: number,
+    optimalRate: number,
+    maxRate: number,
   ): Promise<TransactionSignature> {
     const vaultAccount = new Account();
 
@@ -741,8 +773,10 @@ export class MangoClient {
       new BN(marketIndex),
       I80F48.fromNumber(maintLeverage),
       I80F48.fromNumber(initLeverage),
+      I80F48.fromNumber(optimalUtil),
+      I80F48.fromNumber(optimalRate),
+      I80F48.fromNumber(maxRate),
     );
-
     const transaction = new Transaction();
     transaction.add(...vaultAccountInstructions);
     transaction.add(nodeBankAccountInstruction.instruction);
@@ -1267,9 +1301,13 @@ export class MangoClient {
     marketIndex: number,
     maintLeverage: number,
     initLeverage: number,
+    makerFee: number,
+    takerFee: number,
     baseLotSize: number,
     quoteLotSize: number,
     maxNumEvents: number,
+    maxDepthBps: number, // liquidity incentive params. Set scaler == 0 if no liquidity incentives
+    scaler: number,
   ) {
     const makePerpMarketAccountInstruction = await createAccountInstruction(
       this.connection,
@@ -1310,8 +1348,12 @@ export class MangoClient {
       new BN(marketIndex),
       I80F48.fromNumber(maintLeverage),
       I80F48.fromNumber(initLeverage),
+      I80F48.fromNumber(makerFee),
+      I80F48.fromNumber(takerFee),
       new BN(baseLotSize),
       new BN(quoteLotSize),
+      I80F48.fromNumber(maxDepthBps),
+      I80F48.fromNumber(scaler),
     );
 
     const transaction = new Transaction();
@@ -1342,5 +1384,277 @@ export class MangoClient {
     );
 
     return new EventQueue(decoded);
+  }
+
+  // Liquidator Functions
+  async forceCancelSpotOrders(
+    mangoGroup: MangoGroup,
+    liqeeMangoAccount: MangoAccount,
+    spotMarket: Market,
+    baseRootBank: RootBank,
+    quoteRootBank: RootBank,
+    payer: Account,
+    limit: BN,
+  ) {
+    const baseNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
+    const quoteNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
+
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
+    const instruction = makeForceCancelSpotOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      liqeeMangoAccount.publicKey,
+      baseRootBank.publicKey,
+      baseNodeBanks[0].publicKey,
+      baseNodeBanks[0].vault,
+      quoteRootBank.publicKey,
+      quoteNodeBanks[0].publicKey,
+      quoteNodeBanks[0].vault,
+      spotMarket.publicKey,
+      spotMarket.bidsAddress,
+      spotMarket.asksAddress,
+      mangoGroup.signerKey,
+      spotMarket['_decoded'].eventQueue,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      dexSigner,
+      mangoGroup.dexProgramId,
+      liqeeMangoAccount.spotOpenOrders,
+      limit,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async forceCancelPerpOrders(
+    mangoGroup: MangoGroup,
+    liqeeMangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    payer: Account,
+    limit: BN,
+  ) {
+    const instruction = makeForceCancelPerpOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      liqeeMangoAccount.publicKey,
+      liqeeMangoAccount.spotOpenOrders,
+      limit,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async liquidateTokenAndToken(
+    mangoGroup: MangoGroup,
+    liqeeMangoAccount: MangoAccount,
+    liqorMangoAccount: MangoAccount,
+    assetRootBank: RootBank,
+    liabRootBank: RootBank,
+    payer: Account,
+    maxLiabTransfer: BN,
+  ) {
+    const instruction = makeLiquidateTokenAndTokenInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      liqeeMangoAccount.publicKey,
+      liqorMangoAccount.publicKey,
+      payer.publicKey,
+      assetRootBank.publicKey,
+      assetRootBank.nodeBanks[0],
+      liabRootBank.publicKey,
+      liabRootBank.nodeBanks[0],
+      liqeeMangoAccount.spotOpenOrders,
+      liqorMangoAccount.spotOpenOrders,
+      maxLiabTransfer,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async liquidateTokenAndPerp(
+    mangoGroup: MangoGroup,
+    liqeeMangoAccount: MangoAccount,
+    liqorMangoAccount: MangoAccount,
+    rootBank: RootBank,
+    payer: Account,
+    assetType: AssetType,
+    assetIndex: number,
+    liabType: AssetType,
+    liabIndex: number,
+    maxLiabTransfer: BN,
+  ) {
+    const instruction = makeLiquidateTokenAndPerpInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      liqeeMangoAccount.publicKey,
+      liqorMangoAccount.publicKey,
+      payer.publicKey,
+      rootBank.publicKey,
+      rootBank.nodeBanks[0],
+      liqeeMangoAccount.spotOpenOrders,
+      liqorMangoAccount.spotOpenOrders,
+      assetType,
+      new BN(assetIndex),
+      liabType,
+      new BN(liabIndex),
+      maxLiabTransfer,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async liquidatePerpMarket(
+    mangoGroup: MangoGroup,
+    liqeeMangoAccount: MangoAccount,
+    liqorMangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    payer: Account,
+    baseTransferRequest: BN,
+  ) {
+    const instruction = makeLiquidatePerpMarketInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      perpMarket.publicKey,
+      liqeeMangoAccount.publicKey,
+      liqorMangoAccount.publicKey,
+      payer.publicKey,
+      liqeeMangoAccount.spotOpenOrders,
+      liqorMangoAccount.spotOpenOrders,
+      baseTransferRequest,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async settleFees(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    rootBank: RootBank,
+    payer: Account,
+  ) {
+    const nodeBanks = await rootBank.loadNodeBanks(this.connection);
+
+    const instruction = makeSettleFeesInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      perpMarket.publicKey,
+      mangoAccount.publicKey,
+      rootBank.publicKey,
+      nodeBanks[0].publicKey,
+      nodeBanks[0].vault,
+      mangoGroup.daoVault,
+      payer.publicKey,
+      mangoGroup.admin,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async resolvePerpBankruptcy(
+    mangoGroup: MangoGroup,
+    liqeeMangoAccount: MangoAccount,
+    liqorMangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    rootBank: RootBank,
+    payer: Account,
+    liabIndex: number,
+    maxLiabTransfer: I80F48,
+  ) {
+    const nodeBanks = await rootBank.loadNodeBanks(this.connection);
+    const instruction = makeResolvePerpBankruptcyInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      liqeeMangoAccount.publicKey,
+      liqorMangoAccount.publicKey,
+      payer.publicKey,
+      rootBank.publicKey,
+      nodeBanks[0].publicKey,
+      nodeBanks[0].vault,
+      mangoGroup.daoVault,
+      mangoGroup.signerKey,
+      perpMarket.publicKey,
+      liqorMangoAccount.spotOpenOrders,
+      new BN(liabIndex),
+      maxLiabTransfer,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async resolveTokenBankruptcy(
+    mangoGroup: MangoGroup,
+    liqeeMangoAccount: MangoAccount,
+    liqorMangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    quoteRootBank: RootBank,
+    liabRootBank: RootBank,
+    payer: Account,
+    liabIndex: number,
+    maxLiabTransfer: I80F48,
+  ) {
+    const quoteNodeBanks = await quoteRootBank.loadNodeBanks(this.connection);
+    const liabNodeBanks = await liabRootBank.loadNodeBanks(this.connection);
+    const instruction = makeResolveTokenBankruptcyInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      liqeeMangoAccount.publicKey,
+      liqorMangoAccount.publicKey,
+      payer.publicKey,
+      quoteRootBank.publicKey,
+      quoteNodeBanks[0].publicKey,
+      quoteNodeBanks[0].vault,
+      mangoGroup.daoVault,
+      mangoGroup.signerKey,
+      liabRootBank.publicKey,
+      liabNodeBanks[0].publicKey,
+      liqorMangoAccount.spotOpenOrders,
+      liabNodeBanks.map((nodeBank) => nodeBank.publicKey),
+      maxLiabTransfer,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
   }
 }

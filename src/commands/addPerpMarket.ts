@@ -15,9 +15,13 @@ export default async function addPerpMarket(
   symbol: string,
   maintLeverage: number,
   initLeverage: number,
+  makerFee: number,
+  takerFee: number,
   baseLotSize: number,
   quoteLotSize: number,
   maxNumEvents: number,
+  maxDepthBps: number,
+  scaler: number,
 ): Promise<GroupConfig> {
   console.log({
     connection,
@@ -38,9 +42,13 @@ export default async function addPerpMarket(
     marketIndex,
     maintLeverage,
     initLeverage,
+    makerFee,
+    takerFee,
     baseLotSize,
     quoteLotSize,
     maxNumEvents,
+    maxDepthBps,
+    scaler,
   );
 
   group = await client.getMangoGroup(groupConfig.publicKey);

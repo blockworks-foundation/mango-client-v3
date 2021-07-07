@@ -18,6 +18,9 @@ export default async function addSpotMarket(
   baseMint: PublicKey,
   maintLeverage: number,
   initLeverage: number,
+  optimalUtil: number,
+  optimalRate: number,
+  maxRate: number,
 ): Promise<GroupConfig> {
   const client = new MangoClient(connection, groupConfig.mangoProgramId);
 
@@ -33,6 +36,9 @@ export default async function addSpotMarket(
     marketIndex,
     maintLeverage,
     initLeverage,
+    optimalUtil,
+    optimalRate,
+    maxRate,
   );
 
   group = await client.getMangoGroup(groupConfig.publicKey);

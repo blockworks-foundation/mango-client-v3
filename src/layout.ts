@@ -24,10 +24,6 @@ export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
 const MAX_BOOK_NODES = 1024;
 
-export const MAX_RATE = I80F48.fromString('3.0');
-export const OPTIMAL_UTIL = I80F48.fromString('0.7');
-export const OPTIMAL_RATE = I80F48.fromString('0.2');
-
 class _I80F48Layout extends Blob {
   constructor(property: string) {
     super(16, property);
@@ -181,7 +177,13 @@ export function selfTradeBehaviorLayout(property) {
 export const MangoInstructionLayout = union(u32('instruction'));
 MangoInstructionLayout.addVariant(
   0,
-  struct([u64('signerNonce'), u64('validInterval')]),
+  struct([
+    u64('signerNonce'),
+    u64('validInterval'),
+    I80F48Layout('quoteOptimalUtil'),
+    I80F48Layout('quoteOptimalRate'),
+    I80F48Layout('quoteMaxRate'),
+  ]),
   'InitMangoGroup',
 );
 MangoInstructionLayout.addVariant(1, struct([]), 'InitMangoAccount');
@@ -193,7 +195,14 @@ MangoInstructionLayout.addVariant(
 );
 MangoInstructionLayout.addVariant(
   4,
-  struct([u64('marketIndex'), u128('maintLeverage'), u128('initLeverage')]),
+  struct([
+    u64('marketIndex'),
+    u128('maintLeverage'),
+    u128('initLeverage'),
+    I80F48Layout('optimalUtil'),
+    I80F48Layout('optimalRate'),
+    I80F48Layout('maxRate'),
+  ]),
   'AddSpotMarket',
 );
 MangoInstructionLayout.addVariant(
@@ -225,8 +234,12 @@ MangoInstructionLayout.addVariant(
     u64('marketIndex'),
     I80F48Layout('maintLeverage'),
     I80F48Layout('initLeverage'),
+    I80F48Layout('makerFee'),
+    I80F48Layout('takerFee'),
     i64('baseLotSize'),
     i64('quoteLotSize'),
+    I80F48Layout('maxDepthBps'),
+    I80F48Layout('scaler'),
   ]),
   'AddPerpMarket',
 );
@@ -310,6 +323,11 @@ export const DataType = {
   MangoCache: 7,
   EventQueue: 8,
 };
+
+export const enum AssetType {
+  Token = 0,
+  Perp = 1,
+}
 
 export class MetaData {
   dataType!: number;
@@ -438,6 +456,8 @@ export class PerpMarketInfo {
   maintLiabWeight!: I80F48;
   initLiabWeight!: I80F48;
   liquidationFee!: I80F48;
+  makerFee!: I80F48;
+  takerFee!: I80F48;
   baseLotSize!: BN;
   quoteLotSize!: BN;
 
@@ -459,6 +479,8 @@ export class PerpMarketInfoLayout extends Structure {
         I80F48Layout('maintLiabWeight'),
         I80F48Layout('initLiabWeight'),
         I80F48Layout('liquidationFee'),
+        I80F48Layout('makerFee'),
+        I80F48Layout('takerFee'),
         i64('baseLotSize'),
         i64('quoteLotSize'),
       ],
@@ -485,6 +507,7 @@ export class PerpAccount {
   longSettledFunding!: I80F48;
   shortSettledFunding!: I80F48;
   openOrders!: PerpOpenOrders;
+  liquidityPoints!: I80F48;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -573,6 +596,7 @@ export class PerpAccountLayout extends Structure {
         I80F48Layout('longSettledFunding'),
         I80F48Layout('shortSettledFunding'),
         perpOpenOrdersLayout('openOrders'),
+        I80F48Layout('liquidityPoints'),
       ],
       property,
     );
@@ -647,7 +671,7 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('dexProgramId'),
   publicKeyLayout('mangoCache'),
   u64('validInterval'),
-  publicKeyLayout('insuranceVault'),
+  publicKeyLayout('daoVault'),
 ]);
 
 export const MangoAccountLayout = struct([
@@ -667,11 +691,15 @@ export const MangoAccountLayout = struct([
 
 export const RootBankLayout = struct([
   metaDataLayout('metaData'),
+  I80F48Layout('optimalUtil'),
+  I80F48Layout('optimalRate'),
+  I80F48Layout('maxRate'),
   u64('numNodeBanks'), // usize?
   seq(publicKeyLayout(), MAX_NODE_BANKS, 'nodeBanks'),
   I80F48Layout('depositIndex'),
   I80F48Layout('borrowIndex'),
   u64('lastUpdated'),
+  seq(u8(), 64, 'padding'),
 ]);
 
 export const NodeBankLayout = struct([
@@ -693,28 +721,40 @@ export const PerpMarketLayout = struct([
   publicKeyLayout('bids'),
   publicKeyLayout('asks'),
   publicKeyLayout('eventQueue'),
+  i64('quoteLotSize'),
+  i64('baseLotSize'),
 
   I80F48Layout('longFunding'),
   I80F48Layout('shortFunding'),
   i64('openInterest'),
-  i64('quoteLotSize'),
-  publicKeyLayout('indexOracle'),
   u64('lastUpdated'),
   u64('seqNum'),
-  i64('contractSize'),
+  I80F48Layout('feesAccrued'),
+  I80F48Layout('maxDepthBps'),
+  I80F48Layout('scaler'),
+  I80F48Layout('totalLiquidityPoints'),
 ]);
 
-export const PerpEventLayout = union(u8('eventType'), blob(87), 'event');
+export const PerpEventLayout = union(u8('eventType'), blob(151), 'event');
 PerpEventLayout.addVariant(
   0,
   struct([
-    bool('maker'),
-    seq(u8(), 6),
-    publicKeyLayout('owner'),
-    i64('baseChange'),
-    i64('quoteChange'),
-    I80F48Layout('longFunding'),
-    I80F48Layout('shortFunding'),
+    sideLayout('side', 1),
+    u8('makerSlot'),
+    bool('makerOut'),
+    seq(u8(), 4),
+    publicKeyLayout('maker'),
+    i128('makerOrderId'),
+    u64('makerClientOrderId'),
+    i64('bestInitial'),
+    u64('timestamp'),
+
+    publicKeyLayout('taker'),
+    i128('takerOrderId'),
+    u64('takerClientOrderId'),
+
+    i64('price'),
+    i64('quantity'),
   ]),
   'fill',
 );
@@ -731,12 +771,21 @@ PerpEventLayout.addVariant(
 );
 
 export interface FillEvent {
-  maker: boolean;
-  owner: PublicKey;
-  baseChange: BN;
-  quoteChange: BN;
-  longFunding: I80F48;
-  shortFunding: I80F48;
+  side: 'buy' | 'sell';
+  makerSlot: number;
+  makerOut: boolean;
+  maker: PublicKey;
+  makerOrderId: BN;
+  makerClientOrderId: BN;
+  bestInitial: BN;
+  timestamp: BN;
+
+  taker: PublicKey;
+  takerOrderId: BN;
+  takerClientOrderId: BN;
+
+  price: BN;
+  quantity: BN;
 }
 
 export interface OutEvent {
@@ -813,7 +862,7 @@ export class PerpEventQueue {
   }
 }
 
-const BOOK_NODE_SIZE = 72;
+const BOOK_NODE_SIZE = 88;
 const BOOK_NODE_LAYOUT = union(u32('tag'), blob(BOOK_NODE_SIZE - 4), 'node');
 BOOK_NODE_LAYOUT.addVariant(0, struct([]), 'uninitialized');
 BOOK_NODE_LAYOUT.addVariant(
@@ -835,6 +884,8 @@ BOOK_NODE_LAYOUT.addVariant(
     publicKeyLayout('owner'), // Open orders account
     u64('quantity'), // In units of lot size
     u64('clientOrderId'),
+    u64('bestInitial'),
+    u64('timestamp'),
   ]),
   'leafNode',
 );
