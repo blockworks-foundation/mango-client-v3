@@ -1,6 +1,8 @@
 import BN from 'bn.js';
 import Big from 'big.js';
 
+Big.RM = Big.roundDown;
+
 // TODO - this whole class is inefficient; consider optimizing
 export class I80F48 {
   /**
