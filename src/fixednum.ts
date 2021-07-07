@@ -57,8 +57,9 @@ export class I80F48 {
   toString(): string {
     return this.toFixed();
   }
-  toFixed(decimals?: number): string {
-    return this.toBig().toFixed(decimals);
+  toFixed(decimals?: number, round = true): string {
+    const r = round ? 14 : undefined;
+    return this.toBig().round(r).toFixed(decimals);
   }
   toBig(): Big {
     const divider = new Big(2).pow(I80F48.FRACTIONS);
