@@ -292,22 +292,25 @@ export class MangoClient {
       I80F48.fromNumber(quoteMaxRate),
     );
 
-    const transaction = new Transaction();
-    transaction.add(accountInstruction.instruction);
-    transaction.add(...quoteVaultAccountInstructions);
-    transaction.add(...daoVaultAccountInstructions);
-    transaction.add(quoteNodeBankAccountInstruction.instruction);
-    transaction.add(quoteRootBankAccountInstruction.instruction);
-    transaction.add(cacheAccountInstruction.instruction);
-    transaction.add(initMangoGroupInstruction);
-
-    await this.sendTransaction(transaction, payer, [
+    const createAccountsTransaction = new Transaction();
+    createAccountsTransaction.add(accountInstruction.instruction);
+    createAccountsTransaction.add(...quoteVaultAccountInstructions);
+    createAccountsTransaction.add(quoteNodeBankAccountInstruction.instruction);
+    createAccountsTransaction.add(quoteRootBankAccountInstruction.instruction);
+    createAccountsTransaction.add(cacheAccountInstruction.instruction);
+    createAccountsTransaction.add(...daoVaultAccountInstructions);
+    await this.sendTransaction(createAccountsTransaction, payer, [
       accountInstruction.account,
       quoteVaultAccount,
       quoteNodeBankAccountInstruction.account,
       quoteRootBankAccountInstruction.account,
       cacheAccountInstruction.account,
+      daoVaultAccount,
     ]);
+
+    const initMangoGroupTransaction = new Transaction();
+    initMangoGroupTransaction.add(initMangoGroupInstruction);
+    await this.sendTransaction(initMangoGroupTransaction, payer, []);
 
     return accountInstruction.account.publicKey;
   }
