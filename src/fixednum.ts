@@ -103,22 +103,13 @@ export class I80F48 {
    * @param x
    */
   mul(x: I80F48): I80F48 {
-    const divider = new Big(2).pow(I80F48.FRACTIONS);
-    const result = new Big(this.data.mul(x.getInternalValue()).toString())
-      .div(divider)
-      .round()
-      .toFixed();
-    return new I80F48(new BN(result));
+    const divider = new BN(Math.pow(2, I80F48.FRACTIONS));
+    return new I80F48(this.data.mul(x.data).div(divider));
   }
 
   div(x: I80F48): I80F48 {
-    const multiplier = new Big(2).pow(I80F48.FRACTIONS);
-    const result = new Big(this.data.toString())
-      .div(x.getInternalValue().toString())
-      .times(multiplier)
-      .round()
-      .toFixed();
-    return new I80F48(new BN(result));
+    const multiplier = new BN(Math.pow(2, I80F48.FRACTIONS));
+    return new I80F48(this.data.mul(multiplier).div(x.data));
   }
 
   gt(x: I80F48): boolean {

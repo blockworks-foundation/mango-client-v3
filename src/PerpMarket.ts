@@ -53,17 +53,20 @@ export default class PerpMarket {
     return I80F48.fromI64(this.baseLotSize.mul(quantity));
   }
 
-  priceLotsToNumber(price: BN | number): number {
+  priceLotsToNumber(price: BN): number {
     const nativeToUi = new Big(10).pow(this.baseDecimals - this.quoteDecimals);
-    const lotsToNative = new Big(this.quoteLotSize).div(
-      new Big(this.baseLotSize),
+    const lotsToNative = new Big(this.quoteLotSize.toString()).div(
+      new Big(this.baseLotSize.toString()),
     );
-    return new Big(price).mul(lotsToNative).mul(nativeToUi).toNumber();
+    return new Big(price.toString())
+      .mul(lotsToNative)
+      .mul(nativeToUi)
+      .toNumber();
   }
 
-  baseLotsToNumber(quantity: BN | number): number {
-    return new Big(quantity)
-      .mul(new Big(this.baseLotSize))
+  baseLotsToNumber(quantity: BN): number {
+    return new Big(quantity.toString())
+      .mul(new Big(this.baseLotSize.toString()))
       .div(new Big(10).pow(this.baseDecimals))
       .toNumber();
   }
