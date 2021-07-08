@@ -236,25 +236,59 @@ export default class MangoAccount {
     const bankCache = mangoCache.rootBankCache[marketIndex];
     const price = mangoCache.priceCache[marketIndex].price;
 
-    let [ooBase, ooQuote] = [ZERO_I80F48, ZERO_I80F48];
-    const oo = this.spotOpenOrdersAccounts[marketIndex];
-    if (oo !== undefined) {
-      [ooBase, ooQuote] = [
-        I80F48.fromU64(oo.baseTokenTotal),
-        I80F48.fromU64(oo.quoteTokenTotal.add(oo['referrerRebatesAccrued'])),
-      ];
-    }
-    const baseAssets = this.getNativeDeposit(bankCache, marketIndex).add(
-      ooBase,
-    );
-    const baseLiabs = this.getNativeBorrow(bankCache, marketIndex);
+    const baseNet = this.deposits[marketIndex]
+      .mul(bankCache.depositIndex)
+      .sub(this.borrows[marketIndex].mul(bankCache.borrowIndex));
 
-    // health = (baseAssets * aWeight - baseLiabs * lWeight) * price + ooQuote
-    return baseAssets
-      .mul(assetWeight)
-      .sub(baseLiabs.mul(liabWeight))
-      .mul(price)
-      .add(ooQuote);
+    let health = I80F48.fromNumber(0);
+
+    if (
+      !this.inMarginBasket[marketIndex] ||
+      this.spotOpenOrders[marketIndex].equals(zeroKey)
+    ) {
+      if (!baseNet.isNeg()) {
+        health = baseNet.mul(assetWeight).mul(price);
+      } else {
+        health = baseNet.mul(liabWeight).mul(price);
+      }
+    } else {
+      const openOrders = this.spotOpenOrdersAccounts[marketIndex];
+      if (openOrders !== undefined) {
+        const quoteFree = new I80F48(
+          openOrders.quoteTokenFree.add(openOrders['referrerRebatesAccrued']),
+        );
+        const quoteLocked = new I80F48(
+          openOrders.quoteTokenTotal.sub(openOrders.quoteTokenFree),
+        );
+        const baseFree = new I80F48(openOrders.baseTokenFree);
+        const baseLocked = new I80F48(
+          openOrders.baseTokenTotal.sub(openOrders.baseTokenFree),
+        );
+
+        const bidsBaseNet = baseNet
+          .add(quoteLocked.div(price))
+          .add(baseFree)
+          .add(baseLocked);
+        const bidsWeight = !bidsBaseNet.isNeg() ? assetWeight : liabWeight;
+        const bidsHealth = bidsBaseNet
+          .mul(bidsWeight)
+          .mul(price)
+          .add(quoteFree);
+
+        const asksBaseNet = baseNet.sub(baseLocked).add(baseFree);
+        const asksWeight = !bidsBaseNet.isNeg() ? assetWeight : liabWeight;
+        const asksHealth = asksBaseNet
+          .mul(asksWeight)
+          .mul(price)
+          .add(price.mul(baseLocked))
+          .add(quoteFree)
+          .add(quoteLocked);
+
+        health = bidsHealth.min(asksHealth);
+      }
+    }
+
+    return health;
   }
 
   getHealth(
