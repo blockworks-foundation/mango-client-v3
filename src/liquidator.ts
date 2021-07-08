@@ -11,6 +11,7 @@ import { Cluster, Config } from './config';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import { RootBank } from '.';
+import BN from 'bn.js';
 
 export class Liquidator {
   /**
@@ -81,7 +82,6 @@ export class Liquidator {
           return rootBank != undefined;
         },
       ) as RootBank[];
-      console.log('b');
       console.timeEnd('groupInfo');
       console.time('checkAccounts');
       for (let ma of mangoAccounts) {
@@ -104,18 +104,30 @@ export class Liquidator {
             // );
             // await Promise.all(
             //   spotMarkets.map((spotMarket) => {
+            //     const baseRootBankKey = groupIds.tokens.find((tokenInfo) => {
+            //       return (
+            //         tokenInfo.mintKey.toString() ==
+            //         spotMarket.baseMintAddress.toString()
+            //       );
+            //     })?.rootKey;
+            //     const quoteRootBankKey = groupIds.tokens.find((tokenInfo) => {
+            //       return (
+            //         tokenInfo.mintKey.toString() ==
+            //         spotMarket.quoteMintAddress.toString()
+            //       );
+            //     })?.rootKey;
             //     const baseRootBank = rootBanks.find((rootBank) => {
             //       return (
-            //         rootBank.mintKey.toString() ==
-            //         spotMarket.baseMintAddress.toString()
+            //         rootBank.publicKey.toString() == baseRootBankKey?.toString()
             //       );
             //     });
             //     const quoteRootBank = rootBanks.find((rootBank) => {
             //       return (
-            //         rootBank.mintKey.toString() ==
-            //         spotMarket.quoteMintAddress.toString()
+            //         rootBank.publicKey.toString() ==
+            //         quoteRootBankKey?.toString()
             //       );
             //     });
+
             //     if (!baseRootBank || !quoteRootBank) {
             //       throw new Error(
             //         `Error cancelling spot orders: RootBanks not found for market ${spotMarket.publicKey.toBase58()}`,
