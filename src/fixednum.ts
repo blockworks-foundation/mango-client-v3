@@ -13,20 +13,23 @@ export class I80F48 {
    */
   static MAX_SIZE = 128;
   static FRACTIONS = 48;
+  static MULTIPLIER_BIG = new Big(2).pow(I80F48.FRACTIONS);
+  static MULTIPLIER_BN = new BN(2).pow(new BN(I80F48.FRACTIONS));
+  static MAX_BN: BN = new BN(2)
+    .pow(new BN(I80F48.MAX_SIZE))
+    .div(new BN(2))
+    .sub(new BN(1));
+
+  static MIN_BN: BN = new BN(2)
+    .pow(new BN(I80F48.MAX_SIZE))
+    .div(new BN(2))
+    .neg();
 
   data: BN; // This is i128 => array of 16 bytes
-  maxValue: BN;
-  minValue: BN;
   binaryLayout: string;
 
   constructor(data: BN) {
-    // TODO why is this calculated here? should just be static part of the class
-    this.maxValue = new BN(2)
-      .pow(new BN(I80F48.MAX_SIZE))
-      .div(new BN(2))
-      .sub(new BN(1));
-    this.minValue = new BN(2).pow(new BN(I80F48.MAX_SIZE)).div(new BN(2)).neg();
-    if (data.lt(this.minValue) || data.gt(this.maxValue)) {
+    if (data.lt(I80F48.MIN_BN) || data.gt(I80F48.MAX_BN)) {
       throw new Error('Number out of range');
     }
 
@@ -40,8 +43,7 @@ export class I80F48 {
     return this.fromString(x.toString());
   }
   static fromString(x: string): I80F48 {
-    const multiplier = new Big(2).pow(this.FRACTIONS);
-    const initialValue = new Big(x).times(multiplier);
+    const initialValue = new Big(x).times(I80F48.MULTIPLIER_BIG);
     const fixedPointValue = new BN(initialValue.round().toFixed());
     return new I80F48(fixedPointValue);
   }
@@ -57,13 +59,22 @@ export class I80F48 {
   toString(): string {
     return this.toFixed();
   }
-  toFixed(decimals?: number, round = true): string {
-    const r = round ? 14 : undefined;
-    return this.toBig().round(r).toFixed(decimals);
+
+  toFixed(decimals?: number): string {
+    return this.toBig().toFixed(decimals);
+  }
+
+  /**
+   * The number will be rounded first for UI sensibilities, then toFixed
+   */
+  toFixedUi(decimals?: number): string {
+    return this.toBig().round(14).toFixed(decimals);
   }
   toBig(): Big {
-    const divider = new Big(2).pow(I80F48.FRACTIONS);
-    return new Big(this.data.toString()).div(divider);
+    return new Big(this.data.toString()).div(I80F48.MULTIPLIER_BIG);
+  }
+  static fromBig(x: Big): I80F48 {
+    return new I80F48(new BN(x.mul(I80F48.MULTIPLIER_BIG).round().toFixed()));
   }
   toNumber(): number {
     return this.toBig().toNumber();
@@ -86,17 +97,17 @@ export class I80F48 {
       .toTwos(I80F48.MAX_SIZE)
       .toArrayLike(ArrayType, endian, length);
   }
-  getInternalValue(): BN {
+  getData(): BN {
     return this.data;
   }
   getBinaryLayout(): string {
     return this.binaryLayout;
   }
   add(x: I80F48): I80F48 {
-    return new I80F48(this.data.add(x.getInternalValue()));
+    return new I80F48(this.data.add(x.getData()));
   }
   sub(x: I80F48): I80F48 {
-    return new I80F48(this.data.sub(x.getInternalValue()));
+    return new I80F48(this.data.sub(x.getData()));
   }
 
   /**
@@ -104,34 +115,32 @@ export class I80F48 {
    * @param x
    */
   mul(x: I80F48): I80F48 {
-    const divider = new BN(Math.pow(2, I80F48.FRACTIONS));
-    return new I80F48(this.data.mul(x.data).div(divider));
+    return new I80F48(this.data.mul(x.data).div(I80F48.MULTIPLIER_BN));
   }
 
   div(x: I80F48): I80F48 {
-    const multiplier = new BN(Math.pow(2, I80F48.FRACTIONS));
-    return new I80F48(this.data.mul(multiplier).div(x.data));
+    return new I80F48(this.data.mul(I80F48.MULTIPLIER_BN).div(x.data));
   }
 
   gt(x: I80F48): boolean {
-    return this.data.gt(x.getInternalValue());
+    return this.data.gt(x.getData());
   }
   lt(x: I80F48): boolean {
-    return this.data.lt(x.getInternalValue());
+    return this.data.lt(x.getData());
   }
   gte(x: I80F48): boolean {
-    return this.data.gte(x.getInternalValue());
+    return this.data.gte(x.getData());
   }
   lte(x: I80F48): boolean {
-    return this.data.lte(x.getInternalValue());
+    return this.data.lte(x.getData());
   }
   eq(x: I80F48): boolean {
     // TODO make sure this works when they're diff signs or 0
-    return this.data.eq(x.getInternalValue());
+    return this.data.eq(x.getData());
   }
   cmp(x: I80F48): -1 | 0 | 1 {
     // TODO make sure this works when they're diff signs or 0
-    return this.data.cmp(x.getInternalValue());
+    return this.data.cmp(x.getData());
   }
   neg(): I80F48 {
     return this.mul(NEG_ONE_I80F48);
