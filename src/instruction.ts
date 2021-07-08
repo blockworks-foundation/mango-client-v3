@@ -859,7 +859,7 @@ export function makeForceCancelSpotOrdersInstruction(
     { isSigner: false, isWritable: true, pubkey: spotMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
-    { isSigner: true, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
     { isSigner: false, isWritable: true, pubkey: dexEventQueuePk },
     { isSigner: false, isWritable: true, pubkey: dexBasePk },
     { isSigner: false, isWritable: true, pubkey: dexQuotePk },
@@ -1090,7 +1090,7 @@ export function makeSettleFeesInstruction(
     { isSigner: false, isWritable: true, pubkey: bankVaultPk },
     { isSigner: false, isWritable: true, pubkey: daoVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
-    { isSigner: true, isWritable: false, pubkey: adminPk },
+    { isSigner: false, isWritable: false, pubkey: adminPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
   ];
 
