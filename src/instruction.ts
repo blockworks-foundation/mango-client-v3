@@ -143,6 +143,7 @@ export function makeWithdrawInstruction(
 export function makeSettleFundsInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
   ownerPk: PublicKey,
   mangoAccountPk: PublicKey,
   dexProgramId: PublicKey,
@@ -161,6 +162,7 @@ export function makeSettleFundsInstruction(
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: false, isWritable: false, pubkey: dexProgramId },
