@@ -330,10 +330,10 @@ export default class MangoAccount {
 
     let healthRatio = 100;
     if (liabsVal.gt(ZERO_I80F48)) {
-      healthRatio = health.div(liabsVal).toNumber() * 100;
+      healthRatio = (health.toNumber() / liabsVal.toNumber()) * 100;
     }
 
-    return Math.max(healthRatio, 0);
+    return Math.max(Math.min(healthRatio, 100), 0);
   }
 
   computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
