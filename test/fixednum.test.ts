@@ -49,34 +49,29 @@ describe('fixednumTests', async () => {
       const stepSize = new Big(1).div(new Big(2).pow(48));
       const maxValue = new Big('604462909807314587353088').minus(stepSize);
       expect(
-        I80F48.fromString(maxValue.toFixed())
-          .getInternalValue()
-          .toString()
-          .toString(),
+        I80F48.fromString(maxValue.toFixed()).getData().toString().toString(),
       ).to.equal('170141183460469231731687303715884105727');
     });
     it('should create the min value', async () => {
       expect(
         I80F48.fromString('-604462909807314587353088')
-          .getInternalValue()
+          .getData()
           .toString()
           .toString(),
       ).to.equal('-170141183460469231731687303715884105728');
     });
     it('should create arbitrary values', async () => {
-      expect(I80F48.fromString('0').getInternalValue().toString()).to.equal(
-        '0',
-      );
-      expect(I80F48.fromString('1').getInternalValue().toString()).to.equal(
+      expect(I80F48.fromString('0').getData().toString()).to.equal('0');
+      expect(I80F48.fromString('1').getData().toString()).to.equal(
         '281474976710656',
       );
-      expect(I80F48.fromString('-1').getInternalValue().toString()).to.equal(
+      expect(I80F48.fromString('-1').getData().toString()).to.equal(
         '-281474976710656',
       );
-      expect(I80F48.fromString('1.25').getInternalValue().toString()).to.equal(
+      expect(I80F48.fromString('1.25').getData().toString()).to.equal(
         '351843720888320',
       );
-      expect(I80F48.fromString('-1.25').getInternalValue().toString()).to.equal(
+      expect(I80F48.fromString('-1.25').getData().toString()).to.equal(
         '-351843720888320',
       );
     });
@@ -142,7 +137,7 @@ describe('fixednumTests', async () => {
     it('should create the max value', async () => {
       expect(
         I80F48.fromArray(new Uint8Array(maxValue))
-          .getInternalValue()
+          .getData()
           .toString()
           .toString(),
       ).to.equal('170141183460469231731687303715884105727');
@@ -150,7 +145,7 @@ describe('fixednumTests', async () => {
     it('should create the min value', async () => {
       expect(
         I80F48.fromArray(new Uint8Array(minValue))
-          .getInternalValue()
+          .getData()
           .toString()
           .toString(),
       ).to.equal('-170141183460469231731687303715884105728');
@@ -158,31 +153,31 @@ describe('fixednumTests', async () => {
     it('should create arbitrary values', async () => {
       expect(
         I80F48.fromArray(new Uint8Array(zeroValue))
-          .getInternalValue()
+          .getData()
           .toString()
           .toString(),
       ).to.equal('0');
       expect(
         I80F48.fromArray(new Uint8Array(oneValue))
-          .getInternalValue()
+          .getData()
           .toString()
           .toString(),
       ).to.equal('281474976710656');
       expect(
         I80F48.fromArray(new Uint8Array(oneNegValue))
-          .getInternalValue()
+          .getData()
           .toString()
           .toString(),
       ).to.equal('-281474976710656');
       expect(
         I80F48.fromArray(new Uint8Array(oneFracValue))
-          .getInternalValue()
+          .getData()
           .toString()
           .toString(),
       ).to.equal('351843720888320');
       expect(
         I80F48.fromArray(new Uint8Array(oneFracNegValue))
-          .getInternalValue()
+          .getData()
           .toString()
           .toString(),
       ).to.equal('-351843720888320');

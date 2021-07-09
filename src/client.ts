@@ -1,42 +1,40 @@
 import {
   Account,
   Connection,
-  // Keypair,
   PublicKey,
   SimulatedTransactionResponse,
   Transaction,
   TransactionConfirmationStatus,
   TransactionSignature,
-  // AccountInfo,
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import {
   awaitTransactionSignatureConfirmation,
-  simulateTransaction,
-  sleep,
   createAccountInstruction,
   createSignerKeyAndNonce,
   createTokenAccountInstructions,
+  getFilteredProgramAccounts,
   nativeToUi,
+  simulateTransaction,
+  sleep,
   uiToNative,
   zeroKey,
-  getFilteredProgramAccounts,
 } from './utils';
 import {
-  MangoGroupLayout,
-  NodeBankLayout,
-  RootBankLayout,
-  MangoCacheLayout,
-  MangoAccountLayout,
-  StubOracleLayout,
-  PerpMarketLayout,
+  AssetType,
   BookSideLayout,
-  PerpEventQueueLayout,
-  PerpEventLayout,
   EventQueue,
   EventQueueLayout,
+  MangoAccountLayout,
+  MangoCacheLayout,
+  MangoGroupLayout,
   MAX_TOKENS,
-  AssetType,
+  NodeBankLayout,
+  PerpEventLayout,
+  PerpEventQueueLayout,
+  PerpMarketLayout,
+  RootBankLayout,
+  StubOracleLayout,
 } from './layout';
 import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
 import MangoAccount from './MangoAccount';
@@ -49,33 +47,33 @@ import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
-  makeConsumeEventsInstruction,
+  makeCancelPerpOrderInstruction,
   makeCancelSpotOrderInstruction,
+  makeConsumeEventsInstruction,
   makeDepositInstruction,
+  makeForceCancelPerpOrdersInstruction,
+  makeForceCancelSpotOrdersInstruction,
   makeInitMangoAccountInstruction,
   makeInitMangoGroupInstruction,
+  makeLiquidatePerpMarketInstruction,
+  makeLiquidateTokenAndPerpInstruction,
+  makeLiquidateTokenAndTokenInstruction,
   makePlacePerpOrderInstruction,
   makePlaceSpotOrderInstruction,
+  makeResolvePerpBankruptcyInstruction,
+  makeResolveTokenBankruptcyInstruction,
   makeSetOracleInstruction,
+  makeSettleFeesInstruction,
   makeSettleFundsInstruction,
   makeSettlePnlInstruction,
   makeUpdateFundingInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
-  makeCancelPerpOrderInstruction,
-  makeForceCancelSpotOrdersInstruction,
-  makeForceCancelPerpOrdersInstruction,
-  makeLiquidateTokenAndTokenInstruction,
-  makeLiquidateTokenAndPerpInstruction,
-  makeLiquidatePerpMarketInstruction,
-  makeResolvePerpBankruptcyInstruction,
-  makeSettleFeesInstruction,
-  makeResolveTokenBankruptcyInstruction,
 } from './instruction';
 import {
-  Market,
   getFeeRates,
   getFeeTier,
+  Market,
   OpenOrders,
 } from '@project-serum/serum';
 import { I80F48, ZERO_I80F48 } from './fixednum';
@@ -83,7 +81,6 @@ import { Order } from '@project-serum/serum/lib/market';
 
 import { WalletAdapter } from './types';
 import { PerpOrder } from './book';
-import { SpotMarketConfig } from './config';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -972,6 +969,7 @@ export class MangoClient {
     const instruction = makeSettleFundsInstruction(
       this.programId,
       mangoGroup.publicKey,
+      mangoGroup.mangoCache,
       owner.publicKey,
       mangoAccount.publicKey,
       spotMarket.programId,
@@ -1046,6 +1044,7 @@ export class MangoClient {
       const instruction = makeSettleFundsInstruction(
         this.programId,
         mangoGroup.publicKey,
+        mangoGroup.mangoCache,
         owner.publicKey,
         mangoAccount.publicKey,
         spotMarket.programId,
