@@ -91,17 +91,18 @@ export class Liquidator {
             console.log(
               `Sick account ${ma.publicKey.toBase58()} health: ${health.toString()}`,
             );
-            // await Promise.all(
-            //   perpMarkets.map((perpMarket) => {
-            //     return client.forceCancelPerpOrders(
-            //       mangoGroup,
-            //       ma,
-            //       perpMarket,
-            //       payer,
-            //       new BN(5),
-            //     );
-            //   }),
-            // );
+            await Promise.all(
+              perpMarkets.map((perpMarket) => {
+                return client.forceCancelPerpOrders(
+                  mangoGroup,
+                  ma,
+                  perpMarket,
+                  payer,
+                  new BN(5),
+                );
+              }),
+            );
+
             // await Promise.all(
             //   spotMarkets.map((spotMarket) => {
             //     const baseRootBankKey = groupIds.tokens.find((tokenInfo) => {
@@ -127,13 +128,13 @@ export class Liquidator {
             //         quoteRootBankKey?.toString()
             //       );
             //     });
-
+            //
             //     if (!baseRootBank || !quoteRootBank) {
             //       throw new Error(
             //         `Error cancelling spot orders: RootBanks not found for market ${spotMarket.publicKey.toBase58()}`,
             //       );
             //     }
-
+            //
             //     return client.forceCancelSpotOrders(
             //       mangoGroup,
             //       ma,

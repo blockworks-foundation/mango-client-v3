@@ -590,7 +590,7 @@ export class PerpAccount {
           .mul(liabWeight),
       );
     }
-
+    console.log('sim positional health', health.toString());
     return health;
   }
 
@@ -618,19 +618,23 @@ export class PerpAccount {
       this.openOrders.asksQuantity.neg(),
     );
     const health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
+
+    let x;
     if (this.basePosition.gt(new BN(0))) {
-      return health.sub(
+      x = health.sub(
         longFunding
           .sub(this.longSettledFunding)
           .mul(I80F48.fromI64(this.basePosition)),
       );
     } else {
-      return health.add(
+      x = health.add(
         shortFunding
           .sub(this.shortSettledFunding)
           .mul(I80F48.fromI64(this.basePosition)),
       );
     }
+    console.log('perp health', x.toString());
+    return x;
   }
 }
 

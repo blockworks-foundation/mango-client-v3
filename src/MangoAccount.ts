@@ -296,6 +296,7 @@ export default class MangoAccount {
     mangoCache: MangoCache,
     healthType: HealthType,
   ): I80F48 {
+    console.log('calculating health for', this.publicKey.toBase58());
     const quoteDeposits = this.getNativeDeposit(
       mangoCache.rootBankCache[QUOTE_INDEX],
       QUOTE_INDEX,
@@ -334,6 +335,7 @@ export default class MangoAccount {
         );
 
         health = health.add(spotHealth);
+        console.log('spot health', spotHealth.toString());
       }
 
       if (!mangoGroup.perpMarkets[i].isEmpty()) {
@@ -350,6 +352,9 @@ export default class MangoAccount {
         );
       }
     }
+
+    console.log(healthType, health.toString());
+    console.log('\n');
 
     return health;
   }

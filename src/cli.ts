@@ -17,6 +17,7 @@ import {
   setStubOracle,
 } from './commands';
 import { Cluster, Config, GroupConfig } from './config';
+import { MangoClient } from './client';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -374,6 +375,43 @@ yargs(hideBin(process.argv))
       );
       config.storeGroup(result);
       writeConfig(args.config as string, config);
+      process.exit(0);
+    },
+  )
+  .command(
+    'show <mango_account_pk>',
+    'Print relevant details about a mango account',
+    (y) => {
+      return y
+        .positional('mango_account_pk', {
+          describe: 'the public key of the MangoAccount',
+          type: 'string',
+        })
+        .option('group', {
+          describe: 'the mango group name 🥭',
+          default: 'mango_test_v3.3',
+          type: 'string',
+        })
+
+        .option(...clusterDesc);
+    },
+    async (args) => {
+      console.log('show', args);
+      const cluster = args.cluster as Cluster;
+      const connection = openConnection(config, cluster);
+
+      const group = config.getGroup(
+        cluster,
+        args.group as string,
+      ) as GroupConfig;
+
+      const client = new MangoClient(connection, groupConfig.mangoProgramId);
+      const mangoAccount = await client.getMangoAccount(
+        group.publicKey,
+        group.serumProgramId,
+      );
+      // TODO - write a proper to string
+      console.log(mangoAccount.toString());
       process.exit(0);
     },
   ).argv;

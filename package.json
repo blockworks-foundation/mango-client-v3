@@ -17,6 +17,7 @@
   "scripts": {
     "build": "tsc",
     "cli": "ts-node src/cli.ts",
+    "liquidator": "ts-node src/liquidator.ts",
     "start": "ts-node src/test.ts",
     "clean": "rm -rf lib",
     "prepare": "run-s clean build",
