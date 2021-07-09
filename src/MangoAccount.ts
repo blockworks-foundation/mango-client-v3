@@ -240,7 +240,7 @@ export default class MangoAccount {
       .mul(bankCache.depositIndex)
       .sub(this.borrows[marketIndex].mul(bankCache.borrowIndex));
 
-    let health = I80F48.fromNumber(0);
+    let health = ZERO_I80F48;
 
     if (
       !this.inMarginBasket[marketIndex] ||
@@ -254,14 +254,14 @@ export default class MangoAccount {
     } else {
       const openOrders = this.spotOpenOrdersAccounts[marketIndex];
       if (openOrders !== undefined) {
-        const quoteFree = new I80F48(
+        const quoteFree = I80F48.fromU64(
           openOrders.quoteTokenFree.add(openOrders['referrerRebatesAccrued']),
         );
-        const quoteLocked = new I80F48(
+        const quoteLocked = I80F48.fromU64(
           openOrders.quoteTokenTotal.sub(openOrders.quoteTokenFree),
         );
-        const baseFree = new I80F48(openOrders.baseTokenFree);
-        const baseLocked = new I80F48(
+        const baseFree = I80F48.fromU64(openOrders.baseTokenFree);
+        const baseLocked = I80F48.fromU64(
           openOrders.baseTokenTotal.sub(openOrders.baseTokenFree),
         );
 
@@ -296,7 +296,12 @@ export default class MangoAccount {
     mangoCache: MangoCache,
     healthType: HealthType,
   ): I80F48 {
-    console.log('calculating health for', this.publicKey.toBase58());
+    console.log(
+      'calculating',
+      healthType,
+      'health for',
+      this.publicKey.toBase58(),
+    );
     const quoteDeposits = this.getNativeDeposit(
       mangoCache.rootBankCache[QUOTE_INDEX],
       QUOTE_INDEX,
@@ -326,6 +331,12 @@ export default class MangoAccount {
               perpMarket.initLiabWeight,
             ];
 
+      console.log(
+        spotAssetWeight.toString(),
+        spotLiabWeight.toString(),
+        perpAssetWeight.toString(),
+        perpLiabWeight.toString(),
+      );
       if (!mangoGroup.spotMarkets[i].isEmpty()) {
         const spotHealth = this.getSpotHealth(
           mangoCache,

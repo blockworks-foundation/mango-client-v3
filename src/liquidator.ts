@@ -8,7 +8,7 @@ import { Account, Commitment, Connection } from '@solana/web3.js';
 import { sleep } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
-import { I80F48 } from './fixednum';
+import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import { RootBank } from '.';
 import BN from 'bn.js';
@@ -55,6 +55,8 @@ export class Liquidator {
       const mangoGroup = await client.getMangoGroup(mangoGroupKey);
       const cache = await mangoGroup.loadCache(connection);
 
+      console.log('calling get all mango accounts');
+
       const mangoAccounts = await client.getAllMangoAccounts(mangoGroup);
       const perpMarkets = await Promise.all(
         groupIds.perpMarkets.map((perpMarket, index) => {
@@ -87,7 +89,7 @@ export class Liquidator {
       for (let ma of mangoAccounts) {
         try {
           const health = ma.getHealth(mangoGroup, cache, 'Maint');
-          if (health.lt(I80F48.fromNumber(0))) {
+          if (health.lt(ZERO_I80F48)) {
             console.log(
               `Sick account ${ma.publicKey.toBase58()} health: ${health.toString()}`,
             );
