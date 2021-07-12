@@ -5,6 +5,7 @@ import {
   getPerpMarketByBaseSymbol,
   getTokenBySymbol,
   GroupConfig,
+  mngoMints,
   OracleConfig,
 } from '../config';
 
@@ -37,7 +38,8 @@ export default async function addPerpMarket(
   const marketIndex = group.getOracleIndex(oracleDesc.publicKey);
 
   await client.addPerpMarket(
-    groupConfig.publicKey,
+    group,
+    mngoMints[groupConfig.cluster],
     payer,
     marketIndex,
     maintLeverage,

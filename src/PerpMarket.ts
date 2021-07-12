@@ -30,6 +30,8 @@ export default class PerpMarket {
   maxDepthBps!: I80F48;
   scaler!: I80F48;
   totalLiquidityPoints!: I80F48;
+  pointsPerMngo!: I80F48;
+  mngoVault!: PublicKey;
 
   constructor(
     publicKey: PublicKey,

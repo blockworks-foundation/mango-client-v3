@@ -1,7 +1,20 @@
 import { PublicKey } from '@solana/web3.js';
 import IDS from './ids.json';
+import { zeroKey } from './utils';
 
 export type Cluster = 'devnet' | 'mainnet-beta' | 'localnet' | 'testnet';
+
+export const msrmMints = {
+  devnet: new PublicKey('934bNdNw9QfE8dXD4mKQiKajYURfSkPhxfYZzpvmygca'),
+  'mainnet-beta': new PublicKey('MSRMcoVyrFxnSgo5uXwone5SKcGhT1KEJMFEkMEWf9L'),
+  localnet: zeroKey,
+  testnet: zeroKey,
+};
+
+export const mngoMints = {
+  devnet: new PublicKey('Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC'),
+  'mainnet-beta': new PublicKey('MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac'),
+};
 
 export interface OracleConfig {
   symbol: string;

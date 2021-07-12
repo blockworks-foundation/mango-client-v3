@@ -12,6 +12,7 @@ import {
 import { nativeI80F48ToUi, nativeToUi, promiseUndef, zeroKey } from './utils';
 import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
 import RootBank from './RootBank';
+import BN from 'bn.js';
 
 export default class MangoAccount {
   publicKey: PublicKey;
@@ -28,6 +29,7 @@ export default class MangoAccount {
   spotOpenOrdersAccounts: (OpenOrders | undefined)[];
 
   perpAccounts!: PerpAccount[];
+  msrmAmount!: BN;
 
   beingLiquidated!: boolean;
   isBankrupt!: boolean;
