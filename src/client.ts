@@ -287,6 +287,7 @@ export class MangoClient {
       cacheAccountInstruction.account,
       daoVaultAccount,
     ];
+    await this.sendTransaction(createAccountsTransaction, payer, signers);
 
     // If valid msrmMint passed in, then create new msrmVault
     let msrmVaultPk;
@@ -299,14 +300,15 @@ export class MangoClient {
         msrmMint,
         signerKey,
       );
-      createAccountsTransaction.add(...msrmVaultAccountInstructions);
+      const createMsrmVaultTransaction = new Transaction();
+      createMsrmVaultTransaction.add(...msrmVaultAccountInstructions);
       msrmVaultPk = msrmVaultAccount.publicKey;
-      signers.push(msrmVaultAccount);
+      await this.sendTransaction(createMsrmVaultTransaction, payer, [
+        msrmVaultAccount,
+      ]);
     } else {
       msrmVaultPk = zeroKey;
     }
-
-    await this.sendTransaction(createAccountsTransaction, payer, signers);
 
     const initMangoGroupInstruction = makeInitMangoGroupInstruction(
       this.programId,
