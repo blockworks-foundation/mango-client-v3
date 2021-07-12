@@ -672,6 +672,8 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('mangoCache'),
   u64('validInterval'),
   publicKeyLayout('daoVault'),
+  publicKeyLayout('srmVault'),
+  publicKeyLayout('msrmVault'),
 ]);
 
 export const MangoAccountLayout = struct([
@@ -684,6 +686,8 @@ export const MangoAccountLayout = struct([
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
   seq(perpAccountLayout(), MAX_PAIRS, 'perpAccounts'),
+  u64('msrmAmount'),
+
   bool('beingLiquidated'),
   bool('isBankrupt'),
   seq(u8(), 6, 'padding'),
@@ -733,6 +737,8 @@ export const PerpMarketLayout = struct([
   I80F48Layout('maxDepthBps'),
   I80F48Layout('scaler'),
   I80F48Layout('totalLiquidityPoints'),
+  I80F48Layout('pointsPerMngo'),
+  publicKeyLayout('mngoVault'),
 ]);
 
 export const PerpEventLayout = union(u8('eventType'), blob(151), 'event');
