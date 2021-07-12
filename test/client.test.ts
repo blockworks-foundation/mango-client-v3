@@ -24,6 +24,7 @@ describe('MangoClient', async () => {
       sleep(1000); // sleeping because devnet rate limits suck
       const groupKey = await client.initMangoGroup(
         Test.USDCMint,
+        Test.MSRMMint,
         Test.DexProgramId,
         5,
         0.7,
@@ -52,6 +53,7 @@ describe('MangoClient', async () => {
     before(async () => {
       const groupKey = await client.initMangoGroup(
         Test.USDCMint,
+        Test.MSRMMint,
         Test.DexProgramId,
         5,
         0.7,
@@ -85,6 +87,7 @@ describe('MangoClient', async () => {
     before(async () => {
       const groupKey = await client.initMangoGroup(
         Test.USDCMint,
+        Test.MSRMMint,
         Test.DexProgramId,
         5,
         0.7,

@@ -1,6 +1,6 @@
 import { Account, Connection, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
-import { Cluster, GroupConfig } from '../config';
+import { Cluster, GroupConfig, msrmMints } from '../config';
 
 export default async function initGroup(
   connection: Connection,
@@ -28,8 +28,10 @@ export default async function initGroup(
   });
 
   const client = new MangoClient(connection, mangoProgramId);
+
   const groupKey = await client.initMangoGroup(
     quoteMint,
+    msrmMints[cluster],
     serumProgramId,
     validInterval,
     quoteOptimalUtil,

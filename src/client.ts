@@ -215,6 +215,7 @@ export class MangoClient {
 
   async initMangoGroup(
     quoteMint: PublicKey,
+    msrmMint: PublicKey,
     dexProgram: PublicKey,
     validInterval: number,
     quoteOptimalUtil: number,
@@ -270,6 +271,43 @@ export class MangoClient {
       this.programId,
     );
 
+    const createAccountsTransaction = new Transaction();
+    createAccountsTransaction.add(accountInstruction.instruction);
+    createAccountsTransaction.add(...quoteVaultAccountInstructions);
+    createAccountsTransaction.add(quoteNodeBankAccountInstruction.instruction);
+    createAccountsTransaction.add(quoteRootBankAccountInstruction.instruction);
+    createAccountsTransaction.add(cacheAccountInstruction.instruction);
+    createAccountsTransaction.add(...daoVaultAccountInstructions);
+
+    const signers = [
+      accountInstruction.account,
+      quoteVaultAccount,
+      quoteNodeBankAccountInstruction.account,
+      quoteRootBankAccountInstruction.account,
+      cacheAccountInstruction.account,
+      daoVaultAccount,
+    ];
+
+    // If valid msrmMint passed in, then create new msrmVault
+    let msrmVaultPk;
+    if (!msrmMint.equals(zeroKey)) {
+      const msrmVaultAccount = new Account();
+      const msrmVaultAccountInstructions = await createTokenAccountInstructions(
+        this.connection,
+        payer.publicKey,
+        msrmVaultAccount.publicKey,
+        msrmMint,
+        signerKey,
+      );
+      createAccountsTransaction.add(...msrmVaultAccountInstructions);
+      msrmVaultPk = msrmVaultAccount.publicKey;
+      signers.push(msrmVaultAccount);
+    } else {
+      msrmVaultPk = zeroKey;
+    }
+
+    await this.sendTransaction(createAccountsTransaction, payer, signers);
+
     const initMangoGroupInstruction = makeInitMangoGroupInstruction(
       this.programId,
       accountInstruction.account.publicKey,
@@ -280,6 +318,7 @@ export class MangoClient {
       quoteNodeBankAccountInstruction.account.publicKey,
       quoteRootBankAccountInstruction.account.publicKey,
       daoVaultAccount.publicKey,
+      msrmVaultPk,
       cacheAccountInstruction.account.publicKey,
       dexProgram,
       new BN(signerNonce),
@@ -288,22 +327,6 @@ export class MangoClient {
       I80F48.fromNumber(quoteOptimalRate),
       I80F48.fromNumber(quoteMaxRate),
     );
-
-    const createAccountsTransaction = new Transaction();
-    createAccountsTransaction.add(accountInstruction.instruction);
-    createAccountsTransaction.add(...quoteVaultAccountInstructions);
-    createAccountsTransaction.add(quoteNodeBankAccountInstruction.instruction);
-    createAccountsTransaction.add(quoteRootBankAccountInstruction.instruction);
-    createAccountsTransaction.add(cacheAccountInstruction.instruction);
-    createAccountsTransaction.add(...daoVaultAccountInstructions);
-    await this.sendTransaction(createAccountsTransaction, payer, [
-      accountInstruction.account,
-      quoteVaultAccount,
-      quoteNodeBankAccountInstruction.account,
-      quoteRootBankAccountInstruction.account,
-      cacheAccountInstruction.account,
-      daoVaultAccount,
-    ]);
 
     const initMangoGroupTransaction = new Transaction();
     initMangoGroupTransaction.add(initMangoGroupInstruction);
@@ -837,35 +860,46 @@ export class MangoClient {
 
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
-    const openOrdersKeys: PublicKey[] = [];
-    for (let i = 0; i < mangoAccount.spotOpenOrders.length; i++) {
-      if (
-        i === spotMarketIndex &&
-        mangoAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)
-      ) {
-        // open orders missing for this market; create a new one now
-        const openOrdersSpace = OpenOrders.getLayout(
-          mangoGroup.dexProgramId,
-        ).span;
-        const openOrdersLamports =
-          await this.connection.getMinimumBalanceForRentExemption(
-            openOrdersSpace,
-            'singleGossip',
-          );
-        const accInstr = await createAccountInstruction(
-          this.connection,
-          owner.publicKey,
-          openOrdersSpace,
-          mangoGroup.dexProgramId,
-          openOrdersLamports,
-        );
+    const openOrdersKeys: { pubkey: PublicKey; isWritable: boolean }[] = [];
 
-        transaction.add(accInstr.instruction);
-        additionalSigners.push(accInstr.account);
-        openOrdersKeys.push(accInstr.account.publicKey);
-      } else {
-        openOrdersKeys.push(mangoAccount.spotOpenOrders[i]);
+    // Only pass in open orders if in margin basket or current market index, and
+    // the only writable account should be OpenOrders for current market index
+    for (let i = 0; i < mangoAccount.spotOpenOrders.length; i++) {
+      let pubkey = zeroKey;
+      let isWritable = false;
+
+      if (i === spotMarketIndex) {
+        isWritable = true;
+
+        if (mangoAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)) {
+          // open orders missing for this market; create a new one now
+          const openOrdersSpace = OpenOrders.getLayout(
+            mangoGroup.dexProgramId,
+          ).span;
+          const openOrdersLamports =
+            await this.connection.getMinimumBalanceForRentExemption(
+              openOrdersSpace,
+              'singleGossip',
+            );
+          const accInstr = await createAccountInstruction(
+            this.connection,
+            owner.publicKey,
+            openOrdersSpace,
+            mangoGroup.dexProgramId,
+            openOrdersLamports,
+          );
+
+          transaction.add(accInstr.instruction);
+          additionalSigners.push(accInstr.account);
+          pubkey = accInstr.account.publicKey;
+        } else {
+          pubkey = mangoAccount.spotOpenOrders[i];
+        }
+      } else if (mangoAccount.inMarginBasket[i]) {
+        pubkey = mangoAccount.spotOpenOrders[i];
       }
+
+      openOrdersKeys.push({ pubkey, isWritable });
     }
 
     const dexSigner = await PublicKey.createProgramAddress(
@@ -898,6 +932,7 @@ export class MangoClient {
       baseNodeBank.vault,
       mangoGroup.signerKey,
       dexSigner,
+      mangoGroup.srmVault, // TODO: choose msrm vault if it has any deposits
       openOrdersKeys,
 
       side,
@@ -1295,7 +1330,8 @@ export class MangoClient {
   }
 
   async addPerpMarket(
-    mangoGroupPk: PublicKey,
+    mangoGroup: MangoGroup,
+    mngoMintPk: PublicKey,
     admin: Account,
     marketIndex: number,
     maintLeverage: number,
@@ -1336,13 +1372,23 @@ export class MangoClient {
       this.programId,
     );
 
+    const mngoVaultAccount = new Account();
+    const mngoVaultAccountInstructions = await createTokenAccountInstructions(
+      this.connection,
+      admin.publicKey,
+      mngoVaultAccount.publicKey,
+      mngoMintPk,
+      mangoGroup.signerKey,
+    );
+
     const instruction = await makeAddPerpMarketInstruction(
       this.programId,
-      mangoGroupPk,
+      mangoGroup.publicKey,
       makePerpMarketAccountInstruction.account.publicKey,
       makeEventQueueAccountInstruction.account.publicKey,
       makeBidAccountInstruction.account.publicKey,
       makeAskAccountInstruction.account.publicKey,
+      mngoVaultAccount.publicKey,
       admin.publicKey,
       new BN(marketIndex),
       I80F48.fromNumber(maintLeverage),
@@ -1360,6 +1406,7 @@ export class MangoClient {
     transaction.add(makeEventQueueAccountInstruction.instruction);
     transaction.add(makeBidAccountInstruction.instruction);
     transaction.add(makeAskAccountInstruction.instruction);
+    transaction.add(...mngoVaultAccountInstructions);
     transaction.add(instruction);
 
     const additionalSigners = [
@@ -1367,6 +1414,7 @@ export class MangoClient {
       makeEventQueueAccountInstruction.account,
       makeBidAccountInstruction.account,
       makeAskAccountInstruction.account,
+      mngoVaultAccount,
     ];
 
     return await this.sendTransaction(transaction, admin, additionalSigners);

@@ -10,6 +10,7 @@ import { Market } from '@project-serum/serum';
 import * as Test from '../test/utils';
 import { u64 } from '@solana/spl-token';
 import { findLargestTokenAccountForOwner } from './token';
+import { msrmMints } from './config';
 
 function assertEq(msg, a, b) {
   if (a !== b) {
@@ -54,6 +55,7 @@ const client = new MangoClient(connection, mangoProgramId);
 async function init_mango_group_and_spot_market(): Promise<MangoGroup> {
   const groupKey = await client.initMangoGroup(
     quoteMintKey,
+    msrmMints['devnet'],
     serumDexPk,
     500,
     OPTIMAL_UTIL,
