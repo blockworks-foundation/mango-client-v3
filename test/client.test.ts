@@ -26,6 +26,9 @@ describe('MangoClient', async () => {
         Test.USDCMint,
         Test.DexProgramId,
         5,
+        0.7,
+        0.06,
+        1.5,
         payer,
       );
       const group = await client.getMangoGroup(groupKey);
@@ -51,6 +54,9 @@ describe('MangoClient', async () => {
         Test.USDCMint,
         Test.DexProgramId,
         5,
+        0.7,
+        0.06,
+        1.5,
         payer,
       );
       group = await client.getMangoGroup(groupKey);
@@ -81,6 +87,9 @@ describe('MangoClient', async () => {
         Test.USDCMint,
         Test.DexProgramId,
         5,
+        0.7,
+        0.06,
+        1.5,
         payer,
       );
       group = await client.getMangoGroup(groupKey);

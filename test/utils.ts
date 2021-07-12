@@ -14,7 +14,7 @@ import { StubOracleLayout } from '../src/layout';
 import { createAccountInstruction, sleep } from '../src/utils';
 
 export const MangoProgramId = new PublicKey(
-  'Hc12EyQQ3XVNEE5URg7XjjtZA8sbUPnMeT1CXGbwN6ei',
+  '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt',
 );
 export const DexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',

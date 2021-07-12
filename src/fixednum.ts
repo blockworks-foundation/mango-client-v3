@@ -57,17 +57,13 @@ export class I80F48 {
     return this.data.toTwos(I80F48.MAX_SIZE);
   }
   toString(): string {
-    return this.toFixed();
-  }
-
-  toFixed(decimals?: number): string {
-    return this.toBig().toFixed(decimals);
+    return this.toBig().toFixed();
   }
 
   /**
    * The number will be rounded first for UI sensibilities, then toFixed
    */
-  toFixedUi(decimals?: number): string {
+  toFixed(decimals?: number): string {
     return this.toBig().round(14).toFixed(decimals);
   }
   toBig(): Big {
