@@ -4,9 +4,10 @@ import {
   Market,
   TokenInstructions,
 } from '@project-serum/serum';
-import { u64 } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, Token, u64 } from '@solana/spl-token';
 import {
   Account,
+  Keypair,
   Commitment,
   Connection,
   PublicKey,
@@ -241,6 +242,35 @@ export async function createTokenAccountInstrs(
   ];
 }
 
+export async function createMint (
+  connection: Connection,
+  payer: Account,
+  decimals: number,
+): Promise<Token> {
+  const mintAuthority = Keypair.generate().publicKey;
+  return await Token.createMint(
+    connection,
+    payer,
+    mintAuthority,
+    null,
+    decimals,
+    TOKEN_PROGRAM_ID,
+  );
+}
+
+export async function createMints (
+  connection: Connection,
+  payer: Account,
+  quantity: Number,
+): Promise<Token[]> {
+  const mints: Token[] = [];
+  for (let i = 0; i < quantity; i++) {
+    const decimals = 6;
+    mints.push(await createMint(connection, payer, decimals));
+  }
+  return mints;
+}
+
 export async function listMarket(
   connection: Connection,
   payer: Account,
@@ -365,4 +395,28 @@ export async function listMarket(
   await _sendTransaction(connection, tx2, [payer, market, requestQueue, eventQueue, bids, asks]);
 
   return market.publicKey;
+}
+
+export async function listMarkets(
+  connection: Connection,
+  payer: Account,
+  dexProgramId: PublicKey,
+  mints: Token[],
+  quoteMintPK: PublicKey,
+): Promise<PublicKey[]> {
+  const spotMarketPks: PublicKey[] = [];
+  for (let mint of mints) {
+    spotMarketPks.push(
+      await listMarket(
+        connection,
+        payer,
+        mint.publicKey,
+        quoteMintPK,
+        10, // TODO: Make this dynamic
+        100, // TODO: Make this dynamic
+        dexProgramId,
+      )
+    )
+  }
+  return spotMarketPks;
 }
