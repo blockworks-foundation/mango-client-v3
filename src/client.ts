@@ -1403,12 +1403,17 @@ export class MangoClient {
       I80F48.fromNumber(scaler),
     );
 
+    const createMngoVaultTransaction = new Transaction();
+    createMngoVaultTransaction.add(...mngoVaultAccountInstructions);
+    await this.sendTransaction(createMngoVaultTransaction, admin, [
+      mngoVaultAccount,
+    ]);
+
     const transaction = new Transaction();
     transaction.add(makePerpMarketAccountInstruction.instruction);
     transaction.add(makeEventQueueAccountInstruction.instruction);
     transaction.add(makeBidAccountInstruction.instruction);
     transaction.add(makeAskAccountInstruction.instruction);
-    transaction.add(...mngoVaultAccountInstructions);
     transaction.add(instruction);
 
     const additionalSigners = [
@@ -1416,7 +1421,6 @@ export class MangoClient {
       makeEventQueueAccountInstruction.account,
       makeBidAccountInstruction.account,
       makeAskAccountInstruction.account,
-      mngoVaultAccount,
     ];
 
     return await this.sendTransaction(transaction, admin, additionalSigners);
