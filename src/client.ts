@@ -1200,7 +1200,7 @@ export class MangoClient {
   async getAllMangoAccounts(
     mangoGroup: MangoGroup,
     filters?: any[],
-    includeOpenOrders = false,
+    includeOpenOrders = true,
   ): Promise<MangoAccount[]> {
     const accountFilters = [
       {
@@ -1269,11 +1269,10 @@ export class MangoClient {
     const openOrders = await openOrdersProms;
 
     const pkToOpenOrdersAccount = {};
-    openOrders.forEach(
-      (openOrdersAccount) =>
-        (pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
-          openOrdersAccount),
-    );
+    openOrders.forEach((openOrdersAccount) => {
+      pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
+        openOrdersAccount;
+    });
 
     for (const ma of mangoAccounts) {
       for (let i = 0; i < ma.spotOpenOrders.length; i++) {
@@ -1522,7 +1521,7 @@ export class MangoClient {
     assetRootBank: RootBank,
     liabRootBank: RootBank,
     payer: Account,
-    maxLiabTransfer: BN,
+    maxLiabTransfer: I80F48,
   ) {
     const instruction = makeLiquidateTokenAndTokenInstruction(
       this.programId,

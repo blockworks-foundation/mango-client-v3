@@ -144,6 +144,12 @@ export class I80F48 {
   isNeg(): boolean {
     return this.data.isNeg();
   }
+  min(x: I80F48) {
+    return this.lte(x) ? this : x;
+  }
+  max(x: I80F48) {
+    return this.gte(x) ? this : x;
+  }
 }
 
 export const ONE_I80F48 = I80F48.fromString('1');

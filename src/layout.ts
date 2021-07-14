@@ -284,6 +284,53 @@ MangoInstructionLayout.addVariant(
   struct([u64('marketIndex')]),
   'SettlePnl',
 );
+MangoInstructionLayout.addVariant(
+  23,
+  struct([u64('tokenIndex'), u64('quantity')]),
+  'SettleBorrow',
+);
+MangoInstructionLayout.addVariant(
+  24,
+  struct([u8('limit')]),
+  'ForceCancelSpotOrders',
+);
+MangoInstructionLayout.addVariant(
+  25,
+  struct([u8('limit')]),
+  'ForceCancelPerpOrders',
+);
+MangoInstructionLayout.addVariant(
+  26,
+  struct([I80F48Layout('maxLiabTransfer')]),
+  'LiquidateTokenAndToken',
+);
+MangoInstructionLayout.addVariant(
+  27,
+  struct([
+    u8('assetType'),
+    u64('assetIndex'),
+    u8('liabType'),
+    u64('liabIndex'),
+    I80F48Layout('maxLiabTransfer'),
+  ]),
+  'LiquidateTokenAndPerp',
+);
+MangoInstructionLayout.addVariant(
+  28,
+  struct([i64('baseTransferRequest')]),
+  'LiquidatePerpMarket',
+);
+MangoInstructionLayout.addVariant(29, struct([]), 'SettleFees');
+MangoInstructionLayout.addVariant(
+  30,
+  struct([u64('liabIndex'), I80F48Layout('maxLiabTransfer')]),
+  'ResolvePerpBankruptcy',
+);
+MangoInstructionLayout.addVariant(
+  31,
+  struct([I80F48Layout('maxLiabTransfer')]),
+  'ResolveTokenBankruptcy',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -543,7 +590,6 @@ export class PerpAccount {
           .mul(liabWeight),
       );
     }
-
     return health;
   }
 
@@ -571,19 +617,22 @@ export class PerpAccount {
       this.openOrders.asksQuantity.neg(),
     );
     const health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
+
+    let x;
     if (this.basePosition.gt(new BN(0))) {
-      return health.sub(
+      x = health.sub(
         longFunding
           .sub(this.longSettledFunding)
           .mul(I80F48.fromI64(this.basePosition)),
       );
     } else {
-      return health.add(
+      x = health.add(
         shortFunding
           .sub(this.shortSettledFunding)
           .mul(I80F48.fromI64(this.basePosition)),
       );
     }
+    return x;
   }
 }
 
