@@ -742,7 +742,7 @@ export function makeConsumeEventsInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
-    ...mangoAccountPks.map((pubkey) => ({
+    ...mangoAccountPks.sort().map((pubkey) => ({
       isSigner: false,
       isWritable: true,
       pubkey,

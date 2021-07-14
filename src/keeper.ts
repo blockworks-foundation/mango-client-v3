@@ -148,7 +148,6 @@ export class Keeper {
               const events = queue.eventsSince(
                 lastSeqNums[m.publicKey.toBase58()],
               );
-
               events.forEach((ev) => {
                 if (ev.fill) {
                   accounts.push(ev.fill.maker);
