@@ -911,7 +911,6 @@ export const BookSideLayout = struct([
 export class PriceCache {
   price!: I80F48;
   lastUpdate!: BN;
-  isInitialized!: boolean;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
