@@ -298,12 +298,6 @@ export default class MangoAccount {
     mangoCache: MangoCache,
     healthType: HealthType,
   ): I80F48 {
-    console.log(
-      'calculating',
-      healthType,
-      'health for',
-      this.publicKey.toBase58(),
-    );
     const quoteDeposits = this.getNativeDeposit(
       mangoCache.rootBankCache[QUOTE_INDEX],
       QUOTE_INDEX,
@@ -333,12 +327,6 @@ export default class MangoAccount {
               perpMarket.initLiabWeight,
             ];
 
-      console.log(
-        spotAssetWeight.toString(),
-        spotLiabWeight.toString(),
-        perpAssetWeight.toString(),
-        perpLiabWeight.toString(),
-      );
       if (!mangoGroup.spotMarkets[i].isEmpty()) {
         const spotHealth = this.getSpotHealth(
           mangoCache,
@@ -348,7 +336,6 @@ export default class MangoAccount {
         );
 
         health = health.add(spotHealth);
-        console.log('spot health', spotHealth.toString());
       }
 
       if (!mangoGroup.perpMarkets[i].isEmpty()) {
@@ -365,9 +352,6 @@ export default class MangoAccount {
         );
       }
     }
-
-    console.log(healthType, health.toString());
-    console.log('\n');
 
     return health;
   }

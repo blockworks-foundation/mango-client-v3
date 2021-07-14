@@ -590,7 +590,6 @@ export class PerpAccount {
           .mul(liabWeight),
       );
     }
-    console.log('sim positional health', health.toString());
     return health;
   }
 
@@ -633,7 +632,6 @@ export class PerpAccount {
           .mul(I80F48.fromI64(this.basePosition)),
       );
     }
-    console.log('perp health', x.toString());
     return x;
   }
 }
