@@ -22,7 +22,6 @@ import { msrmMints, MangoClient, I80F48 } from '../src';
 import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
 import MangoAccount from '../src/MangoAccount';
 
-
 export const MangoProgramId = new PublicKey(
   '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt',
   // 'BpnyxDo1YCv7no4v9h4y6Z8dJtF2PC2rqh6auPsPjQdA'
@@ -250,7 +249,7 @@ export async function createTokenAccountInstrs(
   ];
 }
 
-export async function createMint (
+export async function createMint(
   connection: Connection,
   payer: Account,
   decimals: number,
@@ -266,7 +265,7 @@ export async function createMint (
   );
 }
 
-export async function createMints (
+export async function createMints(
   connection: Connection,
   payer: Account,
   quantity: Number,
@@ -400,7 +399,14 @@ export async function listMarket(
     }),
   );
   await _sendTransaction(connection, tx1, [payer, baseVault, quoteVault]);
-  await _sendTransaction(connection, tx2, [payer, market, requestQueue, eventQueue, bids, asks]);
+  await _sendTransaction(connection, tx2, [
+    payer,
+    market,
+    requestQueue,
+    eventQueue,
+    bids,
+    asks,
+  ]);
 
   return market.publicKey;
 }
@@ -423,8 +429,8 @@ export async function listMarkets(
         10, // TODO: Make this dynamic
         100, // TODO: Make this dynamic
         dexProgramId,
-      )
-    )
+      ),
+    );
   }
   return spotMarketPks;
 }
@@ -436,7 +442,12 @@ export async function mintToTokenAccount(
   balance: number,
 ): Promise<void> {
   const mintInfo = await mint.getMintInfo();
-  await mint.mintTo(tokenAccountPk, payer, [], balance * Math.pow(10, mintInfo.decimals));
+  await mint.mintTo(
+    tokenAccountPk,
+    payer,
+    [],
+    balance * Math.pow(10, mintInfo.decimals),
+  );
 }
 
 export async function createUserTokenAccount(
@@ -444,7 +455,9 @@ export async function createUserTokenAccount(
   mint: Token,
   balance: number,
 ): Promise<PublicKey> {
-  const tokenAccountPk = await mint.createAssociatedTokenAccount(payer.publicKey);
+  const tokenAccountPk = await mint.createAssociatedTokenAccount(
+    payer.publicKey,
+  );
   if (balance > 0) {
     await mintToTokenAccount(payer, mint, tokenAccountPk, balance);
   }
@@ -458,7 +471,8 @@ export async function createUserTokenAccounts(
 ): Promise<PublicKey[]> {
   const tokenAccountPks: PublicKey[] = [];
   if (!balances) balances = new Array(mints.length).fill(0);
-  else if (balances.length !== mints.length) throw new Error("Balance and mint array lengths don't match");
+  else if (balances.length !== mints.length)
+    throw new Error("Balance and mint array lengths don't match");
   for (let i = 0; i < mints.length; i++) {
     const mint = mints[i];
     const balance = balances[i];
@@ -478,7 +492,12 @@ export async function addSpotMarketToMangoGroup(
 ): Promise<void> {
   const oraclePk = await createOracle(client.connection, MangoProgramId, payer);
   await client.addOracle(mangoGroup, oraclePk, payer);
-  await client.setOracle(mangoGroup, oraclePk, payer, I80F48.fromNumber(initialPrice));
+  await client.setOracle(
+    mangoGroup,
+    oraclePk,
+    payer,
+    I80F48.fromNumber(initialPrice),
+  );
   const initLeverage = 5;
   const maintLeverage = initLeverage * 2;
   await client.addSpotMarket(
@@ -506,7 +525,15 @@ export async function addSpotMarketsToMangoGroup(
   for (let i = 0; i < mints.length - 1; i++) {
     const mint = mints[i];
     const spotMarketPk = spotMarketPks[i];
-    await addSpotMarketToMangoGroup(client, payer, mangoGroup, mint, spotMarketPk, i, 40000);
+    await addSpotMarketToMangoGroup(
+      client,
+      payer,
+      mangoGroup,
+      mint,
+      spotMarketPk,
+      i,
+      40000,
+    );
   }
   return await client.getMangoGroup(mangoGroupPk);
 }
@@ -532,7 +559,12 @@ export async function cacheRootBanks(
   for (let rootBankIndex of rootBankIndices) {
     rootBanksToCache.push(mangoGroup.tokens[rootBankIndex].rootBank);
   }
-  await client.cacheRootBanks(mangoGroup.publicKey, mangoGroup.mangoCache, rootBanksToCache, payer);
+  await client.cacheRootBanks(
+    mangoGroup.publicKey,
+    mangoGroup.mangoCache,
+    rootBanksToCache,
+    payer,
+  );
 }
 
 export async function performDeposit(
