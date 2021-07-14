@@ -1521,7 +1521,7 @@ export class MangoClient {
     assetRootBank: RootBank,
     liabRootBank: RootBank,
     payer: Account,
-    maxLiabTransfer: BN,
+    maxLiabTransfer: I80F48,
   ) {
     const instruction = makeLiquidateTokenAndTokenInstruction(
       this.programId,

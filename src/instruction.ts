@@ -944,7 +944,7 @@ export function makeLiquidateTokenAndTokenInstruction(
   liabNodeBankPk: PublicKey,
   liqeeOpenOrdersPks: PublicKey[],
   liqorOpenOrdersPks: PublicKey[],
-  maxLiabTransfer: BN,
+  maxLiabTransfer: I80F48,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
