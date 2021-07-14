@@ -163,7 +163,7 @@ export class Keeper {
                 m,
                 [...new Map(accounts.map((a) => [a.toBase58(), a])).values()],
                 payer,
-                new BN(events.length),
+                new BN(10),
               );
               console.log(`Consumed ${events.length} events`);
               lastSeqNums[m.publicKey.toBase58()] = queue.seqNum;
