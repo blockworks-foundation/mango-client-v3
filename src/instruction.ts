@@ -731,6 +731,7 @@ export function makeSettlePnlInstruction(
 export function makeConsumeEventsInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
   perpMarketPk: PublicKey,
   eventQueuePk: PublicKey,
   mangoAccountPks: PublicKey[],
@@ -738,6 +739,7 @@ export function makeConsumeEventsInstruction(
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
     ...mangoAccountPks.map((pubkey) => ({

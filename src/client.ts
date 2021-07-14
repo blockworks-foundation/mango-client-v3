@@ -548,24 +548,24 @@ export class MangoClient {
   }
 
   async consumeEvents(
-    mangoGroup: PublicKey,
-    perpMarket: PublicKey,
-    eventQueue: PublicKey,
+    mangoGroup: MangoGroup,
+    perpMarket: PerpMarket,
     mangoAccounts: PublicKey[],
     payer: Account,
     limit: BN,
   ): Promise<TransactionSignature> {
-    const updateRootBanksInstruction = makeConsumeEventsInstruction(
+    const consumeEventsInstruction = makeConsumeEventsInstruction(
       this.programId,
-      mangoGroup,
-      perpMarket,
-      eventQueue,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      perpMarket.publicKey,
+      perpMarket.eventQueue,
       mangoAccounts,
       limit,
     );
 
     const transaction = new Transaction();
-    transaction.add(updateRootBanksInstruction);
+    transaction.add(consumeEventsInstruction);
 
     return await this.sendTransaction(transaction, payer, []);
   }

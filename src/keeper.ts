@@ -160,9 +160,8 @@ export class Keeper {
               });
 
               client.consumeEvents(
-                mangoGroup.publicKey,
-                m.publicKey,
-                m.eventQueue,
+                mangoGroup,
+                m,
                 [...new Map(accounts.map((a) => [a.toBase58(), a])).values()],
                 payer,
                 new BN(events.length),
