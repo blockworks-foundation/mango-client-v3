@@ -30,6 +30,9 @@ export class Keeper {
    */
   async run() {
     const interval = process.env.INTERVAL || 3500;
+    const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '20');
+    const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
+    const consumeEvents = process.env.CONSUME_EVENTS === 'true';
     const config = new Config(configFile);
 
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
@@ -39,7 +42,6 @@ export class Keeper {
     if (!groupIds) {
       throw new Error(`Group ${groupName} not found`);
     }
-
     const mangoProgramId = groupIds.mangoProgramId;
     const mangoGroupKey = groupIds.publicKey;
     const payer = new Account(
@@ -136,32 +138,39 @@ export class Keeper {
         }
       });
 
-      if (process.env.CONSUME_EVENTS == 'true') {
+      if (consumeEvents) {
         await Promise.all(
           perpMarkets.map((m) => {
             return m.loadEventQueue(connection).then((queue) => {
-              const accounts: PublicKey[] = [];
-              const events = queue.eventsSince(
-                lastSeqNums[m.publicKey.toBase58()],
-              );
-              events.forEach((ev) => {
-                if (ev.fill) {
-                  accounts.push(ev.fill.maker);
-                  accounts.push(ev.fill.taker);
+              const events = queue.getUnconsumedEvents();
+              if (events.length === 0) {
+                console.log('No events to consume');
+                return;
+              }
+
+              const accounts: Set<PublicKey> = new Set();
+              for (const event of events) {
+                if (event.fill) {
+                  accounts.add(event.fill.maker);
+                  accounts.add(event.fill.taker);
+                } else if (event.out) {
+                  accounts.add(event.out.owner);
                 }
-                if (ev.out) {
-                  accounts.push(ev.out.owner);
+
+                // Limit unique accounts to first 20 or 21
+                if (accounts.size >= maxUniqueAccounts) {
+                  break;
                 }
-              });
+              }
 
               client.consumeEvents(
                 mangoGroup,
                 m,
-                [...new Map(accounts.map((a) => [a.toBase58(), a])).values()],
+                Array.from(accounts),
                 payer,
-                new BN(10),
+                consumeEventsLimit,
               );
-              console.log(`Consumed ${events.length} events`);
+              console.log(`Consumed up to ${events.length} events`);
               lastSeqNums[m.publicKey.toBase58()] = queue.seqNum;
             });
           }),

@@ -868,7 +868,18 @@ export class PerpEventQueue {
     Object.assign(this, decoded);
   }
 
+  getUnconsumedEvents(): { fill?: FillEvent; out?: OutEvent }[] {
+    const events: { fill?: FillEvent; out?: OutEvent }[] = [];
+    const head = this.head.toNumber();
+    for (let i = 0; i < this.count.toNumber(); i++) {
+      events.push(this.events[(head + i) % this.events.length]);
+    }
+    return events;
+  }
+
   eventsSince(lastSeqNum: BN): { fill?: FillEvent; out?: OutEvent }[] {
+    // TODO doesn't work when lastSeqNum == 0; please fix
+
     const modulo64Uint = new BN('10000000000000000', 'hex');
     let missedEvents = this.seqNum
       .add(modulo64Uint)
@@ -913,6 +924,7 @@ export class PerpEventQueue {
       if (event.fill || event.out) results.push(event);
       index = index.add(new BN(1)).mod(bufferLength);
     }
+
     return results;
   }
 }

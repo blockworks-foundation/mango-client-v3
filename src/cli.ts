@@ -389,29 +389,31 @@ yargs(hideBin(process.argv))
         })
         .option('group', {
           describe: 'the mango group name 🥭',
-          default: 'mango_test_v3.3',
+          default: 'mango_test_v3.4',
           type: 'string',
         })
-
+        .option(...configDesc)
         .option(...clusterDesc);
     },
     async (args) => {
       console.log('show', args);
       const cluster = args.cluster as Cluster;
+      const config = readConfig(args.config as string);
+
       const connection = openConnection(config, cluster);
 
-      const group = config.getGroup(
+      const groupConfig = config.getGroup(
         cluster,
         args.group as string,
       ) as GroupConfig;
 
       const client = new MangoClient(connection, groupConfig.mangoProgramId);
       const mangoAccount = await client.getMangoAccount(
-        group.publicKey,
-        group.serumProgramId,
+        new PublicKey(args.mango_account_pk as string),
+        groupConfig.serumProgramId,
       );
       // TODO - write a proper to string
-      console.log(mangoAccount.toString());
+      console.log(mangoAccount.perpAccounts[0].basePosition.toString());
       process.exit(0);
     },
   ).argv;
