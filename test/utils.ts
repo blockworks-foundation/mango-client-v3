@@ -20,6 +20,8 @@ import { StubOracleLayout } from '../src/layout';
 import { createAccountInstruction, sleep } from '../src/utils';
 import { msrmMints, MangoClient, I80F48 } from '../src';
 import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
+import MangoAccount from '../src/MangoAccount';
+
 
 export const MangoProgramId = new PublicKey(
   '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt',
@@ -466,7 +468,6 @@ export async function createUserTokenAccounts(
 }
 
 export async function addSpotMarketToMangoGroup(
-  connection: Connection,
   client: MangoClient,
   payer: Account,
   mangoGroup: MangoGroup,
@@ -475,7 +476,7 @@ export async function addSpotMarketToMangoGroup(
   marketIndex: number,
   initialPrice: number,
 ): Promise<void> {
-  const oraclePk = await createOracle(connection, MangoProgramId, payer);
+  const oraclePk = await createOracle(client.connection, MangoProgramId, payer);
   await client.addOracle(mangoGroup, oraclePk, payer);
   await client.setOracle(mangoGroup, oraclePk, payer, I80F48.fromNumber(initialPrice));
   const initLeverage = 5;
@@ -495,7 +496,6 @@ export async function addSpotMarketToMangoGroup(
 }
 
 export async function addSpotMarketsToMangoGroup(
-  connection: Connection,
   client: MangoClient,
   payer: Account,
   mangoGroupPk: PublicKey,
@@ -506,7 +506,53 @@ export async function addSpotMarketsToMangoGroup(
   for (let i = 0; i < mints.length - 1; i++) {
     const mint = mints[i];
     const spotMarketPk = spotMarketPks[i];
-    await addSpotMarketToMangoGroup(connection, client, payer, mangoGroup, mint, spotMarketPk, i, 40000);
+    await addSpotMarketToMangoGroup(client, payer, mangoGroup, mint, spotMarketPk, i, 40000);
   }
   return await client.getMangoGroup(mangoGroupPk);
+}
+
+export async function getNodeBank(
+  client: MangoClient,
+  mangoGroup: MangoGroup,
+  bankIndex: number,
+): Promise<any> {
+  let rootBanks = await mangoGroup.loadRootBanks(client.connection);
+  const rootBank = rootBanks[bankIndex];
+  if (!rootBank) throw new Error(`no root bank at index ${bankIndex}`);
+  return rootBank.nodeBankAccounts[0];
+}
+
+export async function cacheRootBanks(
+  client: MangoClient,
+  payer: Account,
+  mangoGroup: MangoGroup,
+  rootBankIndices: number[],
+): Promise<void> {
+  const rootBanksToCache: PublicKey[] = [];
+  for (let rootBankIndex of rootBankIndices) {
+    rootBanksToCache.push(mangoGroup.tokens[rootBankIndex].rootBank);
+  }
+  await client.cacheRootBanks(mangoGroup.publicKey, mangoGroup.mangoCache, rootBanksToCache, payer);
+}
+
+export async function performDeposit(
+  client: MangoClient,
+  payer: Account,
+  mangoGroup: MangoGroup,
+  mangoAccount: MangoAccount,
+  nodeBank: any, //Todo: Can make explicit NodeBank maybe
+  tokenAccountPk: PublicKey,
+  tokenIndex: number,
+  quantity: number,
+) {
+  await client.deposit(
+    mangoGroup,
+    mangoAccount,
+    payer,
+    mangoGroup.tokens[tokenIndex].rootBank,
+    nodeBank.publicKey,
+    nodeBank.vault,
+    tokenAccountPk,
+    quantity,
+  );
 }

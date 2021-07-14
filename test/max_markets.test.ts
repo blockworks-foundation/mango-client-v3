@@ -9,6 +9,8 @@ import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
 import { sleep, zeroKey } from '../src/utils';
 import MangoAccount from '../src/MangoAccount';
 
+// NOTE: Important that QUOTE_INDEX and quote_index might not be the same number so take caution there
+
 describe('MaxMarkets', async () => {
   let client: MangoClient;
   let payer: Account;
@@ -55,40 +57,18 @@ describe('MaxMarkets', async () => {
       const tokenAccountPks = await Test.createUserTokenAccounts(payer, mints, new Array(mints.length).fill(1));
 
       // Add spotMarkets to MangoGroup
-      mangoGroup = await Test.addSpotMarketsToMangoGroup(connection, client, payer, mangoGroupPk, mints, spotMarketPks);
+      mangoGroup = await Test.addSpotMarketsToMangoGroup(client, payer, mangoGroupPk, mints, spotMarketPks);
 
       // Get root and node banks
-      let rootBanks = await mangoGroup.loadRootBanks(client.connection);
-      const usdcRootBank = rootBanks[QUOTE_INDEX];
-      if (!usdcRootBank) throw new Error('no root bank for quote');
-      const quoteNodeBank = usdcRootBank.nodeBankAccounts[0];
-      const baseRootBank = rootBanks[marketIndex];
-      if (!baseRootBank) throw new Error('no root bank for base');
-      const baseNodeBank = baseRootBank.nodeBankAccounts[0];
+      const quoteNodeBank = await Test.getNodeBank(client, mangoGroup, QUOTE_INDEX);
+      const baseNodeBank = await Test.getNodeBank(client, mangoGroup, marketIndex);
 
-      // Airdrop in to base node bank
+      // Airdrop into base node bank
       await mints[0].mintTo(baseNodeBank.vault, payer, [], 10 * 1e6);
 
       // Deposit into mango account
-      await client.cacheRootBanks(
-        mangoGroup.publicKey,
-        mangoGroup.mangoCache,
-        [
-          mangoGroup.tokens[marketIndex].rootBank,
-          mangoGroup.tokens[QUOTE_INDEX].rootBank,
-        ],
-        payer,
-      );
-      await client.deposit(
-        mangoGroup,
-        mangoAccount,
-        payer,
-        mangoGroup.tokens[QUOTE_INDEX].rootBank,
-        usdcRootBank.nodeBanks?.[0],
-        quoteNodeBank.vault,
-        tokenAccountPks[quoteIndex],
-        1, // quantity
-      );
+      await Test.cacheRootBanks(client, payer, mangoGroup, [marketIndex, QUOTE_INDEX]);
+      await Test.performDeposit(client, payer, mangoGroup, mangoAccount, quoteNodeBank, tokenAccountPks[quoteIndex], QUOTE_INDEX, 1);
     });
   });
 });
