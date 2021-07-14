@@ -18,10 +18,12 @@ import {
 } from '@solana/web3.js';
 import { StubOracleLayout } from '../src/layout';
 import { createAccountInstruction, sleep } from '../src/utils';
-import { msrmMints } from '../src';
+import { msrmMints, MangoClient, I80F48 } from '../src';
+import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
 
 export const MangoProgramId = new PublicKey(
   '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt',
+  // 'BpnyxDo1YCv7no4v9h4y6Z8dJtF2PC2rqh6auPsPjQdA'
 );
 export const DexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -33,6 +35,10 @@ export const MSRMMint = msrmMints['devnet'];
 const FAUCET_PROGRAM_ID = new PublicKey(
   '4bXpkKSV8swHSnwqtzuboGPaPDeEgAn4Vt8GfarV5rZt',
 );
+
+export const OPTIMAL_UTIL = 0.7;
+export const OPTIMAL_RATE = 0.06;
+export const MAX_RATE = 1.5;
 
 const getPDA = () => {
   return PublicKey.findProgramAddress(
@@ -247,11 +253,11 @@ export async function createMint (
   payer: Account,
   decimals: number,
 ): Promise<Token> {
-  const mintAuthority = Keypair.generate().publicKey;
+  // const mintAuthority = Keypair.generate().publicKey; If needed can use a diff mint auth
   return await Token.createMint(
     connection,
     payer,
-    mintAuthority,
+    payer.publicKey,
     null,
     decimals,
     TOKEN_PROGRAM_ID,
@@ -419,4 +425,88 @@ export async function listMarkets(
     )
   }
   return spotMarketPks;
+}
+
+export async function mintToTokenAccount(
+  payer: Account,
+  mint: Token,
+  tokenAccountPk: PublicKey,
+  balance: number,
+): Promise<void> {
+  const mintInfo = await mint.getMintInfo();
+  await mint.mintTo(tokenAccountPk, payer, [], balance * Math.pow(10, mintInfo.decimals));
+}
+
+export async function createUserTokenAccount(
+  payer: Account,
+  mint: Token,
+  balance: number,
+): Promise<PublicKey> {
+  const tokenAccountPk = await mint.createAssociatedTokenAccount(payer.publicKey);
+  if (balance > 0) {
+    await mintToTokenAccount(payer, mint, tokenAccountPk, balance);
+  }
+  return tokenAccountPk;
+}
+
+export async function createUserTokenAccounts(
+  payer: Account,
+  mints: Token[],
+  balances: number[] | null,
+): Promise<PublicKey[]> {
+  const tokenAccountPks: PublicKey[] = [];
+  if (!balances) balances = new Array(mints.length).fill(0);
+  else if (balances.length !== mints.length) throw new Error("Balance and mint array lengths don't match");
+  for (let i = 0; i < mints.length; i++) {
+    const mint = mints[i];
+    const balance = balances[i];
+    tokenAccountPks.push(await createUserTokenAccount(payer, mint, balance));
+  }
+  return tokenAccountPks;
+}
+
+export async function addSpotMarketToMangoGroup(
+  connection: Connection,
+  client: MangoClient,
+  payer: Account,
+  mangoGroup: MangoGroup,
+  mint: Token,
+  spotMarketPk: PublicKey,
+  marketIndex: number,
+  initialPrice: number,
+): Promise<void> {
+  const oraclePk = await createOracle(connection, MangoProgramId, payer);
+  await client.addOracle(mangoGroup, oraclePk, payer);
+  await client.setOracle(mangoGroup, oraclePk, payer, I80F48.fromNumber(initialPrice));
+  const initLeverage = 5;
+  const maintLeverage = initLeverage * 2;
+  await client.addSpotMarket(
+    mangoGroup,
+    spotMarketPk,
+    mint.publicKey,
+    payer,
+    marketIndex,
+    maintLeverage,
+    initLeverage,
+    OPTIMAL_UTIL,
+    OPTIMAL_RATE,
+    MAX_RATE,
+  );
+}
+
+export async function addSpotMarketsToMangoGroup(
+  connection: Connection,
+  client: MangoClient,
+  payer: Account,
+  mangoGroupPk: PublicKey,
+  mints: Token[],
+  spotMarketPks: PublicKey[],
+): Promise<MangoGroup> {
+  let mangoGroup = await client.getMangoGroup(mangoGroupPk);
+  for (let i = 0; i < mints.length - 1; i++) {
+    const mint = mints[i];
+    const spotMarketPk = spotMarketPks[i];
+    await addSpotMarketToMangoGroup(connection, client, payer, mangoGroup, mint, spotMarketPk, i, 40000);
+  }
+  return await client.getMangoGroup(mangoGroupPk);
 }
