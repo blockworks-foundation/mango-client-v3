@@ -1,7 +1,13 @@
-import { TokenInstructions } from '@project-serum/serum';
-import { u64 } from '@solana/spl-token';
+import BN from 'bn.js';
+import {
+  DexInstructions,
+  Market,
+  TokenInstructions,
+} from '@project-serum/serum';
+import { TOKEN_PROGRAM_ID, Token, u64 } from '@solana/spl-token';
 import {
   Account,
+  Keypair,
   Commitment,
   Connection,
   PublicKey,
@@ -12,10 +18,13 @@ import {
 } from '@solana/web3.js';
 import { StubOracleLayout } from '../src/layout';
 import { createAccountInstruction, sleep } from '../src/utils';
-import { msrmMints } from '../src';
+import { msrmMints, MangoClient, I80F48 } from '../src';
+import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
+import MangoAccount from '../src/MangoAccount';
 
 export const MangoProgramId = new PublicKey(
   '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt',
+  // 'BpnyxDo1YCv7no4v9h4y6Z8dJtF2PC2rqh6auPsPjQdA'
 );
 export const DexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -27,6 +36,10 @@ export const MSRMMint = msrmMints['devnet'];
 const FAUCET_PROGRAM_ID = new PublicKey(
   '4bXpkKSV8swHSnwqtzuboGPaPDeEgAn4Vt8GfarV5rZt',
 );
+
+export const OPTIMAL_UTIL = 0.7;
+export const OPTIMAL_RATE = 0.06;
+export const MAX_RATE = 1.5;
 
 const getPDA = () => {
   return PublicKey.findProgramAddress(
@@ -234,4 +247,344 @@ export async function createTokenAccountInstrs(
       owner: ownerPk,
     }),
   ];
+}
+
+export async function createMint(
+  connection: Connection,
+  payer: Account,
+  decimals: number,
+): Promise<Token> {
+  // const mintAuthority = Keypair.generate().publicKey; If needed can use a diff mint auth
+  return await Token.createMint(
+    connection,
+    payer,
+    payer.publicKey,
+    null,
+    decimals,
+    TOKEN_PROGRAM_ID,
+  );
+}
+
+export async function createMints(
+  connection: Connection,
+  payer: Account,
+  quantity: Number,
+): Promise<Token[]> {
+  const mints: Token[] = [];
+  for (let i = 0; i < quantity; i++) {
+    const decimals = 6;
+    mints.push(await createMint(connection, payer, decimals));
+  }
+  return mints;
+}
+
+export async function listMarket(
+  connection: Connection,
+  payer: Account,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
+  baseLotSize: number,
+  quoteLotSize: number,
+  dexProgramId: PublicKey,
+): Promise<PublicKey> {
+  const market = new Account();
+  const requestQueue = new Account();
+  const eventQueue = new Account();
+  const bids = new Account();
+  const asks = new Account();
+  const baseVault = new Account();
+  const quoteVault = new Account();
+  const feeRateBps = 0;
+  const quoteDustThreshold = new BN(100);
+
+  async function getVaultOwnerAndNonce() {
+    const nonce = new BN(0);
+    while (true) {
+      try {
+        const vaultOwner = await PublicKey.createProgramAddress(
+          [market.publicKey.toBuffer(), nonce.toArrayLike(Buffer, 'le', 8)],
+          dexProgramId,
+        );
+        return [vaultOwner, nonce];
+      } catch (e) {
+        nonce.iaddn(1);
+      }
+    }
+  }
+  const [vaultOwner, vaultSignerNonce] = await getVaultOwnerAndNonce();
+
+  const tx1 = new Transaction();
+  tx1.add(
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: baseVault.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(165),
+      space: 165,
+      programId: TokenInstructions.TOKEN_PROGRAM_ID,
+    }),
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: quoteVault.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(165),
+      space: 165,
+      programId: TokenInstructions.TOKEN_PROGRAM_ID,
+    }),
+    TokenInstructions.initializeAccount({
+      account: baseVault.publicKey,
+      mint: baseMint,
+      owner: vaultOwner,
+    }),
+    TokenInstructions.initializeAccount({
+      account: quoteVault.publicKey,
+      mint: quoteMint,
+      owner: vaultOwner,
+    }),
+  );
+
+  const tx2 = new Transaction();
+  tx2.add(
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: market.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(
+        Market.getLayout(dexProgramId).span,
+      ),
+      space: Market.getLayout(dexProgramId).span,
+      programId: dexProgramId,
+    }),
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: requestQueue.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(5120 + 12),
+      space: 5120 + 12,
+      programId: dexProgramId,
+    }),
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: eventQueue.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(262144 + 12),
+      space: 262144 + 12,
+      programId: dexProgramId,
+    }),
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: bids.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(65536 + 12),
+      space: 65536 + 12,
+      programId: dexProgramId,
+    }),
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: asks.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(65536 + 12),
+      space: 65536 + 12,
+      programId: dexProgramId,
+    }),
+    DexInstructions.initializeMarket({
+      market: market.publicKey,
+      requestQueue: requestQueue.publicKey,
+      eventQueue: eventQueue.publicKey,
+      bids: bids.publicKey,
+      asks: asks.publicKey,
+      baseVault: baseVault.publicKey,
+      quoteVault: quoteVault.publicKey,
+      baseMint,
+      quoteMint,
+      baseLotSize: new BN(baseLotSize),
+      quoteLotSize: new BN(quoteLotSize),
+      feeRateBps,
+      vaultSignerNonce,
+      quoteDustThreshold,
+      programId: dexProgramId,
+    }),
+  );
+  await _sendTransaction(connection, tx1, [payer, baseVault, quoteVault]);
+  await _sendTransaction(connection, tx2, [
+    payer,
+    market,
+    requestQueue,
+    eventQueue,
+    bids,
+    asks,
+  ]);
+
+  return market.publicKey;
+}
+
+export async function listMarkets(
+  connection: Connection,
+  payer: Account,
+  dexProgramId: PublicKey,
+  mints: Token[],
+  quoteMintPK: PublicKey,
+): Promise<PublicKey[]> {
+  const spotMarketPks: PublicKey[] = [];
+  for (let mint of mints) {
+    spotMarketPks.push(
+      await listMarket(
+        connection,
+        payer,
+        mint.publicKey,
+        quoteMintPK,
+        10, // TODO: Make this dynamic
+        100, // TODO: Make this dynamic
+        dexProgramId,
+      ),
+    );
+  }
+  return spotMarketPks;
+}
+
+export async function mintToTokenAccount(
+  payer: Account,
+  mint: Token,
+  tokenAccountPk: PublicKey,
+  balance: number,
+): Promise<void> {
+  const mintInfo = await mint.getMintInfo();
+  await mint.mintTo(
+    tokenAccountPk,
+    payer,
+    [],
+    balance * Math.pow(10, mintInfo.decimals),
+  );
+}
+
+export async function createUserTokenAccount(
+  payer: Account,
+  mint: Token,
+  balance: number,
+): Promise<PublicKey> {
+  const tokenAccountPk = await mint.createAssociatedTokenAccount(
+    payer.publicKey,
+  );
+  if (balance > 0) {
+    await mintToTokenAccount(payer, mint, tokenAccountPk, balance);
+  }
+  return tokenAccountPk;
+}
+
+export async function createUserTokenAccounts(
+  payer: Account,
+  mints: Token[],
+  balances: number[] | null,
+): Promise<PublicKey[]> {
+  const tokenAccountPks: PublicKey[] = [];
+  if (!balances) balances = new Array(mints.length).fill(0);
+  else if (balances.length !== mints.length)
+    throw new Error("Balance and mint array lengths don't match");
+  for (let i = 0; i < mints.length; i++) {
+    const mint = mints[i];
+    const balance = balances[i];
+    tokenAccountPks.push(await createUserTokenAccount(payer, mint, balance));
+  }
+  return tokenAccountPks;
+}
+
+export async function addSpotMarketToMangoGroup(
+  client: MangoClient,
+  payer: Account,
+  mangoGroup: MangoGroup,
+  mint: Token,
+  spotMarketPk: PublicKey,
+  marketIndex: number,
+  initialPrice: number,
+): Promise<void> {
+  const oraclePk = await createOracle(client.connection, MangoProgramId, payer);
+  await client.addOracle(mangoGroup, oraclePk, payer);
+  await client.setOracle(
+    mangoGroup,
+    oraclePk,
+    payer,
+    I80F48.fromNumber(initialPrice),
+  );
+  const initLeverage = 5;
+  const maintLeverage = initLeverage * 2;
+  await client.addSpotMarket(
+    mangoGroup,
+    spotMarketPk,
+    mint.publicKey,
+    payer,
+    marketIndex,
+    maintLeverage,
+    initLeverage,
+    OPTIMAL_UTIL,
+    OPTIMAL_RATE,
+    MAX_RATE,
+  );
+}
+
+export async function addSpotMarketsToMangoGroup(
+  client: MangoClient,
+  payer: Account,
+  mangoGroupPk: PublicKey,
+  mints: Token[],
+  spotMarketPks: PublicKey[],
+): Promise<MangoGroup> {
+  let mangoGroup = await client.getMangoGroup(mangoGroupPk);
+  for (let i = 0; i < mints.length - 1; i++) {
+    const mint = mints[i];
+    const spotMarketPk = spotMarketPks[i];
+    await addSpotMarketToMangoGroup(
+      client,
+      payer,
+      mangoGroup,
+      mint,
+      spotMarketPk,
+      i,
+      40000,
+    );
+  }
+  return await client.getMangoGroup(mangoGroupPk);
+}
+
+export async function getNodeBank(
+  client: MangoClient,
+  mangoGroup: MangoGroup,
+  bankIndex: number,
+): Promise<any> {
+  let rootBanks = await mangoGroup.loadRootBanks(client.connection);
+  const rootBank = rootBanks[bankIndex];
+  if (!rootBank) throw new Error(`no root bank at index ${bankIndex}`);
+  return rootBank.nodeBankAccounts[0];
+}
+
+export async function cacheRootBanks(
+  client: MangoClient,
+  payer: Account,
+  mangoGroup: MangoGroup,
+  rootBankIndices: number[],
+): Promise<void> {
+  const rootBanksToCache: PublicKey[] = [];
+  for (let rootBankIndex of rootBankIndices) {
+    rootBanksToCache.push(mangoGroup.tokens[rootBankIndex].rootBank);
+  }
+  await client.cacheRootBanks(
+    mangoGroup.publicKey,
+    mangoGroup.mangoCache,
+    rootBanksToCache,
+    payer,
+  );
+}
+
+export async function performDeposit(
+  client: MangoClient,
+  payer: Account,
+  mangoGroup: MangoGroup,
+  mangoAccount: MangoAccount,
+  nodeBank: any, //Todo: Can make explicit NodeBank maybe
+  tokenAccountPk: PublicKey,
+  tokenIndex: number,
+  quantity: number,
+) {
+  await client.deposit(
+    mangoGroup,
+    mangoAccount,
+    payer,
+    mangoGroup.tokens[tokenIndex].rootBank,
+    nodeBank.publicKey,
+    nodeBank.vault,
+    tokenAccountPk,
+    quantity,
+  );
 }

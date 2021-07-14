@@ -586,7 +586,7 @@ export function makeAddOracleInstruction(
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
-    { isSigner: false, isWritable: false, pubkey: oraclePk },
+    { isSigner: false, isWritable: true, pubkey: oraclePk },
     { isSigner: true, isWritable: false, pubkey: adminPk },
   ];
   const data = encodeMangoInstruction({ AddOracle: {} });
