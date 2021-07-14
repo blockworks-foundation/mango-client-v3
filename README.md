@@ -87,43 +87,63 @@ for (const fill of await perpMarket.loadFills(connection)) {
 ## CLI for testing
 
 Create a new mango group on devnet:
-
+```
+init-group <group> <mangoProgramId> <serumProgramId> <quote_mint>
+```
 ```
 yarn cli init-group mango_test_v2.2 66DFouNQBY1EWyBed3WPicjhwD1FoyTtNCzAowcR8vad DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY EMjjdsqERN4wJUR9jMBax2pzqQPeGLNn5NeucbHpDUZK
 ```
 
-Create a new mango group on devnet with new USDC:
 
+Create a new mango group on devnet with new USDC:
+```
+init-group <group> <mangoProgramId> <serumProgramId> <quote_mint>
+```
 ```
 yarn cli init-group mango_test_v3.1 Hm3U4wFaR66SmuXj66u9AuUNUqa6T8Ldb5D9uHBs3SHd DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY 3u7PfrgTAKgEtNhNdAD4DDmNGfYfv5djGAPixGgepsPp
 ```
 
-Add a stub oracle:
 
+Add a stub oracle:
+```
+add-oracle <group> <symbol>
+```
 ```
 yarn cli add-oracle mango_test_v2.2 BTC
 ```
 
-Add a pyth oracle:
 
+Add a pyth oracle:
+```
+add-oracle <group> <symbol>
+```
 ```
 yarn cli add-oracle mango_test_v3.1 BTC --provider pyth
 ```
 
-Set stub oracle value = base_price \* quote_unit / base_unit:
 
+Set stub oracle value = base_price \* quote_unit / base_unit:
+```
+set-oracle <group> <symbol> <value>
+```
 ```
 yarn cli set-oracle mango_test_v2.2 BTC 40000
 ```
 
-Add a spot-market
 
+Add a spot-market
+```
+add-spot-market <group> <symbol> <market_pk> <mint_pk>
+```
 ```
 yarn cli add-spot-market mango_test_v2.2 BTC E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9 bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP
 ```
 
-Enable a perp-maket
 
+Enable a perp-maket
+```
+add-perp-market <group> <symbol>
+```
 ```
 yarn cli add-perp-market mango_test_v2.2 BTC
 ```

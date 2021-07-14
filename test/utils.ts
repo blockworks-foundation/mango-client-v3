@@ -12,9 +12,10 @@ import {
 } from '@solana/web3.js';
 import { StubOracleLayout } from '../src/layout';
 import { createAccountInstruction, sleep } from '../src/utils';
+import { msrmMints } from '../src';
 
 export const MangoProgramId = new PublicKey(
-  'Hc12EyQQ3XVNEE5URg7XjjtZA8sbUPnMeT1CXGbwN6ei',
+  '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt',
 );
 export const DexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -22,7 +23,7 @@ export const DexProgramId = new PublicKey(
 export const USDCMint = new PublicKey(
   'H6hy7Ykzc43EuGivv7VVuUKNpKgUoFAfUY3wdPr4UyRX',
 );
-
+export const MSRMMint = msrmMints['devnet'];
 const FAUCET_PROGRAM_ID = new PublicKey(
   '4bXpkKSV8swHSnwqtzuboGPaPDeEgAn4Vt8GfarV5rZt',
 );

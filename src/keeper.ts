@@ -33,7 +33,7 @@ export class Keeper {
     const config = new Config(configFile);
 
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const groupName = process.env.GROUP || 'mango_test_v3.2';
+    const groupName = process.env.GROUP || 'mango_test_v3.4';
     const groupIds = config.getGroup(cluster, groupName);
 
     if (!groupIds) {
