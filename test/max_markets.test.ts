@@ -24,7 +24,6 @@ describe('MaxMarkets', async () => {
   describe('testOrdersX32', async () => {
     it('should successfully place x32 orders', async () => {
       // Initial conf
-      const numMints = 2;
       const quoteIndex = numMints - 1;
       const marketIndex = 0;
       // Create mints
@@ -44,7 +43,6 @@ describe('MaxMarkets', async () => {
         payer,
       );
       let mangoGroup = await client.getMangoGroup(mangoGroupPk);
-      console.log("mangoGroupPk:", mangoGroupPk.toString());
 
       // Create mango account
       const mangoAccountPk = await client.initMangoAccount(mangoGroup, payer);
@@ -59,16 +57,17 @@ describe('MaxMarkets', async () => {
       // Add spotMarkets to MangoGroup
       mangoGroup = await Test.addSpotMarketsToMangoGroup(client, payer, mangoGroupPk, mints, spotMarketPks);
 
-      // Get root and node banks
+      // Get node banks
       const quoteNodeBank = await Test.getNodeBank(client, mangoGroup, QUOTE_INDEX);
       const baseNodeBank = await Test.getNodeBank(client, mangoGroup, marketIndex);
 
       // Airdrop into base node bank
-      await mints[0].mintTo(baseNodeBank.vault, payer, [], 10 * 1e6);
+      await Test.mintToTokenAccount(payer, mints[0], baseNodeBank.vault, 10);
 
       // Deposit into mango account
       await Test.cacheRootBanks(client, payer, mangoGroup, [marketIndex, QUOTE_INDEX]);
       await Test.performDeposit(client, payer, mangoGroup, mangoAccount, quoteNodeBank, tokenAccountPks[quoteIndex], QUOTE_INDEX, 1);
+
     });
   });
 });
