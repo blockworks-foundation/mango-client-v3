@@ -26,6 +26,7 @@
     "lint": "eslint . --ext ts --ext tsx --ext js --quiet",
     "shell": "node -e \"$(< shell)\" -i --experimental-repl-await",
     "keeper": "ts-node src/keeper.ts",
+    "crank": "ts-node src/crank.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
     "test:build": "run-s build",
     "test:lint": "eslint src",
@@ -59,7 +60,7 @@
     "trailingComma": "all"
   },
   "dependencies": {
-    "@project-serum/serum": "^0.13.38",
+    "@project-serum/serum": "^0.13.45",
     "@project-serum/sol-wallet-adapter": "^0.2.0",
     "@solana/spl-token": "^0.1.6",
     "@solana/web3.js": "^1.18.0",

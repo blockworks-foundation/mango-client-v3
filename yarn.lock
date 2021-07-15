@@ -93,10 +93,10 @@
     "@nodelib/fs.scandir" "2.1.4"
     fastq "^1.6.0"
 
-"@project-serum/serum@^0.13.38":
-  version "0.13.38"
-  resolved "https://registry.yarnpkg.com/@project-serum/serum/-/serum-0.13.38.tgz#ef50a0f50bd69fd7b51309fbb44ad995a1e6e210"
-  integrity sha512-TOph1Hxoi5kOUg72tWbbNGviqBw29SrP4BH70gXtqUDiFTQJLrE2yfS5HC7p0JaU8p9WdrYGnxcFKCddZJ3ing==
+"@project-serum/serum@^0.13.45":
+  version "0.13.45"
+  resolved "https://registry.yarnpkg.com/@project-serum/serum/-/serum-0.13.45.tgz#a735ebaba355dfb08003fb14375b46f53c9472ba"
+  integrity sha512-f3aAKE9LXxLHJ8cX7Rkzs3IDglo4+/GHRGP5grxn9ujx9XkPwbQpUbZYV7oyQwP8tHHZQBXUw0ThHXvR2MhlNg==
   dependencies:
     "@solana/web3.js" "^0.90.0"
     bn.js "^5.1.2"
