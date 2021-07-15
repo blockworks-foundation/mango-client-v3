@@ -268,7 +268,7 @@ export async function createMint(
 export async function createMints(
   connection: Connection,
   payer: Account,
-  quantity: Number,
+  quantity: number,
 ): Promise<Token[]> {
   const mints: Token[] = [];
   for (let i = 0; i < quantity; i++) {

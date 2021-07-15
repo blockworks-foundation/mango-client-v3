@@ -18,6 +18,7 @@
     "build": "tsc",
     "cli": "ts-node src/cli.ts",
     "liquidator": "ts-node src/liquidator.ts",
+    "launch-group": "ts-node test/initDevnetGroup.ts",
     "start": "ts-node src/test.ts",
     "clean": "rm -rf lib",
     "prepare": "run-s clean build",
