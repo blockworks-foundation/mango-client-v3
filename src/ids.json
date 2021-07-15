@@ -31,12 +31,25 @@
           "nodeKeys": [
             "Drvtng3669H9F2KhmNbg8sB5SEnrBYo2L9t6Dug7JdZg"
           ]
+        },
+        {
+          "symbol": "ETH",
+          "mintKey": "ErWGBLBQMwdyC4H3MR8ef6pFK6gyHAyBxy4o1mHoqKzm",
+          "decimals": 6,
+          "rootKey": "1nkhZVypbGxDruBoTAmZnGoRWSneydfDhvzhH7jDohv",
+          "nodeKeys": [
+            "78DD9QAh6BwYBqGrpTKNK2tzS3Ca5tq1v92gu8hQFaiA"
+          ]
         }
       ],
       "oracles": [
         {
           "symbol": "BTC",
           "publicKey": "5c5T9996DKTqNcjFczz9MRASGubpxY2WfmCdpFdd5Di1"
+        },
+        {
+          "symbol": "ETH",
+          "publicKey": "8PabqAPykA5JNgCyMgwmsVHN3yCS4Z672oUM7RgnVVbv"
         }
       ],
       "perpMarkets": [
@@ -63,6 +76,17 @@
           "bidsKey": "8ovMqp4Tb7xe4r3bXdeyzzucMQfemcn2Wi2j55aYS2rR",
           "asksKey": "GJ5PKrUkGrjHRhP1kNztgfHixYXyNpsRy8S2StBQ171n",
           "eventsKey": "4xJ5T9c7m5wyt9Xw4PnP6yAU1sdqaegsiyGC6CvG2mUJ"
+        },
+        {
+          "name": "ETH/USDC",
+          "publicKey": "9gStrbmhqCUmNsmH1Yjec4TiNXq1g6YQVAamWVhLNdaE",
+          "baseSymbol": "ETH",
+          "baseDecimals": 6,
+          "quoteDecimals": 9,
+          "marketIndex": 1,
+          "bidsKey": "5CWf78MERQPosZy2Q9UTsr5xfUNvfc2ooTcUfFcULUqJ",
+          "asksKey": "FNh2WHQjd4PjTHoa3vdLRXUEdxQtLGagJcoDBtrizmmS",
+          "eventsKey": "8MYDK5y2RUzMzhMd88cEZQHRQH9Xkke6uqqmNnDTy13V"
         }
       ]
     },
