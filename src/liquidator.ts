@@ -197,15 +197,32 @@ export class Liquidator {
 
               if (perpHealth.lt(ZERO_I80F48)) {
                 if (perpAccount.basePosition.eq(new BN(0))) {
-                  //await client.liquidateTokenAndPerp(mangoGroup, mangoAccount, liqorMangoAccount, rootBanks[rootBanks.length-1], payer, )
+                  const rootBank = rootBanks[rootBanks.length - 1];
+                  if (rootBank) {
+                    console.log('liquidateTokenAndPerp ' + i);
+                    await client.liquidateTokenAndPerp(
+                      mangoGroup,
+                      mangoAccount,
+                      liqorMangoAccount,
+                      rootBank,
+                      payer,
+                      AssetType.Token,
+                      rootBanks.length - 1,
+                      AssetType.Perp,
+                      i,
+                      new I80F48(uiToNative(10, mangoGroup.tokens[i].decimals)),
+                    );
+                  }
                 } else {
+                  console.log('liquidatePerpMarket ' + i);
+                  //1.3226
                   await client.liquidatePerpMarket(
                     mangoGroup,
                     mangoAccount,
                     liqorMangoAccount,
                     perpMarkets[i],
                     payer,
-                    new BN(5),
+                    uiToNative(1, mangoGroup.tokens[i].decimals),
                   );
                 }
               }

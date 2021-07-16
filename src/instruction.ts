@@ -997,7 +997,7 @@ export function makeLiquidateTokenAndPerpInstruction(
   assetIndex: BN,
   liabType: AssetType,
   liabIndex: BN,
-  maxLiabTransfer: BN,
+  maxLiabTransfer: I80F48,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },

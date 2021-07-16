@@ -1555,7 +1555,7 @@ export class MangoClient {
     assetIndex: number,
     liabType: AssetType,
     liabIndex: number,
-    maxLiabTransfer: BN,
+    maxLiabTransfer: I80F48,
   ) {
     const instruction = makeLiquidateTokenAndPerpInstruction(
       this.programId,
