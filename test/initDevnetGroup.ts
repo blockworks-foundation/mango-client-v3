@@ -166,15 +166,14 @@ const IDS = [
 ];
 
 const initNewGroup = async () => {
-  console.log('starting');
   // const connection: Connection = Test.createDevnetConnection();
-
-  const quoteMint = IDS.find((id) => id.symbol === 'USDC')?.mint as string;
   // const mints = IDS.filter((id) => id.symbol !== 'USDC').map((id) => id.mint);
-
+  console.log('starting');
+  const quoteMint = IDS.find((id) => id.symbol === 'USDC')?.mint as string;
   await execCommand(
     `yarn cli init-group ${newGroupName} ${mangoProgramId} ${serumProgramId} ${quoteMint}`,
   );
+  console.log(`new group initialized`);
 
   for (let i = 0; i < IDS.length; i++) {
     if (IDS[i].symbol === 'USDC') {

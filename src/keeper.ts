@@ -36,7 +36,7 @@ export class Keeper {
     const config = new Config(configFile);
 
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const groupName = process.env.GROUP || 'mango_test_v3.4';
+    const groupName = process.env.GROUP || 'mango_test_v3.5';
     const groupIds = config.getGroup(cluster, groupName);
 
     if (!groupIds) {
@@ -79,40 +79,75 @@ export class Keeper {
     while (true) {
       await sleep(interval);
 
-      const cacheTransaction = new Transaction();
-      cacheTransaction.add(
+      const cacheTransaction1 = new Transaction();
+      cacheTransaction1.add(
         makeCacheRootBankInstruction(
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          [
-            mangoGroup.tokens[0].rootBank,
-            mangoGroup.tokens[QUOTE_INDEX].rootBank,
-          ],
+          mangoGroup.tokens.map((t) => t.rootBank).slice(0, 15),
         ),
       );
-      cacheTransaction.add(
+
+      const cacheTransaction2 = new Transaction();
+      cacheTransaction2.add(
+        makeCacheRootBankInstruction(
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          mangoGroup.tokens.map((t) => t.rootBank).slice(15),
+        ),
+      );
+
+      const cacheTransaction3 = new Transaction();
+      cacheTransaction3.add(
         makeCachePricesInstruction(
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          mangoGroup.oracles,
+          mangoGroup.oracles.slice(0, 15),
         ),
       );
-      cacheTransaction.add(
+
+      const cacheTransaction4 = new Transaction();
+      cacheTransaction4.add(
+        makeCachePricesInstruction(
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          mangoGroup.oracles.slice(15),
+        ),
+      );
+
+      const cacheTransaction5 = new Transaction();
+      cacheTransaction5.add(
         makeCachePerpMarketsInstruction(
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
           mangoGroup.perpMarkets
             .filter((pm) => !pm.isEmpty())
+            .slice(0, 15)
             .map((pm) => pm.perpMarket),
         ),
       );
 
-      const updateRootBankTransaction = new Transaction();
-      groupIds.tokens.forEach((token) => {
-        updateRootBankTransaction.add(
+      const cacheTransaction6 = new Transaction();
+      cacheTransaction6.add(
+        makeCachePerpMarketsInstruction(
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          mangoGroup.perpMarkets
+            .filter((pm) => !pm.isEmpty())
+            .slice(15)
+            .map((pm) => pm.perpMarket),
+        ),
+      );
+
+      const updateRootBankTransaction1 = new Transaction();
+      groupIds.tokens.slice(0, 10).forEach((token) => {
+        updateRootBankTransaction1.add(
           makeUpdateRootBankInstruction(
             mangoProgramId,
             mangoGroup.publicKey,
@@ -122,10 +157,82 @@ export class Keeper {
         );
       });
 
-      const updateFundingTransaction = new Transaction();
-      perpMarkets.forEach((market) => {
+      const updateRootBankTransaction2 = new Transaction();
+      groupIds.tokens.slice(10, 20).forEach((token) => {
+        updateRootBankTransaction2.add(
+          makeUpdateRootBankInstruction(
+            mangoProgramId,
+            mangoGroup.publicKey,
+            token.rootKey,
+            token.nodeKeys,
+          ),
+        );
+      });
+
+      const updateRootBankTransaction3 = new Transaction();
+      groupIds.tokens.slice(20).forEach((token) => {
+        updateRootBankTransaction3.add(
+          makeUpdateRootBankInstruction(
+            mangoProgramId,
+            mangoGroup.publicKey,
+            token.rootKey,
+            token.nodeKeys,
+          ),
+        );
+      });
+
+      const updateFundingTransaction1 = new Transaction();
+      perpMarkets.slice(0, 8).forEach((market) => {
         if (market) {
-          updateFundingTransaction.add(
+          updateFundingTransaction1.add(
+            makeUpdateFundingInstruction(
+              mangoProgramId,
+              mangoGroup.publicKey,
+              mangoGroup.mangoCache,
+              market.publicKey,
+              market.bids,
+              market.asks,
+            ),
+          );
+        }
+      });
+
+      const updateFundingTransaction2 = new Transaction();
+      perpMarkets.slice(8, 16).forEach((market) => {
+        if (market) {
+          updateFundingTransaction2.add(
+            makeUpdateFundingInstruction(
+              mangoProgramId,
+              mangoGroup.publicKey,
+              mangoGroup.mangoCache,
+              market.publicKey,
+              market.bids,
+              market.asks,
+            ),
+          );
+        }
+      });
+
+      const updateFundingTransaction3 = new Transaction();
+      perpMarkets.slice(16, 24).forEach((market) => {
+        if (market) {
+          updateFundingTransaction3.add(
+            makeUpdateFundingInstruction(
+              mangoProgramId,
+              mangoGroup.publicKey,
+              mangoGroup.mangoCache,
+              market.publicKey,
+              market.bids,
+              market.asks,
+            ),
+          );
+        }
+      });
+
+      const updateFundingTransaction4 = new Transaction();
+      perpMarkets.slice(24).forEach((market) => {
+        if (market) {
+          updateFundingTransaction4.add(
             makeUpdateFundingInstruction(
               mangoProgramId,
               mangoGroup.publicKey,
@@ -177,10 +284,20 @@ export class Keeper {
         );
       }
 
-      await Promise.all([
-        client.sendTransaction(cacheTransaction, payer, []),
-        client.sendTransaction(updateRootBankTransaction, payer, []),
-        client.sendTransaction(updateFundingTransaction, payer, []),
+      const x = await Promise.all([
+        client.sendTransaction(cacheTransaction1, payer, []),
+        client.sendTransaction(cacheTransaction2, payer, []),
+        client.sendTransaction(cacheTransaction3, payer, []),
+        client.sendTransaction(cacheTransaction4, payer, []),
+        client.sendTransaction(cacheTransaction5, payer, []),
+        client.sendTransaction(cacheTransaction6, payer, []),
+        client.sendTransaction(updateRootBankTransaction1, payer, []),
+        client.sendTransaction(updateRootBankTransaction2, payer, []),
+        client.sendTransaction(updateRootBankTransaction3, payer, []),
+        client.sendTransaction(updateFundingTransaction1, payer, []),
+        client.sendTransaction(updateFundingTransaction2, payer, []),
+        client.sendTransaction(updateFundingTransaction3, payer, []),
+        client.sendTransaction(updateFundingTransaction4, payer, []),
       ]);
     }
   }
