@@ -260,11 +260,12 @@ export async function getMultipleAccounts(
   publicKeys: PublicKey[],
   commitment?: Commitment,
 ): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
-  if (publicKeys.length > 100) {
+  const len = publicKeys.length;
+  if (len > 100) {
     const mid = Math.floor(publicKeys.length / 2);
     return Promise.all([
-      getMultipleAccounts(connection, publicKeys.slice(0, mid)),
-      getMultipleAccounts(connection, publicKeys.slice(mid, publicKeys.length)),
+      getMultipleAccounts(connection, publicKeys.slice(0, mid), commitment),
+      getMultipleAccounts(connection, publicKeys.slice(mid, len), commitment),
     ]).then((a) => a[0].concat(a[1]));
   }
   const publicKeyStrs = publicKeys.map((pk) => pk.toBase58());
