@@ -17,6 +17,7 @@ import { Cluster, Config } from './config';
 import BN from 'bn.js';
 import { DexInstructions, Market } from '@project-serum/serum';
 import { findLargestTokenAccountForOwner } from './token';
+import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 export class SerumCrank {
   /**
@@ -32,7 +33,7 @@ export class SerumCrank {
     const config = new Config(configFile);
 
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const groupName = process.env.GROUP || 'mango_test_v3.4';
+    const groupName = process.env.GROUP || 'mango_test_v3.5';
     const groupIds = config.getGroup(cluster, groupName);
 
     if (!groupIds) {
@@ -71,20 +72,29 @@ export class SerumCrank {
       }),
     );
 
-    const quoteWallet = await findLargestTokenAccountForOwner(
+    const quoteToken = new Token(
       connection,
-      payer.publicKey,
       spotMarkets[0].quoteMintAddress,
+      TOKEN_PROGRAM_ID,
+      payer,
     );
+    const quoteWallet = await quoteToken
+      .getOrCreateAssociatedAccountInfo(payer.publicKey)
+      .then((a) => a.address);
 
     const baseWallets = await Promise.all(
-      spotMarkets.map((m) =>
-        findLargestTokenAccountForOwner(
+      spotMarkets.map((m) => {
+        const token = new Token(
           connection,
-          payer.publicKey,
           m.baseMintAddress,
-        ),
-      ),
+          TOKEN_PROGRAM_ID,
+          payer,
+        );
+
+        return token
+          .getOrCreateAssociatedAccountInfo(payer.publicKey)
+          .then((a) => a.address);
+      }),
     );
 
     // eslint-disable-next-line
@@ -95,7 +105,7 @@ export class SerumCrank {
         spotMarkets.map((m, i) => {
           return m.loadEventQueue(connection).then((events) => {
             if (events.length === 0) {
-              console.log('No events to consume');
+              console.log(`market ${i} no events to consume`);
               return;
             }
 
@@ -112,8 +122,8 @@ export class SerumCrank {
             const instr = DexInstructions.consumeEvents({
               market: m.publicKey,
               eventQueue: m['_decoded'].eventQueue,
-              coinFee: baseWallets[i].publicKey,
-              pcFee: quoteWallet.publicKey,
+              coinFee: baseWallets[i],
+              pcFee: quoteWallet,
               openOrdersAccounts: Array.from(accounts).sort(),
               limit: consumeEventsLimit,
               programId: mangoGroup.dexProgramId,
@@ -122,7 +132,13 @@ export class SerumCrank {
             const transaction = new Transaction();
             transaction.add(instr);
 
-            console.log('sending consume events for', events.length, 'events');
+            console.log(
+              'market',
+              i,
+              'sending consume events for',
+              events.length,
+              'events',
+            );
             return client.sendTransaction(transaction, payer, []);
           });
         }),
