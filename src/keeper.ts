@@ -25,7 +25,7 @@ import BN from 'bn.js';
 import { PerpEventQueue, PerpEventQueueLayout } from './layout';
 import { MangoGroup, PerpMarket } from '.';
 
-const groupName = process.env.GROUP || 'mango_test_v3.6';
+const groupName = process.env.GROUP || 'mango_test_v3.7';
 const interval = process.env.INTERVAL || 2000;
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '20');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
