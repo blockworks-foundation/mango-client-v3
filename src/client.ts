@@ -851,7 +851,7 @@ export class MangoClient {
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
 
     const rootBanks = await mangoGroup.loadRootBanks(this.connection);
-    const baseRootBank = rootBanks[0];
+    const baseRootBank = rootBanks[spotMarketIndex];
     const quoteRootBank = rootBanks[QUOTE_INDEX];
     const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
     const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
