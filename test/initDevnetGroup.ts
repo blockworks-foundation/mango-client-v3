@@ -184,7 +184,7 @@ const initNewGroup = async () => {
 
     console.log('setting oracle price');
     await execCommand(
-      `yarn cli set-oracle ${newGroupName} ${IDS[i].symbol} 100000000`,
+      `yarn cli set-oracle ${newGroupName} ${IDS[i].symbol} 10000`,
     );
 
     console.log(`adding ${IDS[i].symbol} spot market`);
