@@ -1,5 +1,9 @@
-import { createDevnetConnection } from '../test/utils';
-import { Account, PublicKey } from '@solana/web3.js';
+import {
+  createDevnetConnection,
+  listMarket,
+  DexProgramId,
+} from '../test/utils';
+import { Account, Connection, PublicKey } from '@solana/web3.js';
 import fs from 'fs';
 import os from 'os';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
@@ -15,26 +19,25 @@ const IDS = [
     mint: 'Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC',
     dexPk: 'Aph31hoXRjhk1QgCmRvs7WAWGdpRoaESMoqzjoFkL5mE',
   },
-  // also should not be in mango group
   {
-    symbol: 'MSRM',
-    mint: '8DJBo4bF4mHNxobjdax3BL9RMh5o71Jf8UiKsf5C5eVH',
-    dexPk: null,
+    symbol: 'SOL',
+    mint: 'So11111111111111111111111111111111111111112',
+    dexPk: 'uaajXobeb1hmTB6StRoa8Yqn6czjtWtFeVfZeJY6YFC',
   },
   {
     symbol: 'SRM',
     mint: 'AvtB6w9xboLwA145E221vhof5TddhqsChYcx7Fy3xVMH',
-    dexPk: null, // TODO - create
+    dexPk: '23tRuJ3zUvXYQEnTDAcWHPDfmYvrWanpM2sJnmhL53X5', // TODO - create
   },
   {
     symbol: 'BTC',
     mint: '9EkC2nQZ4UTwUCP4dzAi3VxfeMYD87ZpqfZfhygGeR1P',
-    dexPk: null, // TODO - create
+    dexPk: '6TwwNrueBAHe6VHwDYMhfTtkb7oP2vUnkun5yK8VzBbE', // TODO - create
   },
   {
     symbol: 'ETH',
     mint: 'Cu84KB3tDL6SbFgToHMLYVDJJXdJjenNzSKikeAvzmkA',
-    dexPk: null, // TODO - create
+    dexPk: '2n81EqJgsTE5PoPX5H8adQ4EaVe5kXnFuxwdCAYfaExH', // TODO - create
   },
   {
     symbol: 'RAY',
@@ -168,15 +171,16 @@ const IDS = [
   },
 ];
 
+const connection = createDevnetConnection();
+const payer = new Account(
+  JSON.parse(
+    process.env.KEYPAIR ||
+      fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+  ),
+);
+
 // TODO - move this into CLI and make it proper
 async function mintDevnetTokens() {
-  const connection = createDevnetConnection();
-  const payer = new Account(
-    JSON.parse(
-      process.env.KEYPAIR ||
-        fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
-    ),
-  );
   console.log(payer.publicKey.toBase58());
   for (let i = 0; i < IDS.length; i++) {
     const token = new Token(
@@ -195,4 +199,33 @@ async function mintDevnetTokens() {
   }
 }
 
-mintDevnetTokens();
+// mintDevnetTokens();
+
+async function createDexMkts() {
+  const quoteToken = IDS.find((id) => id.symbol === 'USDC')?.mint as string;
+  const newMkts = IDS.filter((id) => !id.dexPk)
+    .filter((id) => id.symbol !== 'USDC')
+    .map((id) => id.mint);
+
+  const spotMarketPks: PublicKey[] = [];
+  for (const mint of newMkts) {
+    spotMarketPks.push(
+      await listMarket(
+        connection,
+        payer,
+        new PublicKey(mint),
+        new PublicKey(quoteToken),
+        10, // TODO: Make this dynamic
+        100, // TODO: Make this dynamic
+        DexProgramId,
+      ),
+    );
+  }
+
+  console.log(
+    'spotMarketPks',
+    spotMarketPks.map((mkt) => mkt.toString()),
+  );
+}
+
+// createDexMkts();

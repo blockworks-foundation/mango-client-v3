@@ -14,24 +14,24 @@ const IDS = [
     dexPk: 'Aph31hoXRjhk1QgCmRvs7WAWGdpRoaESMoqzjoFkL5mE',
   },
   {
-    symbol: 'MSRM',
-    mint: '934bNdNw9QfE8dXD4mKQiKajYURfSkPhxfYZzpvmygca',
-    dexPk: '3xjkvoVTRNsMdtmYKGTw7bypDVxgmnKTMjwyzJTYmL83',
+    symbol: 'SOL',
+    mint: 'So11111111111111111111111111111111111111112',
+    dexPk: 'uaajXobeb1hmTB6StRoa8Yqn6czjtWtFeVfZeJY6YFC',
   },
   {
     symbol: 'SRM',
-    mint: '9FbAMDvXqNjPqZSYt4EWTguJuDrGkfvwr3gSFpiSbX9S',
-    dexPk: '36c3QycvqPGhfz2eDLaxyspHu7Cx9Qkqb6ExjSYmQVg7',
+    mint: 'AvtB6w9xboLwA145E221vhof5TddhqsChYcx7Fy3xVMH',
+    dexPk: '23tRuJ3zUvXYQEnTDAcWHPDfmYvrWanpM2sJnmhL53X5',
   },
   {
     symbol: 'BTC',
-    mint: 'bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP',
-    dexPk: '9SxoTdqCRPKHqxm8CssQDwBwnDDWJ3jG3HaDANh9imuS',
+    mint: '9EkC2nQZ4UTwUCP4dzAi3VxfeMYD87ZpqfZfhygGeR1P',
+    dexPk: '6TwwNrueBAHe6VHwDYMhfTtkb7oP2vUnkun5yK8VzBbE',
   },
   {
     symbol: 'ETH',
-    mint: '8BV1zye82XFYXFHH5RhG5TibQGQtvC6ZsFBV9FY9oXUn',
-    dexPk: '4cSQouSchBu1gYRmAWgfiCYySy9Q5nAYxy9ewAtWpgiL',
+    mint: 'Cu84KB3tDL6SbFgToHMLYVDJJXdJjenNzSKikeAvzmkA',
+    dexPk: '2n81EqJgsTE5PoPX5H8adQ4EaVe5kXnFuxwdCAYfaExH',
   },
   {
     symbol: 'RAY',
