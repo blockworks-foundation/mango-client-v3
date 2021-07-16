@@ -11,7 +11,7 @@ import {
   PublicKey,
   Transaction,
 } from '@solana/web3.js';
-import { sleep } from './utils';
+import { sleep, zeroKey } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
 import { QUOTE_INDEX } from '../src/MangoGroup';
@@ -29,14 +29,14 @@ export class Keeper {
    * Long running program that never exits except on keyboard interrupt
    */
   async run() {
-    const interval = process.env.INTERVAL || 3500;
+    const interval = process.env.INTERVAL || 2000;
     const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '20');
     const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
     const consumeEvents = process.env.CONSUME_EVENTS === 'true';
     const config = new Config(configFile);
 
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const groupName = process.env.GROUP || 'mango_test_v3.7';
+    const groupName = process.env.GROUP || 'mango_test_v3.6';
     const groupIds = config.getGroup(cluster, groupName);
 
     if (!groupIds) {
@@ -75,79 +75,52 @@ export class Keeper {
       lastSeqNums[m.publicKey.toBase58()] = new BN(0);
     });
 
-    // eslint-disable-next-line
-    while (true) {
-      await sleep(interval);
-
-      const cacheBankTransaction1 = new Transaction();
-      cacheBankTransaction1.add(
+    async function batchProcessKeeperTransactions(startIndex, endIndex) {
+      const cacheBankTransaction = new Transaction();
+      cacheBankTransaction.add(
         makeCacheRootBankInstruction(
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          mangoGroup.tokens.map((t) => t.rootBank).slice(0, 16),
+          mangoGroup.tokens
+            .map((t) => t.rootBank)
+            .slice(startIndex, endIndex)
+            .filter((x) => !x.equals(zeroKey)),
         ),
       );
 
-      // const cacheBankTransaction2 = new Transaction();
-      // cacheBankTransaction2.add(
-      //   makeCacheRootBankInstruction(
-      //     mangoProgramId,
-      //     mangoGroup.publicKey,
-      //     mangoGroup.mangoCache,
-      //     mangoGroup.tokens.map((t) => t.rootBank).slice(16),
-      //   ),
-      // );
-
-      const cachePriceTransaction1 = new Transaction();
-      cachePriceTransaction1.add(
+      const cachePriceTransaction = new Transaction();
+      cachePriceTransaction.add(
         makeCachePricesInstruction(
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          mangoGroup.oracles.slice(0, 16),
+          mangoGroup.oracles
+            .slice(startIndex, endIndex)
+            .filter((x) => !x.equals(zeroKey)),
         ),
       );
 
-      // const cachePriceTransaction2 = new Transaction();
-      // cachePriceTransaction2.add(
-      //   makeCachePricesInstruction(
-      //     mangoProgramId,
-      //     mangoGroup.publicKey,
-      //     mangoGroup.mangoCache,
-      //     mangoGroup.oracles.slice(16),
-      //   ),
-      // );
-
-      const cachePerpTransaction1 = new Transaction();
-      cachePerpTransaction1.add(
+      const cachePerpTransaction = new Transaction();
+      cachePerpTransaction.add(
         makeCachePerpMarketsInstruction(
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
           mangoGroup.perpMarkets
             .filter((pm) => !pm.isEmpty())
-            .slice(0, 15)
+            .slice(startIndex, endIndex)
             .map((pm) => pm.perpMarket),
         ),
       );
 
-      // const cachePerpTransaction2 = new Transaction();
-      // cachePerpTransaction2.add(
-      //   makeCachePerpMarketsInstruction(
-      //     mangoProgramId,
-      //     mangoGroup.publicKey,
-      //     mangoGroup.mangoCache,
-      //     mangoGroup.perpMarkets
-      //       .filter((pm) => !pm.isEmpty())
-      //       .slice(15)
-      //       .map((pm) => pm.perpMarket),
-      //   ),
-      // );
+      if (!groupIds) {
+        throw new Error(`Group ${groupName} not found`);
+      }
 
-      const updateRootBankTransaction1 = new Transaction();
-      groupIds.tokens.slice(0, 10).forEach((token) => {
-        updateRootBankTransaction1.add(
+      const updateRootBankTransaction = new Transaction();
+      groupIds.tokens.slice(startIndex, endIndex).forEach((token) => {
+        updateRootBankTransaction.add(
           makeUpdateRootBankInstruction(
             mangoProgramId,
             mangoGroup.publicKey,
@@ -157,93 +130,46 @@ export class Keeper {
         );
       });
 
-      const updateRootBankTransaction2 = new Transaction();
-      groupIds.tokens.slice(10, 20).forEach((token) => {
-        updateRootBankTransaction2.add(
-          makeUpdateRootBankInstruction(
-            mangoProgramId,
-            mangoGroup.publicKey,
-            token.rootKey,
-            token.nodeKeys,
-          ),
-        );
-      });
+      const updateFundingTransaction = new Transaction();
+      perpMarkets
+        .slice(startIndex, endIndex)
+        .filter((pm) => !pm.publicKey.equals(zeroKey))
+        .forEach((market) => {
+          if (market) {
+            updateFundingTransaction.add(
+              makeUpdateFundingInstruction(
+                mangoProgramId,
+                mangoGroup.publicKey,
+                mangoGroup.mangoCache,
+                market.publicKey,
+                market.bids,
+                market.asks,
+              ),
+            );
+          }
+        });
 
-      // const updateRootBankTransaction3 = new Transaction();
-      // groupIds.tokens.slice(20).forEach((token) => {
-      //   updateRootBankTransaction3.add(
-      //     makeUpdateRootBankInstruction(
-      //       mangoProgramId,
-      //       mangoGroup.publicKey,
-      //       token.rootKey,
-      //       token.nodeKeys,
-      //     ),
-      //   );
-      // });
+      await Promise.all([
+        client.sendTransaction(cacheBankTransaction, payer, []),
+        client.sendTransaction(cachePriceTransaction, payer, []),
+        client.sendTransaction(cachePerpTransaction, payer, []),
+        client.sendTransaction(updateRootBankTransaction, payer, []),
+        client.sendTransaction(updateFundingTransaction, payer, []),
+      ]);
+    }
 
-      const updateFundingTransaction1 = new Transaction();
-      perpMarkets.slice(0, 8).forEach((market) => {
-        if (market) {
-          updateFundingTransaction1.add(
-            makeUpdateFundingInstruction(
-              mangoProgramId,
-              mangoGroup.publicKey,
-              mangoGroup.mangoCache,
-              market.publicKey,
-              market.bids,
-              market.asks,
-            ),
-          );
-        }
-      });
+    // eslint-disable-next-line
+    while (true) {
+      await sleep(interval);
 
-      const updateFundingTransaction2 = new Transaction();
-      perpMarkets.slice(8, 16).forEach((market) => {
-        if (market) {
-          updateFundingTransaction2.add(
-            makeUpdateFundingInstruction(
-              mangoProgramId,
-              mangoGroup.publicKey,
-              mangoGroup.mangoCache,
-              market.publicKey,
-              market.bids,
-              market.asks,
-            ),
-          );
-        }
-      });
-
-      // const updateFundingTransaction3 = new Transaction();
-      // perpMarkets.slice(16, 24).forEach((market) => {
-      //   if (market) {
-      //     updateFundingTransaction3.add(
-      //       makeUpdateFundingInstruction(
-      //         mangoProgramId,
-      //         mangoGroup.publicKey,
-      //         mangoGroup.mangoCache,
-      //         market.publicKey,
-      //         market.bids,
-      //         market.asks,
-      //       ),
-      //     );
-      //   }
-      // });
-
-      // const updateFundingTransaction4 = new Transaction();
-      // perpMarkets.slice(24).forEach((market) => {
-      //   if (market) {
-      //     updateFundingTransaction4.add(
-      //       makeUpdateFundingInstruction(
-      //         mangoProgramId,
-      //         mangoGroup.publicKey,
-      //         mangoGroup.mangoCache,
-      //         market.publicKey,
-      //         market.bids,
-      //         market.asks,
-      //       ),
-      //     );
-      //   }
-      // });
+      try {
+        await batchProcessKeeperTransactions(0, 8);
+        await batchProcessKeeperTransactions(8, 16);
+        // await batchProcessKeeperTransactions(16, 24);
+        // await batchProcessKeeperTransactions(24, 32);
+      } catch (err) {
+        console.error('Error', `${err}`);
+      }
 
       if (consumeEvents) {
         await Promise.all(
@@ -283,22 +209,6 @@ export class Keeper {
           }),
         );
       }
-
-      const x = await Promise.all([
-        client.sendTransaction(cacheBankTransaction1, payer, []),
-        // client.sendTransaction(cacheBankTransaction2, payer, []),
-        client.sendTransaction(cachePriceTransaction1, payer, []),
-        // client.sendTransaction(cachePriceTransaction2, payer, []),
-        client.sendTransaction(cachePerpTransaction1, payer, []),
-        // client.sendTransaction(cachePerpTransaction2, payer, []),
-        client.sendTransaction(updateRootBankTransaction1, payer, []),
-        client.sendTransaction(updateRootBankTransaction2, payer, []),
-        // client.sendTransaction(updateRootBankTransaction3, payer, []),
-        client.sendTransaction(updateFundingTransaction1, payer, []),
-        client.sendTransaction(updateFundingTransaction2, payer, []),
-        // client.sendTransaction(updateFundingTransaction3, payer, []),
-        // client.sendTransaction(updateFundingTransaction4, payer, []),
-      ]);
     }
   }
 }
