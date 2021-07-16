@@ -66,12 +66,6 @@ async function main() {
       );
     }),
   );
-
-  const lastSeqNums = {};
-  perpMarkets.forEach((m) => {
-    lastSeqNums[m.publicKey.toBase58()] = new BN(0);
-  });
-
   // eslint-disable-next-line
   while (true) {
     await sleep(interval);
@@ -100,7 +94,7 @@ async function main() {
     }
 
     if (consumeEvents) {
-      processConsumeEvents(mangoGroup, perpMarkets, lastSeqNums);
+      processConsumeEvents(mangoGroup, perpMarkets);
     }
   }
 }
@@ -108,7 +102,6 @@ async function main() {
 async function processConsumeEvents(
   mangoGroup: MangoGroup,
   perpMarkets: PerpMarket[],
-  lastSeqNums,
 ) {
   const eventQueuePks = perpMarkets.map((mkt) => mkt.eventQueue);
   const eventQueueAccts = await getMultipleAccounts(connection, eventQueuePks);
@@ -157,7 +150,6 @@ async function processConsumeEvents(
       consumeEventsLimit,
     );
     console.log(`Consumed up to ${events.length} events`);
-    lastSeqNums[perpMarket.publicKey.toBase58()] = eventQueue.seqNum;
   });
 }
 

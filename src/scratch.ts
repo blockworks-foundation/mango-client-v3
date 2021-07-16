@@ -27,17 +27,17 @@ const IDS = [
   {
     symbol: 'SRM',
     mint: 'AvtB6w9xboLwA145E221vhof5TddhqsChYcx7Fy3xVMH',
-    dexPk: '23tRuJ3zUvXYQEnTDAcWHPDfmYvrWanpM2sJnmhL53X5', // TODO - create
+    dexPk: '23tRuJ3zUvXYQEnTDAcWHPDfmYvrWanpM2sJnmhL53X5',
   },
   {
     symbol: 'BTC',
     mint: '9EkC2nQZ4UTwUCP4dzAi3VxfeMYD87ZpqfZfhygGeR1P',
-    dexPk: '6TwwNrueBAHe6VHwDYMhfTtkb7oP2vUnkun5yK8VzBbE', // TODO - create
+    dexPk: '6TwwNrueBAHe6VHwDYMhfTtkb7oP2vUnkun5yK8VzBbE',
   },
   {
     symbol: 'ETH',
     mint: 'Cu84KB3tDL6SbFgToHMLYVDJJXdJjenNzSKikeAvzmkA',
-    dexPk: '2n81EqJgsTE5PoPX5H8adQ4EaVe5kXnFuxwdCAYfaExH', // TODO - create
+    dexPk: '2n81EqJgsTE5PoPX5H8adQ4EaVe5kXnFuxwdCAYfaExH',
   },
   {
     symbol: 'RAY',
@@ -189,6 +189,10 @@ async function mintDevnetTokens() {
       TOKEN_PROGRAM_ID,
       payer,
     );
+
+    if (IDS[i].symbol === 'SOL') {
+      console.log('not minting tokens for SOL');
+    }
 
     const tokenAccount = await token.getOrCreateAssociatedAccountInfo(
       payer.publicKey,
