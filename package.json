@@ -28,6 +28,7 @@
     "shell": "node -e \"$(< shell)\" -i --experimental-repl-await",
     "keeper": "ts-node src/keeper.ts",
     "crank": "ts-node src/crank.ts",
+    "scratch": "ts-node src/scratch.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
     "test:build": "run-s build",
     "test:lint": "eslint src",
