@@ -123,7 +123,7 @@ async function processConsumeEvents(
   perpMktAndEventQueue.forEach(({ perpMarket, eventQueue }) => {
     const events = eventQueue.getUnconsumedEvents();
     if (events.length === 0) {
-      console.log('No events to consume');
+      // console.log('No events to consume');
       return;
     }
 
