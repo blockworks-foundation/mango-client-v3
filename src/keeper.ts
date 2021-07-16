@@ -11,7 +11,7 @@ import {
   PublicKey,
   Transaction,
 } from '@solana/web3.js';
-import { sleep, zeroKey } from './utils';
+import { getMultipleAccounts, sleep, zeroKey } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
 import {
@@ -22,8 +22,10 @@ import {
   makeUpdateRootBankInstruction,
 } from './instruction';
 import BN from 'bn.js';
+import { PerpEventQueue, PerpEventQueueLayout } from './layout';
+import { MangoGroup, PerpMarket } from '.';
 
-const groupName = process.env.GROUP || 'mango_test_v3.7';
+const groupName = process.env.GROUP || 'mango_test_v3.6';
 const interval = process.env.INTERVAL || 2000;
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '20');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
@@ -96,49 +98,70 @@ async function main() {
     }
 
     if (consumeEvents) {
-      await Promise.all(
-        perpMarkets.map((m) => {
-          return m.loadEventQueue(connection).then((queue) => {
-            const events = queue.getUnconsumedEvents();
-            if (events.length === 0) {
-              console.log('No events to consume');
-              return;
-            }
-
-            const accounts: Set<PublicKey> = new Set();
-            for (const event of events) {
-              if (event.fill) {
-                accounts.add(event.fill.maker);
-                accounts.add(event.fill.taker);
-              } else if (event.out) {
-                accounts.add(event.out.owner);
-              }
-
-              // Limit unique accounts to first 20 or 21
-              if (accounts.size >= maxUniqueAccounts) {
-                break;
-              }
-            }
-
-            client.consumeEvents(
-              mangoGroup,
-              m,
-              Array.from(accounts),
-              payer,
-              consumeEventsLimit,
-            );
-            console.log(`Consumed up to ${events.length} events`);
-            lastSeqNums[m.publicKey.toBase58()] = queue.seqNum;
-          });
-        }),
-      );
+      processConsumeEvents(mangoGroup, perpMarkets, lastSeqNums);
     }
   }
 }
 
+async function processConsumeEvents(
+  mangoGroup: MangoGroup,
+  perpMarkets: PerpMarket[],
+  lastSeqNums,
+) {
+  const eventQueuePks = perpMarkets.map((mkt) => mkt.eventQueue);
+  const eventQueueAccts = await getMultipleAccounts(connection, eventQueuePks);
+
+  const perpMktAndEventQueue = eventQueueAccts.map(
+    ({ publicKey, accountInfo }) => {
+      const parsed = PerpEventQueueLayout.decode(accountInfo?.data);
+      const eventQueue = new PerpEventQueue(parsed);
+      const perpMarket = perpMarkets.find((mkt) =>
+        mkt.eventQueue.equals(publicKey),
+      );
+      if (!perpMarket) {
+        throw new Error('PerpMarket not found');
+      }
+      return { perpMarket, eventQueue };
+    },
+  );
+
+  perpMktAndEventQueue.forEach(({ perpMarket, eventQueue }) => {
+    const events = eventQueue.getUnconsumedEvents();
+    if (events.length === 0) {
+      console.log('No events to consume');
+      return;
+    }
+
+    const accounts: Set<PublicKey> = new Set();
+    for (const event of events) {
+      if (event.fill) {
+        accounts.add(event.fill.maker);
+        accounts.add(event.fill.taker);
+      } else if (event.out) {
+        accounts.add(event.out.owner);
+      }
+
+      // Limit unique accounts to first 20 or 21
+      if (accounts.size >= maxUniqueAccounts) {
+        break;
+      }
+    }
+
+    client.consumeEvents(
+      mangoGroup,
+      perpMarket,
+      Array.from(accounts),
+      payer,
+      consumeEventsLimit,
+    );
+    console.log(`Consumed up to ${events.length} events`);
+    lastSeqNums[perpMarket.publicKey.toBase58()] = eventQueue.seqNum;
+  });
+}
+
 async function batchProcessKeeperTransactions(
-  mangoGroup,
-  perpMarkets,
+  mangoGroup: MangoGroup,
+  perpMarkets: PerpMarket[],
   { startIndex, endIndex },
 ) {
   const cacheTransaction = new Transaction();
