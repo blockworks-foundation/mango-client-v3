@@ -77,22 +77,24 @@ async function main() {
     await sleep(interval);
 
     try {
-      await batchProcessKeeperTransactions(mangoGroup, perpMarkets, {
-        startIndex: 0,
-        endIndex: 8,
-      });
-      await batchProcessKeeperTransactions(mangoGroup, perpMarkets, {
-        startIndex: 8,
-        endIndex: 16,
-      });
-      await batchProcessKeeperTransactions(mangoGroup, perpMarkets, {
-        startIndex: 16,
-        endIndex: 24,
-      });
-      await batchProcessKeeperTransactions(mangoGroup, perpMarkets, {
-        startIndex: 24,
-        endIndex: 32,
-      });
+      await Promise.all([
+        batchProcessKeeperTransactions(mangoGroup, perpMarkets, {
+          startIndex: 0,
+          endIndex: 8,
+        }),
+        batchProcessKeeperTransactions(mangoGroup, perpMarkets, {
+          startIndex: 8,
+          endIndex: 16,
+        }),
+        batchProcessKeeperTransactions(mangoGroup, perpMarkets, {
+          startIndex: 16,
+          endIndex: 24,
+        }),
+        batchProcessKeeperTransactions(mangoGroup, perpMarkets, {
+          startIndex: 24,
+          endIndex: 32,
+        }),
+      ]);
     } catch (err) {
       console.error('Error', `${err}`);
     }
