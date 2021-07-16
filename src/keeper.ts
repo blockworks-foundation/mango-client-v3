@@ -215,7 +215,7 @@ async function batchProcessKeeperTransactions(
   await Promise.all([
     client.sendTransaction(cacheTransaction, payer, []),
     client.sendTransaction(updateRootBankTransaction, payer, []),
-    // client.sendTransaction(updateFundingTransaction, payer, []),
+    client.sendTransaction(updateFundingTransaction, payer, []),
   ]);
 }
 
