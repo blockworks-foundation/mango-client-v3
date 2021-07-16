@@ -234,6 +234,38 @@ yargs(hideBin(process.argv)).command(
         default: 20,
         type: 'number',
       })
+      .option('init_leverage', {
+        default: 10,
+        type: 'number',
+      })
+      .option('maker_fee', {
+        default: 0.0,
+        type: 'number',
+      })
+      .option('taker_fee', {
+        default: 0.0001,
+        type: 'number',
+      })
+      .option('base_lot_size', {
+        default: 100,
+        type: 'number',
+      })
+      .option('quote_lot_size', {
+        default: 10,
+        type: 'number',
+      })
+      .option('max_num_events', {
+        default: 128,
+        type: 'number',
+      })
+      .option('max_depth_bps', {
+        default: 200,
+        type: 'number',
+      })
+      .option('scaler', {
+        default: 1,
+        type: 'number',
+      })
       .option(...clusterDesc)
       .option(...configDesc)
       .option(...keypairDesc);
