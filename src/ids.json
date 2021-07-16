@@ -566,13 +566,6 @@
       "serumProgramId": "DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY",
       "tokens": [
         {
-          "symbol": "USDC",
-          "mintKey": "8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN",
-          "decimals": 6,
-          "rootKey": "6baotVqAJRvB5Me17J1qfv699n4dPv9499um23FLKVnS",
-          "nodeKeys": ["2mB2sBBwZP9BiCi4NpCVk49cmBYamWu7DNfNQsSsWTzb"]
-        },
-        {
           "symbol": "MNGO",
           "mintKey": "Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC",
           "decimals": 6,
@@ -788,6 +781,13 @@
           "decimals": 6,
           "rootKey": "GhU9gvSmbDKguZuh6wm8pjbuPNjWPAvk2eFHzqQzrp7N",
           "nodeKeys": ["6Assf5DK3GVzrT57UqftWPEUf4jYumrW4g2RSYicGxUH"]
+        },
+        {
+          "symbol": "USDC",
+          "mintKey": "8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN",
+          "decimals": 6,
+          "rootKey": "6baotVqAJRvB5Me17J1qfv699n4dPv9499um23FLKVnS",
+          "nodeKeys": ["2mB2sBBwZP9BiCi4NpCVk49cmBYamWu7DNfNQsSsWTzb"]
         }
       ],
       "oracles": [
