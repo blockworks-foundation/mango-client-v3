@@ -2,7 +2,7 @@ const newGroupName = 'mango_test_v3.7';
 const mangoProgramId = '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
 
-const IDS = [
+const FIXED_IDS = [
   {
     symbol: 'USDC',
     mint: '8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN',
@@ -94,32 +94,35 @@ const initNewGroup = async () => {
   // const connection: Connection = Test.createDevnetConnection();
   // const mints = IDS.filter((id) => id.symbol !== 'USDC').map((id) => id.mint);
   console.log('starting');
-  const quoteMint = IDS.find((id) => id.symbol === 'USDC')?.mint as string;
+  const quoteMint = FIXED_IDS.find((id) => id.symbol === 'USDC')
+    ?.mint as string;
   await execCommand(
     `yarn cli init-group ${newGroupName} ${mangoProgramId} ${serumProgramId} ${quoteMint}`,
   );
   console.log(`new group initialized`);
 
-  for (let i = 0; i < IDS.length; i++) {
-    if (IDS[i].symbol === 'USDC') {
+  for (let i = 0; i < FIXED_IDS.length; i++) {
+    if (FIXED_IDS[i].symbol === 'USDC') {
       continue;
     }
-    console.log(`adding ${IDS[i].symbol} oracle`);
-    await execCommand(`yarn cli add-oracle ${newGroupName} ${IDS[i].symbol}`);
+    console.log(`adding ${FIXED_IDS[i].symbol} oracle`);
+    await execCommand(
+      `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol}`,
+    );
 
     console.log('setting oracle price');
     await execCommand(
-      `yarn cli set-oracle ${newGroupName} ${IDS[i].symbol} 10000`,
+      `yarn cli set-oracle ${newGroupName} ${FIXED_IDS[i].symbol} 10000`,
     );
 
-    console.log(`adding ${IDS[i].symbol} spot market`);
+    console.log(`adding ${FIXED_IDS[i].symbol} spot market`);
     await execCommand(
-      `yarn cli add-spot-market ${newGroupName} ${IDS[i].symbol} ${IDS[i].dexPk} ${IDS[i].mint}`,
+      `yarn cli add-spot-market ${newGroupName} ${FIXED_IDS[i].symbol} ${FIXED_IDS[i].dexPk} ${FIXED_IDS[i].mint}`,
     );
 
-    console.log(`adding ${IDS[i].symbol} perp market`);
+    console.log(`adding ${FIXED_IDS[i].symbol} perp market`);
     await execCommand(
-      `yarn cli add-perp-market ${newGroupName} ${IDS[i].symbol}`,
+      `yarn cli add-perp-market ${newGroupName} ${FIXED_IDS[i].symbol}`,
     );
     console.log('---');
   }
