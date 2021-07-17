@@ -135,7 +135,9 @@ async function mintDevnetTokens() {
       console.log('not minting tokens for SOL');
       continue;
     } else if (FIXED_IDS[i].symbol === 'BTC') {
-      console.log('not minting tokens for BTC because we messed up');
+      console.log(
+        'not minting tokens for BTC because we messed up. use faucet',
+      );
       continue;
     }
 
