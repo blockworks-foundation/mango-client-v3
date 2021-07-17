@@ -1,4 +1,4 @@
-const newGroupName = 'mango_test_v3.7';
+const newGroupName = 'mango_test_v3.8';
 const mangoProgramId = '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
 
