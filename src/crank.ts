@@ -28,7 +28,7 @@ const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-const groupName = 'mango_test_v3.6'; // this one contains all spot markets
+const groupName = 'mango_test_v3.8'; // this one contains all spot markets
 // const groupName = process.env.GROUP || 'mango_test_v3.7';
 const groupIds = config.getGroup(cluster, groupName);
 
