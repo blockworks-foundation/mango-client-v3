@@ -1,8 +1,14 @@
-const newGroupName = 'mango_test_v3.8';
-const mangoProgramId = '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt';
-const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
+import {
+  createDevnetConnection,
+  listMarket,
+  DexProgramId,
+} from '../test/utils';
+import { Account, Connection, PublicKey } from '@solana/web3.js';
+import fs from 'fs';
+import os from 'os';
+import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
-const FIXED_IDS = [
+const IDS = [
   {
     symbol: 'USDC',
     mint: '8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN',
@@ -25,8 +31,8 @@ const FIXED_IDS = [
   },
   {
     symbol: 'BTC',
-    mint: '3UNBZ6o52WTWwjac2kPUb4FyodhU1vFkRJheu1Sh2TvU',
-    dexPk: '9LBavtqDpEoX623j8z4sotHMDbv7PcTXUW3LQQtepKvR',
+    mint: '9EkC2nQZ4UTwUCP4dzAi3VxfeMYD87ZpqfZfhygGeR1P',
+    dexPk: '6TwwNrueBAHe6VHwDYMhfTtkb7oP2vUnkun5yK8VzBbE',
   },
   {
     symbol: 'ETH',
@@ -90,55 +96,70 @@ const FIXED_IDS = [
   },
 ];
 
-const initNewGroup = async () => {
-  // const connection: Connection = Test.createDevnetConnection();
-  // const mints = IDS.filter((id) => id.symbol !== 'USDC').map((id) => id.mint);
-  console.log('starting');
-  const quoteMint = FIXED_IDS.find((id) => id.symbol === 'USDC')
-    ?.mint as string;
-  await execCommand(
-    `yarn cli init-group ${newGroupName} ${mangoProgramId} ${serumProgramId} ${quoteMint}`,
-  );
-  console.log(`new group initialized`);
+const connection = createDevnetConnection();
+const payer = new Account(
+  JSON.parse(
+    process.env.AUTHORITY ||
+      fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+  ),
+);
 
-  for (let i = 0; i < FIXED_IDS.length; i++) {
-    if (FIXED_IDS[i].symbol === 'USDC') {
-      continue;
-    }
-    console.log(`adding ${FIXED_IDS[i].symbol} oracle`);
-    await execCommand(
-      `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol}`,
-    );
-
-    console.log('setting oracle price');
-    await execCommand(
-      `yarn cli set-oracle ${newGroupName} ${FIXED_IDS[i].symbol} 10000`,
-    );
-
-    console.log(`adding ${FIXED_IDS[i].symbol} spot market`);
-    await execCommand(
-      `yarn cli add-spot-market ${newGroupName} ${FIXED_IDS[i].symbol} ${FIXED_IDS[i].dexPk} ${FIXED_IDS[i].mint}`,
-    );
-
-    console.log(`adding ${FIXED_IDS[i].symbol} perp market`);
-    await execCommand(
-      `yarn cli add-perp-market ${newGroupName} ${FIXED_IDS[i].symbol}`,
-    );
-    console.log('---');
-  }
-  console.log('Succcessfully created new mango group.');
-};
-
-function execCommand(cmd) {
-  const exec = require('child_process').exec;
-  return new Promise((resolve, _reject) => {
-    exec(cmd, (error, stdout, stderr) => {
-      if (error) {
-        console.warn(error);
-      }
-      resolve(stdout ? stdout : stderr);
-    });
-  });
+let wallet;
+if (process.env.WALLET) {
+  wallet = new PublicKey(process.env.WALLET);
+} else {
+  wallet = payer.publicKey;
 }
 
-initNewGroup();
+// TODO - move this into CLI and make it proper
+async function mintDevnetTokens() {
+  console.log(payer.publicKey.toBase58());
+  for (let i = 0; i < IDS.length; i++) {
+    const token = new Token(
+      connection,
+      new PublicKey(IDS[i].mint),
+      TOKEN_PROGRAM_ID,
+      payer,
+    );
+
+    if (IDS[i].symbol === 'SOL') {
+      console.log('not minting tokens for SOL');
+    }
+
+    const tokenAccount = await token.getOrCreateAssociatedAccountInfo(wallet);
+    console.log(tokenAccount.address.toBase58());
+    await token.mintTo(tokenAccount.address, payer, [], 1000000000000);
+    console.log('minted', IDS[i].symbol);
+  }
+}
+
+mintDevnetTokens();
+
+async function createDexMkts() {
+  const quoteToken = IDS.find((id) => id.symbol === 'USDC')?.mint as string;
+  const newMkts = IDS.filter((id) => !id.dexPk)
+    .filter((id) => id.symbol !== 'USDC')
+    .map((id) => id.mint);
+
+  const spotMarketPks: PublicKey[] = [];
+  for (const mint of newMkts) {
+    spotMarketPks.push(
+      await listMarket(
+        connection,
+        payer,
+        new PublicKey(mint),
+        new PublicKey(quoteToken),
+        10, // TODO: Make this dynamic
+        100, // TODO: Make this dynamic
+        DexProgramId,
+      ),
+    );
+  }
+
+  console.log(
+    'spotMarketPks',
+    spotMarketPks.map((mkt) => mkt.toString()),
+  );
+}
+
+// createDexMkts();

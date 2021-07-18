@@ -1069,7 +1069,7 @@ export class MangoClient {
       );
 
       const rootBanks = await mangoGroup.loadRootBanks(this.connection);
-      const baseRootBank = rootBanks[0];
+      const baseRootBank = rootBanks[i];
       const quoteRootBank = rootBanks[QUOTE_INDEX];
       const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
       const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];

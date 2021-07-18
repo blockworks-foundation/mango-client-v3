@@ -1,6 +1,8 @@
-const newGroupName = 'mango_test_v3.8';
-const mangoProgramId = '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt';
-const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
+import { createDevnetConnection } from '../test/utils';
+import { Account, PublicKey } from '@solana/web3.js';
+import fs from 'fs';
+import os from 'os';
+import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 const FIXED_IDS = [
   {
@@ -90,55 +92,54 @@ const FIXED_IDS = [
   },
 ];
 
-const initNewGroup = async () => {
-  // const connection: Connection = Test.createDevnetConnection();
-  // const mints = IDS.filter((id) => id.symbol !== 'USDC').map((id) => id.mint);
-  console.log('starting');
-  const quoteMint = FIXED_IDS.find((id) => id.symbol === 'USDC')
-    ?.mint as string;
-  await execCommand(
-    `yarn cli init-group ${newGroupName} ${mangoProgramId} ${serumProgramId} ${quoteMint}`,
+const connection = createDevnetConnection();
+
+let authority;
+if (process.env.AUTHORITY) {
+  authority = new Account(
+    JSON.parse(fs.readFileSync(process.env.AUTHORITY, 'utf-8')),
   );
-  console.log(`new group initialized`);
-
-  for (let i = 0; i < FIXED_IDS.length; i++) {
-    if (FIXED_IDS[i].symbol === 'USDC') {
-      continue;
-    }
-    console.log(`adding ${FIXED_IDS[i].symbol} oracle`);
-    await execCommand(
-      `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol}`,
-    );
-
-    console.log('setting oracle price');
-    await execCommand(
-      `yarn cli set-oracle ${newGroupName} ${FIXED_IDS[i].symbol} 10000`,
-    );
-
-    console.log(`adding ${FIXED_IDS[i].symbol} spot market`);
-    await execCommand(
-      `yarn cli add-spot-market ${newGroupName} ${FIXED_IDS[i].symbol} ${FIXED_IDS[i].dexPk} ${FIXED_IDS[i].mint}`,
-    );
-
-    console.log(`adding ${FIXED_IDS[i].symbol} perp market`);
-    await execCommand(
-      `yarn cli add-perp-market ${newGroupName} ${FIXED_IDS[i].symbol}`,
-    );
-    console.log('---');
-  }
-  console.log('Succcessfully created new mango group.');
-};
-
-function execCommand(cmd) {
-  const exec = require('child_process').exec;
-  return new Promise((resolve, _reject) => {
-    exec(cmd, (error, stdout, stderr) => {
-      if (error) {
-        console.warn(error);
-      }
-      resolve(stdout ? stdout : stderr);
-    });
-  });
+} else {
+  authority = new Account(
+    JSON.parse(
+      fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+    ),
+  );
 }
 
-initNewGroup();
+let wallet;
+if (process.env.WALLET) {
+  wallet = new PublicKey(process.env.WALLET);
+} else {
+  wallet = authority.publicKey;
+}
+
+// TODO - move this into CLI and make it proper
+async function mintDevnetTokens() {
+  console.log(
+    'minting for wallet:',
+    wallet.toBase58(),
+    'mint authority:',
+    authority.publicKey.toBase58(),
+  );
+
+  for (let i = 0; i < FIXED_IDS.length; i++) {
+    const token = new Token(
+      connection,
+      new PublicKey(FIXED_IDS[i].mint),
+      TOKEN_PROGRAM_ID,
+      authority,
+    );
+
+    if (FIXED_IDS[i].symbol === 'SOL') {
+      console.log('not minting tokens for SOL');
+      continue;
+    }
+
+    const tokenAccount = await token.getOrCreateAssociatedAccountInfo(wallet);
+    await token.mintTo(tokenAccount.address, authority, [], 1000000000000);
+    console.log('minted', FIXED_IDS[i].symbol);
+  }
+}
+
+mintDevnetTokens();
