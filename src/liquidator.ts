@@ -11,12 +11,17 @@ import { Cluster, Config } from './config';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import BN from 'bn.js';
-import { AssetType } from './layout';
+import { AssetType, MangoCache } from './layout';
+import { MangoAccount, MangoGroup } from '.';
 
 export class Liquidator {
   /**
    * Long running program that never exits except on keyboard interrupt
    */
+  liquidating: any;
+  constructor() {
+    this.liquidating = {};
+  }
   async run() {
     const interval = process.env.INTERVAL || 3500;
     const config = new Config(configFile);
@@ -109,76 +114,6 @@ export class Liquidator {
             );
 
             // Liquidate Spot
-            for (let i = 0; i < mangoGroup.spotMarkets.length - 1; i++) {
-              const spotMarket = spotMarkets[i];
-              const spotMarketInfo = mangoGroup.spotMarkets[i];
-              const spotHealth = mangoAccount.getSpotHealth(
-                cache,
-                i,
-                spotMarketInfo.maintAssetWeight,
-                spotMarketInfo.maintLiabWeight,
-              );
-              if (spotHealth.lt(ZERO_I80F48)) {
-                const baseRootBank = rootBanks[i];
-                const quoteRootBank = rootBanks[rootBanks.length - 1];
-
-                if (!baseRootBank || !quoteRootBank) {
-                  throw new Error(
-                    `Error cancelling spot orders: RootBanks not found for market ${i}`,
-                  );
-                }
-
-                if (mangoAccount.inMarginBasket[i]) {
-                  await client.forceCancelSpotOrders(
-                    mangoGroup,
-                    mangoAccount,
-                    spotMarket,
-                    baseRootBank,
-                    quoteRootBank,
-                    payer,
-                    new BN(5),
-                  );
-                }
-
-                let minNet = ZERO_I80F48;
-                let minNetIndex = -1;
-                let maxNet = ZERO_I80F48;
-                let maxNetIndex = mangoGroup.tokens.length - 1;
-                const price = cache.priceCache[i]
-                  ? cache.priceCache[i].price
-                  : ONE_I80F48;
-
-                const netDeposit = mangoAccount
-                  .getNativeDeposit(cache.rootBankCache[i], i)
-                  .sub(mangoAccount.getNativeBorrow(cache.rootBankCache[i], i))
-                  .mul(price);
-
-                if (netDeposit.lt(minNet)) {
-                  minNet = netDeposit;
-                  minNetIndex = i;
-                } else if (netDeposit.gt(maxNet)) {
-                  maxNet = netDeposit;
-                  maxNetIndex = i;
-                }
-
-                const assetRootBank = rootBanks[maxNetIndex];
-                const liabRootBank = rootBanks[minNetIndex];
-
-                if (assetRootBank && liabRootBank) {
-                  await client.liquidateTokenAndToken(
-                    mangoGroup,
-                    mangoAccount,
-                    liqorMangoAccount,
-                    assetRootBank,
-                    liabRootBank,
-                    payer,
-                    new I80F48(
-                      uiToNative(100, mangoGroup.tokens[maxNetIndex].decimals),
-                    ),
-                  );
-                }
-              }
-            }
 
             // Liquidate Perps
             for (let i = 0; i < mangoGroup.perpMarkets.length - 1; i++) {
@@ -236,6 +171,84 @@ export class Liquidator {
         }
       }
       console.timeEnd('checkAccounts');
+    }
+  }
+
+  async liquidateSpot(
+    mangoGroup: MangoGroup,
+    cache: MangoCache,
+    spotMarkets: [Market],
+    liqee: MangoAccount,
+  ) {
+    for (let i = 0; i < mangoGroup.spotMarkets.length - 1; i++) {
+      const spotMarket = spotMarkets[i];
+      const spotMarketInfo = mangoGroup.spotMarkets[i];
+      const spotHealth = mangoAccount.getSpotHealth(
+        cache,
+        i,
+        spotMarketInfo.maintAssetWeight,
+        spotMarketInfo.maintLiabWeight,
+      );
+      if (spotHealth.lt(ZERO_I80F48)) {
+        const baseRootBank = rootBanks[i];
+        const quoteRootBank = rootBanks[rootBanks.length - 1];
+
+        if (!baseRootBank || !quoteRootBank) {
+          throw new Error(
+            `Error cancelling spot orders: RootBanks not found for market ${i}`,
+          );
+        }
+
+        if (mangoAccount.inMarginBasket[i]) {
+          await client.forceCancelSpotOrders(
+            mangoGroup,
+            mangoAccount,
+            spotMarket,
+            baseRootBank,
+            quoteRootBank,
+            payer,
+            new BN(5),
+          );
+        }
+
+        let minNet = ZERO_I80F48;
+        let minNetIndex = -1;
+        let maxNet = ZERO_I80F48;
+        let maxNetIndex = mangoGroup.tokens.length - 1;
+        const price = cache.priceCache[i]
+          ? cache.priceCache[i].price
+          : ONE_I80F48;
+
+        const netDeposit = mangoAccount
+          .getNativeDeposit(cache.rootBankCache[i], i)
+          .sub(mangoAccount.getNativeBorrow(cache.rootBankCache[i], i))
+          .mul(price);
+
+        if (netDeposit.lt(minNet)) {
+          minNet = netDeposit;
+          minNetIndex = i;
+        } else if (netDeposit.gt(maxNet)) {
+          maxNet = netDeposit;
+          maxNetIndex = i;
+        }
+
+        const assetRootBank = rootBanks[maxNetIndex];
+        const liabRootBank = rootBanks[minNetIndex];
+
+        if (assetRootBank && liabRootBank) {
+          await client.liquidateTokenAndToken(
+            mangoGroup,
+            mangoAccount,
+            liqorMangoAccount,
+            assetRootBank,
+            liabRootBank,
+            payer,
+            new I80F48(
+              uiToNative(100, mangoGroup.tokens[maxNetIndex].decimals),
+            ),
+          );
+        }
+      }
     }
   }
 }
