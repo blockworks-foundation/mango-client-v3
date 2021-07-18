@@ -1449,7 +1449,50 @@ export class MangoClient {
     limit: BN,
   ) {
     const baseNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
-    const quoteNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
+    const quoteNodeBanks = await quoteRootBank.loadNodeBanks(this.connection);
+
+    const openOrdersKeys: { pubkey: PublicKey; isWritable: boolean }[] = [];
+    const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
+    // Only pass in open orders if in margin basket or current market index, and
+    // the only writable account should be OpenOrders for current market index
+    for (let i = 0; i < liqeeMangoAccount.spotOpenOrders.length; i++) {
+      let pubkey = zeroKey;
+      let isWritable = false;
+
+      if (i === spotMarketIndex) {
+        isWritable = true;
+
+        if (liqeeMangoAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)) {
+          console.log('missing oo for ', spotMarketIndex);
+          // open orders missing for this market; create a new one now
+          // const openOrdersSpace = OpenOrders.getLayout(
+          //   mangoGroup.dexProgramId,
+          // ).span;
+          // const openOrdersLamports =
+          //   await this.connection.getMinimumBalanceForRentExemption(
+          //     openOrdersSpace,
+          //     'singleGossip',
+          //   );
+          // const accInstr = await createAccountInstruction(
+          //   this.connection,
+          //   owner.publicKey,
+          //   openOrdersSpace,
+          //   mangoGroup.dexProgramId,
+          //   openOrdersLamports,
+          // );
+
+          // transaction.add(accInstr.instruction);
+          // additionalSigners.push(accInstr.account);
+          // pubkey = accInstr.account.publicKey;
+        } else {
+          pubkey = liqeeMangoAccount.spotOpenOrders[i];
+        }
+      } else if (liqeeMangoAccount.inMarginBasket[i]) {
+        pubkey = liqeeMangoAccount.spotOpenOrders[i];
+      }
+
+      openOrdersKeys.push({ pubkey, isWritable });
+    }
 
     const dexSigner = await PublicKey.createProgramAddress(
       [
@@ -1479,7 +1522,7 @@ export class MangoClient {
       spotMarket['_decoded'].quoteVault,
       dexSigner,
       mangoGroup.dexProgramId,
-      liqeeMangoAccount.spotOpenOrders,
+      openOrdersKeys,
       limit,
     );
 

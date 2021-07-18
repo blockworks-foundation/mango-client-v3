@@ -854,7 +854,7 @@ export function makeForceCancelSpotOrdersInstruction(
   dexQuotePk: PublicKey,
   dexSignerPk: PublicKey,
   dexProgramPk: PublicKey,
-  liqeeOpenOrdersPks: PublicKey[],
+  liqeeOpenOrdersKeys: { pubkey: PublicKey; isWritable: boolean }[],
   limit: BN,
 ): TransactionInstruction {
   const keys = [
@@ -877,9 +877,9 @@ export function makeForceCancelSpotOrdersInstruction(
     { isSigner: false, isWritable: false, pubkey: dexSignerPk },
     { isSigner: false, isWritable: false, pubkey: dexProgramPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
-    ...liqeeOpenOrdersPks.map((pubkey) => ({
+    ...liqeeOpenOrdersKeys.map(({ pubkey, isWritable }) => ({
       isSigner: false,
-      isWritable: false,
+      isWritable,
       pubkey,
     })),
   ];

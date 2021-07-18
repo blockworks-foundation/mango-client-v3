@@ -61,7 +61,13 @@ async function main() {
       liqorMangoAccountKey,
       mangoGroup.dexProgramId,
     );
-    const mangoAccounts = await client.getAllMangoAccounts(mangoGroup);
+    const mangoAccounts = await client.getAllMangoAccounts(
+      mangoGroup,
+      undefined,
+      true,
+    );
+    console.log('got ' + mangoAccounts.length + ' accounts');
+
     const perpMarkets = await Promise.all(
       groupIds.perpMarkets.map((perpMarket, index) => {
         return mangoGroup.loadPerpMarket(
@@ -95,6 +101,7 @@ async function main() {
               `Sick account ${mangoAccount.publicKey.toBase58()} health: ${health.toString()}`,
             );
             liquidating[mangoAccount.publicKey.toBase58()] = true;
+            console.log('forceCancelPerpOrders');
             await Promise.all(
               perpMarkets.map((perpMarket) => {
                 return client.forceCancelPerpOrders(
@@ -163,6 +170,33 @@ async function liquidateSpot(
   liqee: MangoAccount,
   liqor: MangoAccount,
 ) {
+  console.log('liquidateSpot');
+  for (let i = 0; i < mangoGroup.spotMarkets.length - 1; i++) {
+    const spotMarket = spotMarkets[i];
+    const spotMarketInfo = mangoGroup.spotMarkets[i];
+
+    const baseRootBank = rootBanks[i];
+    const quoteRootBank = rootBanks[rootBanks.length - 1];
+
+    if (!baseRootBank || !quoteRootBank) {
+      console.error(
+        `Error cancelling spot orders: RootBanks not found for market ${i}`,
+      );
+    } else {
+      if (liqee.inMarginBasket[i]) {
+        console.log('cancelling spot for market ', i);
+        await client.forceCancelSpotOrders(
+          mangoGroup,
+          liqee,
+          spotMarket,
+          baseRootBank,
+          quoteRootBank,
+          payer,
+          new BN(5),
+        );
+      }
+    }
+  }
   const lowestHealthMarket = mangoGroup.spotMarkets
     .map((spotMarketInfo, marketIndex) => {
       const spotHealth = liqee.getSpotHealth(
@@ -192,6 +226,7 @@ async function liquidateSpot(
     }
 
     if (liqee.inMarginBasket[marketIndex]) {
+      console.log('forceCancelSpotOrders', marketIndex);
       await client.forceCancelSpotOrders(
         mangoGroup,
         liqee,
@@ -234,7 +269,11 @@ async function liquidateSpot(
         payer,
         new I80F48(uiToNative(100, mangoGroup.tokens[marketIndex].decimals)),
       );
-
+      console.log(
+        'liquidated max ' +
+          uiToNative(100, mangoGroup.tokens[marketIndex].decimals).toString() +
+          ' of liab',
+      );
       liqee = await liqee.reload(connection);
       if (liqee.isBankrupt) {
         console.log('Bankrupt account', liqee.publicKey.toBase58());
@@ -262,6 +301,7 @@ async function liquidatePerps(
   liqee: MangoAccount,
   liqor: MangoAccount,
 ) {
+  console.log('liquidatePerps');
   const lowestHealthMarket = mangoGroup.perpMarkets
     .map((perpMarketInfo, marketIndex) => {
       const perpAccount = liqee.perpAccounts[marketIndex];
