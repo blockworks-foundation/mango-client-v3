@@ -291,3 +291,13 @@ export async function getMultipleAccounts(
     }),
   );
 }
+
+/**
+ * Throw if undefined; return value otherwise
+ */
+export function throwUndefined<T>(x: T | undefined): T {
+  if (x === undefined) {
+    throw new Error('Undefined');
+  }
+  return x;
+}

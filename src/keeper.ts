@@ -231,9 +231,15 @@ async function batchProcessKeeperTransactions(
       }
     });
 
-  await client.sendTransaction(cacheTransaction, payer, []);
-  await client.sendTransaction(updateRootBankTransaction, payer, []);
-  await client.sendTransaction(updateFundingTransaction, payer, []);
+  if (cacheTransaction.instructions.length > 0) {
+    await client.sendTransaction(cacheTransaction, payer, []);
+  }
+  if (updateRootBankTransaction.instructions.length > 0) {
+    await client.sendTransaction(updateRootBankTransaction, payer, []);
+  }
+  if (updateFundingTransaction.instructions.length > 0) {
+    await client.sendTransaction(updateFundingTransaction, payer, []);
+  }
 }
 
 main();

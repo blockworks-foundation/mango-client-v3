@@ -184,4 +184,8 @@ export default class MangoGroup {
     const decoded = PerpMarketLayout.decode(acc?.data);
     return new PerpMarket(pk, baseDecimals, quoteDecimals, decoded);
   }
+
+  getQuoteTokenInfo(): TokenInfo {
+    return this.tokens[this.tokens.length - 1];
+  }
 }

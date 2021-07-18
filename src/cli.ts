@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+// TODO put node banks and vaults inside the GroupConfig
 import * as fs from 'fs';
 import * as os from 'os';
 import yargs from 'yargs/yargs';
