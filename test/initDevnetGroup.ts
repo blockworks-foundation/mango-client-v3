@@ -1,3 +1,9 @@
+/**
+ * How to use:
+ * 1.) Update the mango group name on line 6
+ * 2.) Run yarn launch-group
+ * 3.) Update the mango group name in keeper.ts crank.ts and in the UI in useMangoStore.ts
+ */
 const newGroupName = 'mango_test_v3.8';
 const mangoProgramId = '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';

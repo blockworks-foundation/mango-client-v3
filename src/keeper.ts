@@ -127,13 +127,13 @@ async function processConsumeEvents(
       return;
     }
 
-    const accounts: Set<PublicKey> = new Set();
+    const accounts: Set<string> = new Set();
     for (const event of events) {
       if (event.fill) {
-        accounts.add(event.fill.maker);
-        accounts.add(event.fill.taker);
+        accounts.add(event.fill.maker.toBase58());
+        accounts.add(event.fill.taker.toBase58());
       } else if (event.out) {
-        accounts.add(event.out.owner);
+        accounts.add(event.out.owner.toBase58());
       }
 
       // Limit unique accounts to first 20 or 21
@@ -145,7 +145,9 @@ async function processConsumeEvents(
     client.consumeEvents(
       mangoGroup,
       perpMarket,
-      Array.from(accounts),
+      Array.from(accounts)
+        .map((s) => new PublicKey(s))
+        .sort(),
       payer,
       consumeEventsLimit,
     );

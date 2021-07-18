@@ -28,7 +28,7 @@ const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-const groupName = 'mango_test_v3.8'; // this one contains all spot markets
+const groupName = 'mango_test_v3.max'; // this one contains all spot markets
 // const groupName = process.env.GROUP || 'mango_test_v3.7';
 const groupIds = config.getGroup(cluster, groupName);
 
@@ -112,9 +112,10 @@ async function run() {
       if (events.length === 0) {
         return;
       }
-      const accounts: Set<PublicKey> = new Set();
+
+      const accounts: Set<string> = new Set();
       for (const event of events) {
-        accounts.add(event.openOrders);
+        accounts.add(event.openOrders.toBase58());
 
         // Limit unique accounts to first 10
         if (accounts.size >= maxUniqueAccounts) {
@@ -127,7 +128,9 @@ async function run() {
         eventQueue: spotMarkets[i]['_decoded'].eventQueue,
         coinFee: baseWallets[i],
         pcFee: quoteWallet,
-        openOrdersAccounts: Array.from(accounts).sort(),
+        openOrdersAccounts: Array.from(accounts)
+          .map((s) => new PublicKey(s))
+          .sort(),
         limit: consumeEventsLimit,
         programId: mangoGroup.dexProgramId,
       });
