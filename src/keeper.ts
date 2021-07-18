@@ -26,7 +26,7 @@ import { PerpEventQueue, PerpEventQueueLayout } from './layout';
 import { MangoGroup, PerpMarket } from '.';
 
 const groupName = process.env.GROUP || 'mango_test_v3.8';
-const interval = process.env.INTERVAL || 2000;
+const interval = process.env.INTERVAL || 4000;
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '20');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const consumeEvents = process.env.CONSUME_EVENTS === 'true';
@@ -231,11 +231,9 @@ async function batchProcessKeeperTransactions(
       }
     });
 
-  await Promise.all([
-    client.sendTransaction(cacheTransaction, payer, []),
-    client.sendTransaction(updateRootBankTransaction, payer, []),
-    client.sendTransaction(updateFundingTransaction, payer, []),
-  ]);
+  await client.sendTransaction(cacheTransaction, payer, []);
+  await client.sendTransaction(updateRootBankTransaction, payer, []);
+  await client.sendTransaction(updateFundingTransaction, payer, []);
 }
 
 main();
