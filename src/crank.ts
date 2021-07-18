@@ -112,9 +112,9 @@ async function run() {
       if (events.length === 0) {
         return;
       }
-      const accounts: Set<PublicKey> = new Set();
+      const accounts: Set<string> = new Set();
       for (const event of events) {
-        accounts.add(event.openOrders);
+        accounts.add(event.openOrders.toBase58());
 
         // Limit unique accounts to first 10
         if (accounts.size >= maxUniqueAccounts) {
@@ -122,12 +122,14 @@ async function run() {
         }
       }
 
+      const openOrdersAccounts = [...accounts].map((a) => new PublicKey(a));
+
       const instr = DexInstructions.consumeEvents({
         market: spotMarkets[i].publicKey,
         eventQueue: spotMarkets[i]['_decoded'].eventQueue,
         coinFee: baseWallets[i],
         pcFee: quoteWallet,
-        openOrdersAccounts: Array.from(accounts).sort(),
+        openOrdersAccounts,
         limit: consumeEventsLimit,
         programId: mangoGroup.dexProgramId,
       });
