@@ -11,96 +11,90 @@ import { Cluster, Config } from './config';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
 import BN from 'bn.js';
-import { AssetType, MangoCache } from './layout';
-import { MangoAccount, MangoGroup } from '.';
+import { AssetType, MangoCache, perpMarketInfoLayout } from './layout';
+import { MangoAccount, MangoGroup, PerpMarket, RootBank } from '.';
 
-export class Liquidator {
-  /**
-   * Long running program that never exits except on keyboard interrupt
-   */
-  liquidating: any;
-  constructor() {
-    this.liquidating = {};
+const interval = process.env.INTERVAL || 3500;
+const config = new Config(configFile);
+
+const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
+const groupName = process.env.GROUP || 'mango_test_v3.8';
+const groupIds = config.getGroup(cluster, groupName);
+if (!groupIds) {
+  throw new Error(`Group ${groupName} not found`);
+}
+const mangoProgramId = groupIds.mangoProgramId;
+const mangoGroupKey = groupIds.publicKey;
+const payer = new Account(
+  JSON.parse(
+    process.env.KEYPAIR ||
+      fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+  ),
+);
+console.log(`Payer: ${payer.publicKey.toBase58()}`);
+const connection = new Connection(
+  config.cluster_urls[cluster],
+  'processed' as Commitment,
+);
+const client = new MangoClient(connection, mangoProgramId);
+
+const liqorMangoAccountKey = new PublicKey(
+  '6jHCjBA21Tecs1NHEkhqHvqsNoxM6e11vYHppvbpMvV8',
+);
+
+async function main() {
+  if (!groupIds) {
+    throw new Error(`Group ${groupName} not found`);
   }
-  async run() {
-    const interval = process.env.INTERVAL || 3500;
-    const config = new Config(configFile);
+  console.log(`Starting liquidator for ${groupName}...`);
+  const liquidating = {};
 
-    const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const groupName = process.env.GROUP || 'mango_test_v3.4';
-    const groupIds = config.getGroup(cluster, groupName);
+  // eslint-disable-next-line
+  while (true) {
+    await sleep(interval);
+    console.time('groupInfo');
+    const mangoGroup = await client.getMangoGroup(mangoGroupKey);
+    const cache = await mangoGroup.loadCache(connection);
 
-    if (!groupIds) {
-      throw new Error(`Group ${groupName} not found`);
-    }
-
-    console.log(`Starting liquidator for ${groupName}...`);
-    const mangoProgramId = groupIds.mangoProgramId;
-    const mangoGroupKey = groupIds.publicKey;
-    const payer = new Account(
-      JSON.parse(
-        process.env.KEYPAIR ||
-          fs.readFileSync(
-            os.homedir() + '/.config/solana/devnet.json',
-            'utf-8',
-          ),
-      ),
+    console.log('calling get all mango accounts');
+    const liqorMangoAccount = await client.getMangoAccount(
+      liqorMangoAccountKey,
+      mangoGroup.dexProgramId,
     );
-    console.log(`Payer: ${payer.publicKey.toBase58()}`);
-    const connection = new Connection(
-      config.cluster_urls[cluster],
-      'processed' as Commitment,
+    const mangoAccounts = await client.getAllMangoAccounts(mangoGroup);
+    const perpMarkets = await Promise.all(
+      groupIds.perpMarkets.map((perpMarket, index) => {
+        return mangoGroup.loadPerpMarket(
+          connection,
+          index,
+          perpMarket.baseDecimals,
+          perpMarket.quoteDecimals,
+        );
+      }),
     );
-    const client = new MangoClient(connection, mangoProgramId);
-
-    const liqorMangoAccountKey = new PublicKey(
-      '6jHCjBA21Tecs1NHEkhqHvqsNoxM6e11vYHppvbpMvV8',
+    const spotMarkets = await Promise.all(
+      groupIds.spotMarkets.map((spotMarket) => {
+        return Market.load(
+          connection,
+          spotMarket.publicKey,
+          undefined,
+          groupIds.serumProgramId,
+        );
+      }),
     );
 
-    // eslint-disable-next-line
-    while (true) {
-      await sleep(interval);
-      console.time('groupInfo');
-      const mangoGroup = await client.getMangoGroup(mangoGroupKey);
-      const cache = await mangoGroup.loadCache(connection);
-
-      console.log('calling get all mango accounts');
-      const liqorMangoAccount = await client.getMangoAccount(
-        liqorMangoAccountKey,
-        mangoGroup.dexProgramId,
-      );
-      const mangoAccounts = await client.getAllMangoAccounts(mangoGroup);
-      const perpMarkets = await Promise.all(
-        groupIds.perpMarkets.map((perpMarket, index) => {
-          return mangoGroup.loadPerpMarket(
-            connection,
-            index,
-            perpMarket.baseDecimals,
-            perpMarket.quoteDecimals,
-          );
-        }),
-      );
-      const spotMarkets = await Promise.all(
-        groupIds.spotMarkets.map((spotMarket) => {
-          return Market.load(
-            connection,
-            spotMarket.publicKey,
-            undefined,
-            groupIds.serumProgramId,
-          );
-        }),
-      );
-
-      const rootBanks = await mangoGroup.loadRootBanks(connection);
-      console.timeEnd('groupInfo');
-      console.time('checkAccounts');
-      for (let mangoAccount of mangoAccounts) {
-        try {
-          const health = mangoAccount.getHealth(mangoGroup, cache, 'Maint');
-          if (health.lt(ZERO_I80F48)) {
+    const rootBanks = await mangoGroup.loadRootBanks(connection);
+    console.timeEnd('groupInfo');
+    console.time('checkAccounts');
+    for (let mangoAccount of mangoAccounts) {
+      try {
+        const health = mangoAccount.getHealth(mangoGroup, cache, 'Maint');
+        if (health.lt(ZERO_I80F48)) {
+          if (!liquidating[mangoAccount.publicKey.toBase58()]) {
             console.log(
               `Sick account ${mangoAccount.publicKey.toBase58()} health: ${health.toString()}`,
             );
+            liquidating[mangoAccount.publicKey.toBase58()] = true;
             await Promise.all(
               perpMarkets.map((perpMarket) => {
                 return client.forceCancelPerpOrders(
@@ -113,144 +107,255 @@ export class Liquidator {
               }),
             );
 
-            // Liquidate Spot
-
-            // Liquidate Perps
-            for (let i = 0; i < mangoGroup.perpMarkets.length - 1; i++) {
-              const price = await mangoGroup.getPrice(i, cache);
-              const perpAccount = mangoAccount.perpAccounts[i];
-              const perpMarketInfo = mangoGroup.perpMarkets[i];
-              const perpMarketCache = cache.perpMarketCache[i];
-              const perpHealth = perpAccount.getHealth(
-                perpMarketInfo,
-                price,
-                perpMarketInfo.maintAssetWeight,
-                perpMarketInfo.maintLiabWeight,
-                perpMarketCache.longFunding,
-                perpMarketCache.shortFunding,
-              );
-
-              if (perpHealth.lt(ZERO_I80F48)) {
-                if (perpAccount.basePosition.eq(new BN(0))) {
-                  const rootBank = rootBanks[rootBanks.length - 1];
-                  if (rootBank) {
-                    console.log('liquidateTokenAndPerp ' + i);
-                    await client.liquidateTokenAndPerp(
-                      mangoGroup,
-                      mangoAccount,
-                      liqorMangoAccount,
-                      rootBank,
-                      payer,
-                      AssetType.Token,
-                      rootBanks.length - 1,
-                      AssetType.Perp,
-                      i,
-                      new I80F48(uiToNative(10, mangoGroup.tokens[i].decimals)),
-                    );
-                  }
-                } else {
-                  console.log('liquidatePerpMarket ' + i);
-                  //1.3226
-                  await client.liquidatePerpMarket(
-                    mangoGroup,
-                    mangoAccount,
-                    liqorMangoAccount,
-                    perpMarkets[i],
-                    payer,
-                    uiToNative(1, mangoGroup.tokens[i].decimals),
-                  );
-                }
-              }
-            }
+            Promise.all([
+              liquidateSpot(
+                mangoGroup,
+                cache,
+                spotMarkets,
+                rootBanks,
+                mangoAccount,
+                liqorMangoAccount,
+              ),
+              liquidatePerps(
+                mangoGroup,
+                cache,
+                perpMarkets,
+                rootBanks,
+                mangoAccount,
+                liqorMangoAccount,
+              ),
+            ])
+              .then((values) => {
+                console.log(
+                  'Liquidated account',
+                  mangoAccount.publicKey.toBase58(),
+                );
+                console.log(values);
+              })
+              .catch((err) => {
+                console.log(
+                  'Failed to liquidate account',
+                  mangoAccount.publicKey.toBase58(),
+                  err,
+                );
+              })
+              .finally(() => {
+                liquidating[mangoAccount.publicKey.toBase58()] = false;
+              });
           }
-        } catch (err) {
-          console.error(
-            `Failed to process account ${mangoAccount.publicKey.toBase58()}`,
-            err,
-          );
         }
+      } catch (err) {
+        console.error(
+          `Failed to process account ${mangoAccount.publicKey.toBase58()}`,
+          err,
+        );
       }
-      console.timeEnd('checkAccounts');
     }
+    console.timeEnd('checkAccounts');
   }
+}
 
-  async liquidateSpot(
-    mangoGroup: MangoGroup,
-    cache: MangoCache,
-    spotMarkets: [Market],
-    liqee: MangoAccount,
-  ) {
-    for (let i = 0; i < mangoGroup.spotMarkets.length - 1; i++) {
-      const spotMarket = spotMarkets[i];
-      const spotMarketInfo = mangoGroup.spotMarkets[i];
-      const spotHealth = mangoAccount.getSpotHealth(
+async function liquidateSpot(
+  mangoGroup: MangoGroup,
+  cache: MangoCache,
+  spotMarkets: Market[],
+  rootBanks: (RootBank | undefined)[],
+  liqee: MangoAccount,
+  liqor: MangoAccount,
+) {
+  const lowestHealthMarket = mangoGroup.spotMarkets
+    .map((spotMarketInfo, marketIndex) => {
+      const spotHealth = liqee.getSpotHealth(
         cache,
-        i,
+        marketIndex,
         spotMarketInfo.maintAssetWeight,
         spotMarketInfo.maintLiabWeight,
       );
-      if (spotHealth.lt(ZERO_I80F48)) {
-        const baseRootBank = rootBanks[i];
-        const quoteRootBank = rootBanks[rootBanks.length - 1];
 
-        if (!baseRootBank || !quoteRootBank) {
-          throw new Error(
-            `Error cancelling spot orders: RootBanks not found for market ${i}`,
-          );
-        }
+      return { spotHealth: spotHealth, marketIndex: marketIndex };
+    })
+    .sort((a, b) => {
+      return a.spotHealth.sub(b.spotHealth).toNumber();
+    })[0];
 
-        if (mangoAccount.inMarginBasket[i]) {
-          await client.forceCancelSpotOrders(
-            mangoGroup,
-            mangoAccount,
-            spotMarket,
-            baseRootBank,
-            quoteRootBank,
-            payer,
-            new BN(5),
-          );
-        }
+  if (lowestHealthMarket.spotHealth.lt(ZERO_I80F48)) {
+    const marketIndex = lowestHealthMarket.marketIndex;
+    const spotMarket = spotMarkets[marketIndex];
 
-        let minNet = ZERO_I80F48;
-        let minNetIndex = -1;
-        let maxNet = ZERO_I80F48;
-        let maxNetIndex = mangoGroup.tokens.length - 1;
-        const price = cache.priceCache[i]
-          ? cache.priceCache[i].price
-          : ONE_I80F48;
+    const baseRootBank = rootBanks[marketIndex];
+    const quoteRootBank = rootBanks[rootBanks.length - 1];
 
-        const netDeposit = mangoAccount
-          .getNativeDeposit(cache.rootBankCache[i], i)
-          .sub(mangoAccount.getNativeBorrow(cache.rootBankCache[i], i))
-          .mul(price);
+    if (!baseRootBank || !quoteRootBank) {
+      throw new Error(
+        `Error cancelling spot orders: RootBanks not found for market ${marketIndex}`,
+      );
+    }
 
-        if (netDeposit.lt(minNet)) {
-          minNet = netDeposit;
-          minNetIndex = i;
-        } else if (netDeposit.gt(maxNet)) {
-          maxNet = netDeposit;
-          maxNetIndex = i;
-        }
+    if (liqee.inMarginBasket[marketIndex]) {
+      await client.forceCancelSpotOrders(
+        mangoGroup,
+        liqee,
+        spotMarket,
+        baseRootBank,
+        quoteRootBank,
+        payer,
+        new BN(5),
+      );
+    }
 
-        const assetRootBank = rootBanks[maxNetIndex];
-        const liabRootBank = rootBanks[minNetIndex];
+    let maxNet = ZERO_I80F48;
+    let maxNetIndex = mangoGroup.tokens.length - 1;
 
-        if (assetRootBank && liabRootBank) {
-          await client.liquidateTokenAndToken(
-            mangoGroup,
-            mangoAccount,
-            liqorMangoAccount,
-            assetRootBank,
-            liabRootBank,
-            payer,
-            new I80F48(
-              uiToNative(100, mangoGroup.tokens[maxNetIndex].decimals),
-            ),
-          );
-        }
+    for (let i = 0; i < mangoGroup.tokens.length; i++) {
+      const price = cache.priceCache[i]
+        ? cache.priceCache[i].price
+        : ONE_I80F48;
+
+      const netDeposit = liqee
+        .getNativeDeposit(cache.rootBankCache[i], i)
+        .sub(liqee.getNativeBorrow(cache.rootBankCache[i], i))
+        .mul(price);
+
+      if (netDeposit.gt(maxNet)) {
+        maxNet = netDeposit;
+        maxNetIndex = i;
+      }
+    }
+
+    const assetRootBank = rootBanks[maxNetIndex];
+
+    if (assetRootBank && baseRootBank) {
+      await client.liquidateTokenAndToken(
+        mangoGroup,
+        liqee,
+        liqor,
+        assetRootBank,
+        baseRootBank,
+        payer,
+        new I80F48(uiToNative(100, mangoGroup.tokens[marketIndex].decimals)),
+      );
+
+      liqee = await liqee.reload(connection);
+      if (liqee.isBankrupt) {
+        console.log('Bankrupt account', liqee.publicKey.toBase58());
+        // await client.resolveTokenBankruptcy(
+        //   mangoGroup,
+        //   liqee,
+        //   liqor,
+        //   perpMarket,
+        //   quoteRootBank,
+        //   baseRootBank,
+        //   payer,
+        //   marketIndex,
+        //   new I80F48(uiToNative(100, mangoGroup.tokens[marketIndex].decimals)),
+        // );
       }
     }
   }
 }
 
-new Liquidator().run();
+async function liquidatePerps(
+  mangoGroup: MangoGroup,
+  cache: MangoCache,
+  perpMarkets: PerpMarket[],
+  rootBanks: (RootBank | undefined)[],
+  liqee: MangoAccount,
+  liqor: MangoAccount,
+) {
+  const lowestHealthMarket = mangoGroup.perpMarkets
+    .map((perpMarketInfo, marketIndex) => {
+      const perpAccount = liqee.perpAccounts[marketIndex];
+      const perpMarketCache = cache.perpMarketCache[marketIndex];
+      const price = mangoGroup.getPrice(marketIndex, cache);
+      const perpHealth = perpAccount.getHealth(
+        perpMarketInfo,
+        price,
+        perpMarketInfo.maintAssetWeight,
+        perpMarketInfo.maintLiabWeight,
+        perpMarketCache.longFunding,
+        perpMarketCache.shortFunding,
+      );
+
+      return { perpHealth: perpHealth, marketIndex: marketIndex };
+    })
+    .sort((a, b) => {
+      return a.perpHealth.sub(b.perpHealth).toNumber();
+    })[0];
+
+  const marketIndex = lowestHealthMarket.marketIndex;
+  const perpAccount = liqee.perpAccounts[marketIndex];
+  const perpMarket = perpMarkets[marketIndex];
+  const baseRootBank = rootBanks[marketIndex];
+
+  if (!baseRootBank) {
+    throw new Error(`Base root bank not found for ${marketIndex}`);
+  }
+
+  if (lowestHealthMarket.perpHealth.lt(ZERO_I80F48)) {
+    let maxNet = ZERO_I80F48;
+    let maxNetIndex = mangoGroup.tokens.length - 1;
+
+    for (let i = 0; i < mangoGroup.tokens.length; i++) {
+      const price = cache.priceCache[i]
+        ? cache.priceCache[i].price
+        : ONE_I80F48;
+
+      const netDeposit = liqee
+        .getNativeDeposit(cache.rootBankCache[i], i)
+        .sub(liqee.getNativeBorrow(cache.rootBankCache[i], i))
+        .mul(price);
+
+      if (netDeposit.gt(maxNet)) {
+        maxNet = netDeposit;
+        maxNetIndex = i;
+      }
+    }
+
+    const assetRootBank = rootBanks[maxNetIndex];
+
+    if (perpAccount.basePosition.eq(new BN(0))) {
+      if (assetRootBank) {
+        console.log('liquidateTokenAndPerp ' + marketIndex);
+        await client.liquidateTokenAndPerp(
+          mangoGroup,
+          liqee,
+          liqor,
+          assetRootBank,
+          payer,
+          AssetType.Token,
+          maxNetIndex,
+          AssetType.Perp,
+          marketIndex,
+          new I80F48(uiToNative(10, mangoGroup.tokens[marketIndex].decimals)),
+        );
+      }
+    } else {
+      console.log('liquidatePerpMarket ' + marketIndex);
+      await client.liquidatePerpMarket(
+        mangoGroup,
+        liqee,
+        liqor,
+        perpMarkets[marketIndex],
+        payer,
+        uiToNative(1, mangoGroup.tokens[marketIndex].decimals),
+      );
+    }
+
+    liqee = await liqee.reload(connection);
+    if (liqee.isBankrupt) {
+      console.log('Bankrupt account', liqee.publicKey.toBase58());
+      await client.resolvePerpBankruptcy(
+        mangoGroup,
+        liqee,
+        liqor,
+        perpMarket,
+        baseRootBank,
+        payer,
+        marketIndex,
+        new I80F48(uiToNative(100, mangoGroup.tokens[marketIndex].decimals)),
+      );
+    }
+  }
+}
+
+main();
