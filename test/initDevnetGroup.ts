@@ -88,6 +88,81 @@ const FIXED_IDS = [
     mint: '3QAVaXixBUtHwjponbZZgNVSRqB8YiTqY59pGSWDVS7X',
     dexPk: 'D9Rc98dPsmkfi9wv9yQLKXXu86MZut5jWZSYVCRu51ay',
   },
+  // {
+  //   symbol: 'AAX',
+  //   mint: 'HDY1CtDh4S5txV84yWfqrM6MuJ1rjCGa6RgV2aNkoq7T',
+  //   dexPk: '9wursY6Ekmephdczc6dmCmhQ9e7Lh7Xbz16fTP4h6KJt',
+  // },
+  // {
+  //   symbol: 'BBX',
+  //   mint: '8S894Tytj7RY6gKcvHWvaR8cmrrbwwRQ3w5ufWKvGgBE',
+  //   dexPk: 'FWEHRHn4TLZTvqZSsN8gmpAHzVuDsNcADVieH7gsqy8D',
+  // },
+  // {
+  //   symbol: 'CCX',
+  //   mint: 'C2a5sZB6ybhNVWmf3uwLhyszfD2NcndLcAaYTriASvWH',
+  //   dexPk: 'HXxay4VBTXkgkpyresugRdfnnG7j6SzvbmiZvFHjcDhe',
+  // },
+  // {
+  //   symbol: 'DDX',
+  //   mint: 'HqWwWZ6dxWWcMXdeYXAxnWYKB37fqEj2wxLwmuQsHwmP',
+  //   dexPk: 'HfPxSpeBJ7tyFVDh2YNMcadX1LUGqcynXiz2cDMqzHCr',
+  // },
+  // {
+  //   symbol: 'EEX',
+  //   mint: 'jYmra5J9RCyEnb1D1ScSSLoXLW8j8GZxSFv8kToUUHB',
+  //   dexPk: '6JXADoVE1nWjd2UkpJqU4PLZAj1urqvuZqnrw9dLKonq',
+  // },
+  // {
+  //   symbol: 'FFX',
+  //   mint: 'EsUAWWkLG2sE1RkBo74Ta4a7sjaj5JvM1y4Aj1tYXpx6',
+  //   dexPk: 'AU4zXmTdwUgzLW5yWB8qtuPaVqnvLoUXKot6KVdbidPa',
+  // },
+  // {
+  //   symbol: 'GGX',
+  //   mint: '6r1A4FQE58pxQubFTN3K8H5J8deNCwBwKReJFjWgV4fg',
+  //   dexPk: 'ETh2Qqrtp53F3BhbXteemWLsjkRiabEnwjoh8TyPLF72',
+  // },
+  // {
+  //   symbol: 'HHX',
+  //   mint: 'HNNjUMfUaLmh7yaTqxtz8rdaL2X789jLEqnVUDtqyEgx',
+  //   dexPk: 'BxQAZsUievWE6JyNVJcFsTLqLqahQF7LhM75qXf26Nr7',
+  // },
+  // {
+  //   symbol: 'IIX',
+  //   mint: 'BB4jPsmsZURcNkj7qANJcxADHH18aPEKK4J4kiubEWmx',
+  //   dexPk: 'EDJqNqTcojU65uLCMZHb1HjxPuWAAhMahsfGju2SBqsn',
+  // },
+  // {
+  //   symbol: 'JJX',
+  //   mint: 'QCKeuUFC3kRhfpLR7HpyCUr5VEjJguuRhngioeaux8L',
+  //   dexPk: 'ugv31rcerPotv8iMXrWDyEjf5TokZWegzDoSK1xL8s9',
+  // },
+  // {
+  //   symbol: 'KKX',
+  //   mint: '5txPKV2L86yfqtR9WqmXLtaE2ZdoUuzpUNBmvsAExbu8',
+  //   dexPk: 'C8GiLqrKW3KNfB6y72jSF7WPYCHWkpgbkX48vsPpzxsU',
+  // },
+  // {
+  //   symbol: 'LLX',
+  //   mint: 'FqEQxh7VLjPAYd5Y8ea2uwC6ut2tJ4fsim5Mwwb1DPh2',
+  //   dexPk: '4KoZwJizkVaZhAY2Ud9tt3yqUxZrJnEgPTe8dDtM399G',
+  // },
+  // {
+  //   symbol: 'MMX',
+  //   mint: 'ENWHT6aaCguz7FDw8v9FBfFAqS4saS4cR2gWje1vHrT9',
+  //   dexPk: '937mGkTYcqGcHoD2UReiC2FJD4DU42rkJciQZ7tQz5H4',
+  // },
+  // {
+  //   symbol: 'NNX',
+  //   mint: 'GunmC8Wr9s4AN6errMFQZicdpNUMVUEvAKyTYektXxGe',
+  //   dexPk: '4my2SByxetXARLxpkDG5iV88AVqqsJzUy88CzyjvKvp8',
+  // },
+  // {
+  //   symbol: 'OOX',
+  //   mint: '6PTt8kHBncHTELnhJoKXAoU6e6fyETBNi7ojvggtJDK2',
+  //   dexPk: 'GhPwZExZ7uT72n5SdWNMxwddxQ8eG7tuEvX2iSUK4MEY',
+  // },
 ];
 
 const initNewGroup = async () => {
