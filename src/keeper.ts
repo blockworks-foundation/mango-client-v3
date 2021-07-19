@@ -75,12 +75,8 @@ async function main() {
     }),
   );
 
-  try {
-    processUpdateCache(mangoGroup);
-    processKeeperTransactions(mangoGroup, perpMarkets);
-  } catch (err) {
-    console.error('Error', `${err}`);
-  }
+  processUpdateCache(mangoGroup);
+  processKeeperTransactions(mangoGroup, perpMarkets);
 
   if (consumeEvents) {
     processConsumeEvents(mangoGroup, perpMarkets);
@@ -88,186 +84,203 @@ async function main() {
 }
 
 async function processUpdateCache(mangoGroup: MangoGroup) {
-  console.log('processUpdateCache');
-  const batchSize = 8;
-  const promises: Promise<string>[] = [];
-  for (let i = 0; i < mangoGroup.tokens.length / batchSize; i++) {
-    const startIndex = i * batchSize;
-    const endIndex = i * batchSize + batchSize;
-    const cacheTransaction = new Transaction();
-    cacheTransaction.add(
-      makeCacheRootBankInstruction(
-        mangoProgramId,
-        mangoGroup.publicKey,
-        mangoGroup.mangoCache,
-        mangoGroup.tokens
-          .map((t) => t.rootBank)
-          .slice(startIndex, endIndex)
-          .filter((x) => !x.equals(zeroKey)),
-      ),
-    );
+  try {
+    console.log('processUpdateCache');
+    const batchSize = 8;
+    const promises: Promise<string>[] = [];
 
-    cacheTransaction.add(
-      makeCachePricesInstruction(
-        mangoProgramId,
-        mangoGroup.publicKey,
-        mangoGroup.mangoCache,
-        mangoGroup.oracles
-          .slice(startIndex, endIndex)
-          .filter((x) => !x.equals(zeroKey)),
-      ),
-    );
+    for (let i = 0; i < mangoGroup.tokens.length / batchSize; i++) {
+      const startIndex = i * batchSize;
+      const endIndex = i * batchSize + batchSize;
+      const cacheTransaction = new Transaction();
+      cacheTransaction.add(
+        makeCacheRootBankInstruction(
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          mangoGroup.tokens
+            .map((t) => t.rootBank)
+            .slice(startIndex, endIndex)
+            .filter((x) => !x.equals(zeroKey)),
+        ),
+      );
 
-    cacheTransaction.add(
-      makeCachePerpMarketsInstruction(
-        mangoProgramId,
-        mangoGroup.publicKey,
-        mangoGroup.mangoCache,
-        mangoGroup.perpMarkets
-          .filter((pm) => !pm.isEmpty())
-          .slice(startIndex, endIndex)
-          .map((pm) => pm.perpMarket),
-      ),
-    );
-    if (cacheTransaction.instructions.length > 0) {
-      promises.push(client.sendTransaction(cacheTransaction, payer, []));
+      cacheTransaction.add(
+        makeCachePricesInstruction(
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          mangoGroup.oracles
+            .slice(startIndex, endIndex)
+            .filter((x) => !x.equals(zeroKey)),
+        ),
+      );
+
+      cacheTransaction.add(
+        makeCachePerpMarketsInstruction(
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          mangoGroup.perpMarkets
+            .filter((pm) => !pm.isEmpty())
+            .slice(startIndex, endIndex)
+            .map((pm) => pm.perpMarket),
+        ),
+      );
+      if (cacheTransaction.instructions.length > 0) {
+        promises.push(client.sendTransaction(cacheTransaction, payer, []));
+      }
     }
+
+    await Promise.all(promises);
+  } catch (err) {
+    console.error('Error updating cache', err);
+  } finally {
+    setTimeout(processUpdateCache, updateCacheInterval, mangoGroup);
   }
-
-  await Promise.all(promises);
-
-  setTimeout(processUpdateCache, updateCacheInterval, mangoGroup);
 }
 
 async function processConsumeEvents(
   mangoGroup: MangoGroup,
   perpMarkets: PerpMarket[],
 ) {
-  console.log('processConsumeEvents');
-  const eventQueuePks = perpMarkets.map((mkt) => mkt.eventQueue);
-  const eventQueueAccts = await getMultipleAccounts(connection, eventQueuePks);
+  try {
+    console.log('processConsumeEvents');
 
-  const perpMktAndEventQueue = eventQueueAccts.map(
-    ({ publicKey, accountInfo }) => {
-      const parsed = PerpEventQueueLayout.decode(accountInfo?.data);
-      const eventQueue = new PerpEventQueue(parsed);
-      const perpMarket = perpMarkets.find((mkt) =>
-        mkt.eventQueue.equals(publicKey),
-      );
-      if (!perpMarket) {
-        throw new Error('PerpMarket not found');
-      }
-      return { perpMarket, eventQueue };
-    },
-  );
-
-  perpMktAndEventQueue.forEach(({ perpMarket, eventQueue }) => {
-    const events = eventQueue.getUnconsumedEvents();
-    if (events.length === 0) {
-      // console.log('No events to consume');
-      return;
-    }
-
-    const accounts: Set<string> = new Set();
-    for (const event of events) {
-      if (event.fill) {
-        accounts.add(event.fill.maker.toBase58());
-        accounts.add(event.fill.taker.toBase58());
-      } else if (event.out) {
-        accounts.add(event.out.owner.toBase58());
-      }
-
-      // Limit unique accounts to first 20 or 21
-      if (accounts.size >= maxUniqueAccounts) {
-        break;
-      }
-    }
-
-    client.consumeEvents(
-      mangoGroup,
-      perpMarket,
-      Array.from(accounts)
-        .map((s) => new PublicKey(s))
-        .sort(),
-      payer,
-      consumeEventsLimit,
+    const eventQueuePks = perpMarkets.map((mkt) => mkt.eventQueue);
+    const eventQueueAccts = await getMultipleAccounts(
+      connection,
+      eventQueuePks,
     );
-    console.log(`Consumed up to ${events.length} events`);
-  });
 
-  setTimeout(
-    processConsumeEvents,
-    consumeEventsInterval,
-    mangoGroup,
-    perpMarkets,
-  );
+    const perpMktAndEventQueue = eventQueueAccts.map(
+      ({ publicKey, accountInfo }) => {
+        const parsed = PerpEventQueueLayout.decode(accountInfo?.data);
+        const eventQueue = new PerpEventQueue(parsed);
+        const perpMarket = perpMarkets.find((mkt) =>
+          mkt.eventQueue.equals(publicKey),
+        );
+        if (!perpMarket) {
+          throw new Error('PerpMarket not found');
+        }
+        return { perpMarket, eventQueue };
+      },
+    );
+
+    perpMktAndEventQueue.forEach(({ perpMarket, eventQueue }) => {
+      const events = eventQueue.getUnconsumedEvents();
+      if (events.length === 0) {
+        // console.log('No events to consume');
+        return;
+      }
+
+      const accounts: Set<string> = new Set();
+      for (const event of events) {
+        if (event.fill) {
+          accounts.add(event.fill.maker.toBase58());
+          accounts.add(event.fill.taker.toBase58());
+        } else if (event.out) {
+          accounts.add(event.out.owner.toBase58());
+        }
+
+        // Limit unique accounts to first 20 or 21
+        if (accounts.size >= maxUniqueAccounts) {
+          break;
+        }
+      }
+
+      client.consumeEvents(
+        mangoGroup,
+        perpMarket,
+        Array.from(accounts)
+          .map((s) => new PublicKey(s))
+          .sort(),
+        payer,
+        consumeEventsLimit,
+      );
+      console.log(`Consumed up to ${events.length} events`);
+    });
+  } catch (err) {
+    console.error('Error consuming events', err);
+  } finally {
+    setTimeout(
+      processConsumeEvents,
+      consumeEventsInterval,
+      mangoGroup,
+      perpMarkets,
+    );
+  }
 }
 
 async function processKeeperTransactions(
   mangoGroup: MangoGroup,
   perpMarkets: PerpMarket[],
 ) {
-  if (!groupIds) {
-    throw new Error(`Group ${groupName} not found`);
-  }
-  console.log('processKeeperTransactions');
-  const batchSize = 8;
-  const promises: Promise<string>[] = [];
-  for (let i = 0; i < mangoGroup.tokens.length / batchSize; i++) {
-    const startIndex = i * batchSize;
-    const endIndex = i * batchSize + batchSize;
+  try {
+    if (!groupIds) {
+      throw new Error(`Group ${groupName} not found`);
+    }
+    console.log('processKeeperTransactions');
+    const batchSize = 8;
+    const promises: Promise<string>[] = [];
+    for (let i = 0; i < mangoGroup.tokens.length / batchSize; i++) {
+      const startIndex = i * batchSize;
+      const endIndex = i * batchSize + batchSize;
 
-    const updateRootBankTransaction = new Transaction();
-    groupIds.tokens.slice(startIndex, endIndex).forEach((token) => {
-      updateRootBankTransaction.add(
-        makeUpdateRootBankInstruction(
-          mangoProgramId,
-          mangoGroup.publicKey,
-          token.rootKey,
-          token.nodeKeys,
-        ),
-      );
-    });
-
-    const updateFundingTransaction = new Transaction();
-    perpMarkets
-      .slice(startIndex, endIndex)
-      .filter((pm) => !pm.publicKey.equals(zeroKey))
-      .forEach((market) => {
-        if (market) {
-          updateFundingTransaction.add(
-            makeUpdateFundingInstruction(
-              mangoProgramId,
-              mangoGroup.publicKey,
-              mangoGroup.mangoCache,
-              market.publicKey,
-              market.bids,
-              market.asks,
-            ),
-          );
-        }
+      const updateRootBankTransaction = new Transaction();
+      groupIds.tokens.slice(startIndex, endIndex).forEach((token) => {
+        updateRootBankTransaction.add(
+          makeUpdateRootBankInstruction(
+            mangoProgramId,
+            mangoGroup.publicKey,
+            token.rootKey,
+            token.nodeKeys,
+          ),
+        );
       });
 
-    if (updateRootBankTransaction.instructions.length > 0) {
-      promises.push(
-        client.sendTransaction(updateRootBankTransaction, payer, []),
-      );
+      const updateFundingTransaction = new Transaction();
+      perpMarkets
+        .slice(startIndex, endIndex)
+        .filter((pm) => !pm.publicKey.equals(zeroKey))
+        .forEach((market) => {
+          if (market) {
+            updateFundingTransaction.add(
+              makeUpdateFundingInstruction(
+                mangoProgramId,
+                mangoGroup.publicKey,
+                mangoGroup.mangoCache,
+                market.publicKey,
+                market.bids,
+                market.asks,
+              ),
+            );
+          }
+        });
+
+      if (updateRootBankTransaction.instructions.length > 0) {
+        promises.push(
+          client.sendTransaction(updateRootBankTransaction, payer, []),
+        );
+      }
+      if (updateFundingTransaction.instructions.length > 0) {
+        promises.push(
+          client.sendTransaction(updateFundingTransaction, payer, []),
+        );
+      }
     }
-    if (updateFundingTransaction.instructions.length > 0) {
-      promises.push(
-        client.sendTransaction(updateFundingTransaction, payer, []),
-      );
-    }
+
+    await Promise.all(promises);
+  } catch (err) {
+    console.error('Error processing keeper instructions', err);
+  } finally {
+    setTimeout(
+      processKeeperTransactions,
+      processKeeperInterval,
+      mangoGroup,
+      perpMarkets,
+    );
   }
-
-  await Promise.all(promises);
-
-  setTimeout(
-    processKeeperTransactions,
-    processKeeperInterval,
-    mangoGroup,
-    perpMarkets,
-  );
 }
 
 main();
