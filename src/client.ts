@@ -457,7 +457,7 @@ export class MangoClient {
       rootBank,
       nodeBank,
       vault,
-      tokenAcc,
+      wrappedSolAccount?.publicKey ?? tokenAcc,
       nativeQuantity,
     );
 
