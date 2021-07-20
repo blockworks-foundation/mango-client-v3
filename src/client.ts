@@ -536,7 +536,7 @@ export class MangoClient {
       );
       if (!tokenAccExists) {
         transaction.add(
-          await Token.createAssociatedTokenAccountInstruction(
+          Token.createAssociatedTokenAccountInstruction(
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             tokenMint,
