@@ -84,6 +84,7 @@ import { Order } from '@project-serum/serum/lib/market';
 import { WalletAdapter } from './types';
 import { PerpOrder } from './book';
 import {
+  closeAccount,
   initializeAccount,
   WRAPPED_SOL_MINT,
 } from '@project-serum/serum/lib/token-instructions';
@@ -461,6 +462,16 @@ export class MangoClient {
     );
 
     transaction.add(instruction);
+
+    if (wrappedSolAccount) {
+      transaction.add(
+        closeAccount({
+          source: wrappedSolAccount.publicKey,
+          destination: owner.publicKey,
+          owner: owner.publicKey,
+        }),
+      );
+    }
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }

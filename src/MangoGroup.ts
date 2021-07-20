@@ -1,4 +1,4 @@
-import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
 import { I80F48, ONE_I80F48 } from './fixednum';
 import {
@@ -13,7 +13,7 @@ import {
 } from './layout';
 import PerpMarket from './PerpMarket';
 import RootBank from './RootBank';
-import { getMultipleAccounts, promiseUndef, zeroKey } from './utils';
+import { getMultipleAccounts, zeroKey } from './utils';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
