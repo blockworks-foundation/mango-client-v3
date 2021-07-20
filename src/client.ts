@@ -88,7 +88,11 @@ import {
   initializeAccount,
   WRAPPED_SOL_MINT,
 } from '@project-serum/serum/lib/token-instructions';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  Token,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -483,12 +487,67 @@ export class MangoClient {
     rootBank: PublicKey,
     nodeBank: PublicKey,
     vault: PublicKey,
-    tokenAcc: PublicKey,
 
     quantity: number,
     allowBorrow: boolean,
   ): Promise<TransactionSignature> {
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
     const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
+    const tokenMint = mangoGroup.tokens[tokenIndex].mint;
+
+    let tokenAcc = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      tokenMint,
+      owner.publicKey,
+    );
+
+    let wrappedSolAccount: Account | null = null;
+    if (tokenMint.equals(WRAPPED_SOL_MINT)) {
+      wrappedSolAccount = new Account();
+      tokenAcc = wrappedSolAccount.publicKey;
+      const space = 165;
+      const lamports = await this.connection.getMinimumBalanceForRentExemption(
+        space,
+        'singleGossip',
+      );
+      transaction.add(
+        SystemProgram.createAccount({
+          fromPubkey: owner.publicKey,
+          newAccountPubkey: tokenAcc,
+          lamports,
+          space,
+          programId: TOKEN_PROGRAM_ID,
+        }),
+      );
+      transaction.add(
+        initializeAccount({
+          account: tokenAcc,
+          mint: WRAPPED_SOL_MINT,
+          owner: owner.publicKey,
+        }),
+      );
+      additionalSigners.push(wrappedSolAccount);
+    } else {
+      const tokenAccExists = await this.connection.getAccountInfo(
+        tokenAcc,
+        'recent',
+      );
+      if (!tokenAccExists) {
+        transaction.add(
+          Token.createAssociatedTokenAccountInstruction(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            tokenMint,
+            tokenAcc,
+            owner.publicKey,
+            owner.publicKey,
+          ),
+        );
+      }
+    }
+
     const nativeQuantity = uiToNative(
       quantity,
       mangoGroup.tokens[tokenIndex].decimals,
@@ -509,10 +568,17 @@ export class MangoClient {
       nativeQuantity,
       allowBorrow,
     );
-
-    const transaction = new Transaction();
     transaction.add(instruction);
-    const additionalSigners = [];
+
+    if (wrappedSolAccount) {
+      transaction.add(
+        closeAccount({
+          source: wrappedSolAccount.publicKey,
+          destination: owner.publicKey,
+          owner: owner.publicKey,
+        }),
+      );
+    }
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
