@@ -850,9 +850,11 @@ export class MangoClient {
 
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
 
-    const rootBanks = await mangoGroup.loadRootBanks(this.connection);
-    const baseRootBank = rootBanks[spotMarketIndex];
-    const quoteRootBank = rootBanks[QUOTE_INDEX];
+    if (!mangoGroup.rootBankAccounts.length) {
+      await mangoGroup.loadRootBanks(this.connection);
+    }
+    const baseRootBank = mangoGroup.rootBankAccounts[spotMarketIndex];
+    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
     const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
     const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
 
@@ -993,9 +995,11 @@ export class MangoClient {
       spotMarket.programId,
     );
 
-    const rootBanks = await mangoGroup.loadRootBanks(this.connection);
-    const baseRootBank = rootBanks[marketIndex];
-    const quoteRootBank = rootBanks[QUOTE_INDEX];
+    if (!mangoGroup.rootBankAccounts.length) {
+      await mangoGroup.loadRootBanks(this.connection);
+    }
+    const baseRootBank = mangoGroup.rootBankAccounts[marketIndex];
+    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
     const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
     const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
 
