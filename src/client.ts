@@ -1068,9 +1068,11 @@ export class MangoClient {
         spotMarket.programId,
       );
 
-      const rootBanks = await mangoGroup.loadRootBanks(this.connection);
-      const baseRootBank = rootBanks[i];
-      const quoteRootBank = rootBanks[QUOTE_INDEX];
+      if (!mangoGroup.rootBankAccounts.length) {
+        await mangoGroup.loadRootBanks(this.connection);
+      }
+      const baseRootBank = mangoGroup.rootBankAccounts[i];
+      const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
       const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
       const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
 
