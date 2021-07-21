@@ -124,14 +124,16 @@ async function run() {
         }
       }
 
+      const openOrdersAccounts = [...accounts]
+        .map((s) => new PublicKey(s))
+        .sort((a, b) => a.toBuffer().swap64().compare(b.toBuffer().swap64()));
+
       const instr = DexInstructions.consumeEvents({
         market: spotMarkets[i].publicKey,
         eventQueue: spotMarkets[i]['_decoded'].eventQueue,
         coinFee: baseWallets[i],
         pcFee: quoteWallet,
-        openOrdersAccounts: Array.from(accounts)
-          .map((s) => new PublicKey(s))
-          .sort(),
+        openOrdersAccounts,
         limit: consumeEventsLimit,
         programId: mangoGroup.dexProgramId,
       });
