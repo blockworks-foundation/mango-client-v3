@@ -11,7 +11,7 @@ import {
   PublicKey,
   Transaction,
 } from '@solana/web3.js';
-import { getMultipleAccounts, sleep, zeroKey } from './utils';
+import { getMultipleAccounts, zeroKey } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
 import {
