@@ -165,7 +165,7 @@ export default class MangoGroup {
       );
       return rootBank ?? undefined;
     });
-    return parsedRootBanks;
+    return this.rootBankAccounts;
   }
 
   async loadPerpMarket(
