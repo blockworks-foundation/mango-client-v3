@@ -1719,15 +1719,12 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     liqeeMangoAccount: MangoAccount,
     liqorMangoAccount: MangoAccount,
-    perpMarket: PerpMarket,
     quoteRootBank: RootBank,
     liabRootBank: RootBank,
     payer: Account,
-    liabIndex: number,
     maxLiabTransfer: I80F48,
   ) {
     const quoteNodeBanks = await quoteRootBank.loadNodeBanks(this.connection);
-    const liabNodeBanks = await liabRootBank.loadNodeBanks(this.connection);
     const instruction = makeResolveTokenBankruptcyInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -1736,14 +1733,14 @@ export class MangoClient {
       liqorMangoAccount.publicKey,
       payer.publicKey,
       quoteRootBank.publicKey,
-      quoteNodeBanks[0].publicKey,
+      quoteRootBank.nodeBanks[0],
       quoteNodeBanks[0].vault,
       mangoGroup.daoVault,
       mangoGroup.signerKey,
       liabRootBank.publicKey,
-      liabNodeBanks[0].publicKey,
+      liabRootBank.nodeBanks[0],
       liqorMangoAccount.spotOpenOrders,
-      liabNodeBanks.map((nodeBank) => nodeBank.publicKey),
+      liabRootBank.nodeBanks,
       maxLiabTransfer,
     );
 

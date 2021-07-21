@@ -1189,7 +1189,7 @@ export function makeResolveTokenBankruptcyInstruction(
     { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
     { isSigner: false, isWritable: true, pubkey: liqorMangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: liqorPk },
-    { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteRootBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
     { isSigner: false, isWritable: true, pubkey: daoVaultPk },
@@ -1204,7 +1204,7 @@ export function makeResolveTokenBankruptcyInstruction(
     })),
     ...liabNodeBankPks.map((pubkey) => ({
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
       pubkey,
     })),
   ];
