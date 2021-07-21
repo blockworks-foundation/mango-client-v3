@@ -102,16 +102,16 @@ async function run() {
 
   // eslint-disable-next-line
   while (true) {
-    await sleep(interval);
     const eventQueueAccts = await getMultipleAccounts(
       connection,
       eventQueuePks,
     );
-    eventQueueAccts.forEach(({ accountInfo }, i) => {
+    for (let i = 0; i < eventQueueAccts.length; i++) {
+      const accountInfo = eventQueueAccts[i].accountInfo;
       const events = decodeEventQueue(accountInfo.data);
 
       if (events.length === 0) {
-        return;
+        continue;
       }
 
       const accounts: Set<string> = new Set();
@@ -148,8 +148,9 @@ async function run() {
         events.length,
         'events',
       );
-      client.sendTransaction(transaction, payer, []);
-    });
+      await client.sendTransaction(transaction, payer, []);
+    }
+    await sleep(interval);
   }
 }
 
