@@ -144,6 +144,40 @@ export class MangoClient {
     }
   }
 
+  async signTransactions({
+    transactionsAndSigners,
+    payer,
+  }: {
+    transactionsAndSigners: {
+      transaction: Transaction;
+      signers?: Array<Account>;
+    }[];
+    payer: Account | WalletAdapter;
+  }) {
+    const blockhash = (await this.connection.getRecentBlockhash('max'))
+      .blockhash;
+    transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
+      transaction.recentBlockhash = blockhash;
+      transaction.setSigners(
+        payer.publicKey,
+        ...signers.map((s) => s.publicKey),
+      );
+      if (signers?.length > 0) {
+        transaction.partialSign(...signers);
+      }
+    });
+    if (!(payer instanceof Account)) {
+      return await payer.signAllTransactions(
+        transactionsAndSigners.map(({ transaction }) => transaction),
+      );
+    } else {
+      transactionsAndSigners.forEach(({ transaction, signers }) => {
+        // @ts-ignore
+        transaction.sign(...[payer].concat(signers));
+      });
+    }
+  }
+
   // TODO - switch Account to Keypair and switch off setSigners due to deprecated
   async sendTransaction(
     transaction: Transaction,
@@ -203,6 +237,81 @@ export class MangoClient {
         console.warn('Simulate transaction failed');
       }
 
+      if (simulateResult && simulateResult.err) {
+        if (simulateResult.logs) {
+          for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
+            const line = simulateResult.logs[i];
+            if (line.startsWith('Program log: ')) {
+              throw new Error(
+                'Transaction failed: ' + line.slice('Program log: '.length),
+              );
+            }
+          }
+        }
+        throw new Error(JSON.stringify(simulateResult.err));
+      }
+      throw new Error('Transaction failed');
+    } finally {
+      done = true;
+    }
+
+    console.log('Latency', txid, getUnixTs() - startTime);
+    return txid;
+  }
+
+  async sendSignedTransaction({
+    signedTransaction,
+    timeout = 30000,
+    confirmLevel = 'processed',
+  }: {
+    signedTransaction: Transaction;
+    timeout?: number;
+    confirmLevel?: TransactionConfirmationStatus;
+  }): Promise<string> {
+    const rawTransaction = signedTransaction.serialize();
+    const startTime = getUnixTs();
+
+    const txid: TransactionSignature = await this.connection.sendRawTransaction(
+      rawTransaction,
+      {
+        skipPreflight: true,
+      },
+    );
+
+    console.log('Started awaiting confirmation for', txid);
+
+    let done = false;
+    (async () => {
+      while (!done && getUnixTs() - startTime < timeout) {
+        this.connection.sendRawTransaction(rawTransaction, {
+          skipPreflight: true,
+        });
+        await sleep(300);
+      }
+    })();
+    try {
+      await awaitTransactionSignatureConfirmation(
+        txid,
+        timeout,
+        this.connection,
+        confirmLevel,
+      );
+    } catch (err) {
+      if (err.timeout) {
+        throw new Error('Timed out awaiting confirmation on transaction');
+      }
+      let simulateResult: SimulatedTransactionResponse | null = null;
+      try {
+        simulateResult = (
+          await simulateTransaction(
+            this.connection,
+            signedTransaction,
+            'single',
+          )
+        ).value;
+      } catch (e) {
+        console.log('Simulate tx failed');
+      }
       if (simulateResult && simulateResult.err) {
         if (simulateResult.logs) {
           for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
@@ -1153,12 +1262,12 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     spotMarkets: Market[],
     owner: Account | WalletAdapter,
-  ): Promise<TransactionSignature | null> {
-    const transaction = new Transaction();
-
+  ) {
+    const transactions: Transaction[] = [];
     const assetGains: number[] = new Array(MAX_TOKENS).fill(0);
 
     for (let i = 0; i < spotMarkets.length; i++) {
+      const transaction = new Transaction();
       const openOrdersAccount = mangoAccount.spotOpenOrdersAccounts[i];
       if (openOrdersAccount === undefined) {
         continue;
@@ -1219,13 +1328,31 @@ export class MangoClient {
       );
 
       transaction.add(instruction);
+      transactions.push(transaction);
     }
 
-    const additionalSigners = [];
-    if (transaction.instructions.length == 0) {
-      return null;
+    const signers = [];
+    const transactionsAndSigners = transactions.map((tx) => ({
+      transaction: tx,
+      signers,
+    }));
+
+    const signedTransactions = await this.signTransactions({
+      transactionsAndSigners,
+      payer: owner,
+    });
+
+    if (signedTransactions) {
+      for (const signedTransaction of signedTransactions) {
+        if (signedTransaction.instructions.length == 0) {
+          continue;
+        }
+        await this.sendSignedTransaction({
+          signedTransaction,
+        });
+      }
     } else {
-      return await this.sendTransaction(transaction, owner, additionalSigners);
+      throw new Error('Unable to sign Settle All transaction');
     }
   }
 
