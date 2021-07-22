@@ -33,7 +33,7 @@ const processKeeperInterval = parseInt(
   process.env.PROCESS_KEEPER_INTERVAL || '15000',
 );
 const consumeEventsInterval = parseInt(
-  process.env.CONSUME_EVENTS_INTERVAL || '5000',
+  process.env.CONSUME_EVENTS_INTERVAL || '4000',
 );
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '20');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
@@ -167,7 +167,9 @@ async function processConsumeEvents(
       },
     );
 
-    perpMktAndEventQueue.forEach(({ perpMarket, eventQueue }) => {
+    for (let i = 0; i < perpMktAndEventQueue.length; i++) {
+      const { perpMarket, eventQueue } = perpMktAndEventQueue[i];
+
       const events = eventQueue.getUnconsumedEvents();
       if (events.length === 0) {
         // console.log('No events to consume');
@@ -189,7 +191,7 @@ async function processConsumeEvents(
         }
       }
 
-      client.consumeEvents(
+      await client.consumeEvents(
         mangoGroup,
         perpMarket,
         Array.from(accounts)
@@ -199,7 +201,7 @@ async function processConsumeEvents(
         consumeEventsLimit,
       );
       console.log(`Consumed up to ${events.length} events`);
-    });
+    }
   } catch (err) {
     console.error('Error consuming events', err);
   } finally {
