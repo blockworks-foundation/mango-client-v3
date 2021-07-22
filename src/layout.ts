@@ -331,6 +331,7 @@ MangoInstructionLayout.addVariant(
   struct([I80F48Layout('maxLiabTransfer')]),
   'ResolveTokenBankruptcy',
 );
+MangoInstructionLayout.addVariant(32, struct([]), 'InitSpotOpenOrders');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore

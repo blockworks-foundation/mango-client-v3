@@ -136,6 +136,7 @@ yargs(hideBin(process.argv)).command(
       args.quote_optimal_rate as number,
       args.quote_max_rate as number,
     );
+    console.log(result);
     config.storeGroup(result);
     writeConfig(args.config as string, config);
     process.exit(0);
