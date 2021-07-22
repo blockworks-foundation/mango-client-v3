@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+// TODO put node banks and vaults inside the GroupConfig
 import * as fs from 'fs';
 import * as os from 'os';
 import yargs from 'yargs/yargs';
@@ -136,6 +136,7 @@ yargs(hideBin(process.argv)).command(
       args.quote_optimal_rate as number,
       args.quote_max_rate as number,
     );
+    console.log(result);
     config.storeGroup(result);
     writeConfig(args.config as string, config);
     process.exit(0);

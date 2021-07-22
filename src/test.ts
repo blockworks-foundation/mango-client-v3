@@ -268,7 +268,6 @@ async function test_place_spot_order() {
     mangoGroup.tokens[marketIndex].rootBank,
     btcRootBank.nodeBanks?.[0],
     filteredBtcNodeBanks[0].vault,
-    userBtcTokenAcc.publicKey,
     0.5, // withdraw amount
     true, // allow borrow
   );

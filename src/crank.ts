@@ -22,13 +22,14 @@ import {
 } from '@project-serum/serum';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
-const interval = process.env.INTERVAL || 3500;
+// const interval = process.env.INTERVAL || 3500;
+const interval = 5000; // TODO - stop sharing env var with Keeper
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '10');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-const groupName = 'mango_test_v3.8'; // this one contains all spot markets
+const groupName = 'mango_test_v3.max'; // this one contains all spot markets
 // const groupName = process.env.GROUP || 'mango_test_v3.7';
 const groupIds = config.getGroup(cluster, groupName);
 
@@ -101,20 +102,21 @@ async function run() {
 
   // eslint-disable-next-line
   while (true) {
-    await sleep(interval);
     const eventQueueAccts = await getMultipleAccounts(
       connection,
       eventQueuePks,
     );
-    eventQueueAccts.forEach(({ accountInfo }, i) => {
+    for (let i = 0; i < eventQueueAccts.length; i++) {
+      const accountInfo = eventQueueAccts[i].accountInfo;
       const events = decodeEventQueue(accountInfo.data);
 
       if (events.length === 0) {
-        return;
+        continue;
       }
-      const accounts: Set<PublicKey> = new Set();
+
+      const accounts: Set<string> = new Set();
       for (const event of events) {
-        accounts.add(event.openOrders);
+        accounts.add(event.openOrders.toBase58());
 
         // Limit unique accounts to first 10
         if (accounts.size >= maxUniqueAccounts) {
@@ -122,12 +124,16 @@ async function run() {
         }
       }
 
+      const openOrdersAccounts = [...accounts]
+        .map((s) => new PublicKey(s))
+        .sort((a, b) => a.toBuffer().swap64().compare(b.toBuffer().swap64()));
+
       const instr = DexInstructions.consumeEvents({
         market: spotMarkets[i].publicKey,
         eventQueue: spotMarkets[i]['_decoded'].eventQueue,
         coinFee: baseWallets[i],
         pcFee: quoteWallet,
-        openOrdersAccounts: Array.from(accounts).sort(),
+        openOrdersAccounts,
         limit: consumeEventsLimit,
         programId: mangoGroup.dexProgramId,
       });
@@ -142,8 +148,9 @@ async function run() {
         events.length,
         'events',
       );
-      client.sendTransaction(transaction, payer, []);
-    });
+      await client.sendTransaction(transaction, payer, []);
+    }
+    await sleep(interval);
   }
 }
 

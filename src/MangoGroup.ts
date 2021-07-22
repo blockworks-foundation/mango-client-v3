@@ -1,4 +1,4 @@
-import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
 import { I80F48, ONE_I80F48 } from './fixednum';
 import {
@@ -13,7 +13,7 @@ import {
 } from './layout';
 import PerpMarket from './PerpMarket';
 import RootBank from './RootBank';
-import { promiseUndef, zeroKey } from './utils';
+import { getMultipleAccounts, zeroKey } from './utils';
 
 export const MAX_TOKENS = 32;
 export const MAX_PAIRS = MAX_TOKENS - 1;
@@ -144,33 +144,28 @@ export default class MangoGroup {
   async loadRootBanks(
     connection: Connection,
   ): Promise<(RootBank | undefined)[]> {
-    const promises: Promise<AccountInfo<Buffer> | undefined | null>[] = [];
+    const rootBankPks = this.tokens
+      .map((t) => t.rootBank)
+      .filter((rB) => !rB.equals(zeroKey));
 
-    for (let i = 0; i < this.tokens.length; i++) {
-      if (this.tokens[i].rootBank.equals(zeroKey)) {
-        promises.push(promiseUndef());
-      } else {
-        promises.push(connection.getAccountInfo(this.tokens[i].rootBank));
-      }
-    }
+    const accounts = await getMultipleAccounts(connection, rootBankPks);
 
-    const accounts = await Promise.all(promises);
-    const parsedRootBanks = accounts.map((acc, i) => {
-      if (acc && acc.data) {
-        const decoded = RootBankLayout.decode(acc.data);
-        return new RootBank(this.tokens[i].rootBank, decoded);
-      }
-      return undefined;
+    const parsedRootBanks = accounts.map((acc) => {
+      const decoded = RootBankLayout.decode(acc.accountInfo.data);
+      return new RootBank(acc.publicKey, decoded);
     });
 
     await Promise.all(
-      parsedRootBanks.map((rootBank) =>
-        rootBank ? rootBank.loadNodeBanks(connection) : promiseUndef(),
-      ),
+      parsedRootBanks.map((rootBank) => rootBank.loadNodeBanks(connection)),
     );
 
-    this.rootBankAccounts = parsedRootBanks;
-    return parsedRootBanks;
+    this.rootBankAccounts = this.tokens.map((t) => {
+      const rootBank = parsedRootBanks.find((rB) =>
+        rB.publicKey.equals(t.rootBank),
+      );
+      return rootBank ?? undefined;
+    });
+    return this.rootBankAccounts;
   }
 
   async loadPerpMarket(
@@ -183,5 +178,9 @@ export default class MangoGroup {
     const acc = await connection.getAccountInfo(pk);
     const decoded = PerpMarketLayout.decode(acc?.data);
     return new PerpMarket(pk, baseDecimals, quoteDecimals, decoded);
+  }
+
+  getQuoteTokenInfo(): TokenInfo {
+    return this.tokens[this.tokens.length - 1];
   }
 }
