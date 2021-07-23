@@ -12,8 +12,6 @@ import {
 import { I80F48 } from './fixednum';
 import { nativeToUi } from './utils';
 
-interface ParsedFillEvent extends FillEvent {}
-
 export default class PerpMarket {
   publicKey: PublicKey;
   baseDecimals: number;
