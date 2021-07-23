@@ -10,6 +10,9 @@ import {
   PerpEventQueueLayout,
 } from '.';
 import { I80F48 } from './fixednum';
+import { nativeToUi } from './utils';
+
+interface ParsedFillEvent extends FillEvent {}
 
 export default class PerpMarket {
   publicKey: PublicKey;
@@ -85,7 +88,19 @@ export default class PerpMarket {
     return q
       .eventsSince(new BN(0))
       .map((e) => e.fill)
-      .filter((e) => !!e) as FillEvent[];
+      .filter((e) => !!e)
+      .map(this.parseFillEvent.bind(this)) as FillEvent[];
+  }
+
+  parseFillEvent(event) {
+    const quantity = nativeToUi(event.quantity, this.baseDecimals);
+    const price = nativeToUi(event.price, this.quoteDecimals);
+
+    return {
+      ...event,
+      quantity,
+      price,
+    };
   }
 
   async loadBids(connection: Connection): Promise<BookSide> {
