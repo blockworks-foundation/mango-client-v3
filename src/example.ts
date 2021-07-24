@@ -6,7 +6,6 @@ import configFile from './ids.json';
 import { Config, getMarketByBaseSymbolAndKind, GroupConfig } from './config';
 import { Market } from '@project-serum/serum';
 import BN from 'bn.js';
-import { MangoAccount } from '.';
 
 function readKeypair() {
   return JSON.parse(
@@ -101,8 +100,8 @@ async function examplePerp() {
     console.log(
       fill.maker.toBase58(),
       fill.taker.toBase58(),
-      fill.price.toNumber(),
-      fill.quantity.toNumber(),
+      fill.price,
+      fill.quantity,
     );
   }
 }

@@ -1,5 +1,6 @@
 import { PublicKey, Transaction } from '@solana/web3.js';
 
+export type Modify<T, R> = Omit<T, keyof R> & R;
 export interface WalletAdapter {
   publicKey: PublicKey;
   autoApprove: boolean;

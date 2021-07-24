@@ -10,7 +10,15 @@ import {
   PerpEventQueueLayout,
 } from '.';
 import { I80F48 } from './fixednum';
-import { nativeToUi } from './utils';
+import { Modify } from './types';
+
+export type ParsedFillEvent = Modify<
+  FillEvent,
+  {
+    price: number;
+    size: number;
+  }
+>;
 
 export default class PerpMarket {
   publicKey: PublicKey;
@@ -80,19 +88,19 @@ export default class PerpMarket {
     return new PerpEventQueue(parsed);
   }
 
-  async loadFills(connection: Connection): Promise<FillEvent[]> {
+  async loadFills(connection: Connection): Promise<ParsedFillEvent[]> {
     const q = await this.loadEventQueue(connection);
     // TODO - verify this works
     return q
       .eventsSince(new BN(0))
       .map((e) => e.fill)
       .filter((e) => !!e)
-      .map(this.parseFillEvent.bind(this)) as FillEvent[];
+      .map(this.parseFillEvent.bind(this)) as ParsedFillEvent[];
   }
 
   parseFillEvent(event) {
-    const quantity = nativeToUi(event.quantity, this.baseDecimals);
-    const price = nativeToUi(event.price, this.quoteDecimals);
+    const quantity = this.baseLotsToNumber(event.quantity);
+    const price = this.priceLotsToNumber(event.price);
 
     return {
       ...event,
