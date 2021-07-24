@@ -49,6 +49,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 100000,
     quoteLot: 100,
+    price: 2,
     mint: '3YFQ7UYJ7sNGpXTKBxM3bYLVxKpzVudXAe4gLExh5b3n',
   },
   {
@@ -56,6 +57,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 10000000,
     quoteLot: 100,
+    price: 0.1,
     mint: 'Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC',
   },
   {
@@ -70,6 +72,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 10000,
     quoteLot: 10,
+    price: 10,
     mint: 'Edi5KNs2LnonULNmoTQqSymJ7VuMC9amTjLN5RJ1YMcq',
   },
   {
@@ -77,6 +80,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 10000,
     quoteLot: 10,
+    price: 30,
     mint: 'Fxh4bpZnRCnpg2vcH11ttmSTDSEeC5qWbPRZNZWnRnqY',
   },
   {
@@ -114,9 +118,19 @@ const initNewGroup = async () => {
     }
 
     console.log(`adding ${FIXED_IDS[i].symbol} oracle`);
-    await execCommand(
-      `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol} --provider pyth`,
-    );
+    if (FIXED_IDS[i].price) {
+      await execCommand(
+        `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol}`,
+      );
+      await execCommand(
+        `yarn cli set-oracle ${newGroupName} ${FIXED_IDS[i].symbol} ${FIXED_IDS[i].price}`,
+      );
+    } else {
+      await execCommand(
+        `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol} --provider pyth`,
+      );
+    }
+
 
     console.log(`listing and adding ${FIXED_IDS[i].symbol} spot market`);
     await execCommand(
