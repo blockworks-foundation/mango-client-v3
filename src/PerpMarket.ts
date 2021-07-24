@@ -101,7 +101,6 @@ export default class PerpMarket {
   parseFillEvent(event) {
     const quantity = this.baseLotsToNumber(event.quantity);
     const price = this.priceLotsToNumber(event.price);
-    console.log('test');
 
     return {
       ...event,
