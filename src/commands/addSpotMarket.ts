@@ -60,10 +60,10 @@ export default async function addSpotMarket(
     nodeKeys: nodeBanks?.map((n) => n?.publicKey) as PublicKey[],
   };
 
-  const token = getTokenBySymbol(groupConfig, symbol);
-  if (token) {
+  try {
+    const token = getTokenBySymbol(groupConfig, symbol);
     Object.assign(token, tokenDesc);
-  } else {
+  } catch(_) {
     groupConfig.tokens.push(tokenDesc);
   }
 

@@ -7,6 +7,12 @@ const PYTH_ORACLES = {
   ETH: 'EdVCmQ9FSPcVe5YySXDPCRmc8aDQLKJ9xvYBMZPie1Vw',
   SOL: 'J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix',
   SRM: '992moaMQKs32GKZ9dxi8keyM2bUmbrwBZpK4p2K6X5Vs',
+  DOGE: '4L6YhY8VvUgmqG5MvJkUJATtzB2rFqdrJwQCmFLv4Jzy',
+  MNGO: '4GqTjGm686yihQ1m1YdTsSvfm4mNfadv6xskzgCYWNC5', // XAU
+  RAY: '8PugCXTAHLM9kfLSQWe2njE5pzAgUdpPk3Nx5zSm7BD3', // LUNA
+  FTT: 'GwzBgrXb4PG59zjce24SF2b9JXbLEjJJTBkmytuEZj1b', // BNB
+  STEP: 'BLArYBCUYhdWiY8PCUTpvFE21iaJq85dvxLk9bYMobcU', // LTC
+  MER: '4EQrNZYk5KR1RnjyzbaaRbHsv8VqZWzSUtvx58wLsZbj', // BCH  
 }
 
 export default async function addPythOracle(
