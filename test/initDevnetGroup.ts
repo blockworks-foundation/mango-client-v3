@@ -198,7 +198,7 @@ const initNewGroup = async () => {
 
     console.log(`adding ${FIXED_IDS[i].symbol} spot market`);
     await execCommand(
-      `yarn cli add-spot-market ${newGroupName} ${FIXED_IDS[i].symbol} ${FIXED_IDS[i].dexPk} ${FIXED_IDS[i].mint}`,
+      `yarn cli add-spot-market ${newGroupName} ${FIXED_IDS[i].symbol} ${FIXED_IDS[i].mint} --market_pk ${FIXED_IDS[i].dexPk}`,
     );
 
     console.log(`adding ${FIXED_IDS[i].symbol} perp market`);

@@ -14,8 +14,9 @@ import {
   addPythOracle,
   initGroup,
   setStubOracle,
+  listMarket,
 } from './commands';
-import { Cluster, Config, GroupConfig } from './config';
+import { Cluster, Config, GroupConfig, getTokenBySymbol } from './config';
 import { MangoClient } from './client';
 
 const clusterDesc: [string, Options] = [
@@ -299,19 +300,30 @@ yargs(hideBin(process.argv)).command(
 ).argv;
 
 yargs(hideBin(process.argv)).command(
-  'add-spot-market <group> <symbol> <market_pk> <mint_pk>',
+  'add-spot-market <group> <symbol> <mint_pk>',
   'add a spot market to the group',
   (y) => {
     return y
       .positional(...groupDesc)
       .positional(...symbolDesc)
-      .positional('market_pk', {
-        describe: 'the public key of the spot market',
-        type: 'string',
-      })
       .positional('mint_pk', {
         describe: 'the public key of the base token mint',
         type: 'string',
+      })
+      .option('market_pk', {
+        default: '',
+        describe: 'the public key of the spot market',
+        type: 'string',
+      })
+      .option('base_lot_size', {
+        default: 100,
+        describe: 'Lot size of the base mint',
+        type: 'number',
+      })
+      .option('quote_lot_size', {
+        default: 10,
+        describe: 'Lot size of the quote mint',
+        type: 'number',
       })
       .option('maint_leverage', {
         default: 10,
@@ -348,12 +360,22 @@ yargs(hideBin(process.argv)).command(
     const cluster = args.cluster as Cluster;
     const connection = openConnection(config, cluster);
     const group = config.getGroup(cluster, args.group as string) as GroupConfig;
+    const market_pk = (args.market_pk) ? new PublicKey(args.market_pk as string) : await listMarket(
+      connection,
+      account,
+      group,
+      new PublicKey(args.mint_pk as string),
+      getTokenBySymbol(group, group.quoteSymbol).mintKey,
+      args.base_lot_size as number,
+      args.quote_lot_size as number,
+      group.serumProgramId,
+    );
     const result = await addSpotMarket(
       connection,
       account,
       group,
       args.symbol as string,
-      new PublicKey(args.market_pk as string),
+      market_pk,
       new PublicKey(args.mint_pk as string),
       args.maint_leverage as number,
       args.init_leverage as number,
