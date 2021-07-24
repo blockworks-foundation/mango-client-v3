@@ -16,7 +16,7 @@ export type ParsedFillEvent = Modify<
   FillEvent,
   {
     price: number;
-    size: number;
+    quantity: number;
   }
 >;
 
