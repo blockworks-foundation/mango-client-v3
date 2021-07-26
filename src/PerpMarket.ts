@@ -10,6 +10,15 @@ import {
   PerpEventQueueLayout,
 } from '.';
 import { I80F48 } from './fixednum';
+import { Modify } from './types';
+
+export type ParsedFillEvent = Modify<
+  FillEvent,
+  {
+    price: number;
+    quantity: number;
+  }
+>;
 
 export default class PerpMarket {
   publicKey: PublicKey;
@@ -79,13 +88,25 @@ export default class PerpMarket {
     return new PerpEventQueue(parsed);
   }
 
-  async loadFills(connection: Connection): Promise<FillEvent[]> {
+  async loadFills(connection: Connection): Promise<ParsedFillEvent[]> {
     const q = await this.loadEventQueue(connection);
     // TODO - verify this works
     return q
       .eventsSince(new BN(0))
       .map((e) => e.fill)
-      .filter((e) => !!e) as FillEvent[];
+      .filter((e) => !!e)
+      .map(this.parseFillEvent.bind(this)) as ParsedFillEvent[];
+  }
+
+  parseFillEvent(event) {
+    const quantity = this.baseLotsToNumber(event.quantity);
+    const price = this.priceLotsToNumber(event.price);
+
+    return {
+      ...event,
+      quantity,
+      price,
+    };
   }
 
   async loadBids(connection: Connection): Promise<BookSide> {

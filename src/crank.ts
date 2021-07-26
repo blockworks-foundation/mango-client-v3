@@ -23,14 +23,13 @@ import {
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 // const interval = process.env.INTERVAL || 3500;
-const interval = 5000; // TODO - stop sharing env var with Keeper
+const interval = 4000; // TODO - stop sharing env var with Keeper
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '10');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-const groupName = 'mango_test_v3.max'; // this one contains all spot markets
-// const groupName = process.env.GROUP || 'mango_test_v3.7';
+const groupName = process.env.GROUP || 'mango_test_v3.8';
 const groupIds = config.getGroup(cluster, groupName);
 
 if (!groupIds) {
