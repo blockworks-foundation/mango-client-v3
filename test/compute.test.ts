@@ -1,9 +1,10 @@
 import fs from 'fs';
 import os from 'os';
-import { Cluster, Config, MangoClient, sleep } from '../src';
+import { Cluster, Config, MangoClient, sleep, throwUndefined } from '../src';
 import configFile from '../src/ids.json';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { Market } from '@project-serum/serum';
+import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 async function testMaxCompute() {
   // Load all the details for mango group
@@ -48,42 +49,42 @@ async function testMaxCompute() {
   const rootBanks = await mangoGroup.loadRootBanks(connection);
 
   // deposit
-  // await sleep(sleepTime / 2);
-  //
-  // for (let i = 0; i < groupIds.tokens.length; i++) {
-  //   if (groupIds.tokens[i].symbol === 'SOL') {
-  //     continue;
-  //   }
-  //   const tokenConfig = groupIds.tokens[i];
-  //   const tokenIndex = mangoGroup.getTokenIndex(tokenConfig.mintKey);
-  //   const rootBank = throwUndefined(rootBanks[tokenIndex]);
-  //   const tokenInfo = mangoGroup.tokens[tokenIndex];
-  //   const token = new Token(
-  //     connection,
-  //     tokenInfo.mint,
-  //     TOKEN_PROGRAM_ID,
-  //     payer,
-  //   );
-  //   const wallet = await token.getOrCreateAssociatedAccountInfo(
-  //     payer.publicKey,
-  //   );
-  //
-  //   await sleep(sleepTime / 2);
-  //   const banks = await rootBank.loadNodeBanks(connection);
-  //
-  //   await sleep(sleepTime);
-  //   console.log('depositing');
-  //   await client.deposit(
-  //     mangoGroup,
-  //     mangoAccount,
-  //     payer,
-  //     rootBank.publicKey,
-  //     banks[0].publicKey,
-  //     banks[0].vault,
-  //     wallet.address,
-  //     1_000_000, //
-  //   );
-  // }
+  await sleep(sleepTime / 2);
+
+  for (let i = 0; i < groupIds.tokens.length; i++) {
+    if (groupIds.tokens[i].symbol === 'SOL') {
+      continue;
+    }
+    const tokenConfig = groupIds.tokens[i];
+    const tokenIndex = mangoGroup.getTokenIndex(tokenConfig.mintKey);
+    const rootBank = throwUndefined(rootBanks[tokenIndex]);
+    const tokenInfo = mangoGroup.tokens[tokenIndex];
+    const token = new Token(
+      connection,
+      tokenInfo.mint,
+      TOKEN_PROGRAM_ID,
+      payer,
+    );
+    const wallet = await token.getOrCreateAssociatedAccountInfo(
+      payer.publicKey,
+    );
+
+    await sleep(sleepTime / 2);
+    const banks = await rootBank.loadNodeBanks(connection);
+
+    await sleep(sleepTime);
+    console.log('depositing');
+    await client.deposit(
+      mangoGroup,
+      mangoAccount,
+      payer,
+      rootBank.publicKey,
+      banks[0].publicKey,
+      banks[0].vault,
+      wallet.address,
+      1_000_000, //
+    );
+  }
 
   // place an order on 10 different spot markets
   for (let i = 0; i < 10; i++) {
@@ -103,8 +104,8 @@ async function testMaxCompute() {
           mangoGroup.mangoCache,
           market,
           payer,
-          'buy',
-          10000,
+          'sell',
+          10001,
           1,
           'limit',
         );
