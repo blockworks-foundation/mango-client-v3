@@ -237,7 +237,7 @@ export function makeCancelPerpOrderInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
   ];
@@ -268,7 +268,7 @@ export function makeCancelPerpOrderByClientIdInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
   ];
@@ -633,12 +633,15 @@ export function makeAddPerpMarketInstruction(
   marketIndex: BN,
   maintLeverage: I80F48,
   initLeverage: I80F48,
+  liquidationFee: I80F48,
   makerFee: I80F48,
   takerFee: I80F48,
   baseLotSize: BN,
   quoteLotSize: BN,
+  rate: I80F48,
   maxDepthBps: I80F48,
-  scaler: I80F48,
+  targetPeriodLength: BN,
+  mngoPerPeriod: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -654,12 +657,15 @@ export function makeAddPerpMarketInstruction(
       marketIndex,
       maintLeverage,
       initLeverage,
+      liquidationFee,
       makerFee,
       takerFee,
       baseLotSize,
       quoteLotSize,
+      rate,
       maxDepthBps,
-      scaler,
+      targetPeriodLength,
+      mngoPerPeriod,
     },
   });
 
