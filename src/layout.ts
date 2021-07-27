@@ -777,15 +777,33 @@ export const StubOracleLayout = struct([
   u64('lastUpdate'),
 ]);
 
-export const LiquidityMiningInfoLayout = struct([
-  I80F48Layout('rate'),
-  I80F48Layout('maxDepthBps'),
+export class LiquidityMiningInfoLayout extends Structure {
+  constructor(property) {
+    super(
+      [
+        I80F48Layout('rate'),
+        I80F48Layout('maxDepthBps'),
 
-  u64('periodStart'),
-  u64('targetPeriodLength'),
-  u64('mngoLeft'),
-  u64('mngoPerPeriod'),
-]);
+        u64('periodStart'),
+        u64('targetPeriodLength'),
+        u64('mngoLeft'),
+        u64('mngoPerPeriod'),
+      ],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new MetaData(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+export function liquidityMiningInfoLayout(property = '') {
+  return new LiquidityMiningInfoLayout(property);
+}
 
 export const PerpMarketLayout = struct([
   metaDataLayout('metaData'),
@@ -802,7 +820,7 @@ export const PerpMarketLayout = struct([
   u64('lastUpdated'),
   u64('seqNum'),
   I80F48Layout('feesAccrued'),
-  LiquidityMiningInfoLayout('liquidityMiningInfo'),
+  liquidityMiningInfoLayout('liquidityMiningInfo'),
   publicKeyLayout('mngoVault'),
 ]);
 
