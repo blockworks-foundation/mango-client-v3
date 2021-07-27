@@ -1,4 +1,5 @@
 import { Account, Connection } from '@solana/web3.js';
+import { uiToNative } from '..';
 import { MangoClient } from '../client';
 import {
   getOracleBySymbol,
@@ -47,7 +48,10 @@ export default async function addPerpMarket(
     if (token === undefined) {
       throw new Error('MNGO not found in group config');
     } else {
-      nativeMngoPerPeriod = Math.pow(mngoPerPeriod, token.decimals);
+      nativeMngoPerPeriod = uiToNative(
+        mngoPerPeriod,
+        token.decimals,
+      ).toNumber();
     }
   }
 
