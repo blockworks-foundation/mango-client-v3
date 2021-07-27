@@ -25,7 +25,7 @@ import BN from 'bn.js';
 import { PerpEventQueue, PerpEventQueueLayout } from './layout';
 import { MangoGroup, PerpMarket } from '.';
 
-const groupName = process.env.GROUP || 'mango_test_v3.8';
+const groupName = process.env.GROUP || 'mango_test_v3.nightly';
 const updateCacheInterval = parseInt(
   process.env.UPDATE_CACHE_INTERVAL || '1000',
 );
