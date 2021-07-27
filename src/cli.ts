@@ -136,6 +136,7 @@ yargs(hideBin(process.argv)).command(
       args.quote_optimal_rate as number,
       args.quote_max_rate as number,
     );
+    console.log(result);
     config.storeGroup(result);
     writeConfig(args.config as string, config);
     process.exit(0);
@@ -238,6 +239,10 @@ yargs(hideBin(process.argv)).command(
         default: 10,
         type: 'number',
       })
+      .option('liquidation_fee', {
+        default: 0.025,
+        type: 'number',
+      })
       .option('maker_fee', {
         default: 0.0,
         type: 'number',
@@ -258,14 +263,23 @@ yargs(hideBin(process.argv)).command(
         default: 128,
         type: 'number',
       })
+      .option('rate', {
+        default: 1,
+        type: 'number',
+      })
       .option('max_depth_bps', {
         default: 200,
         type: 'number',
       })
-      .option('scaler', {
-        default: 1,
+      .option('target_period_length', {
+        default: 3600,
         type: 'number',
       })
+      .option('mngo_per_period', {
+        default: 11400, // roughly corresponds to 100m MNGO per year
+        type: 'number',
+      })
+
       .option(...clusterDesc)
       .option(...configDesc)
       .option(...keypairDesc);
@@ -284,13 +298,16 @@ yargs(hideBin(process.argv)).command(
       args.symbol as string,
       args.maint_leverage as number,
       args.init_leverage as number,
+      args.liquidation_fee as number,
       args.maker_fee as number,
       args.taker_fee as number,
       args.base_lot_size as number,
       args.quote_lot_size as number,
       args.max_num_events as number,
+      args.rate as number,
       args.max_depth_bps as number,
-      args.scaler as number,
+      args.target_period_length as number,
+      args.mngo_per_period as number,
     );
     config.storeGroup(result);
     writeConfig(args.config as string, config);

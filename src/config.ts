@@ -224,15 +224,19 @@ export function getTokenByMint(
   return group.tokens.find((t) => t.mintKey.equals(mint as PublicKey));
 }
 
-export function getTokenBySymbol(
-  group: GroupConfig,
-  symbol: string,
-): TokenConfig {
-  const tokenConfig = group.tokens.find((t) => t.symbol === symbol);
-  if (tokenConfig === undefined) {
-    throw new Error(`Unable to find symbol: ${symbol} in GroupConfig`);
-  }
-  return tokenConfig;
+// export function getTokenBySymbol(
+//   group: GroupConfig,
+//   symbol: string,
+// ): TokenConfig {
+//   const tokenConfig = group.tokens.find((t) => t.symbol === symbol);
+//   if (tokenConfig === undefined) {
+//     throw new Error(`Unable to find symbol: ${symbol} in GroupConfig`);
+//   }
+//   return tokenConfig;
+// }
+
+export function getTokenBySymbol(group: GroupConfig, symbol: string) {
+  return group.tokens.find((t) => t.symbol === symbol);
 }
 
 function groupConfigFromJson(j: any) {

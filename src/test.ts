@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { MangoClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
-import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
+import MangoGroup from '../src/MangoGroup';
 import { sleep } from './utils';
 import { I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
@@ -11,6 +11,7 @@ import * as Test from '../test/utils';
 import { u64 } from '@solana/spl-token';
 import { findLargestTokenAccountForOwner } from './token';
 import { msrmMints } from './config';
+import { QUOTE_INDEX } from './layout';
 
 function assertEq(msg, a, b) {
   if (a !== b) {

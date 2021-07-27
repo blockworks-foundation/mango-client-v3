@@ -8,11 +8,12 @@ import {
   MetaData,
   PerpAccount,
   RootBankCache,
+  QUOTE_INDEX,
 } from './layout';
 import { nativeI80F48ToUi, nativeToUi, promiseUndef, zeroKey } from './utils';
-import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
 import RootBank from './RootBank';
 import BN from 'bn.js';
+import MangoGroup from './MangoGroup';
 
 export default class MangoAccount {
   publicKey: PublicKey;
