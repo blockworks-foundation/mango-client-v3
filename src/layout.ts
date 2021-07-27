@@ -19,10 +19,11 @@ import { I80F48 } from './fixednum';
 import BN from 'bn.js';
 import { zeroKey } from './utils';
 
-export const MAX_TOKENS = 32;
+export const MAX_TOKENS = 16;
 export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
 export const INFO_LEN = 32;
+export const QUOTE_INDEX = MAX_TOKENS - 1;
 
 const MAX_BOOK_NODES = 1024;
 

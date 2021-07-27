@@ -35,10 +35,10 @@ import {
   PerpEventLayout,
   PerpEventQueueLayout,
   PerpMarketLayout,
+  QUOTE_INDEX,
   RootBankLayout,
   StubOracleLayout,
 } from './layout';
-import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
 import MangoAccount from './MangoAccount';
 import PerpMarket from './PerpMarket';
 import RootBank from './RootBank';
@@ -94,6 +94,7 @@ import {
   Token,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
+import MangoGroup from './MangoGroup';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;

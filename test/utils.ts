@@ -19,7 +19,7 @@ import {
 import { StubOracleLayout } from '../src/layout';
 import { createAccountInstruction, sleep } from '../src/utils';
 import { msrmMints, MangoClient, I80F48 } from '../src';
-import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
+import MangoGroup from '../src/MangoGroup';
 import MangoAccount from '../src/MangoAccount';
 
 export const MangoProgramId = new PublicKey(
