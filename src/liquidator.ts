@@ -13,9 +13,9 @@ import { Market } from '@project-serum/serum';
 import BN from 'bn.js';
 import { AssetType, MangoCache, perpMarketInfoLayout } from './layout';
 import { MangoAccount, MangoGroup, PerpMarket, RootBank } from '.';
-import { QUOTE_INDEX } from './MangoGroup';
+import { QUOTE_INDEX } from './layout';
 
-const interval = process.env.INTERVAL || 3500;
+const interval = parseInt(process.env.INTERVAL || '3500');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
@@ -61,6 +61,23 @@ async function main() {
       liqorMangoAccountKey,
       mangoGroup.dexProgramId,
     );
+    // console.log('liqor deposits');
+    // for (const deposit of liqorMangoAccount.deposits) {
+    //   console.log(deposit.toString());
+    // }
+    // console.log('liqor borrows');
+    // for (const deposit of liqorMangoAccount.borrows) {
+    //   console.log(deposit.toString());
+    // }
+    // console.log('liqor spot oos');
+    // for (const oo of liqorMangoAccount.spotOpenOrders) {
+    //   console.log(oo.toBase58());
+    // }
+    // console.log('liqor spot oos');
+    // for (const perpAcc of liqorMangoAccount.perpAccounts) {
+    //   console.log('base', perpAcc.basePosition.toString());
+    //   console.log('quote', perpAcc.quotePosition.toString());
+    // }
     const mangoAccounts = await client.getAllMangoAccounts(
       mangoGroup,
       undefined,
@@ -99,8 +116,8 @@ async function main() {
         if (health.lt(ZERO_I80F48)) {
           if (
             !liquidating[mangoAccount.publicKey.toBase58()] &&
-            mangoAccount.publicKey.toBase58() !=
-              'GSrPgiqrFBGjai6Udw9qoU3poVKj5vJLxRfsoYyZbw4s'
+            mangoAccount.publicKey.toBase58() ==
+              'C9jXuUJ95ZMRknBXaVKtBMbm7w7zgLnFryhSDwRTYv32'
           ) {
             console.log(
               `Sick account ${mangoAccount.publicKey.toBase58()} health: ${health.toString()}`,
@@ -147,6 +164,7 @@ async function main() {
             //   }
             // }
             console.log('forceCancelPerpOrders');
+            // TODO: Only do this for markets with oos
             await Promise.all(
               perpMarkets.map((perpMarket) => {
                 return client.forceCancelPerpOrders(
@@ -158,7 +176,7 @@ async function main() {
                 );
               }),
             );
-            await sleep(interval);
+            await sleep(interval * 5);
             await Promise.all([
               liquidateSpot(
                 mangoGroup,
@@ -168,14 +186,14 @@ async function main() {
                 mangoAccount,
                 liqorMangoAccount,
               ),
-              liquidatePerps(
-                mangoGroup,
-                cache,
-                perpMarkets,
-                rootBanks,
-                mangoAccount,
-                liqorMangoAccount,
-              ),
+              // liquidatePerps(
+              //   mangoGroup,
+              //   cache,
+              //   perpMarkets,
+              //   rootBanks,
+              //   mangoAccount,
+              //   liqorMangoAccount,
+              // ),
             ])
               .then((values) => {
                 console.log(
@@ -234,8 +252,9 @@ async function liquidateSpot(
           baseRootBank,
           quoteRootBank,
           payer,
-          new BN(5),
+          new BN(1),
         );
+        await sleep(interval);
       }
     }
   }
@@ -279,11 +298,11 @@ async function liquidateSpot(
       assetRootBank,
       liabRootBank,
       payer,
-      minNet.mul(I80F48.fromNumber(-1)),
+      new I80F48(uiToNative(1000, mangoGroup.tokens[minNetIndex].decimals)),
     );
     console.log(
       'liquidated max ' +
-        uiToNative(100, mangoGroup.tokens[minNetIndex].decimals).toString() +
+        uiToNative(1000, mangoGroup.tokens[minNetIndex].decimals).toString() +
         ' of liab',
     );
     liqee = await liqee.reload(connection);
