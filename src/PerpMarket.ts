@@ -36,10 +36,17 @@ export default class PerpMarket {
   lastUpdated!: BN;
   seqNum!: BN;
   feesAccrued!: I80F48;
-  maxDepthBps!: I80F48;
-  scaler!: I80F48;
-  totalLiquidityPoints!: I80F48;
-  pointsPerMngo!: I80F48;
+
+  // TODO - verify this gets set correctly after parsing
+  liquidityMiningInfo!: {
+    rate: I80F48;
+    maxDepthBps: I80F48;
+    periodStart: BN;
+    targetPeriodLength: BN;
+    mngoLeft: BN;
+    mngoPerPeriod: BN;
+  };
+
   mngoVault!: PublicKey;
 
   constructor(

@@ -35,10 +35,10 @@ import {
   PerpEventLayout,
   PerpEventQueueLayout,
   PerpMarketLayout,
+  QUOTE_INDEX,
   RootBankLayout,
   StubOracleLayout,
 } from './layout';
-import MangoGroup, { QUOTE_INDEX } from './MangoGroup';
 import MangoAccount from './MangoAccount';
 import PerpMarket from './PerpMarket';
 import RootBank from './RootBank';
@@ -94,6 +94,7 @@ import {
   Token,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
+import MangoGroup from './MangoGroup';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -1616,13 +1617,16 @@ export class MangoClient {
     marketIndex: number,
     maintLeverage: number,
     initLeverage: number,
+    liquidationFee: number,
     makerFee: number,
     takerFee: number,
     baseLotSize: number,
     quoteLotSize: number,
     maxNumEvents: number,
-    maxDepthBps: number, // liquidity incentive params. Set scaler == 0 if no liquidity incentives
-    scaler: number,
+    rate: number, // liquidity mining params; set rate == 0 if no liq mining
+    maxDepthBps: number,
+    targetPeriodLength: number,
+    mngoPerPeriod: number,
   ) {
     const makePerpMarketAccountInstruction = await createAccountInstruction(
       this.connection,
@@ -1673,12 +1677,15 @@ export class MangoClient {
       new BN(marketIndex),
       I80F48.fromNumber(maintLeverage),
       I80F48.fromNumber(initLeverage),
+      I80F48.fromNumber(liquidationFee),
       I80F48.fromNumber(makerFee),
       I80F48.fromNumber(takerFee),
       new BN(baseLotSize),
       new BN(quoteLotSize),
+      I80F48.fromNumber(rate),
       I80F48.fromNumber(maxDepthBps),
-      I80F48.fromNumber(scaler),
+      new BN(targetPeriodLength),
+      new BN(mngoPerPeriod),
     );
 
     const createMngoVaultTransaction = new Transaction();

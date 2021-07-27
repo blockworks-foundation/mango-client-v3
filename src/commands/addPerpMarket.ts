@@ -16,13 +16,16 @@ export default async function addPerpMarket(
   symbol: string,
   maintLeverage: number,
   initLeverage: number,
+  liquidationFee: number,
   makerFee: number,
   takerFee: number,
   baseLotSize: number,
   quoteLotSize: number,
   maxNumEvents: number,
+  rate: number,
   maxDepthBps: number,
-  scaler: number,
+  targetPeriodLength: number,
+  mngoPerPeriod: number,
 ): Promise<GroupConfig> {
   console.log({
     connection,
@@ -37,6 +40,17 @@ export default async function addPerpMarket(
   const oracleDesc = getOracleBySymbol(groupConfig, symbol) as OracleConfig;
   const marketIndex = group.getOracleIndex(oracleDesc.publicKey);
 
+  // Adding perp market
+  let nativeMngoPerPeriod = 0;
+  if (rate !== 0) {
+    const token = getTokenBySymbol(groupConfig, 'MNGO');
+    if (token === undefined) {
+      throw new Error('MNGO not found in group config');
+    } else {
+      nativeMngoPerPeriod = Math.pow(mngoPerPeriod, token.decimals);
+    }
+  }
+
   await client.addPerpMarket(
     group,
     mngoMints[groupConfig.cluster],
@@ -44,13 +58,16 @@ export default async function addPerpMarket(
     marketIndex,
     maintLeverage,
     initLeverage,
+    liquidationFee,
     makerFee,
     takerFee,
     baseLotSize,
     quoteLotSize,
     maxNumEvents,
+    rate,
     maxDepthBps,
-    scaler,
+    targetPeriodLength,
+    nativeMngoPerPeriod,
   );
 
   group = await client.getMangoGroup(groupConfig.publicKey);
