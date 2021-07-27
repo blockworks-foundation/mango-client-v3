@@ -561,7 +561,7 @@ export class PerpAccount {
   longSettledFunding!: I80F48;
   shortSettledFunding!: I80F48;
   openOrders!: PerpOpenOrders;
-  liquidityPoints!: I80F48;
+  mngoAccrued!: BN;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -652,7 +652,7 @@ export class PerpAccountLayout extends Structure {
         I80F48Layout('longSettledFunding'),
         I80F48Layout('shortSettledFunding'),
         perpOpenOrdersLayout('openOrders'),
-        I80F48Layout('liquidityPoints'),
+        u64('mngoAccrued'),
       ],
       property,
     );
@@ -691,8 +691,8 @@ export class PerpOpenOrdersLayout extends Structure {
         i64('asksQuantity'),
         u32('isFreeBits'),
         u32('isBidBits'),
-        seq(i128(), MAX_TOKENS, 'orders'),
-        seq(u64(), MAX_TOKENS, 'clientOrderIds'),
+        seq(i128(), 32, 'orders'),
+        seq(u64(), 32, 'clientOrderIds'),
       ],
       property,
     );
