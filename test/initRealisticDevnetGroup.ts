@@ -7,7 +7,7 @@ import * as Test from './utils';
  * 3.) Update the mango group name in keeper.ts crank.ts and in the UI in useMangoStore.ts
  */
 const newGroupName = 'mango_test_v3.9';
-const mangoProgramId = '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt';
+const mangoProgramId = '7TgHoQrdJkhMiJegHYtfsNwEmxTXuWB6oJBPnKgeMN6Y';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
 
 const FIXED_IDS: any[] = [
