@@ -29,7 +29,7 @@ const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-const groupName = process.env.GROUP || 'mango_test_v3.8';
+const groupName = process.env.GROUP || 'devnet.0';
 const groupIds = config.getGroup(cluster, groupName);
 
 if (!groupIds) {
