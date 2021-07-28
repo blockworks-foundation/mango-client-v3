@@ -25,8 +25,6 @@ import {
 import {
   AssetType,
   BookSideLayout,
-  EventQueue,
-  EventQueueLayout,
   MangoAccountLayout,
   MangoCacheLayout,
   MangoGroupLayout,
@@ -1709,19 +1707,6 @@ export class MangoClient {
     ];
 
     return await this.sendTransaction(transaction, admin, additionalSigners);
-  }
-
-  async getOrderBook() {}
-
-  async getEventQueue(eventQueue: PublicKey): Promise<EventQueue> {
-    const accountInfo = await this.connection.getAccountInfo(eventQueue);
-    EventQueueLayout;
-    const decoded = PerpEventQueueLayout.decode(
-      accountInfo == null ? undefined : accountInfo.data,
-      0,
-    );
-
-    return new EventQueue(decoded);
   }
 
   // Liquidator Functions
