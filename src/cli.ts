@@ -377,16 +377,20 @@ yargs(hideBin(process.argv)).command(
     const cluster = args.cluster as Cluster;
     const connection = openConnection(config, cluster);
     const group = config.getGroup(cluster, args.group as string) as GroupConfig;
-    const market_pk = (args.market_pk) ? new PublicKey(args.market_pk as string) : await listMarket(
-      connection,
-      account,
-      group,
-      new PublicKey(args.mint_pk as string),
-      getTokenBySymbol(group, group.quoteSymbol).mintKey,
-      args.base_lot_size as number,
-      args.quote_lot_size as number,
-      group.serumProgramId,
-    );
+    const quoteMintPk = getTokenBySymbol(group, group.quoteSymbol)
+      ?.mintKey as PublicKey;
+    const market_pk = args.market_pk
+      ? new PublicKey(args.market_pk as string)
+      : await listMarket(
+          connection,
+          account,
+          group,
+          new PublicKey(args.mint_pk as string),
+          quoteMintPk,
+          args.base_lot_size as number,
+          args.quote_lot_size as number,
+          group.serumProgramId,
+        );
     const result = await addSpotMarket(
       connection,
       account,

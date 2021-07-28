@@ -1,13 +1,11 @@
-import { PublicKey, Connection } from '@solana/web3.js';
-import * as Test from './utils';
 /**
  * How to use:
  * 1.) Update the mango group name on line 6
  * 2.) Run yarn launch-realistic-group
  * 3.) Update the mango group name in keeper.ts crank.ts and in the UI in useMangoStore.ts
  */
-const newGroupName = 'mango_test_v3.9';
-const mangoProgramId = '7TgHoQrdJkhMiJegHYtfsNwEmxTXuWB6oJBPnKgeMN6Y';
+const newGroupName = 'devnet.0';
+const mangoProgramId = '5fP7Z7a87ZEVsKr2tQPApdtq83GcTW4kz919R6ou5h5E';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
 
 const FIXED_IDS: any[] = [
@@ -15,6 +13,14 @@ const FIXED_IDS: any[] = [
     symbol: 'USDC',
     decimals: 6,
     mint: '8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN',
+  },
+  {
+    symbol: 'MNGO',
+    decimals: 6,
+    baseLot: 10000000,
+    quoteLot: 100,
+    price: 0.1,
+    mint: 'Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC',
   },
   {
     symbol: 'BTC',
@@ -53,14 +59,6 @@ const FIXED_IDS: any[] = [
     mint: '3YFQ7UYJ7sNGpXTKBxM3bYLVxKpzVudXAe4gLExh5b3n',
   },
   {
-    symbol: 'MNGO',
-    decimals: 6,
-    baseLot: 10000000,
-    quoteLot: 100,
-    price: 0.1,
-    mint: 'Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC',
-  },
-  {
     symbol: 'DOGE',
     decimals: 6,
     baseLot: 200000000,
@@ -90,14 +88,14 @@ const FIXED_IDS: any[] = [
     quoteLot: 100,
     mint: '7KBVenLz5WNH4PA5MdGkJNpDDyNKnBQTwnz1UqJv9GUm',
   },
-]
+];
 
 const initNewGroup = async () => {
   // const connection: Connection = Test.createDevnetConnection();
   // const mints = IDS.filter((id) => id.symbol !== 'USDC').map((id) => id.mint);
   console.log('starting');
-  const connection: Connection = Test.createDevnetConnection();
-  const payer = await Test.createAccount(connection, 10);
+  // const connection: Connection = Test.createDevnetConnection();
+  // const payer = await Test.createAccount(connection, 10);
   const quoteMint = FIXED_IDS.find((id) => id.symbol === 'USDC')
     ?.mint as string;
   await execCommand(
@@ -112,9 +110,7 @@ const initNewGroup = async () => {
 
     if (!FIXED_IDS[i].mint) {
       console.log(`adding ${FIXED_IDS[i].symbol} mint`);
-      await execCommand(
-        ``,
-      );
+      await execCommand(``);
     }
 
     console.log(`adding ${FIXED_IDS[i].symbol} oracle`);
@@ -130,7 +126,6 @@ const initNewGroup = async () => {
         `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol} --provider pyth`,
       );
     }
-
 
     console.log(`listing and adding ${FIXED_IDS[i].symbol} spot market`);
     await execCommand(
