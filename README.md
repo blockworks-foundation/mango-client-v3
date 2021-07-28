@@ -131,12 +131,20 @@ yarn cli set-oracle mango_test_v2.2 BTC 40000
 ```
 
 
-Add a spot-market
+Add a spot-market with existing serum market
 ```
-add-spot-market <group> <symbol> <market_pk> <mint_pk>
+add-spot-market <group> <symbol> <mint_pk> --market_pk <market_pk>
 ```
 ```
-yarn cli add-spot-market mango_test_v2.2 BTC E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9 bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP
+yarn cli add-spot-market mango_test_v2.2 BTC bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP --market_pk E1mfsnnCcL24JcDQxr7F2BpWjkyy5x2WHys8EL2pnCj9
+```
+
+List and add a spot-market
+```
+add-spot-market <group> <symbol> <mint_pk> --base_lot_size <number> --quote_lot_size <number>
+```
+```
+yarn cli add-spot-market mango_test_v2.2 BTC bypQzRBaSDWiKhoAw3hNkf35eF3z3AZCU8Sxks6mTPP --base_lot_size 100 --quote_lot_size 10
 ```
 
 
