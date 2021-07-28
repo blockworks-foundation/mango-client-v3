@@ -235,6 +235,10 @@ export function getTokenBySymbol(
   return tokenConfig;
 }
 
+// export function getTokenBySymbol(group: GroupConfig, symbol: string) {
+//   return group.tokens.find((t) => t.symbol === symbol);
+// }
+
 function groupConfigFromJson(j: any) {
   return {
     ...j,

@@ -19,9 +19,12 @@ import { I80F48 } from './fixednum';
 import BN from 'bn.js';
 import { zeroKey } from './utils';
 
-export const MAX_TOKENS = 32;
+export const MAX_TOKENS = 16;
 export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
+export const INFO_LEN = 32;
+export const QUOTE_INDEX = MAX_TOKENS - 1;
+
 const MAX_BOOK_NODES = 1024;
 
 class _I80F48Layout extends Blob {
@@ -234,12 +237,15 @@ MangoInstructionLayout.addVariant(
     u64('marketIndex'),
     I80F48Layout('maintLeverage'),
     I80F48Layout('initLeverage'),
+    I80F48Layout('liquidationFee'),
     I80F48Layout('makerFee'),
     I80F48Layout('takerFee'),
     i64('baseLotSize'),
     i64('quoteLotSize'),
+    I80F48Layout('rate'),
     I80F48Layout('maxDepthBps'),
-    I80F48Layout('scaler'),
+    u64('targetPeriodLength'),
+    u64('mngoPerPeriod'),
   ]),
   'AddPerpMarket',
 );
@@ -331,6 +337,7 @@ MangoInstructionLayout.addVariant(
   struct([I80F48Layout('maxLiabTransfer')]),
   'ResolveTokenBankruptcy',
 );
+MangoInstructionLayout.addVariant(32, struct([]), 'InitSpotOpenOrders');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -554,7 +561,7 @@ export class PerpAccount {
   longSettledFunding!: I80F48;
   shortSettledFunding!: I80F48;
   openOrders!: PerpOpenOrders;
-  liquidityPoints!: I80F48;
+  mngoAccrued!: BN;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -645,7 +652,7 @@ export class PerpAccountLayout extends Structure {
         I80F48Layout('longSettledFunding'),
         I80F48Layout('shortSettledFunding'),
         perpOpenOrdersLayout('openOrders'),
-        I80F48Layout('liquidityPoints'),
+        u64('mngoAccrued'),
       ],
       property,
     );
@@ -684,8 +691,8 @@ export class PerpOpenOrdersLayout extends Structure {
         i64('asksQuantity'),
         u32('isFreeBits'),
         u32('isBidBits'),
-        seq(i128(), MAX_TOKENS, 'orders'),
-        seq(u64(), MAX_TOKENS, 'clientOrderIds'),
+        seq(i128(), 32, 'orders'),
+        seq(u64(), 32, 'clientOrderIds'),
       ],
       property,
     );
@@ -723,6 +730,7 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('daoVault'),
   publicKeyLayout('srmVault'),
   publicKeyLayout('msrmVault'),
+  seq(u8(), 64, 'padding'),
 ]);
 
 export const MangoAccountLayout = struct([
@@ -739,7 +747,8 @@ export const MangoAccountLayout = struct([
 
   bool('beingLiquidated'),
   bool('isBankrupt'),
-  seq(u8(), 6, 'padding'),
+  seq(u8(), INFO_LEN, 'info'),
+  seq(u8(), 70, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
@@ -768,6 +777,34 @@ export const StubOracleLayout = struct([
   u64('lastUpdate'),
 ]);
 
+export class LiquidityMiningInfoLayout extends Structure {
+  constructor(property) {
+    super(
+      [
+        I80F48Layout('rate'),
+        I80F48Layout('maxDepthBps'),
+
+        u64('periodStart'),
+        u64('targetPeriodLength'),
+        u64('mngoLeft'),
+        u64('mngoPerPeriod'),
+      ],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new MetaData(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+export function liquidityMiningInfoLayout(property = '') {
+  return new LiquidityMiningInfoLayout(property);
+}
+
 export const PerpMarketLayout = struct([
   metaDataLayout('metaData'),
   publicKeyLayout('mangoGroup'),
@@ -783,10 +820,7 @@ export const PerpMarketLayout = struct([
   u64('lastUpdated'),
   u64('seqNum'),
   I80F48Layout('feesAccrued'),
-  I80F48Layout('maxDepthBps'),
-  I80F48Layout('scaler'),
-  I80F48Layout('totalLiquidityPoints'),
-  I80F48Layout('pointsPerMngo'),
+  liquidityMiningInfoLayout('liquidityMiningInfo'),
   publicKeyLayout('mngoVault'),
 ]);
 
@@ -855,6 +889,8 @@ export const PerpEventQueueLayout = struct([
   u64('head'),
   u64('count'),
   u64('seqNum'),
+  I80F48Layout('makerFee'),
+  I80F48Layout('takerFee'),
   seq(PerpEventLayout, greedy(PerpEventLayout.span), 'events'),
 ]);
 
@@ -862,6 +898,8 @@ export class PerpEventQueue {
   head!: BN;
   count!: BN;
   seqNum!: BN;
+  makerFee!: I80F48;
+  takerFee!: I80F48;
   events!: any[];
 
   constructor(decoded: any) {
@@ -1099,6 +1137,8 @@ export class EventQueueHeader {
   count!: number;
   seqNum!: number;
 
+  makerFee!: I80F48;
+  takerFee!: I80F48;
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
@@ -1106,7 +1146,14 @@ export class EventQueueHeader {
 export class EventQueueHeaderLayout extends Structure {
   constructor(property) {
     super(
-      [metaDataLayout('metaData'), u64('head'), u64('count'), u64('seqNum')],
+      [
+        metaDataLayout('metaData'),
+        u64('head'),
+        u64('count'),
+        u64('seqNum'),
+        I80F48Layout('makerFee'),
+        I80F48Layout('takerFee'),
+      ],
       property,
     );
   }
@@ -1147,11 +1194,14 @@ export function anyEventLayout(property = '') {
   return new AnyEventLayout(property);
 }
 
+// TODO is this duplicated? look at PerpEventQueue above
 export class EventQueue {
   metaData!: MetaData;
   head!: number;
   count!: number;
   seqNum!: number;
+  makerFee!: I80F48;
+  takerFee!: I80F48;
   buf!: AnyEvent[];
 
   constructor(decoded: any) {
@@ -1169,6 +1219,8 @@ export class EventQueueLayout extends Structure {
         u64('head'),
         queueLength,
         u64('seqNum'),
+        I80F48Layout('makerFee'),
+        I80F48Layout('takerFee'),
         seq(anyEventLayout(), offset(queueLength, -1), 'buf'),
       ],
       property,

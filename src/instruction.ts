@@ -237,7 +237,7 @@ export function makeCancelPerpOrderInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
   ];
@@ -268,7 +268,7 @@ export function makeCancelPerpOrderByClientIdInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
   ];
@@ -444,29 +444,37 @@ export function makeAddSpotMarketInstruction(
   });
 }
 
-// export function makeAddToBasketInstruction(
-//   programId: PublicKey,
-//   mangoGroupPk: PublicKey,
-//   mangoAccountPk: PublicKey,
-//   ownerPk: PublicKey,
-//   marketIndex: BN,
-// ): TransactionInstruction {
-//   const keys = [
-//     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
-//     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
-//     { isSigner: true, isWritable: false, pubkey: ownerPk },
-//   ];
-//
-//   const data = encodeMangoInstruction({
-//     AddToBasket: { marketIndex },
-//   });
-//
-//   return new TransactionInstruction({
-//     keys,
-//     data,
-//     programId,
-//   });
-// }
+export function makeInitSpotOpenOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  serumDexPk: PublicKey,
+  openOrdersPk: PublicKey,
+  spotMarketPk: PublicKey,
+  signerPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: serumDexPk },
+    { isSigner: false, isWritable: true, pubkey: openOrdersPk },
+    { isSigner: false, isWritable: false, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
+  ];
+
+  const data = encodeMangoInstruction({
+    InitSpotOpenOrders: {},
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
 
 export function makePlaceSpotOrderInstruction(
   programId: PublicKey,
@@ -482,14 +490,10 @@ export function makePlaceSpotOrderInstruction(
   eventQueuePk: PublicKey,
   spotMktBaseVaultPk: PublicKey,
   spotMktQuoteVaultPk: PublicKey,
-  baseRootBankPk: PublicKey,
-  baseNodeBankPk: PublicKey,
-  quoteRootBankPk: PublicKey,
-  quoteNodeBankPk: PublicKey,
-  quoteVaultPk: PublicKey,
-  baseVaultPk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBankPk: PublicKey,
+  vaultPk: PublicKey,
   signerPk: PublicKey,
-  dexSignerPk: PublicKey,
   msrmOrSrmVaultPk: PublicKey,
   // pass in only openOrders in margin basket, and only the market index one should be writable
   openOrders: { pubkey: PublicKey; isWritable: boolean }[],
@@ -514,16 +518,12 @@ export function makePlaceSpotOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
     { isSigner: false, isWritable: true, pubkey: spotMktBaseVaultPk },
     { isSigner: false, isWritable: true, pubkey: spotMktQuoteVaultPk },
-    { isSigner: false, isWritable: false, pubkey: baseRootBankPk },
-    { isSigner: false, isWritable: true, pubkey: baseNodeBankPk },
-    { isSigner: false, isWritable: true, pubkey: quoteRootBankPk },
-    { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
-    { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
-    { isSigner: false, isWritable: true, pubkey: baseVaultPk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: vaultPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
     { isSigner: false, isWritable: false, pubkey: signerPk },
     { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
-    { isSigner: false, isWritable: false, pubkey: dexSignerPk },
     { isSigner: false, isWritable: false, pubkey: msrmOrSrmVaultPk },
     ...openOrders.map(({ pubkey, isWritable }) => ({
       isSigner: false,
@@ -633,12 +633,15 @@ export function makeAddPerpMarketInstruction(
   marketIndex: BN,
   maintLeverage: I80F48,
   initLeverage: I80F48,
+  liquidationFee: I80F48,
   makerFee: I80F48,
   takerFee: I80F48,
   baseLotSize: BN,
   quoteLotSize: BN,
+  rate: I80F48,
   maxDepthBps: I80F48,
-  scaler: I80F48,
+  targetPeriodLength: BN,
+  mngoPerPeriod: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -654,12 +657,15 @@ export function makeAddPerpMarketInstruction(
       marketIndex,
       maintLeverage,
       initLeverage,
+      liquidationFee,
       makerFee,
       takerFee,
       baseLotSize,
       quoteLotSize,
+      rate,
       maxDepthBps,
-      scaler,
+      targetPeriodLength,
+      mngoPerPeriod,
     },
   });
 

@@ -3,7 +3,7 @@ import { Account, Connection } from '@solana/web3.js';
 import { Token } from '@solana/spl-token';
 import * as Test from './utils';
 import { MangoClient } from '../src';
-import { QUOTE_INDEX } from '../src/MangoGroup';
+import { QUOTE_INDEX } from '../src/layout';
 
 // NOTE: Important that QUOTE_INDEX and quote_index might not be the same number so take caution there
 
@@ -65,7 +65,7 @@ describe('MaxMarkets', async () => {
       const tokenAccountPks = await Test.createUserTokenAccounts(
         payer,
         mints,
-        new Array(mints.length).fill(1),
+        new Array(mints.length).fill(1_000_000),
       );
 
       // Add spotMarkets to MangoGroup
@@ -98,7 +98,7 @@ describe('MaxMarkets', async () => {
         QUOTE_INDEX,
       ]);
 
-      await Test.performDeposit(
+      mangoAccount = await Test.performDeposit(
         client,
         payer,
         mangoGroup,
@@ -106,7 +106,19 @@ describe('MaxMarkets', async () => {
         quoteNodeBank,
         tokenAccountPks[quoteIndex],
         QUOTE_INDEX,
-        1,
+        1_000_000,
+      );
+
+      await Test.cachePrices(client, payer, mangoGroup, [marketIndex]);
+
+      const market = await Test.getMarket(client, mangoGroup, 0);
+
+      mangoAccount = await Test.placeSpotOrder(
+        client,
+        payer,
+        mangoGroup,
+        mangoAccount,
+        market,
       );
     });
   });

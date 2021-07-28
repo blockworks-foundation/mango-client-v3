@@ -10,15 +10,12 @@ import {
   PerpMarketLayout,
   MangoCache,
   MangoCacheLayout,
+  QUOTE_INDEX,
+  MAX_TOKENS,
 } from './layout';
 import PerpMarket from './PerpMarket';
 import RootBank from './RootBank';
 import { getMultipleAccounts, zeroKey } from './utils';
-
-export const MAX_TOKENS = 32;
-export const MAX_PAIRS = MAX_TOKENS - 1;
-export const MAX_NODE_BANKS = 8;
-export const QUOTE_INDEX = MAX_TOKENS - 1;
 
 export default class MangoGroup {
   publicKey: PublicKey;

@@ -44,6 +44,9 @@ export default async function initGroup(
   const tokenIndex = group.getTokenIndex(quoteMint);
   const nodeBanks = await banks[tokenIndex]?.loadNodeBanks(connection);
 
+  console.log(banks);
+  console.log(nodeBanks);
+
   const tokenDesc = {
     symbol: quoteSymbol,
     mintKey: quoteMint,

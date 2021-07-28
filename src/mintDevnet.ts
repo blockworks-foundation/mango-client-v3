@@ -202,7 +202,12 @@ async function mintDevnetTokens() {
     }
 
     const tokenAccount = await token.getOrCreateAssociatedAccountInfo(wallet);
-    await token.mintTo(tokenAccount.address, authority, [], 1000000000000);
+    await token.mintTo(
+      tokenAccount.address,
+      authority,
+      [],
+      1_000_000_000_000_000,
+    );
     console.log('minted', FIXED_IDS[i].symbol);
   }
 }
