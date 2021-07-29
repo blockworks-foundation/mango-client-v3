@@ -42,7 +42,7 @@ export default class MangoAccount {
     this.publicKey = publicKey;
     this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);
     this.name = decoded.info
-      ? String.fromCharCode(...this.info).replace(/0/g, '')
+      ? String.fromCharCode(...decoded.info).replace(/0/g, '')
       : '';
 
     Object.assign(this, decoded);
