@@ -15,6 +15,17 @@ import RootBank from './RootBank';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 
+export function getMarginInfoString(mangoAccount: MangoAccount) {
+  console.log('mangoAccount info', mangoAccount?.info);
+
+  return mangoAccount?.info
+    ? String.fromCharCode(...mangoAccount?.info).replaceAll(
+        String.fromCharCode(0),
+        '',
+      )
+    : '';
+}
+
 export default class MangoAccount {
   publicKey: PublicKey;
   metaData!: MetaData;
@@ -36,9 +47,14 @@ export default class MangoAccount {
   isBankrupt!: boolean;
   info!: number[];
 
+  name?: string;
+
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);
+    this.name = decoded.info
+      ? String.fromCharCode(...this.info).replace(/0/g, '')
+      : '';
 
     Object.assign(this, decoded);
   }
