@@ -15,17 +15,6 @@ import RootBank from './RootBank';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 
-export function getMarginInfoString(mangoAccount: MangoAccount) {
-  console.log('mangoAccount info', mangoAccount?.info);
-
-  return mangoAccount?.info
-    ? String.fromCharCode(...mangoAccount?.info).replaceAll(
-        String.fromCharCode(0),
-        '',
-      )
-    : '';
-}
-
 export default class MangoAccount {
   publicKey: PublicKey;
   metaData!: MetaData;
