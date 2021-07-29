@@ -4,7 +4,7 @@ import {
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { encodeMangoInstruction, AssetType } from './layout';
+import { encodeMangoInstruction, AssetType, INFO_LEN } from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
@@ -1225,4 +1225,107 @@ export function makeResolveTokenBankruptcyInstruction(
     data,
     programId,
   });
+}
+
+export function makeRedeemMngoInstruction(
+  programId: PublicKey,
+  mangoGroup: PublicKey,
+  mangoCache: PublicKey,
+  mangoAccount: PublicKey,
+  owner: PublicKey,
+  perpMarket: PublicKey,
+  mngoPerpVault: PublicKey,
+  mngoRootBank: PublicKey,
+  mngoNodeBank: PublicKey,
+  mngoBankVault: PublicKey,
+  signer: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroup },
+    { isSigner: false, isWritable: false, pubkey: mangoCache },
+    { isSigner: false, isWritable: true, pubkey: mangoAccount },
+    { isSigner: true, isWritable: false, pubkey: owner },
+    { isSigner: false, isWritable: false, pubkey: perpMarket },
+    { isSigner: false, isWritable: true, pubkey: mngoPerpVault },
+    { isSigner: false, isWritable: false, pubkey: mngoRootBank },
+    { isSigner: false, isWritable: true, pubkey: mngoNodeBank },
+    { isSigner: false, isWritable: true, pubkey: mngoBankVault },
+    { isSigner: false, isWritable: false, pubkey: signer },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+  const data = encodeMangoInstruction({ RedeemMngo: {} });
+  return new TransactionInstruction({ keys, data, programId });
+}
+
+export function makeAddMangoAccountInfoInstruction(
+  programId: PublicKey,
+  mangoGroup: PublicKey,
+  mangoAccount: PublicKey,
+  owner: PublicKey,
+  info: string,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroup },
+    { isSigner: false, isWritable: true, pubkey: mangoAccount },
+    { isSigner: true, isWritable: false, pubkey: owner },
+  ];
+  // TODO convert info into a 32 byte utf encoded byte array
+  const encoded = Buffer.from(info);
+  if (encoded.length > INFO_LEN) {
+    throw new Error(
+      'info string too long. Must be less than or equal to 32 bytes',
+    );
+  }
+  const infoArray = new Uint8Array(encoded, 0, INFO_LEN);
+  const data = encodeMangoInstruction({
+    AddMangoAccountInfo: { info: infoArray },
+  });
+
+  return new TransactionInstruction({ keys, data, programId });
+}
+
+export function makeDepositMsrmInstruction(
+  programId: PublicKey,
+  mangoGroup: PublicKey,
+  mangoAccount: PublicKey,
+  owner: PublicKey,
+  msrmAccount: PublicKey,
+  msrmVault: PublicKey,
+  quantity: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroup },
+    { isSigner: false, isWritable: true, pubkey: mangoAccount },
+    { isSigner: true, isWritable: false, pubkey: owner },
+    { isSigner: false, isWritable: true, pubkey: msrmAccount },
+    { isSigner: false, isWritable: true, pubkey: msrmVault },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+  const data = encodeMangoInstruction({ DepositMsrm: { quantity } });
+  return new TransactionInstruction({ keys, data, programId });
+}
+export function makeWithdrawMsrmInstruction(
+  programId: PublicKey,
+  mangoGroup: PublicKey,
+  mangoAccount: PublicKey,
+  owner: PublicKey,
+  msrmAccount: PublicKey,
+  msrmVault: PublicKey,
+  signer: PublicKey,
+  quantity: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroup },
+    { isSigner: false, isWritable: true, pubkey: mangoAccount },
+    { isSigner: true, isWritable: false, pubkey: owner },
+    { isSigner: false, isWritable: true, pubkey: msrmAccount },
+    { isSigner: false, isWritable: true, pubkey: msrmVault },
+    { isSigner: false, isWritable: false, pubkey: signer },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+  const data = encodeMangoInstruction({ WithdrawMsrm: { quantity } });
+  return new TransactionInstruction({ keys, data, programId });
 }

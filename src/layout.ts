@@ -337,6 +337,18 @@ MangoInstructionLayout.addVariant(
   'ResolveTokenBankruptcy',
 );
 MangoInstructionLayout.addVariant(32, struct([]), 'InitSpotOpenOrders');
+MangoInstructionLayout.addVariant(33, struct([]), 'RedeemMngo');
+MangoInstructionLayout.addVariant(
+  34,
+  struct([seq(u8(), INFO_LEN, 'info')]),
+  'AddMangoAccountInfo',
+);
+MangoInstructionLayout.addVariant(35, struct([u64('quantity')]), 'DepositMsrm');
+MangoInstructionLayout.addVariant(
+  36,
+  struct([u64('quantity')]),
+  'WithdrawMsrm',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore

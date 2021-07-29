@@ -41,6 +41,7 @@ import MangoAccount from './MangoAccount';
 import PerpMarket from './PerpMarket';
 import RootBank from './RootBank';
 import {
+  makeAddMangoAccountInfoInstruction,
   makeAddOracleInstruction,
   makeAddPerpMarketInstruction,
   makeAddSpotMarketInstruction,
@@ -51,6 +52,7 @@ import {
   makeCancelSpotOrderInstruction,
   makeConsumeEventsInstruction,
   makeDepositInstruction,
+  makeDepositMsrmInstruction,
   makeForceCancelPerpOrdersInstruction,
   makeForceCancelSpotOrdersInstruction,
   makeInitMangoAccountInstruction,
@@ -61,6 +63,7 @@ import {
   makeLiquidateTokenAndTokenInstruction,
   makePlacePerpOrderInstruction,
   makePlaceSpotOrderInstruction,
+  makeRedeemMngoInstruction,
   makeResolvePerpBankruptcyInstruction,
   makeResolveTokenBankruptcyInstruction,
   makeSetOracleInstruction,
@@ -70,6 +73,7 @@ import {
   makeUpdateFundingInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
+  makeWithdrawMsrmInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -1979,5 +1983,99 @@ export class MangoClient {
     transaction.add(instruction);
 
     return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async redeemMngo(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    payer: Account | WalletAdapter,
+    mngoRootBank: PublicKey,
+    mngoNodeBank: PublicKey,
+    mngoVault: PublicKey,
+  ): Promise<TransactionSignature> {
+    const instruction = makeRedeemMngoInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      perpMarket.publicKey,
+      perpMarket.mngoVault,
+      mngoRootBank,
+      mngoNodeBank,
+      mngoVault,
+      mangoGroup.signerKey,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async addMangoAccountInfo(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+    info: string,
+  ): Promise<TransactionSignature> {
+    const instruction = makeAddMangoAccountInfoInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      owner.publicKey,
+      mangoAccount.publicKey,
+      info,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async depositMsrm(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+    msrmAccount: PublicKey,
+    quantity: number,
+  ): Promise<TransactionSignature> {
+    const instruction = makeDepositMsrmInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      msrmAccount,
+      mangoGroup.msrmVault,
+      new BN(Math.floor(quantity)),
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+  async withdrawMsrm(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+    msrmAccount: PublicKey,
+    quantity: number,
+  ): Promise<TransactionSignature> {
+    const instruction = makeWithdrawMsrmInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      msrmAccount,
+      mangoGroup.msrmVault,
+      mangoGroup.signerKey,
+      new BN(Math.floor(quantity)),
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 }
