@@ -18,6 +18,7 @@ export default async function addSpotMarket(
   baseMint: PublicKey,
   maintLeverage: number,
   initLeverage: number,
+  liquidationFee: number,
   optimalUtil: number,
   optimalRate: number,
   maxRate: number,
@@ -36,6 +37,7 @@ export default async function addSpotMarket(
     marketIndex,
     maintLeverage,
     initLeverage,
+    liquidationFee,
     optimalUtil,
     optimalRate,
     maxRate,
@@ -63,7 +65,7 @@ export default async function addSpotMarket(
   try {
     const token = getTokenBySymbol(groupConfig, symbol);
     Object.assign(token, tokenDesc);
-  } catch(_) {
+  } catch (_) {
     groupConfig.tokens.push(tokenDesc);
   }
 

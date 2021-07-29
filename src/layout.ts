@@ -1,17 +1,17 @@
 import {
-  struct,
-  u32,
-  u8,
-  u16,
-  union,
-  seq,
   blob,
   Blob,
-  Structure,
-  Layout,
-  UInt,
   greedy,
+  Layout,
   nu64,
+  seq,
+  struct,
+  Structure,
+  u16,
+  u32,
+  u8,
+  UInt,
+  union,
 } from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
@@ -199,8 +199,9 @@ MangoInstructionLayout.addVariant(
   4,
   struct([
     u64('marketIndex'),
-    u128('maintLeverage'),
-    u128('initLeverage'),
+    I80F48Layout('maintLeverage'),
+    I80F48Layout('initLeverage'),
+    I80F48Layout('liquidationFee'),
     I80F48Layout('optimalUtil'),
     I80F48Layout('optimalRate'),
     I80F48Layout('maxRate'),

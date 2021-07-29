@@ -499,6 +499,7 @@ export async function addSpotMarketToMangoGroup(
   );
   const initLeverage = 5;
   const maintLeverage = initLeverage * 2;
+  const liquidationFee = 1 / (2 * maintLeverage);
   await client.addSpotMarket(
     mangoGroup,
     spotMarketPk,
@@ -507,6 +508,7 @@ export async function addSpotMarketToMangoGroup(
     marketIndex,
     maintLeverage,
     initLeverage,
+    liquidationFee,
     OPTIMAL_UTIL,
     OPTIMAL_RATE,
     MAX_RATE,

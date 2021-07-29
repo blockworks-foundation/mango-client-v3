@@ -350,6 +350,10 @@ yargs(hideBin(process.argv)).command(
         default: 5,
         type: 'number',
       })
+      .option('liquidation_fee', {
+        default: 0.05,
+        type: 'number',
+      })
       .option('optimal_util', {
         describe: 'optimal utilization interest rate param',
         default: 0.7,
@@ -400,6 +404,7 @@ yargs(hideBin(process.argv)).command(
       new PublicKey(args.mint_pk as string),
       args.maint_leverage as number,
       args.init_leverage as number,
+      args.liquidation_fee as number,
       args.optimal_util as number,
       args.optimal_rate as number,
       args.max_rate as number,
