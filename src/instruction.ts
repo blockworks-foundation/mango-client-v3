@@ -608,7 +608,7 @@ export function makeSetOracleInstruction(
   price: I80F48,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: oraclePk },
     { isSigner: true, isWritable: false, pubkey: adminPk },
   ];
