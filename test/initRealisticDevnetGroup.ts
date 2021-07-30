@@ -10,17 +10,17 @@ const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
 
 const FIXED_IDS: any[] = [
   {
-    symbol: 'USDC',
-    decimals: 6,
-    mint: '8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN',
-  },
-  {
     symbol: 'MNGO',
     decimals: 6,
     baseLot: 10000000,
     quoteLot: 100,
-    price: 0.1,
+    price: 1_000_00, // 0.1
     mint: 'Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC',
+  },
+  {
+    symbol: 'USDC',
+    decimals: 6,
+    mint: '8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN',
   },
   {
     symbol: 'BTC',
@@ -55,7 +55,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 100000,
     quoteLot: 100,
-    price: 2,
+    price: 2_000_000, // 2
     mint: '3YFQ7UYJ7sNGpXTKBxM3bYLVxKpzVudXAe4gLExh5b3n',
   },
   {
@@ -70,7 +70,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 10000,
     quoteLot: 10,
-    price: 10,
+    price: 10_000_000, // 10
     mint: 'Edi5KNs2LnonULNmoTQqSymJ7VuMC9amTjLN5RJ1YMcq',
   },
   {
@@ -78,7 +78,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 10000,
     quoteLot: 10,
-    price: 30,
+    price: 30_000_000, // 30
     mint: 'Fxh4bpZnRCnpg2vcH11ttmSTDSEeC5qWbPRZNZWnRnqY',
   },
   {
@@ -86,16 +86,14 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 1000000,
     quoteLot: 100,
-    mint: '7KBVenLz5WNH4PA5MdGkJNpDDyNKnBQTwnz1UqJv9GUm',
+    mint: 'DAwBSXe6w9g37wdE2tCrFbho3QHKZi4PjuBytQCULap2',
   },
-];
+]
 
 const initNewGroup = async () => {
   // const connection: Connection = Test.createDevnetConnection();
   // const mints = IDS.filter((id) => id.symbol !== 'USDC').map((id) => id.mint);
   console.log('starting');
-  // const connection: Connection = Test.createDevnetConnection();
-  // const payer = await Test.createAccount(connection, 10);
   const quoteMint = FIXED_IDS.find((id) => id.symbol === 'USDC')
     ?.mint as string;
   await execCommand(
@@ -110,7 +108,9 @@ const initNewGroup = async () => {
 
     if (!FIXED_IDS[i].mint) {
       console.log(`adding ${FIXED_IDS[i].symbol} mint`);
-      await execCommand(``);
+      await execCommand(
+        ``, // TODO: Create a function that creates the mint
+      );
     }
 
     console.log(`adding ${FIXED_IDS[i].symbol} oracle`);
@@ -126,6 +126,7 @@ const initNewGroup = async () => {
         `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol} --provider pyth`,
       );
     }
+
 
     console.log(`listing and adding ${FIXED_IDS[i].symbol} spot market`);
     await execCommand(
