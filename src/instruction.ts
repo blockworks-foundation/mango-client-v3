@@ -1268,7 +1268,7 @@ export function makeAddMangoAccountInfoInstruction(
   info: string,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: true, pubkey: mangoGroup },
+    { isSigner: false, isWritable: false, pubkey: mangoGroup },
     { isSigner: false, isWritable: true, pubkey: mangoAccount },
     { isSigner: true, isWritable: false, pubkey: owner },
   ];

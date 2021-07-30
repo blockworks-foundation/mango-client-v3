@@ -34,10 +34,16 @@ export default class MangoAccount {
 
   beingLiquidated!: boolean;
   isBankrupt!: boolean;
+  info!: number[];
+
+  name?: string;
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);
+    this.name = decoded.info
+      ? String.fromCharCode(...decoded.info).replace(/0/g, '')
+      : '';
 
     Object.assign(this, decoded);
   }

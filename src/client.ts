@@ -2024,8 +2024,8 @@ export class MangoClient {
     const instruction = makeAddMangoAccountInfoInstruction(
       this.programId,
       mangoGroup.publicKey,
-      owner.publicKey,
       mangoAccount.publicKey,
+      owner.publicKey,
       info,
     );
     const transaction = new Transaction();
