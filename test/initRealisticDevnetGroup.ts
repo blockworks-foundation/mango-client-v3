@@ -78,7 +78,6 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 10000,
     quoteLot: 10,
-    price: 30,
     mint: 'Fxh4bpZnRCnpg2vcH11ttmSTDSEeC5qWbPRZNZWnRnqY',
   },
   {
