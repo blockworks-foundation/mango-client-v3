@@ -242,7 +242,6 @@ export default class MangoAccount {
         this.perpAccounts[i].getLiabsVal(
           mangoGroup.perpMarkets[i],
           price,
-          liabWeight,
           mangoCache.perpMarketCache[i].shortFunding,
           mangoCache.perpMarketCache[i].longFunding,
         ),

@@ -657,7 +657,6 @@ export class PerpAccount {
   getLiabsVal(
     perpMarketInfo: PerpMarketInfo,
     price: I80F48,
-    liabWeight: I80F48,
     shortFunding: I80F48,
     longFunding: I80F48,
   ): I80F48 {
@@ -667,7 +666,6 @@ export class PerpAccount {
       liabsVal = liabsVal.add(
         I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize))
           .mul(price)
-          .mul(liabWeight)
           .neg(),
       );
     }
