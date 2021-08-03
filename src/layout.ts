@@ -14,7 +14,7 @@ import {
   union,
 } from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
-import { I80F48 } from './fixednum';
+import { I80F48, ZERO_I80F48 } from './fixednum';
 import BN from 'bn.js';
 import { zeroKey } from './utils';
 
@@ -652,6 +652,34 @@ export class PerpAccount {
       );
     }
     return x;
+  }
+
+  getLiabsVal(
+    perpMarketInfo: PerpMarketInfo,
+    price: I80F48,
+    liabWeight: I80F48,
+    shortFunding: I80F48,
+  ): I80F48 {
+    let liabsVal = ZERO_I80F48;
+    if (this.basePosition.lt(new BN(0))) {
+      liabsVal = liabsVal.add(
+        I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize))
+          .mul(price)
+          .mul(liabWeight)
+          .neg(),
+      );
+
+      liabsVal = liabsVal.sub(
+        shortFunding
+          .sub(this.shortSettledFunding)
+          .mul(I80F48.fromI64(this.basePosition)),
+      );
+    }
+
+    if (this.quotePosition.lt(I80F48.fromNumber(0))) {
+      liabsVal = liabsVal.add(this.quotePosition).neg();
+    }
+    return liabsVal;
   }
 }
 

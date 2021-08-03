@@ -237,6 +237,15 @@ export default class MangoAccount {
           price.mul(liabWeight),
         ),
       );
+
+      liabsVal = liabsVal.add(
+        this.perpAccounts[i].getLiabsVal(
+          mangoGroup.perpMarkets[i],
+          price,
+          liabWeight,
+          mangoCache.perpMarketCache[i].shortFunding,
+        ),
+      );
     }
     return liabsVal;
   }
