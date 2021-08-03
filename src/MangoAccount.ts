@@ -284,15 +284,14 @@ export default class MangoAccount {
           .mul(price)
           .add(quoteFree);
 
-        const asksBaseNet = baseNet.sub(baseLocked).add(baseFree);
+        const asksBaseNet = baseNet.add(baseFree);
         const asksWeight = !bidsBaseNet.isNeg() ? assetWeight : liabWeight;
         const asksHealth = asksBaseNet
           .mul(asksWeight)
+          .add(baseLocked)
           .mul(price)
-          .add(price.mul(baseLocked))
           .add(quoteFree)
           .add(quoteLocked);
-
         health = bidsHealth.min(asksHealth);
       }
     }
