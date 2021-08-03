@@ -244,6 +244,7 @@ export default class MangoAccount {
           price,
           liabWeight,
           mangoCache.perpMarketCache[i].shortFunding,
+          mangoCache.perpMarketCache[i].longFunding,
         ),
       );
     }

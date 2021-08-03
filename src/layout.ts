@@ -659,25 +659,36 @@ export class PerpAccount {
     price: I80F48,
     liabWeight: I80F48,
     shortFunding: I80F48,
+    longFunding: I80F48,
   ): I80F48 {
     let liabsVal = ZERO_I80F48;
-    if (this.basePosition.lt(new BN(0))) {
+    const ZERO_BN = new BN(0);
+    if (this.basePosition.lt(new BN(ZERO_BN))) {
       liabsVal = liabsVal.add(
         I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize))
           .mul(price)
           .mul(liabWeight)
           .neg(),
       );
+    }
 
-      liabsVal = liabsVal.sub(
+    let realQuotePosition = this.quotePosition;
+    if (this.basePosition.gt(ZERO_BN)) {
+      realQuotePosition = this.quotePosition.sub(
+        longFunding
+          .sub(this.longSettledFunding)
+          .mul(I80F48.fromI64(this.basePosition)),
+      );
+    } else if (this.basePosition.lt(ZERO_BN)) {
+      realQuotePosition = this.quotePosition.sub(
         shortFunding
           .sub(this.shortSettledFunding)
           .mul(I80F48.fromI64(this.basePosition)),
       );
     }
 
-    if (this.quotePosition.lt(I80F48.fromNumber(0))) {
-      liabsVal = liabsVal.add(this.quotePosition).neg();
+    if (realQuotePosition.lt(ZERO_I80F48)) {
+      liabsVal = liabsVal.add(realQuotePosition).neg();
     }
     return liabsVal;
   }
