@@ -12,14 +12,21 @@ import configFile from '../src/ids.json';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { Market } from '@project-serum/serum';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { QUOTE_INDEX } from '../src/MangoGroup';
+import { MAX_NUM_IN_MARGIN_BASKET, QUOTE_INDEX } from '../src/layout';
 
 async function testMaxCompute() {
   // Load all the details for mango group
   const groupName = process.env.GROUP || 'mango_test_v3.nightly';
   const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
+  const sleepTime = 500;
   const config = new Config(configFile);
   const groupIds = config.getGroup(cluster, groupName);
+  const setupLiqor = true;
+  const setupLiqee = true;
+  const liqorSpotOrders = MAX_NUM_IN_MARGIN_BASKET;
+  const liqeeSpotOrders = MAX_NUM_IN_MARGIN_BASKET;
+  const liqorPerpOrders = 16;
+  const liqeePerpOrders = 16;
 
   if (!groupIds) {
     throw new Error(`Group ${groupName} not found`);
@@ -47,47 +54,15 @@ async function testMaxCompute() {
   const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
 
   // Deposit some usdc to borrow
-  const whale = await client.initMangoAccount(mangoGroup, payer);
-  console.log('Created Whale:', whale.toBase58());
-  const whaleAccount = await client.getMangoAccount(
-    whale,
-    mangoGroup.dexProgramId,
-  );
-  const tokenConfig = groupIds.tokens[QUOTE_INDEX];
-  const tokenInfo = mangoGroup.tokens[QUOTE_INDEX];
-  const token = new Token(connection, tokenInfo.mint, TOKEN_PROGRAM_ID, payer);
-  const wallet = await token.getOrCreateAssociatedAccountInfo(payer.publicKey);
-  await client.deposit(
-    mangoGroup,
-    whaleAccount,
-    payer,
-    quoteRootBank.publicKey,
-    quoteNodeBanks[0].publicKey,
-    quoteNodeBanks[0].vault,
-    wallet.address,
-    500000,
-  );
-
-  const mangoAccountPk = await client.initMangoAccount(mangoGroup, payer);
-  let mangoAccount = await client.getMangoAccount(
-    mangoAccountPk,
-    mangoGroup.dexProgramId,
-  );
-  console.log('Created Liqee:', mangoAccountPk.toBase58());
-  const sleepTime = 500;
-
-  const cache = await mangoGroup.loadCache(connection);
-  // deposit
-  await sleep(sleepTime / 2);
-
-  for (let i = 0; i < groupIds.tokens.length; i++) {
-    if (groupIds.tokens[i].symbol === 'SOL') {
-      continue;
-    }
-    const tokenConfig = groupIds.tokens[i];
-    const tokenIndex = mangoGroup.getTokenIndex(tokenConfig.mintKey);
-    const rootBank = throwUndefined(rootBanks[tokenIndex]);
-    const tokenInfo = mangoGroup.tokens[tokenIndex];
+  if (setupLiqor) {
+    const whale = await client.initMangoAccount(mangoGroup, payer);
+    console.log('Created Liqor:', whale.toBase58());
+    const whaleAccount = await client.getMangoAccount(
+      whale,
+      mangoGroup.dexProgramId,
+    );
+    const tokenConfig = groupIds.tokens[QUOTE_INDEX];
+    const tokenInfo = mangoGroup.tokens[QUOTE_INDEX];
     const token = new Token(
       connection,
       tokenInfo.mint,
@@ -98,47 +73,68 @@ async function testMaxCompute() {
       payer.publicKey,
     );
 
-    await sleep(sleepTime / 2);
-    const banks = await rootBank.loadNodeBanks(connection);
+    for (let i = 0; i < groupIds.tokens.length; i++) {
+      if (groupIds.tokens[i].symbol === 'SOL') {
+        continue;
+      }
+      const tokenConfig = groupIds.tokens[i];
+      const tokenIndex = mangoGroup.getTokenIndex(tokenConfig.mintKey);
+      const rootBank = throwUndefined(rootBanks[tokenIndex]);
+      const tokenInfo = mangoGroup.tokens[tokenIndex];
+      const token = new Token(
+        connection,
+        tokenInfo.mint,
+        TOKEN_PROGRAM_ID,
+        payer,
+      );
+      const wallet = await token.getOrCreateAssociatedAccountInfo(
+        payer.publicKey,
+      );
 
-    await sleep(sleepTime);
-    console.log('depositing');
+      await sleep(sleepTime / 2);
+      const banks = await rootBank.loadNodeBanks(connection);
+
+      await sleep(sleepTime);
+      console.log('depositing');
+
+      if (i != QUOTE_INDEX) {
+        await client.deposit(
+          mangoGroup,
+          whaleAccount,
+          payer,
+          rootBank.publicKey,
+          banks[0].publicKey,
+          banks[0].vault,
+          wallet.address,
+          1000,
+        );
+      }
+    }
     await client.deposit(
       mangoGroup,
-      mangoAccount,
+      whaleAccount,
       payer,
-      rootBank.publicKey,
-      banks[0].publicKey,
-      banks[0].vault,
+      quoteRootBank.publicKey,
+      quoteNodeBanks[0].publicKey,
+      quoteNodeBanks[0].vault,
       wallet.address,
-      100,
+      1_000_000,
     );
-    if (i != QUOTE_INDEX) {
-      console.log('Resetting oracle');
-      await client.setStubOracle(
-        mangoGroupKey,
-        mangoGroup.oracles[i],
-        payer,
-        10000,
-      );
-    }
-  }
 
-  // place an order on 10 different spot markets
-  for (let i = 0; i < 10; i++) {
-    const market = await Market.load(
-      connection,
-      mangoGroup.spotMarkets[i].spotMarket,
-      {},
-      mangoGroup.dexProgramId,
-    );
-    while (1) {
+    // place orders on spot markets
+    for (let i = 0; i < liqorSpotOrders; i++) {
+      const market = await Market.load(
+        connection,
+        mangoGroup.spotMarkets[i].spotMarket,
+        {},
+        mangoGroup.dexProgramId,
+      );
       await sleep(sleepTime);
       console.log('placing spot order', i);
       try {
         await client.placeSpotOrder(
           mangoGroup,
-          mangoAccount,
+          whaleAccount,
           mangoGroup.mangoCache,
           market,
           payer,
@@ -148,115 +144,182 @@ async function testMaxCompute() {
           'limit',
         );
         await sleep(sleepTime);
-        mangoAccount = await client.getMangoAccount(
-          mangoAccountPk,
-          mangoGroup.dexProgramId,
-        );
+        await whaleAccount.reload(connection);
         break;
       } catch (e) {
         console.log(e);
         continue;
       }
     }
-  }
-  // place an order in 32 different perp markets
-  for (let i = 0; i < groupIds.perpMarkets.length; i++) {
-    await sleep(sleepTime);
-    const perpMarket = await client.getPerpMarket(
-      mangoGroup.perpMarkets[i].perpMarket,
-      groupIds.perpMarkets[i].baseDecimals,
-      groupIds.perpMarkets[i].quoteDecimals,
-    );
+    // place orders in perp markets
+    for (let i = 0; i < liqorPerpOrders; i++) {
+      await sleep(sleepTime);
+      const perpMarket = await client.getPerpMarket(
+        mangoGroup.perpMarkets[i].perpMarket,
+        groupIds.perpMarkets[i].baseDecimals,
+        groupIds.perpMarkets[i].quoteDecimals,
+      );
 
-    console.log('placing perp order', i);
-    await sleep(sleepTime);
-    await client.placePerpOrder(
+      console.log('placing perp order', i);
+      await sleep(sleepTime);
+      await client.placePerpOrder(
+        mangoGroup,
+        whaleAccount,
+        mangoGroup.mangoCache,
+        perpMarket,
+        payer,
+        'buy',
+        10000,
+        1,
+        'limit',
+      );
+    }
+    await whaleAccount.reload(connection);
+    console.log('LIQOR', whaleAccount.publicKey.toBase58());
+  }
+  if (setupLiqee) {
+    const mangoAccountPk = await client.initMangoAccount(mangoGroup, payer);
+    let mangoAccount = await client.getMangoAccount(
+      mangoAccountPk,
+      mangoGroup.dexProgramId,
+    );
+    console.log('Created Liqee:', mangoAccountPk.toBase58());
+
+    const cache = await mangoGroup.loadCache(connection);
+    // deposit
+    await sleep(sleepTime / 2);
+
+    for (let i = 0; i < groupIds.tokens.length; i++) {
+      if (groupIds.tokens[i].symbol === 'SOL') {
+        continue;
+      }
+      const tokenConfig = groupIds.tokens[i];
+      const tokenIndex = mangoGroup.getTokenIndex(tokenConfig.mintKey);
+      const rootBank = throwUndefined(rootBanks[tokenIndex]);
+      const tokenInfo = mangoGroup.tokens[tokenIndex];
+      const token = new Token(
+        connection,
+        tokenInfo.mint,
+        TOKEN_PROGRAM_ID,
+        payer,
+      );
+      const wallet = await token.getOrCreateAssociatedAccountInfo(
+        payer.publicKey,
+      );
+
+      await sleep(sleepTime / 2);
+      const banks = await rootBank.loadNodeBanks(connection);
+
+      await sleep(sleepTime);
+      console.log('depositing');
+
+      if (i != QUOTE_INDEX) {
+        await client.deposit(
+          mangoGroup,
+          mangoAccount,
+          payer,
+          rootBank.publicKey,
+          banks[0].publicKey,
+          banks[0].vault,
+          wallet.address,
+          1000,
+        );
+        console.log('Resetting oracle');
+        await client.setStubOracle(
+          mangoGroupKey,
+          mangoGroup.oracles[i],
+          payer,
+          10000,
+        );
+      }
+    }
+
+    // place orders on spot markets
+    for (let i = 0; i < liqeeSpotOrders; i++) {
+      const market = await Market.load(
+        connection,
+        mangoGroup.spotMarkets[i].spotMarket,
+        {},
+        mangoGroup.dexProgramId,
+      );
+      while (1) {
+        await sleep(sleepTime);
+        console.log('placing spot order', i);
+        try {
+          await client.placeSpotOrder(
+            mangoGroup,
+            mangoAccount,
+            mangoGroup.mangoCache,
+            market,
+            payer,
+            'buy',
+            10000,
+            1,
+            'limit',
+          );
+          await sleep(sleepTime);
+          mangoAccount = await client.getMangoAccount(
+            mangoAccountPk,
+            mangoGroup.dexProgramId,
+          );
+          break;
+        } catch (e) {
+          console.log(e);
+          continue;
+        }
+      }
+    }
+    // place orders on perp markets
+    for (let i = 0; i < liqeePerpOrders; i++) {
+      await sleep(sleepTime);
+      const perpMarket = await client.getPerpMarket(
+        mangoGroup.perpMarkets[i].perpMarket,
+        groupIds.perpMarkets[i].baseDecimals,
+        groupIds.perpMarkets[i].quoteDecimals,
+      );
+
+      console.log('placing perp order', i);
+      await sleep(sleepTime);
+      await client.placePerpOrder(
+        mangoGroup,
+        mangoAccount,
+        mangoGroup.mangoCache,
+        perpMarket,
+        payer,
+        'buy',
+        10000,
+        1,
+        'limit',
+      );
+    }
+    console.log('withdrawing');
+    await client.withdraw(
       mangoGroup,
       mangoAccount,
-      mangoGroup.mangoCache,
-      perpMarket,
       payer,
-      'buy',
-      10000,
-      1,
-      'limit',
+      quoteRootBank.publicKey,
+      quoteRootBank.nodeBanks[0],
+      quoteNodeBanks[0].vault,
+      750000,
+      true,
     );
+
+    await mangoAccount.reload(connection);
+    console.log(mangoAccount.getHealth(mangoGroup, cache, 'Maint').toString());
+    console.log('LIQEE', mangoAccount.publicKey.toBase58());
   }
-
-  for (let i = 0; i < groupIds.perpMarkets.length; i++) {
-    await sleep(sleepTime);
-    const perpMarket = await client.getPerpMarket(
-      mangoGroup.perpMarkets[i].perpMarket,
-      groupIds.perpMarkets[i].baseDecimals,
-      groupIds.perpMarkets[i].quoteDecimals,
-    );
-
-    console.log('placing perp order', i);
-    await sleep(sleepTime);
-    await client.placePerpOrder(
-      mangoGroup,
-      mangoAccount,
-      mangoGroup.mangoCache,
-      perpMarket,
-      payer,
-      'buy',
-      10000,
-      1,
-      'limit',
-    );
-  }
-
-  await client.withdraw(
-    mangoGroup,
-    mangoAccount,
-    payer,
-    quoteRootBank.publicKey,
-    quoteRootBank.nodeBanks[0],
-    quoteNodeBanks[0].vault,
-    500000,
-    true,
-  );
-  await mangoAccount.reload(connection);
-  console.log(mangoAccount.getHealth(mangoGroup, cache, 'Maint').toString());
-  console.log(
-    nativeToUi(
-      mangoAccount.borrows[QUOTE_INDEX].toNumber(),
-      groupIds.tokens[QUOTE_INDEX].decimals,
-    ),
-  );
-  console.log(
-    nativeToUi(
-      mangoAccount.getAssetsVal(mangoGroup, cache, 'Maint').toNumber(),
-      groupIds.tokens[QUOTE_INDEX].decimals,
-    ),
-  );
 
   for (let i = 0; i < groupIds.tokens.length; i++) {
     if (i != QUOTE_INDEX) {
-      console.log('Resetting oracle');
+      console.log('Setting oracle');
       await client.setStubOracle(
         mangoGroupKey,
         mangoGroup.oracles[i],
         payer,
-        50,
+        20,
       );
     }
   }
-
-  await mangoAccount.reload(connection);
-  console.log(mangoAccount.getHealth(mangoGroup, cache, 'Maint').toString());
-  console.log(
-    nativeToUi(
-      mangoAccount.borrows[QUOTE_INDEX].toNumber(),
-      groupIds.tokens[QUOTE_INDEX].decimals,
-    ),
-  );
-  console.log(
-    nativeToUi(
-      mangoAccount.getAssetsVal(mangoGroup, cache, 'Maint').toNumber(),
-      groupIds.tokens[QUOTE_INDEX].decimals,
-    ),
-  );
 }
 
 testMaxCompute();
