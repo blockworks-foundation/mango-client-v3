@@ -22,8 +22,9 @@ import {
   makeUpdateRootBankInstruction,
 } from './instruction';
 import BN from 'bn.js';
-import { PerpEventQueue, PerpEventQueueLayout } from './layout';
+import { PerpEventQueueLayout } from './layout';
 import { MangoGroup, PerpMarket } from '.';
+import PerpEventQueue from './PerpEventQueue';
 
 const groupName = process.env.GROUP || 'devnet.0';
 const updateCacheInterval = parseInt(

@@ -2,8 +2,18 @@ import IDS from './ids.json';
 import MangoAccount from './MangoAccount';
 import MangoGroup from './MangoGroup';
 import PerpMarket from './PerpMarket';
+import PerpAccount from './PerpAccount';
+import PerpEventQueue from './PerpEventQueue';
 import RootBank from './RootBank';
-export { IDS, MangoAccount, MangoGroup, PerpMarket, RootBank };
+export {
+  IDS,
+  MangoAccount,
+  MangoGroup,
+  PerpAccount,
+  PerpEventQueue,
+  PerpMarket,
+  RootBank,
+};
 
 export * from './book';
 export * from './client';

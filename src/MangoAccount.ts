@@ -6,7 +6,6 @@ import {
   MangoAccountLayout,
   MangoCache,
   MetaData,
-  PerpAccount,
   RootBankCache,
   QUOTE_INDEX,
 } from './layout';
@@ -21,6 +20,7 @@ import {
 import RootBank from './RootBank';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
+import PerpAccount from './PerpAccount';
 
 export default class MangoAccount {
   publicKey: PublicKey;
