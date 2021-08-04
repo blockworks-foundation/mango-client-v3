@@ -13,7 +13,7 @@ import {
   TransactionInstruction,
   TransactionSignature,
 } from '@solana/web3.js';
-import { TokenInstructions } from '@project-serum/serum';
+import { OpenOrders, TokenInstructions } from '@project-serum/serum';
 import { I80F48 } from './fixednum';
 import MangoGroup from './MangoGroup';
 import { HealthType } from './MangoAccount';
@@ -64,6 +64,24 @@ export function getWeights(
   }
 }
 
+export function splitOpenOrders(openOrders: OpenOrders): {
+  quoteFree: I80F48;
+  quoteLocked: I80F48;
+  baseFree: I80F48;
+  baseLocked: I80F48;
+} {
+  const quoteFree = I80F48.fromU64(
+    openOrders.quoteTokenFree.add(openOrders['referrerRebatesAccrued']),
+  );
+  const quoteLocked = I80F48.fromU64(
+    openOrders.quoteTokenTotal.sub(openOrders.quoteTokenFree),
+  );
+  const baseFree = I80F48.fromU64(openOrders.baseTokenFree);
+  const baseLocked = I80F48.fromU64(
+    openOrders.baseTokenTotal.sub(openOrders.baseTokenFree),
+  );
+  return { quoteFree, quoteLocked, baseFree, baseLocked };
+}
 export async function awaitTransactionSignatureConfirmation(
   txid: TransactionSignature,
   timeout: number,

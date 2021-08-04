@@ -15,6 +15,7 @@ import {
   nativeI80F48ToUi,
   nativeToUi,
   promiseUndef,
+  splitOpenOrders,
   zeroKey,
 } from './utils';
 import RootBank from './RootBank';
@@ -347,16 +348,8 @@ export default class MangoAccount {
       // Evaluate spot first
       const openOrders = this.spotOpenOrdersAccounts[i];
       if (this.inMarginBasket[i] && openOrders !== undefined) {
-        const quoteFree = I80F48.fromU64(
-          openOrders.quoteTokenFree.add(openOrders['referrerRebatesAccrued']),
-        );
-        const quoteLocked = I80F48.fromU64(
-          openOrders.quoteTokenTotal.sub(openOrders.quoteTokenFree),
-        );
-        const baseFree = I80F48.fromU64(openOrders.baseTokenFree);
-        const baseLocked = I80F48.fromU64(
-          openOrders.baseTokenTotal.sub(openOrders.baseTokenFree),
-        );
+        const { quoteFree, quoteLocked, baseFree, baseLocked } =
+          splitOpenOrders(openOrders);
 
         // base total if all bids were executed
         const bidsBaseNet = baseNet
@@ -441,16 +434,8 @@ export default class MangoAccount {
     } else {
       const openOrders = this.spotOpenOrdersAccounts[marketIndex];
       if (openOrders !== undefined) {
-        const quoteFree = I80F48.fromU64(
-          openOrders.quoteTokenFree.add(openOrders['referrerRebatesAccrued']),
-        );
-        const quoteLocked = I80F48.fromU64(
-          openOrders.quoteTokenTotal.sub(openOrders.quoteTokenFree),
-        );
-        const baseFree = I80F48.fromU64(openOrders.baseTokenFree);
-        const baseLocked = I80F48.fromU64(
-          openOrders.baseTokenTotal.sub(openOrders.baseTokenFree),
-        );
+        const { quoteFree, quoteLocked, baseFree, baseLocked } =
+          splitOpenOrders(openOrders);
 
         const bidsBaseNet = baseNet
           .add(quoteLocked.div(price))
