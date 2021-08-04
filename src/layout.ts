@@ -677,7 +677,7 @@ export class PerpAccount {
           .mul(I80F48.fromI64(this.basePosition)),
       );
     } else if (this.basePosition.lt(ZERO_BN)) {
-      realQuotePosition = this.quotePosition.add(
+      realQuotePosition = this.quotePosition.sub(
         shortFunding
           .sub(this.shortSettledFunding)
           .mul(I80F48.fromI64(this.basePosition)),
