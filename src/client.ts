@@ -2016,6 +2016,53 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  async redeemAllMngo(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter,
+  ): Promise<TransactionSignature> {
+    const transaction = new Transaction();
+
+    for (let i = 0; i < mangoAccount.perpAccounts.length; i++) {
+      const perpAccount = mangoAccount.perpAccounts[i];
+      if (perpAccount.mngoAccrued === ZERO_BN) {
+        continue;
+      }
+      const perpMarketInfo = mangoGroup.perpMarkets[i];
+      const perpMarket = await this.getPerpMarket(
+        perpMarketInfo.perpMarket,
+        mangoGroup.tokens[i].decimals,
+        mangoGroup.tokens[QUOTE_INDEX].decimals,
+      );
+      const mngoRootBank = mangoGroup.tokens[i].rootBank;
+      if (!mangoGroup.rootBankAccounts.length) {
+        await mangoGroup.loadRootBanks(this.connection);
+      }
+      const mngoNodeBank = mangoGroup.rootBankAccounts[i]?.nodeBankAccounts[0];
+      if (!mngoNodeBank) {
+        throw new Error('Unable to find MNGO node bank');
+      }
+      const mngoVault = mngoNodeBank.vault;
+
+      const instruction = makeRedeemMngoInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoGroup.mangoCache,
+        mangoAccount.publicKey,
+        payer.publicKey,
+        perpMarket.publicKey,
+        perpMarket.mngoVault,
+        mngoRootBank,
+        mngoNodeBank.publicKey,
+        mngoVault,
+        mangoGroup.signerKey,
+      );
+      transaction.add(instruction);
+    }
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
   async addMangoAccountInfo(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
