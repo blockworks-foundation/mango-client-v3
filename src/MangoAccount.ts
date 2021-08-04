@@ -50,7 +50,12 @@ export default class MangoAccount {
   }
 
   get name(): string {
-    return this.info ? String.fromCharCode(...this.info).replace(/0/g, '') : '';
+    return this.info
+      ? String.fromCharCode(...this.info).replace(
+          new RegExp(String.fromCharCode(0), 'g'),
+          '',
+        )
+      : '';
   }
 
   async reload(connection: Connection): Promise<MangoAccount> {
