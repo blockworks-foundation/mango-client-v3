@@ -36,16 +36,14 @@ export default class MangoAccount {
   isBankrupt!: boolean;
   info!: number[];
 
-  name?: string;
-
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);
-    this.name = decoded.info
-      ? String.fromCharCode(...decoded.info).replace(/0/g, '')
-      : '';
-
     Object.assign(this, decoded);
+  }
+
+  get name(): string {
+    return this.info ? String.fromCharCode(...this.info).replace(/0/g, '') : '';
   }
 
   async reload(connection: Connection): Promise<MangoAccount> {
