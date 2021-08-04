@@ -14,9 +14,9 @@ import {
   union,
 } from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
-import { I80F48 } from './fixednum';
+import { I80F48, ZERO_I80F48 } from './fixednum';
 import BN from 'bn.js';
-import { zeroKey } from './utils';
+import { zeroKey, ZERO_BN } from './utils';
 
 export const MAX_TOKENS = 16;
 export const MAX_PAIRS = MAX_TOKENS - 1;
@@ -652,6 +652,42 @@ export class PerpAccount {
       );
     }
     return x;
+  }
+
+  getLiabsVal(
+    perpMarketInfo: PerpMarketInfo,
+    price: I80F48,
+    shortFunding: I80F48,
+    longFunding: I80F48,
+  ): I80F48 {
+    let liabsVal = ZERO_I80F48;
+    if (this.basePosition.lt(ZERO_BN)) {
+      liabsVal = liabsVal.add(
+        I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize)).mul(
+          price,
+        ),
+      );
+    }
+
+    let realQuotePosition = this.quotePosition;
+    if (this.basePosition.gt(ZERO_BN)) {
+      realQuotePosition = this.quotePosition.sub(
+        longFunding
+          .sub(this.longSettledFunding)
+          .mul(I80F48.fromI64(this.basePosition)),
+      );
+    } else if (this.basePosition.lt(ZERO_BN)) {
+      realQuotePosition = this.quotePosition.sub(
+        shortFunding
+          .sub(this.shortSettledFunding)
+          .mul(I80F48.fromI64(this.basePosition)),
+      );
+    }
+
+    if (realQuotePosition.lt(ZERO_I80F48)) {
+      liabsVal = liabsVal.add(realQuotePosition);
+    }
+    return liabsVal.neg();
   }
 }
 

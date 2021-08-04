@@ -16,6 +16,7 @@ import {
 import { TokenInstructions } from '@project-serum/serum';
 import { I80F48 } from './fixednum';
 
+export const ZERO_BN = new BN(0);
 export const zeroKey = new PublicKey(new Uint8Array(32));
 
 export async function promiseUndef(): Promise<undefined> {
