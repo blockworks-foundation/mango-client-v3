@@ -2020,6 +2020,9 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     payer: Account | WalletAdapter,
+    mngoRootBank: PublicKey,
+    mngoNodeBank: PublicKey,
+    mngoVault: PublicKey,
   ): Promise<TransactionSignature> {
     const transaction = new Transaction();
 
@@ -2035,18 +2038,6 @@ export class MangoClient {
         mangoGroup.tokens[QUOTE_INDEX].decimals,
       );
 
-      const rootBankAccounts = await mangoGroup.loadRootBanks(this.connection);
-
-      const mngoRootBank = rootBankAccounts[i];
-      if (!mngoRootBank) {
-        throw new Error('Unable to find MNGO root bank');
-      }
-      const mngoNodeBank = mngoRootBank.nodeBankAccounts[0];
-      if (!mngoNodeBank) {
-        throw new Error('Unable to find MNGO node bank');
-      }
-      const mngoVault = mngoNodeBank.vault;
-
       const instruction = makeRedeemMngoInstruction(
         this.programId,
         mangoGroup.publicKey,
@@ -2055,8 +2046,8 @@ export class MangoClient {
         payer.publicKey,
         perpMarket.publicKey,
         perpMarket.mngoVault,
-        mngoRootBank.publicKey,
-        mngoNodeBank.publicKey,
+        mngoRootBank,
+        mngoNodeBank,
         mngoVault,
         mangoGroup.signerKey,
       );
