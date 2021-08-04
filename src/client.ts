@@ -2025,7 +2025,7 @@ export class MangoClient {
 
     for (let i = 0; i < mangoAccount.perpAccounts.length; i++) {
       const perpAccount = mangoAccount.perpAccounts[i];
-      if (perpAccount.mngoAccrued === ZERO_BN) {
+      if (perpAccount.mngoAccrued.eq(ZERO_BN)) {
         continue;
       }
       const perpMarketInfo = mangoGroup.perpMarkets[i];
