@@ -141,6 +141,9 @@ export class I80F48 {
   neg(): I80F48 {
     return this.mul(NEG_ONE_I80F48);
   }
+  isPos(): boolean {
+    return this.gt(ZERO_I80F48);
+  }
   isNeg(): boolean {
     return this.data.isNeg();
   }

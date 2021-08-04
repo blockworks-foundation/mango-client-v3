@@ -263,14 +263,67 @@ export default class MangoAccount {
       .sub(this.borrows[tokenIndex].mul(bankCache.borrowIndex));
   }
 
+  /**
+   * Take health components and return the assets and liabs weighted
+   */
+  getWeightedAssetsLiabsVals(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    spot: I80F48[],
+    perps: I80F48[],
+    quote: I80F48,
+    healthType: HealthType,
+  ): { assets: I80F48; liabs: I80F48 } {
+    let assets = ZERO_I80F48;
+    let liabs = ZERO_I80F48;
+
+    if (quote.isPos()) {
+      assets = assets.add(quote);
+    } else {
+      liabs = liabs.add(quote.neg());
+    }
+
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      const w = getWeights(mangoGroup, i, healthType);
+      const price = mangoCache.priceCache[i].price;
+      if (spot[i].isPos()) {
+        assets = spot[i].mul(price).mul(w.spotAssetWeight).add(assets);
+      } else {
+        liabs = spot[i].neg().mul(price).mul(w.spotLiabWeight).add(liabs);
+      }
+
+      if (perps[i].isPos()) {
+        assets = perps[i].mul(price).mul(w.perpAssetWeight).add(assets);
+      } else {
+        liabs = perps[i].neg().mul(price).mul(w.perpLiabWeight).add(liabs);
+      }
+    }
+    return { assets, liabs };
+  }
+
   getHealthFromComponents(
     mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
     spot: I80F48[],
     perps: I80F48[],
     quote: I80F48,
     healthType: HealthType,
   ): I80F48 {
-    throw new Error('Unimplemented');
+    let health = quote;
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      const w = getWeights(mangoGroup, i, healthType);
+      const price = mangoCache.priceCache[i].price;
+      const spotHealth = spot[i]
+        .mul(price)
+        .mul(spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight);
+      const perpHealth = perps[i]
+        .mul(price)
+        .mul(perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight);
+
+      health = health.add(spotHealth).add(perpHealth);
+    }
+
+    return health;
   }
   /**
    * Return the spot, perps and quote currency values after adjusting for
