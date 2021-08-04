@@ -876,7 +876,7 @@ export const PerpEventLayout = union(u8('eventType'), blob(151), 'event');
 PerpEventLayout.addVariant(
   0,
   struct([
-    sideLayout('side', 1),
+    sideLayout('takerSide', 1),
     u8('makerSlot'),
     bool('makerOut'),
     seq(u8(), 4),
@@ -908,7 +908,7 @@ PerpEventLayout.addVariant(
 );
 
 export interface FillEvent {
-  side: 'buy' | 'sell';
+  takerSide: 'buy' | 'sell';
   makerSlot: number;
   makerOut: boolean;
   maker: PublicKey;
