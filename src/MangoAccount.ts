@@ -10,7 +10,13 @@ import {
   RootBankCache,
   QUOTE_INDEX,
 } from './layout';
-import { nativeI80F48ToUi, nativeToUi, promiseUndef, zeroKey } from './utils';
+import {
+  getWeights,
+  nativeI80F48ToUi,
+  nativeToUi,
+  promiseUndef,
+  zeroKey,
+} from './utils';
 import RootBank from './RootBank';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
@@ -248,6 +254,118 @@ export default class MangoAccount {
     return liabsVal;
   }
 
+  /**
+   * deposits - borrows in native terms
+   */
+  getNet(bankCache: RootBankCache, tokenIndex: number): I80F48 {
+    return this.deposits[tokenIndex]
+      .mul(bankCache.depositIndex)
+      .sub(this.borrows[tokenIndex].mul(bankCache.borrowIndex));
+  }
+
+  getHealthFromComponents(
+    mangoGroup: MangoGroup,
+    spot: I80F48[],
+    perps: I80F48[],
+    quote: I80F48,
+    healthType: HealthType,
+  ): I80F48 {
+    throw new Error('Unimplemented');
+  }
+  /**
+   * Return the spot, perps and quote currency values after adjusting for
+   * worst case open orders scenarios. These values are not adjusted for health
+   * type
+   * @param mangoGroup
+   * @param mangoCache
+   */
+  getHealthComponents(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+  ): { spot: I80F48[]; perps: I80F48[]; quote: I80F48 } {
+    const spot = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
+    const perps = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
+    let quote = this.getNet(mangoCache.rootBankCache[QUOTE_INDEX], QUOTE_INDEX);
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      const bankCache = mangoCache.rootBankCache[i];
+      const price = mangoCache.priceCache[i].price;
+      const baseNet = this.getNet(bankCache, i);
+
+      // Evaluate spot first
+      const openOrders = this.spotOpenOrdersAccounts[i];
+      if (this.inMarginBasket[i] && openOrders !== undefined) {
+        const quoteFree = I80F48.fromU64(
+          openOrders.quoteTokenFree.add(openOrders['referrerRebatesAccrued']),
+        );
+        const quoteLocked = I80F48.fromU64(
+          openOrders.quoteTokenTotal.sub(openOrders.quoteTokenFree),
+        );
+        const baseFree = I80F48.fromU64(openOrders.baseTokenFree);
+        const baseLocked = I80F48.fromU64(
+          openOrders.baseTokenTotal.sub(openOrders.baseTokenFree),
+        );
+
+        // base total if all bids were executed
+        const bidsBaseNet = baseNet
+          .add(quoteLocked.div(price))
+          .add(baseFree)
+          .add(baseLocked);
+
+        // base total if all asks were executed
+        const asksBaseNet = baseNet.add(baseFree);
+
+        // bids case worse if it has a higher absolute position
+        if (bidsBaseNet.abs().gt(asksBaseNet.abs())) {
+          spot[i] = bidsBaseNet;
+          quote = quote.add(quoteFree);
+        } else {
+          spot[i] = asksBaseNet;
+          quote = baseLocked
+            .mul(price)
+            .add(quoteFree)
+            .add(quoteLocked)
+            .add(quote);
+        }
+      } else {
+        spot[i] = baseNet;
+      }
+
+      // Evaluate perps
+      if (!mangoGroup.perpMarkets[i].perpMarket.equals(zeroKey)) {
+        const perpMarketCache = mangoCache.perpMarketCache[i];
+        const perpAccount = this.perpAccounts[i];
+        const lotSize = mangoGroup.perpMarkets[i].baseLotSize;
+
+        const basePos = I80F48.fromI64(perpAccount.basePosition.mul(lotSize));
+        const bidsQuantity = I80F48.fromI64(
+          perpAccount.openOrders.bidsQuantity.mul(lotSize),
+        );
+        const asksQuantity = I80F48.fromI64(
+          perpAccount.openOrders.asksQuantity.mul(lotSize),
+        );
+
+        const bidsBaseNet = basePos.add(bidsQuantity);
+        const asksBaseNet = basePos.sub(asksQuantity);
+
+        if (bidsBaseNet.abs().gt(asksBaseNet.abs())) {
+          const quotePos = perpAccount
+            .getQuotePosition(perpMarketCache)
+            .sub(bidsQuantity.mul(price));
+          quote = quote.add(quotePos);
+          perps[i] = bidsBaseNet;
+        } else {
+          const quotePos = perpAccount
+            .getQuotePosition(perpMarketCache)
+            .add(asksQuantity.mul(price));
+          quote = quote.add(quotePos);
+          perps[i] = asksBaseNet;
+        }
+      }
+    }
+
+    return { spot, perps, quote };
+  }
+
   getSpotHealth(mangoCache, marketIndex, assetWeight, liabWeight): I80F48 {
     const bankCache = mangoCache.rootBankCache[marketIndex];
     const price = mangoCache.priceCache[marketIndex].price;
@@ -439,4 +557,4 @@ export default class MangoAccount {
   }
 }
 
-type HealthType = 'Init' | 'Maint';
+export type HealthType = 'Init' | 'Maint';

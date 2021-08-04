@@ -15,6 +15,8 @@ import {
 } from '@solana/web3.js';
 import { TokenInstructions } from '@project-serum/serum';
 import { I80F48 } from './fixednum';
+import MangoGroup from './MangoGroup';
+import { HealthType } from './MangoAccount';
 
 export const ZERO_BN = new BN(0);
 export const zeroKey = new PublicKey(new Uint8Array(32));
@@ -33,6 +35,33 @@ export function nativeToUi(amount: number, decimals: number): number {
 
 export function nativeI80F48ToUi(amount: I80F48, decimals: number): I80F48 {
   return amount.div(I80F48.fromNumber(Math.pow(10, decimals)));
+}
+
+export function getWeights(
+  mangoGroup: MangoGroup,
+  marketIndex: number,
+  healthType: HealthType,
+): {
+  spotAssetWeight: I80F48;
+  spotLiabWeight: I80F48;
+  perpAssetWeight: I80F48;
+  perpLiabWeight: I80F48;
+} {
+  if (healthType === 'Maint') {
+    return {
+      spotAssetWeight: mangoGroup.spotMarkets[marketIndex].maintAssetWeight,
+      spotLiabWeight: mangoGroup.spotMarkets[marketIndex].maintAssetWeight,
+      perpAssetWeight: mangoGroup.perpMarkets[marketIndex].maintAssetWeight,
+      perpLiabWeight: mangoGroup.perpMarkets[marketIndex].maintLiabWeight,
+    };
+  } else {
+    return {
+      spotAssetWeight: mangoGroup.spotMarkets[marketIndex].initAssetWeight,
+      spotLiabWeight: mangoGroup.spotMarkets[marketIndex].initAssetWeight,
+      perpAssetWeight: mangoGroup.perpMarkets[marketIndex].initAssetWeight,
+      perpLiabWeight: mangoGroup.perpMarkets[marketIndex].initLiabWeight,
+    };
+  }
 }
 
 export async function awaitTransactionSignatureConfirmation(

@@ -585,6 +585,25 @@ export class PerpAccount {
       .add(this.quotePosition);
   }
 
+  getUnsettledFunding(perpMarketCache: PerpMarketCache): I80F48 {
+    if (this.basePosition.isNeg()) {
+      return I80F48.fromI64(this.basePosition).mul(
+        perpMarketCache.shortFunding.sub(this.shortSettledFunding),
+      );
+    } else {
+      return I80F48.fromI64(this.basePosition).mul(
+        perpMarketCache.longFunding.sub(this.longSettledFunding),
+      );
+    }
+  }
+
+  /**
+   * Return the quote position after adjusting for unsettled funding
+   */
+  getQuotePosition(perpMarketCache: PerpMarketCache): I80F48 {
+    return this.quotePosition.sub(this.getUnsettledFunding(perpMarketCache));
+  }
+
   simPositionHealth(
     perpMarketInfo: PerpMarketInfo,
     price: I80F48,
