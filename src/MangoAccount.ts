@@ -534,16 +534,22 @@ export default class MangoAccount {
     mangoGroup: MangoGroup,
     mangoCache: MangoCache,
     healthType: HealthType,
-  ): number {
-    const health = this.getHealth(mangoGroup, mangoCache, healthType);
-    const liabsVal = this.getNativeLiabsVal(mangoGroup, mangoCache, healthType);
+  ): I80F48 {
+    const { spot, perps, quote } = this.getHealthComponents(
+      mangoGroup,
+      mangoCache,
+    );
 
-    let healthRatio = 100;
-    if (liabsVal.gt(ZERO_I80F48)) {
-      healthRatio = (health.toNumber() / liabsVal.toNumber()) * 100;
-    }
+    const { assets, liabs } = this.getWeightedAssetsLiabsVals(
+      mangoGroup,
+      mangoCache,
+      spot,
+      perps,
+      quote,
+      healthType,
+    );
 
-    return Math.max(Math.min(healthRatio, 100), 0);
+    return assets.div(liabs).sub(ONE_I80F48).mul(I80F48.fromNumber(100));
   }
 
   computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
