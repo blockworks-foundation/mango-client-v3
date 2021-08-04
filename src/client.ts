@@ -21,6 +21,7 @@ import {
   sleep,
   uiToNative,
   zeroKey,
+  ZERO_BN,
 } from './utils';
 import {
   AssetType,
@@ -1071,10 +1072,10 @@ export class MangoClient {
         .mul(spotMarket.priceNumberToLots(price)),
     );
 
-    if (maxBaseQuantity.lte(new BN(0))) {
+    if (maxBaseQuantity.lte(ZERO_BN)) {
       throw new Error('size too small');
     }
-    if (limitPrice.lte(new BN(0))) {
+    if (limitPrice.lte(ZERO_BN)) {
       throw new Error('invalid price');
     }
     const selfTradeBehavior = 'decrementTake';

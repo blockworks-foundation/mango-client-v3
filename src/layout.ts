@@ -596,7 +596,7 @@ export class PerpAccount {
     let health = this.quotePosition.sub(
       I80F48.fromI64(baseChange.mul(perpMarketInfo.baseLotSize)).mul(price),
     );
-    if (newBase.gt(new BN(0))) {
+    if (newBase.gt(ZERO_BN)) {
       health = health.add(
         I80F48.fromI64(newBase.mul(perpMarketInfo.baseLotSize))
           .mul(price)
@@ -638,7 +638,7 @@ export class PerpAccount {
     const health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
 
     let x;
-    if (this.basePosition.gt(new BN(0))) {
+    if (this.basePosition.gt(ZERO_BN)) {
       x = health.sub(
         longFunding
           .sub(this.longSettledFunding)

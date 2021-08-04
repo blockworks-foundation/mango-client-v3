@@ -17,7 +17,7 @@ import {
   TransactionSignature,
 } from '@solana/web3.js';
 import { StubOracleLayout } from '../src/layout';
-import { createAccountInstruction, sleep } from '../src/utils';
+import { createAccountInstruction, sleep, ZERO_BN } from '../src/utils';
 import { msrmMints, MangoClient, I80F48 } from '../src';
 import MangoGroup from '../src/MangoGroup';
 import MangoAccount from '../src/MangoAccount';
@@ -297,7 +297,7 @@ export async function listMarket(
   const quoteDustThreshold = new BN(100);
 
   async function getVaultOwnerAndNonce() {
-    const nonce = new BN(0);
+    const nonce = ZERO_BN;
     while (true) {
       try {
         const vaultOwner = await PublicKey.createProgramAddress(

@@ -11,6 +11,7 @@ import {
 } from '.';
 import { I80F48 } from './fixednum';
 import { Modify } from './types';
+import { ZERO_BN } from './utils';
 
 export type ParsedFillEvent = Modify<
   FillEvent,
@@ -99,7 +100,7 @@ export default class PerpMarket {
     const q = await this.loadEventQueue(connection);
     // TODO - verify this works
     return q
-      .eventsSince(new BN(0))
+      .eventsSince(ZERO_BN)
       .map((e) => e.fill)
       .filter((e) => !!e)
       .map(this.parseFillEvent.bind(this)) as ParsedFillEvent[];

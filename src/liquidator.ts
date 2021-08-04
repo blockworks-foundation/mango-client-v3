@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { MangoClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
-import { sleep, uiToNative } from './utils';
+import { sleep, uiToNative, ZERO_BN } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
@@ -196,7 +196,7 @@ export class Liquidator {
               );
 
               if (perpHealth.lt(ZERO_I80F48)) {
-                if (perpAccount.basePosition.eq(new BN(0))) {
+                if (perpAccount.basePosition.eq(ZERO_BN)) {
                   //await client.liquidateTokenAndPerp(mangoGroup, mangoAccount, liqorMangoAccount, rootBanks[rootBanks.length-1], payer, )
                 } else {
                   await client.liquidatePerpMarket(

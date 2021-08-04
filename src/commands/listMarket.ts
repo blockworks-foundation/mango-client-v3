@@ -13,7 +13,7 @@ import {
 } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import { GroupConfig } from '../config';
-
+import { ZERO_BN } from '../utils';
 
 export default async function listMarket(
   connection: Connection,
@@ -38,7 +38,7 @@ export default async function listMarket(
   const quoteDustThreshold = new BN(100);
 
   async function getVaultOwnerAndNonce() {
-    const nonce = new BN(0);
+    const nonce = ZERO_BN;
     while (true) {
       try {
         const vaultOwner = await PublicKey.createProgramAddress(
