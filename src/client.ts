@@ -2034,11 +2034,14 @@ export class MangoClient {
         mangoGroup.tokens[i].decimals,
         mangoGroup.tokens[QUOTE_INDEX].decimals,
       );
-      const mngoRootBank = mangoGroup.tokens[i].rootBank;
-      if (!mangoGroup.rootBankAccounts.length) {
-        await mangoGroup.loadRootBanks(this.connection);
+
+      const rootBankAccounts = await mangoGroup.loadRootBanks(this.connection);
+
+      const mngoRootBank = rootBankAccounts[i];
+      if (!mngoRootBank) {
+        throw new Error('Unable to find MNGO root bank');
       }
-      const mngoNodeBank = mangoGroup.rootBankAccounts[i]?.nodeBankAccounts[0];
+      const mngoNodeBank = mngoRootBank.nodeBankAccounts[0];
       if (!mngoNodeBank) {
         throw new Error('Unable to find MNGO node bank');
       }
@@ -2052,7 +2055,7 @@ export class MangoClient {
         payer.publicKey,
         perpMarket.publicKey,
         perpMarket.mngoVault,
-        mngoRootBank,
+        mngoRootBank.publicKey,
         mngoNodeBank.publicKey,
         mngoVault,
         mangoGroup.signerKey,
