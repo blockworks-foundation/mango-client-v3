@@ -10,10 +10,11 @@ import configFile from './ids.json';
 import { Cluster, Config } from './config';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import { Market } from '@project-serum/serum';
-import BN from 'bn.js';
+import BN, { min } from 'bn.js';
 import { AssetType, MangoCache, perpMarketInfoLayout } from './layout';
 import { MangoAccount, MangoGroup, PerpMarket, RootBank } from '.';
-import { QUOTE_INDEX } from './layout';
+import { QUOTE_INDEX, MangoAccountLayout } from './layout';
+import { group } from 'yargs';
 
 const interval = parseInt(process.env.INTERVAL || '3500');
 const config = new Config(configFile);
@@ -40,7 +41,10 @@ const connection = new Connection(
 const client = new MangoClient(connection, mangoProgramId);
 
 const liqorMangoAccountKey = new PublicKey(
-  'Dgwt7kchNmM6jwVsDDU1yracgmJBoGE1Wr5X6pUokJGp',
+  'GcbqoK1HU5D5wU4MzbSzjbMw9G1kbvdotj4XsF9zyEfA',
+);
+const liqeeMangoAccountKey = new PublicKey(
+  '6He4qyREK7SwaxTmbF8t1dKZ1X3qLiLC9mFjxSo4U7jD',
 );
 
 async function main() {
@@ -49,40 +53,50 @@ async function main() {
   }
   console.log(`Starting liquidator for ${groupName}...`);
   const liquidating = {};
+  const mangoGroup = await client.getMangoGroup(mangoGroupKey);
+  console.time('getAllMangoAccounts');
+  const mangoAccounts = await client.getAllMangoAccounts(
+    mangoGroup,
+    undefined,
+    true,
+  );
+  console.timeEnd('getAllMangoAccounts');
+  console.log(`Fetched ${mangoAccounts.length} accounts`);
+  const accounts = mangoAccounts.reduce((res, item) => {
+    res[item.publicKey.toBase58()] = item;
+    return res;
+  }, {});
 
+  connection.onProgramAccountChange(
+    groupIds.mangoProgramId,
+    ({ accountId, accountInfo }) => {
+      if (accountInfo.data.length == MangoAccountLayout.span) {
+        const mangoAccount = new MangoAccount(
+          accountId,
+          MangoAccountLayout.decode(accountInfo.data),
+        );
+        mangoAccount
+          .loadOpenOrders(connection, groupIds.serumProgramId)
+          .then(() => {
+            accounts[accountId.toBase58()] = mangoAccount;
+          });
+      }
+    },
+    'singleGossip',
+    //[{ dataSize: MangoAccountLayout.span }], broken, web3 bug?
+  );
   // eslint-disable-next-line
   while (true) {
     console.time('groupInfo');
     const mangoGroup = await client.getMangoGroup(mangoGroupKey);
     const cache = await mangoGroup.loadCache(connection);
 
-    console.log('calling get all mango accounts');
     const liqorMangoAccount = await client.getMangoAccount(
       liqorMangoAccountKey,
       mangoGroup.dexProgramId,
     );
-    // console.log('liqor deposits');
-    // for (const deposit of liqorMangoAccount.deposits) {
-    //   console.log(deposit.toString());
-    // }
-    // console.log('liqor borrows');
-    // for (const deposit of liqorMangoAccount.borrows) {
-    //   console.log(deposit.toString());
-    // }
-    // console.log('liqor spot oos');
-    // for (const oo of liqorMangoAccount.spotOpenOrders) {
-    //   console.log(oo.toBase58());
-    // }
-    // console.log('liqor spot oos');
-    // for (const perpAcc of liqorMangoAccount.perpAccounts) {
-    //   console.log('base', perpAcc.basePosition.toString());
-    //   console.log('quote', perpAcc.quotePosition.toString());
-    // }
-    const mangoAccounts = await client.getAllMangoAccounts(
-      mangoGroup,
-      undefined,
-      true,
-    );
+
+    const mangoAccounts: MangoAccount[] = Object.values(accounts);
     console.log('got ' + mangoAccounts.length + ' accounts');
     await sleep(interval);
     const perpMarkets = await Promise.all(
@@ -116,53 +130,13 @@ async function main() {
         if (health.lt(ZERO_I80F48)) {
           if (
             !liquidating[mangoAccount.publicKey.toBase58()] &&
-            mangoAccount.publicKey.toBase58() ==
-              'C9jXuUJ95ZMRknBXaVKtBMbm7w7zgLnFryhSDwRTYv32'
+            mangoAccount.publicKey.equals(liqeeMangoAccountKey)
           ) {
             console.log(
               `Sick account ${mangoAccount.publicKey.toBase58()} health: ${health.toString()}`,
             );
             liquidating[mangoAccount.publicKey.toBase58()] = true;
-            // if (mangoAccount.isBankrupt) {
-            //   let minNet = ZERO_I80F48;
-            //   let minNetIndex = -1;
-
-            //   for (let i = 0; i < mangoGroup.tokens.length; i++) {
-            //     const price = cache.priceCache[i]
-            //       ? cache.priceCache[i].price
-            //       : ONE_I80F48;
-
-            //     const netDeposit = mangoAccount
-            //       .getNativeDeposit(cache.rootBankCache[i], i)
-            //       .sub(mangoAccount.getNativeBorrow(cache.rootBankCache[i], i))
-            //       .mul(price);
-
-            //     if (netDeposit.lt(minNet)) {
-            //       minNet = netDeposit;
-            //       minNetIndex = i;
-            //     }
-            //   }
-            //   const quoteRootBank = rootBanks[QUOTE_INDEX];
-            //   const liabRootBank = rootBanks[minNetIndex];
-            //   console.log('minnetindex', minNetIndex);
-            //   console.log('quoteindex', QUOTE_INDEX);
-            //   if (quoteRootBank && liabRootBank) {
-            //     await client.resolveTokenBankruptcy(
-            //       mangoGroup,
-            //       mangoAccount,
-            //       liqorMangoAccount,
-            //       quoteRootBank,
-            //       liabRootBank,
-            //       payer,
-            //       new I80F48(
-            //         uiToNative(
-            //           100000000,
-            //           mangoGroup.tokens[minNetIndex].decimals,
-            //         ),
-            //       ),
-            //     );
-            //   }
-            // }
+            // TODO: Check bankruptcy here
             console.log('forceCancelPerpOrders');
             // TODO: Only do this for markets with oos
             await Promise.all(
@@ -186,14 +160,14 @@ async function main() {
                 mangoAccount,
                 liqorMangoAccount,
               ),
-              // liquidatePerps(
-              //   mangoGroup,
-              //   cache,
-              //   perpMarkets,
-              //   rootBanks,
-              //   mangoAccount,
-              //   liqorMangoAccount,
-              // ),
+              liquidatePerps(
+                mangoGroup,
+                cache,
+                perpMarkets,
+                rootBanks,
+                mangoAccount,
+                liqorMangoAccount,
+              ),
             ])
               .then((values) => {
                 console.log(
@@ -287,6 +261,11 @@ async function liquidateSpot(
   console.log(minNet.toString());
   console.log(maxNetIndex);
   console.log(maxNet.toString());
+  console.log(
+    liqee
+      .getNativeBorrow(cache.rootBankCache[minNetIndex], minNetIndex)
+      .toString(),
+  );
   const liabRootBank = rootBanks[minNetIndex];
   const assetRootBank = rootBanks[maxNetIndex];
 
@@ -318,7 +297,7 @@ async function liquidateSpot(
           liabRootBank,
           payer,
           new I80F48(
-            uiToNative(100000000000, mangoGroup.tokens[minNetIndex].decimals),
+            uiToNative(10000000, mangoGroup.tokens[minNetIndex].decimals),
           ),
         );
       }

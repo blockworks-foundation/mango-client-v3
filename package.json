@@ -31,6 +31,7 @@
     "scratch": "ts-node src/scratch.ts",
     "test-compute": "ts-node test/compute.test.ts",
     "test-liquidator": "ts-node test/liquidator.test.ts",
+    "test-accounts": "ts-node test/accounts.test.ts",
     "mint-devnet": "ts-node src/mintDevnet.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
     "test:build": "run-s build",
