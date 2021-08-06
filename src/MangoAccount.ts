@@ -562,7 +562,11 @@ export default class MangoAccount {
       healthType,
     );
 
-    return assets.div(liabs).sub(ONE_I80F48).mul(I80F48.fromNumber(100));
+    if (liabs.gt(ZERO_I80F48)) {
+      return assets.div(liabs).sub(ONE_I80F48).mul(I80F48.fromNumber(100));
+    } else {
+      return I80F48.fromNumber(100);
+    }
   }
 
   computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
