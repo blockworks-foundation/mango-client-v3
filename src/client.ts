@@ -1442,22 +1442,25 @@ export class MangoClient {
       }
 
       // Account pnl must have opposite signs
-      if (pnl.mul(account.pnl).gte(ZERO_I80F48)) {
+      if (
+        (pnl.isPos() && account.pnl.isNeg()) ||
+        (pnl.isNeg() && account.pnl.isPos())
+      ) {
+        const instr = makeSettlePnlInstruction(
+          this.programId,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
+          account.account.publicKey,
+          mangoGroup.mangoCache,
+          quoteRootBank.publicKey,
+          quoteRootBank.nodeBanks[0],
+          new BN(marketIndex),
+        );
+
+        transaction.add(instr);
+      } else {
         break;
       }
-
-      const instr = makeSettlePnlInstruction(
-        this.programId,
-        mangoGroup.publicKey,
-        mangoAccount.publicKey,
-        account.account.publicKey,
-        mangoGroup.mangoCache,
-        quoteRootBank.publicKey,
-        quoteRootBank.nodeBanks[0],
-        new BN(marketIndex),
-      );
-
-      transaction.add(instr);
     }
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
