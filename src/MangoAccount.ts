@@ -207,6 +207,7 @@ export default class MangoAccount {
 
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       let liabWeight = ONE_I80F48;
+      const price = mangoGroup.getPrice(i, mangoCache);
       if (healthType === 'Maint') {
         liabWeight = mangoGroup.spotMarkets[i].maintLiabWeight;
       } else if (healthType === 'Init') {
@@ -215,9 +216,21 @@ export default class MangoAccount {
 
       liabsVal = liabsVal.add(
         this.getUiBorrow(mangoCache.rootBankCache[i], mangoGroup, i).mul(
-          mangoGroup.getPrice(i, mangoCache).mul(liabWeight),
+          price.mul(liabWeight),
         ),
       );
+
+      const perpsUiLiabsVal = nativeI80F48ToUi(
+        this.perpAccounts[i].getLiabsVal(
+          mangoGroup.perpMarkets[i],
+          price,
+          mangoCache.perpMarketCache[i].shortFunding,
+          mangoCache.perpMarketCache[i].longFunding,
+        ),
+        mangoGroup.tokens[i].decimals,
+      );
+
+      liabsVal = liabsVal.add(perpsUiLiabsVal);
     }
     return liabsVal;
   }
@@ -549,7 +562,11 @@ export default class MangoAccount {
       healthType,
     );
 
-    return assets.div(liabs).sub(ONE_I80F48).mul(I80F48.fromNumber(100));
+    if (liabs.gt(ZERO_I80F48)) {
+      return assets.div(liabs).sub(ONE_I80F48).mul(I80F48.fromNumber(100));
+    } else {
+      return I80F48.fromNumber(100);
+    }
   }
 
   computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
