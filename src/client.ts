@@ -21,12 +21,11 @@ import {
   sleep,
   uiToNative,
   zeroKey,
+  ZERO_BN,
 } from './utils';
 import {
   AssetType,
   BookSideLayout,
-  EventQueue,
-  EventQueueLayout,
   MangoAccountLayout,
   MangoCacheLayout,
   MangoGroupLayout,
@@ -43,6 +42,7 @@ import MangoAccount from './MangoAccount';
 import PerpMarket from './PerpMarket';
 import RootBank from './RootBank';
 import {
+  makeAddMangoAccountInfoInstruction,
   makeAddOracleInstruction,
   makeAddPerpMarketInstruction,
   makeAddSpotMarketInstruction,
@@ -53,6 +53,7 @@ import {
   makeCancelSpotOrderInstruction,
   makeConsumeEventsInstruction,
   makeDepositInstruction,
+  makeDepositMsrmInstruction,
   makeForceCancelPerpOrdersInstruction,
   makeForceCancelSpotOrdersInstruction,
   makeInitMangoAccountInstruction,
@@ -63,6 +64,7 @@ import {
   makeLiquidateTokenAndTokenInstruction,
   makePlacePerpOrderInstruction,
   makePlaceSpotOrderInstruction,
+  makeRedeemMngoInstruction,
   makeResolvePerpBankruptcyInstruction,
   makeResolveTokenBankruptcyInstruction,
   makeSetOracleInstruction,
@@ -72,6 +74,7 @@ import {
   makeUpdateFundingInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
+  makeWithdrawMsrmInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -979,6 +982,7 @@ export class MangoClient {
     marketIndex: number,
     maintLeverage: number,
     initLeverage: number,
+    liquidationFee: number,
     optimalUtil: number,
     optimalRate: number,
     maxRate: number,
@@ -1019,6 +1023,7 @@ export class MangoClient {
       new BN(marketIndex),
       I80F48.fromNumber(maintLeverage),
       I80F48.fromNumber(initLeverage),
+      I80F48.fromNumber(liquidationFee),
       I80F48.fromNumber(optimalUtil),
       I80F48.fromNumber(optimalRate),
       I80F48.fromNumber(maxRate),
@@ -1067,10 +1072,10 @@ export class MangoClient {
         .mul(spotMarket.priceNumberToLots(price)),
     );
 
-    if (maxBaseQuantity.lte(new BN(0))) {
+    if (maxBaseQuantity.lte(ZERO_BN)) {
       throw new Error('size too small');
     }
-    if (limitPrice.lte(new BN(0))) {
+    if (limitPrice.lte(ZERO_BN)) {
       throw new Error('invalid price');
     }
     const selfTradeBehavior = 'decrementTake';
@@ -1437,22 +1442,25 @@ export class MangoClient {
       }
 
       // Account pnl must have opposite signs
-      if (pnl.mul(account.pnl).gte(ZERO_I80F48)) {
+      if (
+        (pnl.isPos() && account.pnl.isNeg()) ||
+        (pnl.isNeg() && account.pnl.isPos())
+      ) {
+        const instr = makeSettlePnlInstruction(
+          this.programId,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
+          account.account.publicKey,
+          mangoGroup.mangoCache,
+          quoteRootBank.publicKey,
+          quoteRootBank.nodeBanks[0],
+          new BN(marketIndex),
+        );
+
+        transaction.add(instr);
+      } else {
         break;
       }
-
-      const instr = makeSettlePnlInstruction(
-        this.programId,
-        mangoGroup.publicKey,
-        mangoAccount.publicKey,
-        account.account.publicKey,
-        mangoGroup.mangoCache,
-        quoteRootBank.publicKey,
-        quoteRootBank.nodeBanks[0],
-        new BN(marketIndex),
-      );
-
-      transaction.add(instr);
     }
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
@@ -1709,19 +1717,6 @@ export class MangoClient {
     ];
 
     return await this.sendTransaction(transaction, admin, additionalSigners);
-  }
-
-  async getOrderBook() {}
-
-  async getEventQueue(eventQueue: PublicKey): Promise<EventQueue> {
-    const accountInfo = await this.connection.getAccountInfo(eventQueue);
-    EventQueueLayout;
-    const decoded = PerpEventQueueLayout.decode(
-      accountInfo == null ? undefined : accountInfo.data,
-      0,
-    );
-
-    return new EventQueue(decoded);
   }
 
   // Liquidator Functions
@@ -2034,5 +2029,140 @@ export class MangoClient {
     transaction.add(instruction);
 
     return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async redeemMngo(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    payer: Account | WalletAdapter,
+    mngoRootBank: PublicKey,
+    mngoNodeBank: PublicKey,
+    mngoVault: PublicKey,
+  ): Promise<TransactionSignature> {
+    const instruction = makeRedeemMngoInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      perpMarket.publicKey,
+      perpMarket.mngoVault,
+      mngoRootBank,
+      mngoNodeBank,
+      mngoVault,
+      mangoGroup.signerKey,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async redeemAllMngo(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter,
+    mngoRootBank: PublicKey,
+    mngoNodeBank: PublicKey,
+    mngoVault: PublicKey,
+  ): Promise<TransactionSignature> {
+    const transaction = new Transaction();
+
+    for (let i = 0; i < mangoAccount.perpAccounts.length; i++) {
+      const perpAccount = mangoAccount.perpAccounts[i];
+      if (perpAccount.mngoAccrued.eq(ZERO_BN)) {
+        continue;
+      }
+      const perpMarketInfo = mangoGroup.perpMarkets[i];
+      const perpMarket = await this.getPerpMarket(
+        perpMarketInfo.perpMarket,
+        mangoGroup.tokens[i].decimals,
+        mangoGroup.tokens[QUOTE_INDEX].decimals,
+      );
+
+      const instruction = makeRedeemMngoInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoGroup.mangoCache,
+        mangoAccount.publicKey,
+        payer.publicKey,
+        perpMarket.publicKey,
+        perpMarket.mngoVault,
+        mngoRootBank,
+        mngoNodeBank,
+        mngoVault,
+        mangoGroup.signerKey,
+      );
+      transaction.add(instruction);
+    }
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  async addMangoAccountInfo(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+    info: string,
+  ): Promise<TransactionSignature> {
+    const instruction = makeAddMangoAccountInfoInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      info,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async depositMsrm(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+    msrmAccount: PublicKey,
+    quantity: number,
+  ): Promise<TransactionSignature> {
+    const instruction = makeDepositMsrmInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      msrmAccount,
+      mangoGroup.msrmVault,
+      new BN(Math.floor(quantity)),
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+  async withdrawMsrm(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+    msrmAccount: PublicKey,
+    quantity: number,
+  ): Promise<TransactionSignature> {
+    const instruction = makeWithdrawMsrmInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      msrmAccount,
+      mangoGroup.msrmVault,
+      mangoGroup.signerKey,
+      new BN(Math.floor(quantity)),
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 }

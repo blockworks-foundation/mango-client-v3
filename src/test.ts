@@ -96,6 +96,7 @@ async function init_mango_group_and_spot_market(): Promise<MangoGroup> {
   await sleep(SLEEP_TIME);
   const initLeverage = 5;
   const maintLeverage = initLeverage * 2;
+  const liquidationFee = 1 / (2 * maintLeverage);
   const marketIndex = 0;
   console.log('= adding spot market =');
   await client.addSpotMarket(
@@ -106,6 +107,7 @@ async function init_mango_group_and_spot_market(): Promise<MangoGroup> {
     marketIndex,
     maintLeverage,
     initLeverage,
+    liquidationFee,
     OPTIMAL_UTIL,
     OPTIMAL_RATE,
     MAX_RATE,

@@ -6,6 +6,7 @@ import configFile from './ids.json';
 import { Config, getMarketByBaseSymbolAndKind, GroupConfig } from './config';
 import { Market } from '@project-serum/serum';
 import BN from 'bn.js';
+import { ZERO_BN } from './utils';
 
 function readKeypair() {
   return JSON.parse(
@@ -208,10 +209,9 @@ async function exampleSpot() {
   )) {
     if (!openOrders) continue;
 
-    const zero = new BN(0);
     if (
-      openOrders.baseTokenFree.gt(zero) ||
-      openOrders.quoteTokenFree.gt(zero)
+      openOrders.baseTokenFree.gt(ZERO_BN) ||
+      openOrders.quoteTokenFree.gt(ZERO_BN)
     ) {
       await client.settleFunds(mangoGroup, mangoAccount, owner, spotMarket);
     }

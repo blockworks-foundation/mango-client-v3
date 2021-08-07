@@ -1,6 +1,6 @@
 {
   "name": "@blockworks-foundation/mango-client",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Client to interact with the Mango program on Solana",
   "main": "lib/src/index.js",
   "types": "lib/src/index.d.ts",
@@ -19,6 +19,7 @@
     "cli": "ts-node src/cli.ts",
     "liquidator": "ts-node src/liquidator.ts",
     "launch-group": "ts-node test/initDevnetGroup.ts",
+    "launch-realistic-group": "ts-node test/initRealisticDevnetGroup.ts",
     "start": "ts-node src/test.ts",
     "clean": "rm -rf lib",
     "prepare": "run-s clean build",

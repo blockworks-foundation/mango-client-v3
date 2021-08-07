@@ -91,6 +91,11 @@ const FIXED_IDS = [
     dexPk: 'D9Rc98dPsmkfi9wv9yQLKXXu86MZut5jWZSYVCRu51ay',
   },
   {
+    symbol: 'USDT',
+    mint: 'DAwBSXe6w9g37wdE2tCrFbho3QHKZi4PjuBytQCULap2',
+    dexPk: '4WLnnEzwG6QT6xJ9rke1sYmKR1ttEX9GMKqHZfdhkUwL',
+  },
+  {
     symbol: 'AAX',
     mint: 'HDY1CtDh4S5txV84yWfqrM6MuJ1rjCGa6RgV2aNkoq7T',
     dexPk: '9wursY6Ekmephdczc6dmCmhQ9e7Lh7Xbz16fTP4h6KJt',

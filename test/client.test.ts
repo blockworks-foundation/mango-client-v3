@@ -3,7 +3,8 @@ import { Account } from '@solana/web3.js';
 import { expect } from 'chai';
 import * as Test from './utils';
 import { MangoClient } from '../src';
-import MangoGroup, { QUOTE_INDEX } from '../src/MangoGroup';
+import MangoGroup from '../src/MangoGroup';
+import { QUOTE_INDEX } from '../src/layout';
 import { sleep, zeroKey } from '../src/utils';
 import MangoAccount from '../src/MangoAccount';
 
