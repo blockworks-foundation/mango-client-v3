@@ -24,6 +24,7 @@ export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
 export const INFO_LEN = 32;
 export const QUOTE_INDEX = MAX_TOKENS - 1;
+export const MAX_NUM_IN_MARGIN_BASKET = 10;
 
 const MAX_BOOK_NODES = 1024;
 

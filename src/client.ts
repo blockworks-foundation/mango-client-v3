@@ -257,7 +257,7 @@ export class MangoClient {
       done = true;
     }
 
-    console.log('Latency', txid, getUnixTs() - startTime);
+    // console.log('Latency', txid, getUnixTs() - startTime);
     return txid;
   }
 
@@ -280,7 +280,7 @@ export class MangoClient {
       },
     );
 
-    console.log('Started awaiting confirmation for', txid);
+    // console.log('Started awaiting confirmation for', txid);
 
     let done = false;
     (async () => {
@@ -332,7 +332,7 @@ export class MangoClient {
       done = true;
     }
 
-    console.log('Latency', txid, getUnixTs() - startTime);
+    // console.log('Latency', txid, getUnixTs() - startTime);
     return txid;
   }
 

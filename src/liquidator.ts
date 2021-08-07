@@ -41,10 +41,10 @@ const connection = new Connection(
 const client = new MangoClient(connection, mangoProgramId);
 
 const liqorMangoAccountKey = new PublicKey(
-  'GcbqoK1HU5D5wU4MzbSzjbMw9G1kbvdotj4XsF9zyEfA',
+  'Vgie2z6jppy1ocaz9zZq4MFQctQXCXMu7DSfeXXuBeF',
 );
 const liqeeMangoAccountKey = new PublicKey(
-  '6He4qyREK7SwaxTmbF8t1dKZ1X3qLiLC9mFjxSo4U7jD',
+  'Hj7Aoz7oJSur8Mic4CE5oJF12zWbjAivJ5M4CNtW7E5M',
 );
 
 async function main() {

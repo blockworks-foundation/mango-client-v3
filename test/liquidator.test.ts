@@ -4,6 +4,7 @@ import {
   Cluster,
   Config,
   MangoClient,
+  MAX_PAIRS,
   nativeToUi,
   sleep,
   throwUndefined,
@@ -21,12 +22,12 @@ async function testMaxCompute() {
   const sleepTime = 500;
   const config = new Config(configFile);
   const groupIds = config.getGroup(cluster, groupName);
-  const setupLiqor = true;
+  const setupLiqor = false;
   const setupLiqee = true;
   const liqorSpotOrders = MAX_NUM_IN_MARGIN_BASKET;
   const liqeeSpotOrders = MAX_NUM_IN_MARGIN_BASKET;
-  const liqorPerpOrders = 16;
-  const liqeePerpOrders = 16;
+  const liqorPerpOrders = MAX_PAIRS;
+  const liqeePerpOrders = MAX_PAIRS;
 
   if (!groupIds) {
     throw new Error(`Group ${groupName} not found`);
@@ -57,6 +58,7 @@ async function testMaxCompute() {
   if (setupLiqor) {
     const whale = await client.initMangoAccount(mangoGroup, payer);
     console.log('Created Liqor:', whale.toBase58());
+    await sleep(sleepTime);
     const whaleAccount = await client.getMangoAccount(
       whale,
       mangoGroup.dexProgramId,
@@ -131,24 +133,26 @@ async function testMaxCompute() {
       );
       await sleep(sleepTime);
       console.log('placing spot order', i);
-      try {
-        await client.placeSpotOrder(
-          mangoGroup,
-          whaleAccount,
-          mangoGroup.mangoCache,
-          market,
-          payer,
-          'buy',
-          10000,
-          1,
-          'limit',
-        );
-        await sleep(sleepTime);
-        await whaleAccount.reload(connection);
-        break;
-      } catch (e) {
-        console.log(e);
-        continue;
+      while (1) {
+        try {
+          await client.placeSpotOrder(
+            mangoGroup,
+            whaleAccount,
+            mangoGroup.mangoCache,
+            market,
+            payer,
+            'buy',
+            10000,
+            1,
+            'limit',
+          );
+          await sleep(sleepTime);
+          await whaleAccount.reload(connection);
+          break;
+        } catch (e) {
+          console.log(e);
+          continue;
+        }
       }
     }
     // place orders in perp markets
@@ -160,7 +164,7 @@ async function testMaxCompute() {
         groupIds.perpMarkets[i].quoteDecimals,
       );
 
-      console.log('placing perp order', i);
+      console.log('liqor placing perp order', i);
       await sleep(sleepTime);
       await client.placePerpOrder(
         mangoGroup,
@@ -179,6 +183,7 @@ async function testMaxCompute() {
   }
   if (setupLiqee) {
     const mangoAccountPk = await client.initMangoAccount(mangoGroup, payer);
+    await sleep(sleepTime);
     let mangoAccount = await client.getMangoAccount(
       mangoAccountPk,
       mangoGroup.dexProgramId,
@@ -244,7 +249,7 @@ async function testMaxCompute() {
       );
       while (1) {
         await sleep(sleepTime);
-        console.log('placing spot order', i);
+        console.log('liqee placing spot order', i);
         try {
           await client.placeSpotOrder(
             mangoGroup,
@@ -278,9 +283,9 @@ async function testMaxCompute() {
         groupIds.perpMarkets[i].quoteDecimals,
       );
 
-      console.log('placing perp order', i);
+      console.log('liqee placing perp order', i);
       await sleep(sleepTime);
-      await client.placePerpOrder(
+      const txid = await client.placePerpOrder(
         mangoGroup,
         mangoAccount,
         mangoGroup.mangoCache,
@@ -291,6 +296,7 @@ async function testMaxCompute() {
         1,
         'limit',
       );
+      console.log();
     }
     console.log('withdrawing');
     await client.withdraw(
