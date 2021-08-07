@@ -4,6 +4,7 @@ import addSpotMarket from './addSpotMarket';
 import addStubOracle from './addStubOracle';
 import addPythOracle from './addPythOracle';
 import setStubOracle from './setStubOracle';
+import listMarket from './listMarket';
 
 export {
   addPerpMarket,
@@ -12,4 +13,5 @@ export {
   addPythOracle,
   initGroup,
   setStubOracle,
+  listMarket,
 };

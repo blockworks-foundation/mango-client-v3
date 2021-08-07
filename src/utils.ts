@@ -13,9 +13,12 @@ import {
   TransactionInstruction,
   TransactionSignature,
 } from '@solana/web3.js';
-import { TokenInstructions } from '@project-serum/serum';
+import { OpenOrders, TokenInstructions } from '@project-serum/serum';
 import { I80F48 } from './fixednum';
+import MangoGroup from './MangoGroup';
+import { HealthType } from './MangoAccount';
 
+export const ZERO_BN = new BN(0);
 export const zeroKey = new PublicKey(new Uint8Array(32));
 
 export async function promiseUndef(): Promise<undefined> {
@@ -34,6 +37,51 @@ export function nativeI80F48ToUi(amount: I80F48, decimals: number): I80F48 {
   return amount.div(I80F48.fromNumber(Math.pow(10, decimals)));
 }
 
+export function getWeights(
+  mangoGroup: MangoGroup,
+  marketIndex: number,
+  healthType: HealthType,
+): {
+  spotAssetWeight: I80F48;
+  spotLiabWeight: I80F48;
+  perpAssetWeight: I80F48;
+  perpLiabWeight: I80F48;
+} {
+  if (healthType === 'Maint') {
+    return {
+      spotAssetWeight: mangoGroup.spotMarkets[marketIndex].maintAssetWeight,
+      spotLiabWeight: mangoGroup.spotMarkets[marketIndex].maintAssetWeight,
+      perpAssetWeight: mangoGroup.perpMarkets[marketIndex].maintAssetWeight,
+      perpLiabWeight: mangoGroup.perpMarkets[marketIndex].maintLiabWeight,
+    };
+  } else {
+    return {
+      spotAssetWeight: mangoGroup.spotMarkets[marketIndex].initAssetWeight,
+      spotLiabWeight: mangoGroup.spotMarkets[marketIndex].initAssetWeight,
+      perpAssetWeight: mangoGroup.perpMarkets[marketIndex].initAssetWeight,
+      perpLiabWeight: mangoGroup.perpMarkets[marketIndex].initLiabWeight,
+    };
+  }
+}
+
+export function splitOpenOrders(openOrders: OpenOrders): {
+  quoteFree: I80F48;
+  quoteLocked: I80F48;
+  baseFree: I80F48;
+  baseLocked: I80F48;
+} {
+  const quoteFree = I80F48.fromU64(
+    openOrders.quoteTokenFree.add(openOrders['referrerRebatesAccrued']),
+  );
+  const quoteLocked = I80F48.fromU64(
+    openOrders.quoteTokenTotal.sub(openOrders.quoteTokenFree),
+  );
+  const baseFree = I80F48.fromU64(openOrders.baseTokenFree);
+  const baseLocked = I80F48.fromU64(
+    openOrders.baseTokenTotal.sub(openOrders.baseTokenFree),
+  );
+  return { quoteFree, quoteLocked, baseFree, baseLocked };
+}
 export async function awaitTransactionSignatureConfirmation(
   txid: TransactionSignature,
   timeout: number,

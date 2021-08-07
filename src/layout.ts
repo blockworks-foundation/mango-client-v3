@@ -1,23 +1,23 @@
 import {
-  struct,
-  u32,
-  u8,
-  u16,
-  union,
-  seq,
   blob,
   Blob,
-  Structure,
-  Layout,
-  UInt,
-  offset,
   greedy,
+  Layout,
   nu64,
+  seq,
+  struct,
+  Structure,
+  u16,
+  u32,
+  u8,
+  UInt,
+  union,
 } from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import BN from 'bn.js';
 import { zeroKey } from './utils';
+import PerpAccount from './PerpAccount';
 
 export const MAX_TOKENS = 16;
 export const MAX_PAIRS = MAX_TOKENS - 1;
@@ -201,8 +201,9 @@ MangoInstructionLayout.addVariant(
   4,
   struct([
     u64('marketIndex'),
-    u128('maintLeverage'),
-    u128('initLeverage'),
+    I80F48Layout('maintLeverage'),
+    I80F48Layout('initLeverage'),
+    I80F48Layout('liquidationFee'),
     I80F48Layout('optimalUtil'),
     I80F48Layout('optimalRate'),
     I80F48Layout('maxRate'),
@@ -339,6 +340,18 @@ MangoInstructionLayout.addVariant(
   'ResolveTokenBankruptcy',
 );
 MangoInstructionLayout.addVariant(32, struct([]), 'InitSpotOpenOrders');
+MangoInstructionLayout.addVariant(33, struct([]), 'RedeemMngo');
+MangoInstructionLayout.addVariant(
+  34,
+  struct([seq(u8(), INFO_LEN, 'info')]),
+  'AddMangoAccountInfo',
+);
+MangoInstructionLayout.addVariant(35, struct([u64('quantity')]), 'DepositMsrm');
+MangoInstructionLayout.addVariant(
+  36,
+  struct([u64('quantity')]),
+  'WithdrawMsrm',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -556,94 +569,6 @@ export function perpMarketInfoLayout(property = '') {
   return new PerpMarketInfoLayout(property);
 }
 
-export class PerpAccount {
-  basePosition!: BN;
-  quotePosition!: I80F48;
-  longSettledFunding!: I80F48;
-  shortSettledFunding!: I80F48;
-  openOrders!: PerpOpenOrders;
-  mngoAccrued!: BN;
-
-  constructor(decoded: any) {
-    Object.assign(this, decoded);
-  }
-
-  getPnl(perpMarketInfo: PerpMarketInfo, price: I80F48): I80F48 {
-    return I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize))
-      .mul(price)
-      .add(this.quotePosition);
-  }
-
-  simPositionHealth(
-    perpMarketInfo: PerpMarketInfo,
-    price: I80F48,
-    assetWeight: I80F48,
-    liabWeight: I80F48,
-    baseChange: BN,
-  ): I80F48 {
-    const newBase = this.basePosition.add(baseChange);
-    let health = this.quotePosition.sub(
-      I80F48.fromI64(baseChange.mul(perpMarketInfo.baseLotSize)).mul(price),
-    );
-    if (newBase.gt(new BN(0))) {
-      health = health.add(
-        I80F48.fromI64(newBase.mul(perpMarketInfo.baseLotSize))
-          .mul(price)
-          .mul(assetWeight),
-      );
-    } else {
-      health = health.add(
-        I80F48.fromI64(newBase.mul(perpMarketInfo.baseLotSize))
-          .mul(price)
-          .mul(liabWeight),
-      );
-    }
-    return health;
-  }
-
-  getHealth(
-    perpMarketInfo: PerpMarketInfo,
-    price: I80F48,
-    assetWeight: I80F48,
-    liabWeight: I80F48,
-    longFunding: I80F48,
-    shortFunding: I80F48,
-  ): I80F48 {
-    const bidsHealth = this.simPositionHealth(
-      perpMarketInfo,
-      price,
-      assetWeight,
-      liabWeight,
-      this.openOrders.bidsQuantity,
-    );
-
-    const asksHealth = this.simPositionHealth(
-      perpMarketInfo,
-      price,
-      assetWeight,
-      liabWeight,
-      this.openOrders.asksQuantity.neg(),
-    );
-    const health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
-
-    let x;
-    if (this.basePosition.gt(new BN(0))) {
-      x = health.sub(
-        longFunding
-          .sub(this.longSettledFunding)
-          .mul(I80F48.fromI64(this.basePosition)),
-      );
-    } else {
-      x = health.add(
-        shortFunding
-          .sub(this.shortSettledFunding)
-          .mul(I80F48.fromI64(this.basePosition)),
-      );
-    }
-    return x;
-  }
-}
-
 export class PerpAccountLayout extends Structure {
   constructor(property) {
     super(
@@ -829,7 +754,7 @@ export const PerpEventLayout = union(u8('eventType'), blob(151), 'event');
 PerpEventLayout.addVariant(
   0,
   struct([
-    sideLayout('side', 1),
+    sideLayout('takerSide', 1),
     u8('makerSlot'),
     bool('makerOut'),
     seq(u8(), 4),
@@ -861,7 +786,7 @@ PerpEventLayout.addVariant(
 );
 
 export interface FillEvent {
-  side: 'buy' | 'sell';
+  takerSide: 'buy' | 'sell';
   makerSlot: number;
   makerOut: boolean;
   maker: PublicKey;
@@ -894,79 +819,6 @@ export const PerpEventQueueLayout = struct([
   I80F48Layout('takerFee'),
   seq(PerpEventLayout, greedy(PerpEventLayout.span), 'events'),
 ]);
-
-export class PerpEventQueue {
-  head!: BN;
-  count!: BN;
-  seqNum!: BN;
-  makerFee!: I80F48;
-  takerFee!: I80F48;
-  events!: any[];
-
-  constructor(decoded: any) {
-    Object.assign(this, decoded);
-  }
-
-  getUnconsumedEvents(): { fill?: FillEvent; out?: OutEvent }[] {
-    const events: { fill?: FillEvent; out?: OutEvent }[] = [];
-    const head = this.head.toNumber();
-    for (let i = 0; i < this.count.toNumber(); i++) {
-      events.push(this.events[(head + i) % this.events.length]);
-    }
-    return events;
-  }
-
-  eventsSince(lastSeqNum: BN): { fill?: FillEvent; out?: OutEvent }[] {
-    // TODO doesn't work when lastSeqNum == 0; please fix
-
-    const modulo64Uint = new BN('10000000000000000', 'hex');
-    let missedEvents = this.seqNum
-      .add(modulo64Uint)
-      .sub(lastSeqNum)
-      .mod(modulo64Uint);
-
-    /*
-    console.log({
-      last: lastSeqNum.toString(),
-      now: this.seqNum.toString(),
-      missed: missedEvents.toString(),
-      mod: modulo64Uint.toString(),
-    });
-    */
-
-    const bufferLength = new BN(this.events.length);
-    if (missedEvents.gte(bufferLength)) {
-      missedEvents = bufferLength.sub(new BN(1));
-    }
-
-    const endIndex = this.head.add(this.count).mod(bufferLength);
-    const startIndex = endIndex
-      .add(bufferLength)
-      .sub(missedEvents)
-      .mod(bufferLength);
-
-    /*
-    console.log({
-      bufLength: bufferLength.toString(),
-      missed: missedEvents.toString(),
-      head: this.head.toString(),
-      count: this.count.toString(),
-      end: endIndex.toString(),
-      start: startIndex.toString(),
-    });
-    */
-
-    const results: { fill?: FillEvent; out?: OutEvent }[] = [];
-    let index = startIndex;
-    while (!index.eq(endIndex)) {
-      const event = this.events[index.toNumber()];
-      if (event.fill || event.out) results.push(event);
-      index = index.add(new BN(1)).mod(bufferLength);
-    }
-
-    return results;
-  }
-}
 
 const BOOK_NODE_SIZE = 88;
 const BOOK_NODE_LAYOUT = union(u32('tag'), blob(BOOK_NODE_SIZE - 4), 'node');
@@ -1130,112 +982,4 @@ export class NodeBank {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
   }
-}
-
-export class EventQueueHeader {
-  metaData!: MetaData;
-  head!: number;
-  count!: number;
-  seqNum!: number;
-
-  makerFee!: I80F48;
-  takerFee!: I80F48;
-  constructor(decoded: any) {
-    Object.assign(this, decoded);
-  }
-}
-export class EventQueueHeaderLayout extends Structure {
-  constructor(property) {
-    super(
-      [
-        metaDataLayout('metaData'),
-        u64('head'),
-        u64('count'),
-        u64('seqNum'),
-        I80F48Layout('makerFee'),
-        I80F48Layout('takerFee'),
-      ],
-      property,
-    );
-  }
-
-  decode(b, offset) {
-    return new EventQueueHeader(super.decode(b, offset));
-  }
-
-  encode(src, b, offset) {
-    return super.encode(src.toBuffer(), b, offset);
-  }
-}
-export function eventQueueHeaderLayout(property = '') {
-  return new EventQueueHeaderLayout(property);
-}
-
-export enum EventType {
-  Fill,
-  Out,
-}
-export class AnyEvent {
-  eventType!: EventType;
-}
-export class AnyEventLayout extends Structure {
-  constructor(property) {
-    super([u8('eventType'), seq(u8(), 7, 'padding')], property);
-  }
-
-  decode(b, offset) {
-    return new EventQueueHeader(super.decode(b, offset));
-  }
-
-  encode(src, b, offset) {
-    return super.encode(src.toBuffer(), b, offset);
-  }
-}
-export function anyEventLayout(property = '') {
-  return new AnyEventLayout(property);
-}
-
-// TODO is this duplicated? look at PerpEventQueue above
-export class EventQueue {
-  metaData!: MetaData;
-  head!: number;
-  count!: number;
-  seqNum!: number;
-  makerFee!: I80F48;
-  takerFee!: I80F48;
-  buf!: AnyEvent[];
-
-  constructor(decoded: any) {
-    Object.assign(this, decoded);
-  }
-}
-export class EventQueueLayout extends Structure {
-  constructor(property) {
-    //const headerLayout = eventQueueHeaderLayout('header');
-    const queueLength = u64('count');
-    console.log(queueLength);
-    super(
-      [
-        metaDataLayout('metaData'),
-        u64('head'),
-        queueLength,
-        u64('seqNum'),
-        I80F48Layout('makerFee'),
-        I80F48Layout('takerFee'),
-        seq(anyEventLayout(), offset(queueLength, -1), 'buf'),
-      ],
-      property,
-    );
-  }
-
-  decode(b, offset) {
-    return new EventQueue(super.decode(b, offset));
-  }
-
-  encode(src, b, offset) {
-    return super.encode(src.toBuffer(), b, offset);
-  }
-}
-export function eventQueueLayout(property = '') {
-  return new EventQueueLayout(property);
 }

@@ -2,7 +2,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { MangoClient } from './client';
 import { Account, Commitment, Connection } from '@solana/web3.js';
-import { sleep } from './utils';
+import { sleep, ZERO_BN } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
 import BN from 'bn.js';
@@ -48,7 +48,7 @@ export class Fetcher {
       mk.quoteDecimals,
     );
 
-    let lastSeqNum = new BN(0);
+    let lastSeqNum = ZERO_BN;
     // eslint-disable-next-line
     while (true) {
       await sleep(interval);

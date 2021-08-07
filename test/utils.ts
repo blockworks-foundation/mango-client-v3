@@ -17,14 +17,13 @@ import {
   TransactionSignature,
 } from '@solana/web3.js';
 import { StubOracleLayout } from '../src/layout';
-import { createAccountInstruction, sleep } from '../src/utils';
+import { createAccountInstruction, sleep, ZERO_BN } from '../src/utils';
 import { msrmMints, MangoClient, I80F48 } from '../src';
 import MangoGroup from '../src/MangoGroup';
 import MangoAccount from '../src/MangoAccount';
 
 export const MangoProgramId = new PublicKey(
-  '32WeJ46tuY6QEkgydqzHYU5j85UT9m1cPJwFxPjuSVCt',
-  // 'BpnyxDo1YCv7no4v9h4y6Z8dJtF2PC2rqh6auPsPjQdA'
+  '7TgHoQrdJkhMiJegHYtfsNwEmxTXuWB6oJBPnKgeMN6Y',
 );
 export const DexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -298,7 +297,7 @@ export async function listMarket(
   const quoteDustThreshold = new BN(100);
 
   async function getVaultOwnerAndNonce() {
-    const nonce = new BN(0);
+    const nonce = ZERO_BN;
     while (true) {
       try {
         const vaultOwner = await PublicKey.createProgramAddress(
@@ -426,8 +425,8 @@ export async function listMarkets(
         payer,
         mint.publicKey,
         quoteMintPK,
-        10, // TODO: Make this dynamic
         100, // TODO: Make this dynamic
+        10, // TODO: Make this dynamic
         dexProgramId,
       ),
     );
@@ -500,6 +499,7 @@ export async function addSpotMarketToMangoGroup(
   );
   const initLeverage = 5;
   const maintLeverage = initLeverage * 2;
+  const liquidationFee = 1 / (2 * maintLeverage);
   await client.addSpotMarket(
     mangoGroup,
     spotMarketPk,
@@ -508,6 +508,7 @@ export async function addSpotMarketToMangoGroup(
     marketIndex,
     maintLeverage,
     initLeverage,
+    liquidationFee,
     OPTIMAL_UTIL,
     OPTIMAL_RATE,
     MAX_RATE,
@@ -549,6 +550,24 @@ export async function getNodeBank(
   return rootBank.nodeBankAccounts[0];
 }
 
+export async function cachePrices(
+  client: MangoClient,
+  payer: Account,
+  mangoGroup: MangoGroup,
+  oracleIndices: number[],
+): Promise<void> {
+  const pricesToCache: PublicKey[] = [];
+  for (let oracleIndex of oracleIndices) {
+    pricesToCache.push(mangoGroup.oracles[oracleIndex]);
+  }
+  await client.cachePrices(
+    mangoGroup.publicKey,
+    mangoGroup.mangoCache,
+    pricesToCache,
+    payer,
+  );
+}
+
 export async function cacheRootBanks(
   client: MangoClient,
   payer: Account,
@@ -586,5 +605,46 @@ export async function performDeposit(
     nodeBank.vault,
     tokenAccountPk,
     quantity,
+  );
+  return await client.getMangoAccount(
+    mangoAccount.publicKey,
+    mangoGroup.dexProgramId,
+  );
+}
+
+export async function getMarket(
+  client: MangoClient,
+  mangoGroup: MangoGroup,
+  marketIndex: number,
+) {
+  return await Market.load(
+    client.connection,
+    mangoGroup.spotMarkets[marketIndex].spotMarket,
+    {},
+    mangoGroup.dexProgramId,
+  );
+}
+
+export async function placeSpotOrder(
+  client: MangoClient,
+  payer: Account,
+  mangoGroup: MangoGroup,
+  mangoAccount: MangoAccount,
+  market: Market,
+) {
+  await client.placeSpotOrder(
+    mangoGroup,
+    mangoAccount,
+    mangoGroup.mangoCache,
+    market,
+    payer,
+    'buy',
+    10000,
+    1,
+    'limit',
+  );
+  return await client.getMangoAccount(
+    mangoAccount.publicKey,
+    mangoGroup.dexProgramId,
   );
 }
