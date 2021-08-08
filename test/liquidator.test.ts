@@ -22,7 +22,7 @@ async function testMaxCompute() {
   const sleepTime = 500;
   const config = new Config(configFile);
   const groupIds = config.getGroup(cluster, groupName);
-  const setupLiqor = false;
+  const setupLiqor = true;
   const setupLiqee = true;
   const liqorSpotOrders = MAX_NUM_IN_MARGIN_BASKET;
   const liqeeSpotOrders = MAX_NUM_IN_MARGIN_BASKET;
