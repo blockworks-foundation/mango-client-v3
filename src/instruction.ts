@@ -1151,7 +1151,7 @@ export function makeResolvePerpBankruptcyInstruction(
     { isSigner: false, isWritable: true, pubkey: vaultPk },
     { isSigner: false, isWritable: true, pubkey: daoVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
-    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
     ...liqorOpenOrdersPks.map((pubkey) => ({
       isSigner: false,

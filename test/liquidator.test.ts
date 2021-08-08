@@ -5,15 +5,15 @@ import {
   Config,
   MangoClient,
   MAX_PAIRS,
-  nativeToUi,
   sleep,
   throwUndefined,
+  MAX_NUM_IN_MARGIN_BASKET,
+  QUOTE_INDEX,
 } from '../src';
 import configFile from '../src/ids.json';
-import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
+import { Account, Commitment, Connection } from '@solana/web3.js';
 import { Market } from '@project-serum/serum';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { MAX_NUM_IN_MARGIN_BASKET, QUOTE_INDEX } from '../src/layout';
 
 async function testMaxCompute() {
   // Load all the details for mango group
@@ -285,7 +285,7 @@ async function testMaxCompute() {
 
       console.log('liqee placing perp order', i);
       await sleep(sleepTime);
-      const txid = await client.placePerpOrder(
+      await client.placePerpOrder(
         mangoGroup,
         mangoAccount,
         mangoGroup.mangoCache,
@@ -296,7 +296,6 @@ async function testMaxCompute() {
         1,
         'limit',
       );
-      console.log();
     }
     console.log('withdrawing');
     await client.withdraw(
