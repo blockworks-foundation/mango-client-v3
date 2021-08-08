@@ -1,14 +1,6 @@
-import { struct, blob, nu64 } from 'buffer-layout';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TokenInstructions } from '@project-serum/serum';
-import { publicKeyLayout } from './layout';
-
-export const TokenAccountLayout = struct([
-  publicKeyLayout('mint'),
-  publicKeyLayout('owner'),
-  nu64('amount'),
-  blob(93),
-]);
+import { TokenAccountLayout } from './layout';
 
 export class TokenAccount {
   publicKey!: PublicKey;
