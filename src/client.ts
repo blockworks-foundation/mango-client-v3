@@ -32,6 +32,7 @@ import {
   MAX_TOKENS,
   NodeBankLayout,
   PerpEventLayout,
+  PerpEventQueueHeaderLayout,
   PerpEventQueueLayout,
   PerpMarketLayout,
   QUOTE_INDEX,
@@ -1646,7 +1647,7 @@ export class MangoClient {
     const makeEventQueueAccountInstruction = await createAccountInstruction(
       this.connection,
       admin.publicKey,
-      PerpEventQueueLayout.span + maxNumEvents * PerpEventLayout.span,
+      PerpEventQueueHeaderLayout.span + maxNumEvents * PerpEventLayout.span,
       this.programId,
     );
 
@@ -1918,6 +1919,7 @@ export class MangoClient {
       mangoGroup.publicKey,
       mangoGroup.mangoCache,
       perpMarket.publicKey,
+      perpMarket.eventQueue,
       liqeeMangoAccount.publicKey,
       liqorMangoAccount.publicKey,
       payer.publicKey,

@@ -783,6 +783,18 @@ PerpEventLayout.addVariant(
   ]),
   'out',
 );
+PerpEventLayout.addVariant(
+  2,
+  struct([
+    seq(u8(), 7),
+    publicKeyLayout('liqee'),
+    publicKeyLayout('liqor'),
+    I80F48Layout('price'),
+    i64('quantity'),
+    I80F48Layout('liquidationFee'),
+  ]),
+  'liquidate',
+);
 
 export interface FillEvent {
   takerSide: 'buy' | 'sell';
@@ -808,6 +820,23 @@ export interface OutEvent {
   owner: PublicKey;
   quantity: BN;
 }
+
+export interface LiquidateEvent {
+  liqee: PublicKey;
+  liqor: PublicKey;
+  price: I80F48;
+  quantity: BN; // i64
+  liquidationFee: I80F48; // same as what's in the PerpMarketInfo
+}
+
+export const PerpEventQueueHeaderLayout = struct([
+  metaDataLayout('metaData'),
+  u64('head'),
+  u64('count'),
+  u64('seqNum'),
+  I80F48Layout('makerFee'),
+  I80F48Layout('takerFee'),
+]);
 
 export const PerpEventQueueLayout = struct([
   metaDataLayout('metaData'),
