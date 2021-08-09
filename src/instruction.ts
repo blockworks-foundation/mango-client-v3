@@ -918,7 +918,7 @@ export function makeForceCancelPerpOrdersInstruction(
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
-    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
@@ -1151,7 +1151,7 @@ export function makeResolvePerpBankruptcyInstruction(
     { isSigner: false, isWritable: true, pubkey: vaultPk },
     { isSigner: false, isWritable: true, pubkey: daoVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
-    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
     ...liqorOpenOrdersPks.map((pubkey) => ({
       isSigner: false,

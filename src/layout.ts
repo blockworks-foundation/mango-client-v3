@@ -24,9 +24,9 @@ export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
 export const INFO_LEN = 32;
 export const QUOTE_INDEX = MAX_TOKENS - 1;
+export const MAX_NUM_IN_MARGIN_BASKET = 10;
 
 const MAX_BOOK_NODES = 1024;
-
 class _I80F48Layout extends Blob {
   constructor(property: string) {
     super(16, property);
@@ -982,3 +982,10 @@ export class NodeBank {
     Object.assign(this, decoded);
   }
 }
+
+export const TokenAccountLayout = struct([
+  publicKeyLayout('mint'),
+  publicKeyLayout('owner'),
+  nu64('amount'),
+  blob(93),
+]);

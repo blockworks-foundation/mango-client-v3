@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { MangoClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
-import { sleep, uiToNative, ZERO_BN } from './utils';
+import { sleep, uiToNative } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
@@ -41,10 +41,10 @@ const connection = new Connection(
 const client = new MangoClient(connection, mangoProgramId);
 
 const liqorMangoAccountKey = new PublicKey(
-  'GcbqoK1HU5D5wU4MzbSzjbMw9G1kbvdotj4XsF9zyEfA',
+  'Db6shuaGQC9rJjfK9wYRXVTAdSWCiDbEYDgyVidfWMqH',
 );
 const liqeeMangoAccountKey = new PublicKey(
-  '6He4qyREK7SwaxTmbF8t1dKZ1X3qLiLC9mFjxSo4U7jD',
+  'CiLbJRhSj4cqYYwn3Sxs5PvYnshrowDR4XELBmAiWQPn',
 );
 
 async function main() {

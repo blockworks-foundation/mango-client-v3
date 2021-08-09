@@ -1,6 +1,6 @@
 {
   "cluster_urls": {
-    "devnet": "https://api.devnet.solana.com",
+    "devnet": "https://mango.devnet.rpcpool.com",
     "localnet": "http://127.0.0.1:8899",
     "mainnet-beta": "https://solana-api.projectserum.com",
     "testnet": "https://testnet.solana.com"
