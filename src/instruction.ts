@@ -82,23 +82,6 @@ export function makeInitMangoAccountInstruction(
   });
 }
 
-export function makeTestMultiTxInstruction(
-  programId: PublicKey,
-  mangoGroup: PublicKey,
-  index: BN,
-): TransactionInstruction {
-  const keys = [
-    { isSigner: false, isWritable: true, pubkey: mangoGroup },
-    { isSigner: false, isWritable: false, pubkey: SYSVAR_CLOCK_PUBKEY },
-  ];
-
-  const data = encodeMangoInstruction({
-    TestMultiTx: { index },
-  });
-
-  return new TransactionInstruction({ keys, data, programId });
-}
-
 export function makeWithdrawInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,

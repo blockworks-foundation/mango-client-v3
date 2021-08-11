@@ -5,23 +5,26 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { MangoClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
-import { sleep, uiToNative, ZERO_BN } from './utils';
+import { sleep, uiToNative } from './utils';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import { Market, OpenOrders } from '@project-serum/serum';
-import BN, { min } from 'bn.js';
-import { AssetType, MangoCache, perpMarketInfoLayout } from './layout';
+import BN from 'bn.js';
+import {
+  AssetType,
+  MangoAccountLayout,
+  MangoCache,
+  QUOTE_INDEX,
+} from './layout';
 import { MangoAccount, MangoGroup, PerpMarket, RootBank } from '.';
-import { QUOTE_INDEX, MangoAccountLayout } from './layout';
-import { group } from 'yargs';
 
 const interval = parseInt(process.env.INTERVAL || '3500');
 const refreshAccountsInterval = parseInt(process.env.INTERVAL || '30000');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-const groupName = process.env.GROUP || 'mango_test_v3.nightly';
+const groupName = process.env.GROUP || 'devnet.0';
 const groupIds = config.getGroup(cluster, groupName);
 if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);
@@ -57,6 +60,20 @@ const liqeeMangoAccountKey = new PublicKey(
 async function main() {
   if (!groupIds) {
     throw new Error(`Group ${groupName} not found`);
+  }
+
+  const m = await Market.load(
+    connection,
+    new PublicKey('4DhsFeFJKHU53G2JkPeAx6tLPsStETDyhxbCdoWMM6FS'),
+    undefined,
+    groupIds.serumProgramId,
+  );
+  console.log(
+    m['_decoded'].quoteLotSize.toString(),
+    m['_decoded'].baseLotSize.toString(),
+  );
+  if (m) {
+    return;
   }
   console.log(`Starting liquidator for ${groupName}...`);
   const liquidating = {};

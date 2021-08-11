@@ -757,15 +757,19 @@ PerpEventLayout.addVariant(
     u8('makerSlot'),
     bool('makerOut'),
     seq(u8(), 4),
+    u64('timestamp'),
+    u64('seqNum'),
     publicKeyLayout('maker'),
     i128('makerOrderId'),
     u64('makerClientOrderId'),
+    I80F48Layout('makerFee'),
     i64('bestInitial'),
     u64('timestamp'),
 
     publicKeyLayout('taker'),
     i128('takerOrderId'),
     u64('takerClientOrderId'),
+    I80F48Layout('takerFee'),
 
     i64('price'),
     i64('quantity'),
@@ -778,6 +782,8 @@ PerpEventLayout.addVariant(
     sideLayout('side', 1),
     u8('slot'),
     seq(u8(), 5),
+    u64('timestamp'),
+    u64('seqNum'),
     publicKeyLayout('owner'),
     i64('quantity'),
   ]),
@@ -787,6 +793,8 @@ PerpEventLayout.addVariant(
   2,
   struct([
     seq(u8(), 7),
+    u64('timestamp'),
+    u64('seqNum'),
     publicKeyLayout('liqee'),
     publicKeyLayout('liqor'),
     I80F48Layout('price'),
@@ -800,15 +808,20 @@ export interface FillEvent {
   takerSide: 'buy' | 'sell';
   makerSlot: number;
   makerOut: boolean;
+  timestamp: BN;
+  seqNum: BN;
+
   maker: PublicKey;
   makerOrderId: BN;
   makerClientOrderId: BN;
+  makerFee: I80F48;
   bestInitial: BN;
-  timestamp: BN;
+  makerTimestamp: BN; // this is timestamp of maker order not timestamp of trade
 
   taker: PublicKey;
   takerOrderId: BN;
   takerClientOrderId: BN;
+  takerFee: I80F48;
 
   price: BN;
   quantity: BN;
@@ -817,11 +830,15 @@ export interface FillEvent {
 export interface OutEvent {
   side: 'buy' | 'sell';
   slot: number;
+  timestamp: BN;
+  seqNum: BN;
   owner: PublicKey;
   quantity: BN;
 }
 
 export interface LiquidateEvent {
+  timestamp: BN;
+  seqNum: BN;
   liqee: PublicKey;
   liqor: PublicKey;
   price: I80F48;
