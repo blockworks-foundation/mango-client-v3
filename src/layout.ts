@@ -748,8 +748,12 @@ export const PerpMarketLayout = struct([
   liquidityMiningInfoLayout('liquidityMiningInfo'),
   publicKeyLayout('mngoVault'),
 ]);
-
-export const PerpEventLayout = union(u8('eventType'), blob(199), 'event');
+const EVENT_SIZE = 200;
+export const PerpEventLayout = union(
+  u8('eventType'),
+  blob(EVENT_SIZE - 1),
+  'event',
+);
 PerpEventLayout.addVariant(
   0,
   struct([
@@ -764,7 +768,7 @@ PerpEventLayout.addVariant(
     u64('makerClientOrderId'),
     I80F48Layout('makerFee'),
     i64('bestInitial'),
-    u64('timestamp'),
+    u64('makerTimestamp'),
 
     publicKeyLayout('taker'),
     i128('takerOrderId'),
@@ -786,6 +790,7 @@ PerpEventLayout.addVariant(
     u64('seqNum'),
     publicKeyLayout('owner'),
     i64('quantity'),
+    seq(u8(), EVENT_SIZE - 64, 'padding'),
   ]),
   'out',
 );
@@ -800,6 +805,7 @@ PerpEventLayout.addVariant(
     I80F48Layout('price'),
     i64('quantity'),
     I80F48Layout('liquidationFee'),
+    seq(u8(), EVENT_SIZE - 128, 'padding'),
   ]),
   'liquidate',
 );
@@ -860,8 +866,6 @@ export const PerpEventQueueLayout = struct([
   u64('head'),
   u64('count'),
   u64('seqNum'),
-  I80F48Layout('makerFee'),
-  I80F48Layout('takerFee'),
   seq(PerpEventLayout, greedy(PerpEventLayout.span), 'events'),
 ]);
 
