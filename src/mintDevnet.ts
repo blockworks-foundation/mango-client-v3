@@ -201,8 +201,8 @@ async function mintDevnetTokens() {
       authority,
     );
 
-    if (FIXED_IDS[i].symbol === 'SOL' || FIXED_IDS[i].symbol === 'MNGO') {
-      console.log('not minting tokens for SOL or MNGO');
+    if (FIXED_IDS[i].symbol === 'SOL') {
+      console.log('not minting tokens for SOL');
       continue;
     }
 
