@@ -1,5 +1,12 @@
 import BN from 'bn.js';
-import { PerpMarketCache, PerpMarketInfo, PerpOpenOrders, ZERO_BN } from '.';
+import {
+  FillEvent,
+  LiquidateEvent,
+  PerpMarketCache,
+  PerpMarketInfo,
+  PerpOpenOrders,
+  ZERO_BN,
+} from '.';
 import { I80F48, ZERO_I80F48 } from './fixednum';
 
 export default class PerpAccount {
@@ -13,6 +20,8 @@ export default class PerpAccount {
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
+
+  getAverageEntryPrice(events: (FillEvent | LiquidateEvent)[]) {}
 
   getPnl(perpMarketInfo: PerpMarketInfo, price: I80F48): I80F48 {
     return I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize))

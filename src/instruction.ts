@@ -82,23 +82,6 @@ export function makeInitMangoAccountInstruction(
   });
 }
 
-export function makeTestMultiTxInstruction(
-  programId: PublicKey,
-  mangoGroup: PublicKey,
-  index: BN,
-): TransactionInstruction {
-  const keys = [
-    { isSigner: false, isWritable: true, pubkey: mangoGroup },
-    { isSigner: false, isWritable: false, pubkey: SYSVAR_CLOCK_PUBKEY },
-  ];
-
-  const data = encodeMangoInstruction({
-    TestMultiTx: { index },
-  });
-
-  return new TransactionInstruction({ keys, data, programId });
-}
-
 export function makeWithdrawInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
@@ -862,7 +845,7 @@ export function makeForceCancelSpotOrdersInstruction(
   dexQuotePk: PublicKey,
   dexSignerPk: PublicKey,
   dexProgramPk: PublicKey,
-  liqeeOpenOrdersPks: PublicKey[],
+  liqeeOpenOrdersKeys: { pubkey: PublicKey; isWritable: boolean }[],
   limit: BN,
 ): TransactionInstruction {
   const keys = [
@@ -885,9 +868,9 @@ export function makeForceCancelSpotOrdersInstruction(
     { isSigner: false, isWritable: false, pubkey: dexSignerPk },
     { isSigner: false, isWritable: false, pubkey: dexProgramPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
-    ...liqeeOpenOrdersPks.map((pubkey) => ({
+    ...liqeeOpenOrdersKeys.map(({ pubkey, isWritable }) => ({
       isSigner: false,
-      isWritable: false,
+      isWritable,
       pubkey,
     })),
   ];
@@ -918,7 +901,7 @@ export function makeForceCancelPerpOrdersInstruction(
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
-    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
@@ -1005,7 +988,7 @@ export function makeLiquidateTokenAndPerpInstruction(
   assetIndex: BN,
   liabType: AssetType,
   liabIndex: BN,
-  maxLiabTransfer: BN,
+  maxLiabTransfer: I80F48,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -1048,6 +1031,7 @@ export function makeLiquidatePerpMarketInstruction(
   mangoGroupPk: PublicKey,
   mangoCachePk: PublicKey,
   perpMarketPk: PublicKey,
+  eventQueuePk: PublicKey,
   liqeeMangoAccountPk: PublicKey,
   liqorMangoAccountPk: PublicKey,
   liqorAccountPk: PublicKey,
@@ -1059,6 +1043,7 @@ export function makeLiquidatePerpMarketInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
     { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
     { isSigner: false, isWritable: true, pubkey: liqorMangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: liqorAccountPk },
@@ -1151,7 +1136,7 @@ export function makeResolvePerpBankruptcyInstruction(
     { isSigner: false, isWritable: true, pubkey: vaultPk },
     { isSigner: false, isWritable: true, pubkey: daoVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
-    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
     ...liqorOpenOrdersPks.map((pubkey) => ({
       isSigner: false,
@@ -1197,7 +1182,7 @@ export function makeResolveTokenBankruptcyInstruction(
     { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
     { isSigner: false, isWritable: true, pubkey: liqorMangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: liqorPk },
-    { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteRootBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
     { isSigner: false, isWritable: true, pubkey: daoVaultPk },
@@ -1212,7 +1197,7 @@ export function makeResolveTokenBankruptcyInstruction(
     })),
     ...liabNodeBankPks.map((pubkey) => ({
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
       pubkey,
     })),
   ];

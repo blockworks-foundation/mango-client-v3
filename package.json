@@ -31,6 +31,8 @@
     "crank": "ts-node src/crank.ts",
     "scratch": "ts-node src/scratch.ts",
     "test-compute": "ts-node test/compute.test.ts",
+    "test-liquidator": "ts-node test/liquidator.test.ts",
+    "test-accounts": "ts-node test/accounts.test.ts",
     "mint-devnet": "ts-node src/mintDevnet.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
     "test:build": "run-s build",
@@ -65,10 +67,10 @@
     "trailingComma": "all"
   },
   "dependencies": {
-    "@project-serum/serum": "^0.13.45",
+    "@project-serum/serum": "0.13.55",
     "@project-serum/sol-wallet-adapter": "^0.2.0",
     "@solana/spl-token": "^0.1.6",
-    "@solana/web3.js": "^1.18.0",
+    "@solana/web3.js": "1.21.0",
     "big.js": "^6.1.1",
     "bigint-buffer": "^1.1.5",
     "bn.js": "^5.1.2",

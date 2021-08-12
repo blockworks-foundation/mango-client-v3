@@ -326,7 +326,6 @@ export async function getMultipleAccounts(
   if (resp.error) {
     throw new Error(resp.error.message);
   }
-
   return resp.result.value.map(
     ({ data, executable, lamports, owner }, i: number) => ({
       publicKey: publicKeys[i],
