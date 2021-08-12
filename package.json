@@ -22,7 +22,7 @@
     "launch-realistic-group": "ts-node test/initRealisticDevnetGroup.ts",
     "start": "ts-node src/test.ts",
     "clean": "rm -rf lib",
-    "prepare": "run-s clean build",
+    "prepare": "yarn clean && yarn build",
     "type-check": "tsc --pretty --noEmit",
     "format": "prettier --check .",
     "lint": "eslint . --ext ts --ext tsx --ext js --quiet",
@@ -35,7 +35,7 @@
     "test-accounts": "ts-node test/accounts.test.ts",
     "mint-devnet": "ts-node src/mintDevnet.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
-    "test:build": "run-s build",
+    "test:build": "yarn build && yarn",
     "test:lint": "eslint src",
     "heroku-postbuild": "npm run build"
   },

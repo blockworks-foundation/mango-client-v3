@@ -1,10 +1,10 @@
 /**
  * How to use:
- * 1.) Update the mango group name on line 6
+ * 1.) Update the mango group name on line 7
  * 2.) Run yarn launch-realistic-group
  * 3.) Update the mango group name in keeper.ts crank.ts and in the UI in useMangoStore.ts
  */
-const newGroupName = 'devnet.0';
+const newGroupName = 'devnet.1';
 const mangoProgramId = '5fP7Z7a87ZEVsKr2tQPApdtq83GcTW4kz919R6ou5h5E';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
 
@@ -87,7 +87,7 @@ const FIXED_IDS: any[] = [
     quoteLot: 100,
     mint: 'DAwBSXe6w9g37wdE2tCrFbho3QHKZi4PjuBytQCULap2',
   },
-]
+];
 
 const initNewGroup = async () => {
   // const connection: Connection = Test.createDevnetConnection();
@@ -125,7 +125,6 @@ const initNewGroup = async () => {
         `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol} --provider pyth`,
       );
     }
-
 
     console.log(`listing and adding ${FIXED_IDS[i].symbol} spot market`);
     await execCommand(

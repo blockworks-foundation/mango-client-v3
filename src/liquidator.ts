@@ -24,7 +24,7 @@ const refreshAccountsInterval = parseInt(process.env.INTERVAL || '30000');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-const groupName = process.env.GROUP || 'devnet.0';
+const groupName = process.env.GROUP || 'devnet.1';
 const groupIds = config.getGroup(cluster, groupName);
 if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);

@@ -26,7 +26,7 @@ import { PerpEventQueueLayout } from './layout';
 import { MangoGroup, PerpMarket } from '.';
 import PerpEventQueue from './PerpEventQueue';
 
-const groupName = process.env.GROUP || 'devnet.0';
+const groupName = process.env.GROUP || 'devnet.1';
 const updateCacheInterval = parseInt(
   process.env.UPDATE_CACHE_INTERVAL || '1000',
 );

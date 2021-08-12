@@ -749,7 +749,7 @@ export const PerpMarketLayout = struct([
   publicKeyLayout('mngoVault'),
 ]);
 
-export const PerpEventLayout = union(u8('eventType'), blob(151), 'event');
+export const PerpEventLayout = union(u8('eventType'), blob(199), 'event');
 PerpEventLayout.addVariant(
   0,
   struct([
