@@ -34,7 +34,7 @@ const processKeeperInterval = parseInt(
   process.env.PROCESS_KEEPER_INTERVAL || '15000',
 );
 const consumeEventsInterval = parseInt(
-  process.env.CONSUME_EVENTS_INTERVAL || '4000',
+  process.env.CONSUME_EVENTS_INTERVAL || '3000',
 );
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '20');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
@@ -174,7 +174,7 @@ async function processConsumeEvents(
       const events = eventQueue.getUnconsumedEvents();
       if (events.length === 0) {
         // console.log('No events to consume');
-        return;
+        continue;
       }
 
       const accounts: Set<string> = new Set();
