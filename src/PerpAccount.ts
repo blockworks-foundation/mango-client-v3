@@ -38,7 +38,6 @@ export default class PerpAccount {
     if (this.basePosition.isZero()) {
       return 0;
     }
-    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
     const basePos = perpMarket.baseLotsToNumber(this.basePosition);
     const userPk = mangoAccount.publicKey.toString();
 
@@ -49,8 +48,8 @@ export default class PerpAccount {
       let price, baseChange;
       if ('liqor' in event) {
         const le = event;
-        price = mangoGroup.cachePriceToUi(le.price, marketIndex);
-        let quantity = perpMarket.baseLotsToNumber(le.quantity);
+        price = le.price;
+        let quantity = le.quantity;
 
         if (userPk == le.liqee) {
           quantity = -quantity;
@@ -69,8 +68,8 @@ export default class PerpAccount {
       } else {
         const fe = event;
         // TODO - verify this gives proper UI number
-        price = perpMarket.priceLotsToNumber(fe.price);
-        let quantity = perpMarket.baseLotsToNumber(fe.quantity);
+        price = fe.price;
+        let quantity = fe.quantity;
 
         if (
           (userPk == fe.taker && fe.takerSide === 'sell') ||
