@@ -30,7 +30,6 @@ export default class PerpAccount {
    * Events are sorted latest event first
    */
   getAverageOpenPrice(
-    mangoGroup: MangoGroup,
     mangoAccount: MangoAccount, // circular import?
     perpMarket: PerpMarket,
     events: any[], // TODO - replace with actual Event types coming from DB
@@ -106,17 +105,15 @@ export default class PerpAccount {
    * Get price at which you break even. Includes fees.
    */
   getBreakEvenPrice(
-    mangoGroup: MangoGroup,
     mangoAccount: MangoAccount, // circular import?
     perpMarket: PerpMarket,
-    events: (FillEvent | LiquidateEvent)[], // TODO - replace with actual Event types coming from DB
+    events: any[], // TODO - replace with actual Event types coming from DB
   ) {
     if (this.basePosition.isZero()) {
       return 0;
     }
-    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
     const basePos = perpMarket.baseLotsToNumber(this.basePosition);
-    const userPk = mangoAccount.publicKey;
+    const userPk = mangoAccount.publicKey.toString();
 
     let currBase = basePos;
     let totalQuoteChange = 0;
@@ -125,11 +122,11 @@ export default class PerpAccount {
       let price, baseChange;
       if ('liqor' in event) {
         // TODO - build cleaner way to distinguish events
-        const le: LiquidateEvent = event;
-        price = mangoGroup.cachePriceToUi(le.price, marketIndex);
-        let quantity = perpMarket.baseLotsToNumber(le.quantity);
+        const le = event;
+        price = le.price;
+        let quantity = le.quantity;
 
-        if (userPk.equals(le.liqee)) {
+        if (userPk == le.liqee) {
           quantity = -quantity;
         }
 
@@ -144,14 +141,14 @@ export default class PerpAccount {
           baseChange = quantity;
         }
       } else {
-        const fe: FillEvent = event;
+        const fe = event;
         // TODO - verify this gives proper UI number
-        price = perpMarket.priceLotsToNumber(fe.price);
-        let quantity = perpMarket.baseLotsToNumber(fe.quantity);
+        price = fe.price;
+        let quantity = fe.quantity;
 
         if (
-          (userPk.equals(fe.taker) && fe.takerSide === 'sell') ||
-          (userPk.equals(fe.maker) && fe.takerSide === 'buy')
+          (userPk == fe.taker && fe.takerSide === 'sell') ||
+          (userPk == fe.maker && fe.takerSide === 'buy')
         ) {
           quantity = -quantity;
         }
