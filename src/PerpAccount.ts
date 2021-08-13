@@ -165,7 +165,10 @@ export default class PerpAccount {
       }
 
       totalQuoteChange -= baseChange * price;
+      console.log('baseChange', baseChange);
+
       currBase -= baseChange;
+      console.log('currBase', currBase);
 
       if (currBase === 0) {
         return -totalQuoteChange / basePos;
@@ -174,7 +177,7 @@ export default class PerpAccount {
 
     // If we haven't returned yet, there was an error or missing data
     // TODO - consider failing silently
-    console.log('currBase', currBase);
+    console.log('final currBase', currBase);
 
     throw new Error('Trade history incomplete');
   }
