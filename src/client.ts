@@ -33,7 +33,6 @@ import {
   NodeBankLayout,
   PerpEventLayout,
   PerpEventQueueHeaderLayout,
-  PerpEventQueueLayout,
   PerpMarketLayout,
   QUOTE_INDEX,
   RootBankLayout,
@@ -516,6 +515,100 @@ export class MangoClient {
     );
     await mangoAccount.loadOpenOrders(this.connection, dexProgramId);
     return mangoAccount;
+  }
+
+  async initMangoAccountAndDeposit(
+    mangoGroup: MangoGroup,
+    owner: Account | WalletAdapter,
+    rootBank: PublicKey,
+    nodeBank: PublicKey,
+    vault: PublicKey,
+    tokenAcc: PublicKey,
+
+    quantity: number,
+  ) {
+    const transaction = new Transaction();
+    const accountInstruction = await createAccountInstruction(
+      this.connection,
+      owner.publicKey,
+      MangoAccountLayout.span,
+      this.programId,
+    );
+
+    const initMangoAccountInstruction = makeInitMangoAccountInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      accountInstruction.account.publicKey,
+      owner.publicKey,
+    );
+
+    transaction.add(accountInstruction.instruction);
+    transaction.add(initMangoAccountInstruction);
+
+    const additionalSigners = [accountInstruction.account];
+
+    const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
+    const tokenMint = mangoGroup.tokens[tokenIndex].mint;
+
+    let wrappedSolAccount: Account | null = null;
+    if (
+      tokenMint.equals(WRAPPED_SOL_MINT) &&
+      tokenAcc.toBase58() === owner.publicKey.toBase58()
+    ) {
+      wrappedSolAccount = new Account();
+      const lamports = Math.round(quantity * LAMPORTS_PER_SOL) + 1e7;
+      transaction.add(
+        SystemProgram.createAccount({
+          fromPubkey: owner.publicKey,
+          newAccountPubkey: wrappedSolAccount.publicKey,
+          lamports,
+          space: 165,
+          programId: TOKEN_PROGRAM_ID,
+        }),
+      );
+
+      transaction.add(
+        initializeAccount({
+          account: wrappedSolAccount.publicKey,
+          mint: WRAPPED_SOL_MINT,
+          owner: owner.publicKey,
+        }),
+      );
+
+      additionalSigners.push(wrappedSolAccount);
+    }
+
+    const nativeQuantity = uiToNative(
+      quantity,
+      mangoGroup.tokens[tokenIndex].decimals,
+    );
+
+    const instruction = makeDepositInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      owner.publicKey,
+      mangoGroup.mangoCache,
+      accountInstruction.account.publicKey,
+      rootBank,
+      nodeBank,
+      vault,
+      wrappedSolAccount?.publicKey ?? tokenAcc,
+      nativeQuantity,
+    );
+
+    transaction.add(instruction);
+
+    if (wrappedSolAccount) {
+      transaction.add(
+        closeAccount({
+          source: wrappedSolAccount.publicKey,
+          destination: owner.publicKey,
+          owner: owner.publicKey,
+        }),
+      );
+    }
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
   async deposit(
