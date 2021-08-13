@@ -165,10 +165,12 @@ export default class PerpAccount {
       }
 
       totalQuoteChange -= baseChange * price;
-      console.log('baseChange', baseChange);
+      console.log('baseChange', baseChange, price, baseChange * price);
 
-      currBase -= baseChange;
       console.log('currBase', currBase);
+      currBase -= baseChange;
+      console.log('currBase - baseChange', currBase);
+      console.log('---');
 
       if (currBase === 0) {
         return -totalQuoteChange / basePos;
