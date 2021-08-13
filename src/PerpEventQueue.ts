@@ -14,7 +14,11 @@ export default class PerpEventQueue {
     Object.assign(this, decoded);
   }
 
-  getUnconsumedEvents(): { fill?: FillEvent; out?: OutEvent }[] {
+  getUnconsumedEvents(): {
+    fill?: FillEvent;
+    out?: OutEvent;
+    liquidate?: LiquidateEvent;
+  }[] {
     const events: { fill?: FillEvent; out?: OutEvent }[] = [];
     const head = this.head.toNumber();
     for (let i = 0; i < this.count.toNumber(); i++) {
