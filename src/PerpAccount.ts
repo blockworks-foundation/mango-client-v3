@@ -174,6 +174,8 @@ export default class PerpAccount {
 
     // If we haven't returned yet, there was an error or missing data
     // TODO - consider failing silently
+    console.log('currBase', currBase);
+
     throw new Error('Trade history incomplete');
   }
   getPnl(perpMarketInfo: PerpMarketInfo, price: I80F48): I80F48 {
