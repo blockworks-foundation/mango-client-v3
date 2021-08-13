@@ -33,14 +33,14 @@ export default class PerpAccount {
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount, // circular import?
     perpMarket: PerpMarket,
-    events: (FillEvent | LiquidateEvent)[], // TODO - replace with actual Event types coming from DB
+    events: any[], // TODO - replace with actual Event types coming from DB
   ): number {
     if (this.basePosition.isZero()) {
       return 0;
     }
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
     const basePos = perpMarket.baseLotsToNumber(this.basePosition);
-    const userPk = mangoAccount.publicKey;
+    const userPk = mangoAccount.publicKey.toString();
 
     let currBase = basePos;
     let openingQuote = 0;
@@ -48,11 +48,11 @@ export default class PerpAccount {
     for (const event of events) {
       let price, baseChange;
       if ('liqor' in event) {
-        const le: LiquidateEvent = event;
+        const le = event;
         price = mangoGroup.cachePriceToUi(le.price, marketIndex);
         let quantity = perpMarket.baseLotsToNumber(le.quantity);
 
-        if (userPk.equals(le.liqee)) {
+        if (userPk == le.liqee) {
           quantity = -quantity;
         }
 
@@ -67,14 +67,14 @@ export default class PerpAccount {
           continue;
         }
       } else {
-        const fe: FillEvent = event;
+        const fe = event;
         // TODO - verify this gives proper UI number
         price = perpMarket.priceLotsToNumber(fe.price);
         let quantity = perpMarket.baseLotsToNumber(fe.quantity);
 
         if (
-          (userPk.equals(fe.taker) && fe.takerSide === 'sell') ||
-          (userPk.equals(fe.maker) && fe.takerSide === 'buy')
+          (userPk == fe.taker && fe.takerSide === 'sell') ||
+          (userPk == fe.maker && fe.takerSide === 'buy')
         ) {
           quantity = -quantity;
         }
