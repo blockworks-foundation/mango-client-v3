@@ -8,6 +8,9 @@ import {
   ZERO_BN,
 } from '.';
 import { I80F48, ZERO_I80F48 } from './fixednum';
+import PerpMarket from './PerpMarket';
+import MangoAccount from './MangoAccount';
+import MangoGroup from './MangoGroup';
 
 export default class PerpAccount {
   basePosition!: BN;
@@ -21,8 +24,162 @@ export default class PerpAccount {
     Object.assign(this, decoded);
   }
 
-  getAverageEntryPrice(events: (FillEvent | LiquidateEvent)[]) {}
+  /**
+   * Get average entry price of current position. Returned value is UI number.
+   * Does not include fees.
+   * Events are sorted latest event first
+   */
+  getAverageOpenPrice(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount, // circular import?
+    perpMarket: PerpMarket,
+    events: (FillEvent | LiquidateEvent)[], // TODO - replace with actual Event types coming from DB
+  ): number {
+    if (this.basePosition.isZero()) {
+      return 0;
+    }
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+    const basePos = perpMarket.baseLotsToNumber(this.basePosition);
+    const userPk = mangoAccount.publicKey;
 
+    let currBase = basePos;
+    let openingQuote = 0;
+
+    for (const event of events) {
+      let price, baseChange;
+      if ('liqor' in event) {
+        const le: LiquidateEvent = event;
+        price = mangoGroup.cachePriceToUi(le.price, marketIndex);
+        let quantity = perpMarket.baseLotsToNumber(le.quantity);
+
+        if (userPk.equals(le.liqee)) {
+          quantity = -quantity;
+        }
+
+        if (currBase > 0 && quantity > 0) {
+          // liquidation that opens
+          baseChange = Math.min(currBase, quantity);
+        } else if (currBase < 0 && quantity < 0) {
+          // liquidation that opens
+          baseChange = Math.max(currBase, quantity);
+        } else {
+          // liquidation that closes
+          continue;
+        }
+      } else {
+        const fe: FillEvent = event;
+        // TODO - verify this gives proper UI number
+        price = perpMarket.priceLotsToNumber(fe.price);
+        let quantity = perpMarket.baseLotsToNumber(fe.quantity);
+
+        if (
+          (userPk.equals(fe.taker) && fe.takerSide === 'sell') ||
+          (userPk.equals(fe.maker) && fe.takerSide === 'buy')
+        ) {
+          quantity = -quantity;
+        }
+
+        if (currBase > 0 && quantity > 0) {
+          // Means we are opening long
+          baseChange = Math.min(currBase, quantity);
+        } else if (currBase < 0 && quantity < 0) {
+          // means we are opening short
+          baseChange = Math.max(currBase, quantity);
+        } else {
+          // ignore closing trades
+          continue;
+        }
+      }
+
+      openingQuote -= baseChange * price;
+      currBase -= baseChange;
+      if (currBase === 0) {
+        return Math.abs(openingQuote) / basePos;
+      }
+    }
+
+    // If we haven't returned yet, there was an error or missing data
+    // TODO - consider failing silently
+    throw new Error('Trade history incomplete');
+  }
+
+  /**
+   * Get price at which you break even. Includes fees.
+   */
+  getBreakEvenPrice(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount, // circular import?
+    perpMarket: PerpMarket,
+    events: (FillEvent | LiquidateEvent)[], // TODO - replace with actual Event types coming from DB
+  ) {
+    if (this.basePosition.isZero()) {
+      return 0;
+    }
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+    const basePos = perpMarket.baseLotsToNumber(this.basePosition);
+    const userPk = mangoAccount.publicKey;
+
+    let currBase = basePos;
+    let totalQuoteChange = 0;
+
+    for (const event of events) {
+      let price, baseChange;
+      if ('liqor' in event) {
+        // TODO - build cleaner way to distinguish events
+        const le: LiquidateEvent = event;
+        price = mangoGroup.cachePriceToUi(le.price, marketIndex);
+        let quantity = perpMarket.baseLotsToNumber(le.quantity);
+
+        if (userPk.equals(le.liqee)) {
+          quantity = -quantity;
+        }
+
+        if (currBase > 0 && quantity > 0) {
+          // liquidation that opens
+          baseChange = Math.min(currBase, quantity);
+        } else if (currBase < 0 && quantity < 0) {
+          // liquidation that opens
+          baseChange = Math.max(currBase, quantity);
+        } else {
+          // liquidation that closes
+          baseChange = quantity;
+        }
+      } else {
+        const fe: FillEvent = event;
+        // TODO - verify this gives proper UI number
+        price = perpMarket.priceLotsToNumber(fe.price);
+        let quantity = perpMarket.baseLotsToNumber(fe.quantity);
+
+        if (
+          (userPk.equals(fe.taker) && fe.takerSide === 'sell') ||
+          (userPk.equals(fe.maker) && fe.takerSide === 'buy')
+        ) {
+          quantity = -quantity;
+        }
+
+        if (currBase > 0 && quantity > 0) {
+          // Means we are opening long
+          baseChange = Math.min(currBase, quantity);
+        } else if (currBase < 0 && quantity < 0) {
+          // means we are opening short
+          baseChange = Math.max(currBase, quantity);
+        } else {
+          baseChange = quantity;
+        }
+      }
+
+      totalQuoteChange -= baseChange * price;
+      currBase -= baseChange;
+
+      if (currBase === 0) {
+        return -totalQuoteChange / basePos;
+      }
+    }
+
+    // If we haven't returned yet, there was an error or missing data
+    // TODO - consider failing silently
+    throw new Error('Trade history incomplete');
+  }
   getPnl(perpMarketInfo: PerpMarketInfo, price: I80F48): I80F48 {
     return I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize))
       .mul(price)

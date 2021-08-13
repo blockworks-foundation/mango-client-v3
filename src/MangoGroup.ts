@@ -1,4 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
+import { Big } from 'big.js';
 import BN from 'bn.js';
 import { I80F48, ONE_I80F48 } from './fixednum';
 import {
@@ -106,12 +107,22 @@ export default class MangoGroup {
     return rootBank.getDepositRate(this);
   }
 
+  cachePriceToUi(price: I80F48, tokenIndex: number): number {
+    const decimalAdj = new Big(10).pow(
+      this.tokens[tokenIndex].decimals - this.tokens[QUOTE_INDEX].decimals,
+    );
+    return price.toBig().mul(decimalAdj).toNumber();
+  }
+
   getPrice(tokenIndex: number, mangoCache: MangoCache): I80F48 {
     if (tokenIndex === QUOTE_INDEX) return ONE_I80F48;
+    const decimalAdj = new Big(10).pow(
+      this.tokens[tokenIndex].decimals - this.tokens[QUOTE_INDEX].decimals,
+    );
 
-    return mangoCache.priceCache[tokenIndex]?.price
-      .mul(I80F48.fromNumber(Math.pow(10, this.tokens[tokenIndex].decimals)))
-      .div(I80F48.fromNumber(Math.pow(10, this.tokens[QUOTE_INDEX].decimals)));
+    return I80F48.fromBig(
+      mangoCache.priceCache[tokenIndex]?.price.toBig().mul(decimalAdj),
+    );
   }
 
   getUiTotalDeposit(tokenIndex: number): I80F48 {
