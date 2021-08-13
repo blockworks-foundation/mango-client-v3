@@ -291,7 +291,7 @@ export default class MangoAccount {
     spot: I80F48[],
     perps: I80F48[],
     quote: I80F48,
-    healthType: HealthType,
+    healthType?: HealthType,
   ): { assets: I80F48; liabs: I80F48 } {
     let assets = ZERO_I80F48;
     let liabs = ZERO_I80F48;
