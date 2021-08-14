@@ -10,7 +10,6 @@ import {
 import { I80F48, ZERO_I80F48 } from './fixednum';
 import PerpMarket from './PerpMarket';
 import MangoAccount from './MangoAccount';
-import MangoGroup from './MangoGroup';
 import Big from 'big.js';
 
 const ZERO = new Big(0);
@@ -36,33 +35,33 @@ export default class PerpAccount {
     mangoAccount: MangoAccount, // circular import?
     perpMarket: PerpMarket,
     events: any[], // TODO - replace with actual Event types coming from DB
-  ): number {
+  ): Big {
     if (this.basePosition.isZero()) {
-      return 0;
+      return ZERO;
     }
     const basePos = perpMarket.baseLotsToNumber(this.basePosition);
     const userPk = mangoAccount.publicKey.toString();
 
-    let currBase = basePos;
-    let openingQuote = 0;
+    let currBase = new Big(basePos);
+    let openingQuote = ZERO;
 
     for (const event of events) {
       let price, baseChange;
       if ('liqor' in event) {
         const le = event;
-        price = le.price;
-        let quantity = le.quantity;
+        price = new Big(le.price);
+        let quantity = new Big(le.quantity);
 
         if (userPk == le.liqee) {
-          quantity = -quantity;
+          quantity = quantity.mul(new Big(-1));
         }
 
-        if (currBase > 0 && quantity > 0) {
+        if (currBase.gt(ZERO) && quantity.gt(ZERO)) {
           // liquidation that opens
-          baseChange = Math.min(currBase, quantity);
-        } else if (currBase < 0 && quantity < 0) {
+          baseChange = quantity.lt(currBase) ? quantity : currBase; // get min value
+        } else if (currBase.lt(ZERO) && quantity.lt(ZERO)) {
           // liquidation that opens
-          baseChange = Math.max(currBase, quantity);
+          baseChange = currBase.gt(quantity) ? currBase : quantity; // get max value
         } else {
           // liquidation that closes
           continue;
@@ -70,7 +69,7 @@ export default class PerpAccount {
       } else {
         const fe = event;
         // TODO - verify this gives proper UI number
-        price = fe.price;
+        price = new Big(fe.price);
         let quantity = fe.quantity;
 
         if (
@@ -80,22 +79,22 @@ export default class PerpAccount {
           quantity = -quantity;
         }
 
-        if (currBase > 0 && quantity > 0) {
+        if (currBase.gt(ZERO) && quantity.gt(ZERO)) {
           // Means we are opening long
-          baseChange = Math.min(currBase, quantity);
-        } else if (currBase < 0 && quantity < 0) {
+          baseChange = quantity.lt(currBase) ? quantity : currBase; // get min value
+        } else if (currBase.lt(ZERO) && quantity.lt(ZERO)) {
           // means we are opening short
-          baseChange = Math.max(currBase, quantity);
+          baseChange = currBase.gt(quantity) ? currBase : quantity; // get max value
         } else {
           // ignore closing trades
           continue;
         }
       }
 
-      openingQuote -= baseChange * price;
-      currBase -= baseChange;
-      if (currBase === 0) {
-        return Math.abs(openingQuote) / basePos;
+      openingQuote = openingQuote.sub(baseChange.mul(price));
+      currBase = currBase.sub(baseChange);
+      if (currBase.eq(ZERO)) {
+        return openingQuote.abs().div(basePos);
       }
     }
 
@@ -111,15 +110,15 @@ export default class PerpAccount {
     mangoAccount: MangoAccount, // circular import?
     perpMarket: PerpMarket,
     events: any[], // TODO - replace with actual Event types coming from DB
-  ) {
+  ): Big {
     if (this.basePosition.isZero()) {
-      return 0;
+      return ZERO;
     }
     const basePos = perpMarket.baseLotsToNumber(this.basePosition);
     const userPk = mangoAccount.publicKey.toString();
 
     let currBase = new Big(basePos);
-    let totalQuoteChange = new Big(0);
+    let totalQuoteChange = ZERO;
 
     for (const event of events) {
       let price, baseChange;
@@ -130,7 +129,7 @@ export default class PerpAccount {
         let quantity = new Big(le.quantity);
 
         if (userPk == le.liqee) {
-          quantity = quantity.sub(quantity);
+          quantity = quantity.mul(new Big(-1));
         }
 
         if (currBase.gt(ZERO) && quantity.gt(ZERO)) {
@@ -153,7 +152,7 @@ export default class PerpAccount {
           (userPk == fe.taker && fe.takerSide === 'sell') ||
           (userPk == fe.maker && fe.takerSide === 'buy')
         ) {
-          quantity = quantity.sub(quantity);
+          quantity = quantity.mul(new Big(-1));
         }
 
         if (currBase.gt(ZERO) && quantity.gt(ZERO)) {
@@ -168,12 +167,7 @@ export default class PerpAccount {
       }
 
       totalQuoteChange = totalQuoteChange.sub(baseChange.mul(price));
-      console.log('baseChange', baseChange, price, baseChange * price);
-
-      console.log('currBase', currBase);
       currBase = currBase.sub(baseChange);
-      console.log('currBase - baseChange', currBase);
-      console.log('---');
 
       if (currBase.eq(ZERO)) {
         return totalQuoteChange.mul(new Big(-1)).div(basePos);
@@ -182,8 +176,6 @@ export default class PerpAccount {
 
     // If we haven't returned yet, there was an error or missing data
     // TODO - consider failing silently
-    console.log('final currBase', currBase);
-
     throw new Error('Trade history incomplete');
   }
   getPnl(perpMarketInfo: PerpMarketInfo, price: I80F48): I80F48 {
