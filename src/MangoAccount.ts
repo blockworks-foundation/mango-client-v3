@@ -580,7 +580,9 @@ export default class MangoAccount {
   }
 
   computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
-    return ZERO_I80F48;
+    return this.getAssetsVal(mangoGroup, mangoCache).sub(
+      this.getLiabsVal(mangoGroup, mangoCache),
+    );
   }
 }
 
