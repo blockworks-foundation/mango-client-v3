@@ -13,6 +13,7 @@ import MangoAccount from './MangoAccount';
 import Big from 'big.js';
 
 const ZERO = new Big(0);
+const NEG_ONE = new Big(-1);
 
 export default class PerpAccount {
   basePosition!: BN;
@@ -53,7 +54,7 @@ export default class PerpAccount {
         let quantity = new Big(le.quantity);
 
         if (userPk == le.liqee) {
-          quantity = quantity.mul(new Big(-1));
+          quantity = quantity.mul(NEG_ONE);
         }
 
         if (currBase.gt(ZERO) && quantity.gt(ZERO)) {
@@ -70,13 +71,13 @@ export default class PerpAccount {
         const fe = event;
         // TODO - verify this gives proper UI number
         price = new Big(fe.price);
-        let quantity = fe.quantity;
+        let quantity = new Big(fe.quantity);
 
         if (
           (userPk == fe.taker && fe.takerSide === 'sell') ||
           (userPk == fe.maker && fe.takerSide === 'buy')
         ) {
-          quantity = -quantity;
+          quantity = quantity.mul(NEG_ONE);
         }
 
         if (currBase.gt(ZERO) && quantity.gt(ZERO)) {
@@ -129,7 +130,7 @@ export default class PerpAccount {
         let quantity = new Big(le.quantity);
 
         if (userPk == le.liqee) {
-          quantity = quantity.mul(new Big(-1));
+          quantity = quantity.mul(NEG_ONE);
         }
 
         if (currBase.gt(ZERO) && quantity.gt(ZERO)) {
@@ -152,7 +153,7 @@ export default class PerpAccount {
           (userPk == fe.taker && fe.takerSide === 'sell') ||
           (userPk == fe.maker && fe.takerSide === 'buy')
         ) {
-          quantity = quantity.mul(new Big(-1));
+          quantity = quantity.mul(NEG_ONE);
         }
 
         if (currBase.gt(ZERO) && quantity.gt(ZERO)) {
@@ -170,7 +171,7 @@ export default class PerpAccount {
       currBase = currBase.sub(baseChange);
 
       if (currBase.eq(ZERO)) {
-        return totalQuoteChange.mul(new Big(-1)).div(basePos);
+        return totalQuoteChange.mul(NEG_ONE).div(basePos);
       }
     }
 
