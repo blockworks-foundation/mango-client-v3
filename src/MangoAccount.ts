@@ -584,6 +584,16 @@ export default class MangoAccount {
       this.getLiabsVal(mangoGroup, mangoCache),
     );
   }
+
+  getLeverage(mangoGroup, mangoCache): I80F48 {
+    const liabs = this.getLiabsVal(mangoGroup, mangoCache);
+    const assets = this.getAssetsVal(mangoGroup, mangoCache);
+
+    if (assets.gt(ZERO_I80F48)) {
+      return liabs.div(assets.sub(liabs));
+    }
+    return ZERO_I80F48;
+  }
 }
 
 export type HealthType = 'Init' | 'Maint';
