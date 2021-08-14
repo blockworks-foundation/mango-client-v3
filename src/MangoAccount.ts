@@ -163,7 +163,6 @@ export default class MangoAccount {
     healthType?: HealthType,
   ): I80F48 {
     let assetsVal = ZERO_I80F48;
-
     // quote currency deposits
     assetsVal = assetsVal.add(
       this.getUiDeposit(
@@ -184,7 +183,18 @@ export default class MangoAccount {
       const spotVal = this.getSpotVal(mangoGroup, mangoCache, i, assetWeight);
       assetsVal = assetsVal.add(spotVal);
 
-      // TODO get perp value
+      const price = mangoGroup.getPrice(i, mangoCache);
+      const perpsUiAssetVal = nativeI80F48ToUi(
+        this.perpAccounts[i].getAssetVal(
+          mangoGroup.perpMarkets[i],
+          price,
+          mangoCache.perpMarketCache[i].shortFunding,
+          mangoCache.perpMarketCache[i].longFunding,
+        ),
+        mangoGroup.tokens[QUOTE_INDEX].decimals,
+      );
+
+      assetsVal = assetsVal.add(perpsUiAssetVal);
     }
 
     return assetsVal;
@@ -227,7 +237,7 @@ export default class MangoAccount {
           mangoCache.perpMarketCache[i].shortFunding,
           mangoCache.perpMarketCache[i].longFunding,
         ),
-        mangoGroup.tokens[i].decimals,
+        mangoGroup.tokens[QUOTE_INDEX].decimals,
       );
 
       liabsVal = liabsVal.add(perpsUiLiabsVal);
@@ -570,56 +580,7 @@ export default class MangoAccount {
   }
 
   computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
-    let value = ZERO_I80F48;
-
-    value = value.add(
-      this.getUiDeposit(
-        mangoCache.rootBankCache[QUOTE_INDEX],
-        mangoGroup,
-        QUOTE_INDEX,
-      ).sub(
-        this.getUiBorrow(
-          mangoCache.rootBankCache[QUOTE_INDEX],
-          mangoGroup,
-          QUOTE_INDEX,
-        ),
-      ),
-    );
-
-    for (let i = 0; i < mangoGroup.numOracles; i++) {
-      value = value.add(
-        this.getUiDeposit(mangoCache.rootBankCache[i], mangoGroup, i)
-          .sub(this.getUiBorrow(mangoCache.rootBankCache[i], mangoGroup, i))
-          .mul(mangoGroup.getPrice(i, mangoCache)),
-      );
-    }
-
-    // TODO add perp vals
-
-    for (let i = 0; i < this.spotOpenOrdersAccounts.length; i++) {
-      const oos = this.spotOpenOrdersAccounts[i];
-      if (oos != undefined) {
-        value = value.add(
-          I80F48.fromNumber(
-            nativeToUi(
-              oos.baseTokenTotal.toNumber(),
-              mangoGroup.tokens[i].decimals,
-            ),
-          ).mul(mangoGroup.getPrice(i, mangoCache)),
-        );
-        value = value.add(
-          I80F48.fromNumber(
-            nativeToUi(
-              oos.quoteTokenTotal.toNumber() +
-                oos['referrerRebatesAccrued'].toNumber(),
-              mangoGroup.tokens[QUOTE_INDEX].decimals,
-            ),
-          ),
-        );
-      }
-    }
-
-    return value;
+    return ZERO_I80F48;
   }
 }
 

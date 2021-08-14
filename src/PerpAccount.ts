@@ -1,12 +1,5 @@
 import BN from 'bn.js';
-import {
-  FillEvent,
-  LiquidateEvent,
-  PerpMarketCache,
-  PerpMarketInfo,
-  PerpOpenOrders,
-  ZERO_BN,
-} from '.';
+import { PerpMarketCache, PerpMarketInfo, PerpOpenOrders, ZERO_BN } from '.';
 import { I80F48, ZERO_I80F48 } from './fixednum';
 import PerpMarket from './PerpMarket';
 import MangoAccount from './MangoAccount';
@@ -307,5 +300,42 @@ export default class PerpAccount {
       liabsVal = liabsVal.add(realQuotePosition);
     }
     return liabsVal.neg();
+  }
+
+  getAssetVal(
+    perpMarketInfo: PerpMarketInfo,
+    price: I80F48,
+    shortFunding: I80F48,
+    longFunding: I80F48,
+  ) {
+    let assetsVal = ZERO_I80F48;
+
+    if (this.basePosition.gt(ZERO_BN)) {
+      assetsVal = assetsVal.add(
+        I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize)).mul(
+          price,
+        ),
+      );
+    }
+
+    let realQuotePosition = this.quotePosition;
+    if (this.basePosition.gt(ZERO_BN)) {
+      realQuotePosition = this.quotePosition.sub(
+        longFunding
+          .sub(this.longSettledFunding)
+          .mul(I80F48.fromI64(this.basePosition)),
+      );
+    } else if (this.basePosition.lt(ZERO_BN)) {
+      realQuotePosition = this.quotePosition.sub(
+        shortFunding
+          .sub(this.shortSettledFunding)
+          .mul(I80F48.fromI64(this.basePosition)),
+      );
+    }
+
+    if (realQuotePosition.gt(ZERO_I80F48)) {
+      assetsVal = assetsVal.add(realQuotePosition);
+    }
+    return assetsVal;
   }
 }
