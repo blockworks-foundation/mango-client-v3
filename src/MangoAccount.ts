@@ -595,7 +595,7 @@ export default class MangoAccount {
     return ZERO_I80F48;
   }
 
-  getMaxWithdrawForToken(mangoGroup, mangoCache, tokenIndex): I80F48 {
+  getMaxWithBorrowForToken(mangoGroup, mangoCache, tokenIndex): I80F48 {
     const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
     const price = mangoGroup.getPrice(tokenIndex, mangoCache);
     const healthDecimals = I80F48.fromNumber(
