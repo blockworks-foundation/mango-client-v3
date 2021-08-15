@@ -54,14 +54,14 @@ export function getWeights(
   if (healthType === 'Maint') {
     return {
       spotAssetWeight: mangoGroup.spotMarkets[marketIndex].maintAssetWeight,
-      spotLiabWeight: mangoGroup.spotMarkets[marketIndex].maintAssetWeight,
+      spotLiabWeight: mangoGroup.spotMarkets[marketIndex].maintLiabWeight,
       perpAssetWeight: mangoGroup.perpMarkets[marketIndex].maintAssetWeight,
       perpLiabWeight: mangoGroup.perpMarkets[marketIndex].maintLiabWeight,
     };
   } else if (healthType === 'Init') {
     return {
       spotAssetWeight: mangoGroup.spotMarkets[marketIndex].initAssetWeight,
-      spotLiabWeight: mangoGroup.spotMarkets[marketIndex].initAssetWeight,
+      spotLiabWeight: mangoGroup.spotMarkets[marketIndex].initLiabWeight,
       perpAssetWeight: mangoGroup.perpMarkets[marketIndex].initAssetWeight,
       perpLiabWeight: mangoGroup.perpMarkets[marketIndex].initLiabWeight,
     };
