@@ -454,3 +454,53 @@ yargs(hideBin(process.argv)).command(
     process.exit(0);
   },
 ).argv;
+
+yargs(hideBin(process.argv)).command(
+  'verify-token-gov <token_account> <owner>',
+  'Verify the owner of token_account is a governance PDA',
+  (y) => {
+    return y
+      .positional('token_account', {
+        describe: 'the public key of the MangoAccount',
+        type: 'string',
+      })
+      .positional('owner', {
+        describe: 'The owner of the token_account',
+        type: 'string',
+      })
+      .option('program_id', {
+        default: 'GqTPL6qRf5aUuqscLh8Rg2HTxPUXfhhAXDptTLhp1t2J',
+        describe: 'Mango DAO program id',
+        type: 'string',
+      })
+      .option('realm', {
+        default: 'DPiH3H3c7t47BMxqTxLsuPQpEC6Kne8GA9VXbxpnZxFE',
+        describe: 'Realm of this governance',
+        type: 'string',
+      });
+  },
+  async (args) => {
+    const programId = new PublicKey(args.program_id as string);
+    const realm = new PublicKey(args.realm as string);
+    const tokenAccount = new PublicKey(args.token_account as string);
+    const owner = new PublicKey(args.owner as string);
+    const [address, nonce] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from('token-governance', 'utf-8'),
+        realm.toBuffer(),
+        tokenAccount.toBuffer(),
+      ],
+      programId,
+    );
+
+    if (address.equals(owner)) {
+      console.log(
+        `Success. The token_account: ${tokenAccount.toBase58()} is owned by a governance PDA`,
+      );
+    } else {
+      console.log(`Failure`);
+    }
+
+    process.exit(0);
+  },
+).argv;
