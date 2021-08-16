@@ -178,7 +178,9 @@ export default class MangoGroup {
     let nodeBankIndex = 0;
     for (let i = 0; i < parsedRootBanks.length; i++) {
       const rootBank = parsedRootBanks[i];
-      const numNodeBanks = rootBank.nodeBanks.length;
+      const numNodeBanks = rootBank.nodeBanks.filter(
+        (pk) => !pk.equals(zeroKey),
+      ).length;
       rootBank.nodeBankAccounts = nodeBankAccounts.slice(
         nodeBankIndex,
         numNodeBanks + 1,
