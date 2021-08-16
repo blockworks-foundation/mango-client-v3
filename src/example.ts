@@ -5,7 +5,6 @@ import { Account, Commitment, Connection } from '@solana/web3.js';
 import configFile from './ids.json';
 import { Config, getMarketByBaseSymbolAndKind, GroupConfig } from './config';
 import { Market } from '@project-serum/serum';
-import BN from 'bn.js';
 import { ZERO_BN } from './utils';
 
 function readKeypair() {

@@ -193,6 +193,8 @@ export default class MangoGroup {
       return rootBank ?? undefined;
     });
 
+    console.log('this.rootBankAccounts', this.rootBankAccounts);
+
     return this.rootBankAccounts;
   }
 
