@@ -65,7 +65,7 @@ async function examplePerp() {
   // Place order
   const owner = new Account(readKeypair());
   const mangoAccount = (
-    await client.getMarginAccountsForOwner(mangoGroup, owner.publicKey)
+    await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
   await client.placePerpOrder(
     mangoGroup,
@@ -157,7 +157,7 @@ async function exampleSpot() {
   // Place order
   const owner = new Account(readKeypair());
   const mangoAccount = (
-    await client.getMarginAccountsForOwner(mangoGroup, owner.publicKey)
+    await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
   await client.placeSpotOrder(
     mangoGroup,
