@@ -1562,7 +1562,7 @@ export class MangoClient {
     // Calculate the profit or loss per market
   }
 
-  getMarginAccountsForOwner(
+  getMangoAccountsForOwner(
     mangoGroup: MangoGroup,
     owner: PublicKey,
     includeOpenOrders = false,
