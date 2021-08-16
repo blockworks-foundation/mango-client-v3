@@ -183,7 +183,7 @@ export default class MangoGroup {
       ).length;
       rootBank.nodeBankAccounts = nodeBankAccounts.slice(
         nodeBankIndex,
-        numNodeBanks + 1,
+        numNodeBanks,
       );
       nodeBankIndex += numNodeBanks;
     }
