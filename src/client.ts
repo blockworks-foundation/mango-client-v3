@@ -527,6 +527,7 @@ export class MangoClient {
     tokenAcc: PublicKey,
 
     quantity: number,
+    info?: string,
   ) {
     const transaction = new Transaction();
     const accountInstruction = await createAccountInstruction(
@@ -596,8 +597,18 @@ export class MangoClient {
       wrappedSolAccount?.publicKey ?? tokenAcc,
       nativeQuantity,
     );
-
     transaction.add(instruction);
+
+    if (info) {
+      const addAccountNameinstruction = makeAddMangoAccountInfoInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        accountInstruction.account.publicKey,
+        owner.publicKey,
+        info,
+      );
+      transaction.add(addAccountNameinstruction);
+    }
 
     if (wrappedSolAccount) {
       transaction.add(
