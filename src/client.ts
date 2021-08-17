@@ -1,5 +1,6 @@
 import {
   Account,
+  AccountInfo,
   Connection,
   LAMPORTS_PER_SOL,
   PublicKey,
@@ -86,7 +87,7 @@ import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 
 import { WalletAdapter } from './types';
-import { PerpOrder } from './book';
+import { BookSide, PerpOrder } from './book';
 import {
   closeAccount,
   initializeAccount,
@@ -928,7 +929,6 @@ export class MangoClient {
     );
     return perpMarket;
   }
-
   async placePerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -941,6 +941,7 @@ export class MangoClient {
     quantity: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId = 0,
+    bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
   ): Promise<TransactionSignature> {
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
 
@@ -978,6 +979,38 @@ export class MangoClient {
       orderType,
     );
     transaction.add(instruction);
+
+    if (bookSideInfo) {
+      const bookSide = bookSideInfo.data
+        ? new BookSide(
+            side === 'buy' ? perpMarket.asks : perpMarket.bids,
+            perpMarket,
+            BookSideLayout.decode(bookSideInfo.data),
+          )
+        : [];
+      const accounts: Set<string> = new Set();
+      accounts.add(mangoAccount.publicKey.toBase58());
+
+      for (const order of bookSide) {
+        accounts.add(order.owner.toBase58());
+        if (accounts.size >= 10) {
+          break;
+        }
+      }
+
+      const consumeInstruction = makeConsumeEventsInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoGroup.mangoCache,
+        perpMarket.publicKey,
+        perpMarket.eventQueue,
+        Array.from(accounts)
+          .map((s) => new PublicKey(s))
+          .sort(),
+        new BN(10),
+      );
+      transaction.add(consumeInstruction);
+    }
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
