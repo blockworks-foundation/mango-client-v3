@@ -37,6 +37,11 @@ export default class MangoAccount {
   spotOpenOrdersAccounts: (OpenOrders | undefined)[];
 
   perpAccounts!: PerpAccount[];
+  orderMarket!: number[];
+  orderSide!: string[];
+  orders!: BN[];
+  clientOrderIds!: BN[];
+
   msrmAmount!: BN;
 
   beingLiquidated!: boolean;
@@ -408,14 +413,19 @@ export default class MangoAccount {
       if (!mangoGroup.perpMarkets[i].perpMarket.equals(zeroKey)) {
         const perpMarketCache = mangoCache.perpMarketCache[i];
         const perpAccount = this.perpAccounts[i];
-        const lotSize = mangoGroup.perpMarkets[i].baseLotSize;
-
-        const basePos = I80F48.fromI64(perpAccount.basePosition.mul(lotSize));
+        const baseLotSize = mangoGroup.perpMarkets[i].baseLotSize;
+        const quoteLotSize = mangoGroup.perpMarkets[i].quoteLotSize;
+        const takerQuote = I80F48.fromI64(
+          perpAccount.takerQuote.mul(quoteLotSize),
+        );
+        const basePos = I80F48.fromI64(
+          perpAccount.basePosition.add(perpAccount.takerBase).mul(baseLotSize),
+        );
         const bidsQuantity = I80F48.fromI64(
-          perpAccount.openOrders.bidsQuantity.mul(lotSize),
+          perpAccount.bidsQuantity.mul(baseLotSize),
         );
         const asksQuantity = I80F48.fromI64(
-          perpAccount.openOrders.asksQuantity.mul(lotSize),
+          perpAccount.asksQuantity.mul(baseLotSize),
         );
 
         const bidsBaseNet = basePos.add(bidsQuantity);
@@ -424,12 +434,14 @@ export default class MangoAccount {
         if (bidsBaseNet.abs().gt(asksBaseNet.abs())) {
           const quotePos = perpAccount
             .getQuotePosition(perpMarketCache)
+            .add(takerQuote)
             .sub(bidsQuantity.mul(price));
           quote = quote.add(quotePos);
           perps[i] = bidsBaseNet;
         } else {
           const quotePos = perpAccount
             .getQuotePosition(perpMarketCache)
+            .add(takerQuote)
             .add(asksQuantity.mul(price));
           quote = quote.add(quotePos);
           perps[i] = asksBaseNet;

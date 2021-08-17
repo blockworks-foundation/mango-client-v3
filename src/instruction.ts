@@ -1,10 +1,9 @@
 import {
   PublicKey,
-  SYSVAR_CLOCK_PUBKEY,
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { encodeMangoInstruction, AssetType, INFO_LEN } from './layout';
+import { AssetType, encodeMangoInstruction, INFO_LEN } from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
@@ -215,6 +214,7 @@ export function makeCancelPerpOrderInstruction(
   bidsPk: PublicKey,
   asksPk: PublicKey,
   order: PerpOrder,
+  invalidIdOk: boolean,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -228,7 +228,7 @@ export function makeCancelPerpOrderInstruction(
   const data = encodeMangoInstruction({
     CancelPerpOrder: {
       orderId: order.orderId,
-      side: order.side,
+      invalidIdOk,
     },
   });
 
@@ -246,6 +246,7 @@ export function makeCancelPerpOrderByClientIdInstruction(
   bidsPk: PublicKey,
   asksPk: PublicKey,
   clientOrderId: BN,
+  invalidIdOk: boolean,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -259,6 +260,7 @@ export function makeCancelPerpOrderByClientIdInstruction(
   const data = encodeMangoInstruction({
     CancelPerpOrderByClientId: {
       clientOrderId,
+      invalidIdOk,
     },
   });
   return new TransactionInstruction({ keys, data, programId });
@@ -475,10 +477,14 @@ export function makePlaceSpotOrderInstruction(
   eventQueuePk: PublicKey,
   spotMktBaseVaultPk: PublicKey,
   spotMktQuoteVaultPk: PublicKey,
-  rootBankPk: PublicKey,
-  nodeBankPk: PublicKey,
-  vaultPk: PublicKey,
+  baseRootBankPk: PublicKey,
+  baseNodeBankPk: PublicKey,
+  baseVaultPk: PublicKey,
+  quoteRootBankPk: PublicKey,
+  quoteNodeBankPk: PublicKey,
+  quoteVaultPk: PublicKey,
   signerPk: PublicKey,
+  dexSignerPk: PublicKey,
   msrmOrSrmVaultPk: PublicKey,
   // pass in only openOrders in margin basket, and only the market index one should be writable
   openOrders: { pubkey: PublicKey; isWritable: boolean }[],
@@ -503,12 +509,16 @@ export function makePlaceSpotOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
     { isSigner: false, isWritable: true, pubkey: spotMktBaseVaultPk },
     { isSigner: false, isWritable: true, pubkey: spotMktQuoteVaultPk },
-    { isSigner: false, isWritable: false, pubkey: rootBankPk },
-    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
-    { isSigner: false, isWritable: true, pubkey: vaultPk },
+    { isSigner: false, isWritable: false, pubkey: baseRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseVaultPk },
+    { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
     { isSigner: false, isWritable: false, pubkey: signerPk },
     { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
+    { isSigner: false, isWritable: false, pubkey: dexSignerPk },
     { isSigner: false, isWritable: false, pubkey: msrmOrSrmVaultPk },
     ...openOrders.map(({ pubkey, isWritable }) => ({
       isSigner: false,

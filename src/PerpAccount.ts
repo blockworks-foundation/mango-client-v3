@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import { PerpMarketCache, PerpMarketInfo, PerpOpenOrders, ZERO_BN } from '.';
+import { PerpMarketCache, PerpMarketInfo, ZERO_BN } from '.';
 import { I80F48, ZERO_I80F48 } from './fixednum';
 import PerpMarket from './PerpMarket';
 import MangoAccount from './MangoAccount';
@@ -13,7 +13,10 @@ export default class PerpAccount {
   quotePosition!: I80F48;
   longSettledFunding!: I80F48;
   shortSettledFunding!: I80F48;
-  openOrders!: PerpOpenOrders;
+  bidsQuantity!: BN;
+  asksQuantity!: BN;
+  takerBase!: BN;
+  takerQuote!: BN;
   mngoAccrued!: BN;
 
   constructor(decoded: any) {
@@ -46,7 +49,7 @@ export default class PerpAccount {
         price = new Big(le.price);
         let quantity = new Big(le.quantity);
 
-        if (userPk == le.liqee) {
+        if (userPk === le.liqee) {
           quantity = quantity.mul(NEG_ONE);
         }
 
@@ -67,8 +70,8 @@ export default class PerpAccount {
         let quantity = new Big(fe.quantity);
 
         if (
-          (userPk == fe.taker && fe.takerSide === 'sell') ||
-          (userPk == fe.maker && fe.takerSide === 'buy')
+          (userPk === fe.taker && fe.takerSide === 'sell') ||
+          (userPk === fe.maker && fe.takerSide === 'buy')
         ) {
           quantity = quantity.mul(NEG_ONE);
         }
@@ -122,7 +125,7 @@ export default class PerpAccount {
         price = new Big(le.price);
         let quantity = new Big(le.quantity);
 
-        if (userPk == le.liqee) {
+        if (userPk === le.liqee) {
           quantity = quantity.mul(NEG_ONE);
         }
 
@@ -143,8 +146,8 @@ export default class PerpAccount {
         let quantity = new Big(fe.quantity);
 
         if (
-          (userPk == fe.taker && fe.takerSide === 'sell') ||
-          (userPk == fe.maker && fe.takerSide === 'buy')
+          (userPk === fe.taker && fe.takerSide === 'sell') ||
+          (userPk === fe.maker && fe.takerSide === 'buy')
         ) {
           quantity = quantity.mul(NEG_ONE);
         }
@@ -237,7 +240,7 @@ export default class PerpAccount {
       price,
       assetWeight,
       liabWeight,
-      this.openOrders.bidsQuantity,
+      this.bidsQuantity,
     );
 
     const asksHealth = this.simPositionHealth(
@@ -245,7 +248,7 @@ export default class PerpAccount {
       price,
       assetWeight,
       liabWeight,
-      this.openOrders.asksQuantity.neg(),
+      this.asksQuantity.neg(),
     );
     const health = bidsHealth.lt(asksHealth) ? bidsHealth : asksHealth;
 
