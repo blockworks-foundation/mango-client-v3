@@ -504,7 +504,7 @@ export default class MangoAccount {
     );
   }
 
-  getLeverage(mangoGroup, mangoCache): I80F48 {
+  getLeverage(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
     const liabs = this.getLiabsVal(mangoGroup, mangoCache);
     const assets = this.getAssetsVal(mangoGroup, mangoCache);
 
@@ -514,11 +514,31 @@ export default class MangoAccount {
     return ZERO_I80F48;
   }
 
-  getMaxWithBorrowForToken(mangoGroup, mangoCache, tokenIndex): I80F48 {
+  getMaxLeverageForMarket(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    marketAssetWeight: I80F48,
+  ): I80F48 {
+    const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
+    const healthDecimals = I80F48.fromNumber(
+      Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
+    );
+
+    const uiHealth = initHealth.div(healthDecimals);
+    const assetLev = ONE_I80F48.sub(marketAssetWeight);
+
+    return uiHealth.div(assetLev);
+  }
+
+  getMaxWithBorrowForToken(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    tokenIndex: number,
+  ): I80F48 {
     const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
     const price = mangoGroup.getPrice(tokenIndex, mangoCache);
     const healthDecimals = I80F48.fromNumber(
-      Math.pow(10, mangoGroup.tokens[tokenIndex].decimals),
+      Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
     );
 
     const liabWeight =
