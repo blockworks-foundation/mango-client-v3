@@ -164,7 +164,9 @@ export default class MangoGroup {
       return new RootBank(acc.publicKey, decoded);
     });
 
-    const nodeBankPks = parsedRootBanks.map((bank) => bank.nodeBanks);
+    const nodeBankPks = parsedRootBanks.map((bank) =>
+      bank.nodeBanks.filter((key) => !key.equals(zeroKey)),
+    );
     const nodeBankAccts = await getMultipleAccounts(
       connection,
       nodeBankPks.flat(),
@@ -181,9 +183,10 @@ export default class MangoGroup {
       const numNodeBanks = rootBank.nodeBanks.filter(
         (pk) => !pk.equals(zeroKey),
       ).length;
+
       rootBank.nodeBankAccounts = nodeBankAccounts.slice(
         nodeBankIndex,
-        numNodeBanks,
+        nodeBankIndex + numNodeBanks,
       );
       nodeBankIndex += numNodeBanks;
     }
@@ -194,8 +197,6 @@ export default class MangoGroup {
       );
       return rootBank ?? undefined;
     });
-
-    console.log('this.rootBankAccounts', this.rootBankAccounts);
 
     return this.rootBankAccounts;
   }
