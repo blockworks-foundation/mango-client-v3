@@ -4,8 +4,8 @@
  * 2.) Run yarn launch-realistic-group
  * 3.) Update the mango group name in keeper.ts crank.ts and in the UI in useMangoStore.ts
  */
-const newGroupName = 'devnet.1';
-const mangoProgramId = '5fP7Z7a87ZEVsKr2tQPApdtq83GcTW4kz919R6ou5h5E';
+const newGroupName = 'devnet.nightly';
+const mangoProgramId = 'EwG6vXKHmTPAS3K17CPu62AK3bdrrDJS3DibwUjv5ayT';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
 
 const FIXED_IDS: any[] = [

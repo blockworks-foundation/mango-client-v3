@@ -1178,16 +1178,16 @@ export class MangoClient {
 
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
 
-    const tokenIndex = side === 'buy' ? QUOTE_INDEX : spotMarketIndex;
-
     if (!mangoGroup.rootBankAccounts.length) {
       await mangoGroup.loadRootBanks(this.connection);
     }
 
-    const rootBank = mangoGroup.rootBankAccounts[tokenIndex];
-    const nodeBank = rootBank?.nodeBankAccounts[0];
+    const baseRootBank = mangoGroup.rootBankAccounts[spotMarketIndex];
+    const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
+    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
+    const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
 
-    if (!rootBank || !nodeBank) {
+    if (!baseRootBank || !baseNodeBank || !quoteRootBank || !quoteNodeBank) {
       throw new Error('Invalid or missing banks');
     }
 
@@ -1253,6 +1253,14 @@ export class MangoClient {
       openOrdersKeys.push({ pubkey, isWritable });
     }
 
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
     const placeOrderInstruction = makePlaceSpotOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -1267,10 +1275,14 @@ export class MangoClient {
       spotMarket['_decoded'].eventQueue,
       spotMarket['_decoded'].baseVault,
       spotMarket['_decoded'].quoteVault,
-      rootBank.publicKey,
-      nodeBank.publicKey,
-      nodeBank.vault,
+      baseRootBank.publicKey,
+      baseNodeBank.publicKey,
+      baseNodeBank.vault,
+      quoteRootBank.publicKey,
+      quoteNodeBank.publicKey,
+      quoteNodeBank.vault,
       mangoGroup.signerKey,
+      dexSigner,
       mangoGroup.srmVault, // TODO: choose msrm vault if it has any deposits
       openOrdersKeys,
       side,
