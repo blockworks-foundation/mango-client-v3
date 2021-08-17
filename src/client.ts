@@ -609,7 +609,9 @@ export class MangoClient {
       );
     }
 
-    return await this.sendTransaction(transaction, owner, additionalSigners);
+    await this.sendTransaction(transaction, owner, additionalSigners);
+
+    return accountInstruction.account.publicKey;
   }
 
   async deposit(
