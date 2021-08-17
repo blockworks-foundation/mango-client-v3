@@ -1,10 +1,9 @@
 import {
   PublicKey,
-  SYSVAR_CLOCK_PUBKEY,
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { encodeMangoInstruction, AssetType, INFO_LEN } from './layout';
+import { AssetType, encodeMangoInstruction, INFO_LEN } from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
@@ -215,6 +214,7 @@ export function makeCancelPerpOrderInstruction(
   bidsPk: PublicKey,
   asksPk: PublicKey,
   order: PerpOrder,
+  invalidIdOk: boolean,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -228,7 +228,7 @@ export function makeCancelPerpOrderInstruction(
   const data = encodeMangoInstruction({
     CancelPerpOrder: {
       orderId: order.orderId,
-      side: order.side,
+      invalidIdOk,
     },
   });
 
@@ -246,6 +246,7 @@ export function makeCancelPerpOrderByClientIdInstruction(
   bidsPk: PublicKey,
   asksPk: PublicKey,
   clientOrderId: BN,
+  invalidIdOk: boolean,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -259,6 +260,7 @@ export function makeCancelPerpOrderByClientIdInstruction(
   const data = encodeMangoInstruction({
     CancelPerpOrderByClientId: {
       clientOrderId,
+      invalidIdOk,
     },
   });
   return new TransactionInstruction({ keys, data, programId });

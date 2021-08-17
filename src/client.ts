@@ -988,6 +988,7 @@ export class MangoClient {
     owner: Account | WalletAdapter,
     perpMarket: PerpMarket,
     order: PerpOrder,
+    invalidIdOk = false, // Don't throw error if order is invalid
   ): Promise<TransactionSignature> {
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
@@ -998,6 +999,7 @@ export class MangoClient {
       perpMarket.bids,
       perpMarket.asks,
       order,
+      invalidIdOk,
     );
 
     const transaction = new Transaction();

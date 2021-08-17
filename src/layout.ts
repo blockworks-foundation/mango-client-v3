@@ -25,6 +25,8 @@ export const MAX_NODE_BANKS = 8;
 export const INFO_LEN = 32;
 export const QUOTE_INDEX = MAX_TOKENS - 1;
 export const MAX_NUM_IN_MARGIN_BASKET = 10;
+export const MAX_PERP_OPEN_ORDERS = 64;
+export const FREE_ORDER_SLOT = 255; // u8::MAX
 
 const MAX_BOOK_NODES = 1024;
 class _I80F48Layout extends Blob {
@@ -135,7 +137,7 @@ function encodeBool(value: boolean): number {
 
 class EnumLayout extends UInt {
   values: any;
-  constructor(values, span, property) {
+  constructor(values, span, property?) {
     super(span, property);
     this.values = values;
   }
@@ -158,7 +160,7 @@ class EnumLayout extends UInt {
   }
 }
 
-export function sideLayout(property, span) {
+export function sideLayout(span, property?) {
   return new EnumLayout({ buy: 0, sell: 1 }, span, property);
 }
 
@@ -220,7 +222,7 @@ MangoInstructionLayout.addVariant(8, struct([]), 'CacheRootBanks');
 MangoInstructionLayout.addVariant(
   9,
   struct([
-    sideLayout('side', 4),
+    sideLayout(4, 'side'),
     u64('limitPrice'),
     u64('maxBaseQuantity'),
     u64('maxQuoteQuantity'),
@@ -256,19 +258,19 @@ MangoInstructionLayout.addVariant(
     i64('price'),
     i64('quantity'),
     u64('clientOrderId'),
-    sideLayout('side', 1),
+    sideLayout(1, 'side'),
     orderTypeLayout('orderType', 1),
   ]),
   'PlacePerpOrder',
 );
 MangoInstructionLayout.addVariant(
   13,
-  struct([u64('clientOrderId')]),
+  struct([u64('clientOrderId'), bool('invalidIdOk')]),
   'CancelPerpOrderByClientId',
 );
 MangoInstructionLayout.addVariant(
   14,
-  struct([i128('orderId'), sideLayout('side', 4)]),
+  struct([i128('orderId'), bool('invalidIdOk')]),
   'CancelPerpOrder',
 );
 MangoInstructionLayout.addVariant(15, struct([u64('limit')]), 'ConsumeEvents');
@@ -282,7 +284,7 @@ MangoInstructionLayout.addVariant(
 MangoInstructionLayout.addVariant(19, struct([]), 'SettleFunds');
 MangoInstructionLayout.addVariant(
   20,
-  struct([sideLayout('side', 4), u128('orderId')]),
+  struct([sideLayout(4, 'side'), u128('orderId')]),
   'CancelSpotOrder',
 );
 MangoInstructionLayout.addVariant(21, struct([]), 'UpdateRootBank');
@@ -576,7 +578,10 @@ export class PerpAccountLayout extends Structure {
         I80F48Layout('quotePosition'),
         I80F48Layout('longSettledFunding'),
         I80F48Layout('shortSettledFunding'),
-        perpOpenOrdersLayout('openOrders'),
+        i64('bidsQuantity'),
+        i64('asksQuantity'),
+        i64('takerBase'),
+        i64('takerQuote'),
         u64('mngoAccrued'),
       ],
       property,
@@ -594,46 +599,6 @@ export class PerpAccountLayout extends Structure {
 
 export function perpAccountLayout(property = '') {
   return new PerpAccountLayout(property);
-}
-export class PerpOpenOrders {
-  bidsQuantity!: BN;
-  asksQuantity!: BN;
-  isFreeBits!: BN;
-  isBidBits!: BN;
-  orders!: BN[];
-  clientOrderIds!: BN[];
-
-  constructor(decoded: any) {
-    Object.assign(this, decoded);
-  }
-}
-
-export class PerpOpenOrdersLayout extends Structure {
-  constructor(property) {
-    super(
-      [
-        i64('bidsQuantity'),
-        i64('asksQuantity'),
-        u32('isFreeBits'),
-        u32('isBidBits'),
-        seq(i128(), 32, 'orders'),
-        seq(u64(), 32, 'clientOrderIds'),
-      ],
-      property,
-    );
-  }
-
-  decode(b, offset) {
-    return new PerpOpenOrders(super.decode(b, offset));
-  }
-
-  encode(src, b, offset) {
-    return super.encode(src.toBuffer(), b, offset);
-  }
-}
-
-export function perpOpenOrdersLayout(property = '') {
-  return new PerpOpenOrdersLayout(property);
 }
 
 export const MangoGroupLayout = struct([
@@ -668,6 +633,12 @@ export const MangoAccountLayout = struct([
   seq(I80F48Layout(), MAX_TOKENS, 'borrows'),
   seq(publicKeyLayout(), MAX_PAIRS, 'spotOpenOrders'),
   seq(perpAccountLayout(), MAX_PAIRS, 'perpAccounts'),
+
+  seq(u8(), MAX_PERP_OPEN_ORDERS, 'orderMarket'),
+  seq(sideLayout(1), MAX_PERP_OPEN_ORDERS, 'orderSide'),
+  seq(i128(), MAX_PERP_OPEN_ORDERS, 'orders'),
+  seq(u64, MAX_PERP_OPEN_ORDERS, 'clientOrderIds'),
+
   u64('msrmAmount'),
 
   bool('beingLiquidated'),
@@ -757,7 +728,7 @@ export const PerpEventLayout = union(
 PerpEventLayout.addVariant(
   0,
   struct([
-    sideLayout('takerSide', 1),
+    sideLayout(1, 'takerSide'),
     u8('makerSlot'),
     bool('makerOut'),
     seq(u8(), 4),
@@ -783,7 +754,7 @@ PerpEventLayout.addVariant(
 PerpEventLayout.addVariant(
   1,
   struct([
-    sideLayout('side', 1),
+    sideLayout(1, 'side'),
     u8('slot'),
     seq(u8(), 5),
     u64('timestamp'),
@@ -857,8 +828,6 @@ export const PerpEventQueueHeaderLayout = struct([
   u64('head'),
   u64('count'),
   u64('seqNum'),
-  I80F48Layout('makerFee'),
-  I80F48Layout('takerFee'),
 ]);
 
 export const PerpEventQueueLayout = struct([
