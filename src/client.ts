@@ -1,5 +1,6 @@
 import {
   Account,
+  AccountInfo,
   Connection,
   LAMPORTS_PER_SOL,
   PublicKey,
@@ -86,7 +87,7 @@ import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 
 import { WalletAdapter } from './types';
-import { PerpOrder } from './book';
+import { BookSide, PerpOrder } from './book';
 import {
   closeAccount,
   initializeAccount,
@@ -608,7 +609,9 @@ export class MangoClient {
       );
     }
 
-    return await this.sendTransaction(transaction, owner, additionalSigners);
+    await this.sendTransaction(transaction, owner, additionalSigners);
+
+    return accountInstruction.account.publicKey;
   }
 
   async deposit(
@@ -928,7 +931,6 @@ export class MangoClient {
     );
     return perpMarket;
   }
-
   async placePerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -941,6 +943,7 @@ export class MangoClient {
     quantity: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId = 0,
+    bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
   ): Promise<TransactionSignature> {
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
 
@@ -979,6 +982,38 @@ export class MangoClient {
     );
     transaction.add(instruction);
 
+    if (bookSideInfo) {
+      const bookSide = bookSideInfo.data
+        ? new BookSide(
+            side === 'buy' ? perpMarket.asks : perpMarket.bids,
+            perpMarket,
+            BookSideLayout.decode(bookSideInfo.data),
+          )
+        : [];
+      const accounts: Set<string> = new Set();
+      accounts.add(mangoAccount.publicKey.toBase58());
+
+      for (const order of bookSide) {
+        accounts.add(order.owner.toBase58());
+        if (accounts.size >= 10) {
+          break;
+        }
+      }
+
+      const consumeInstruction = makeConsumeEventsInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoGroup.mangoCache,
+        perpMarket.publicKey,
+        perpMarket.eventQueue,
+        Array.from(accounts)
+          .map((s) => new PublicKey(s))
+          .sort(),
+        new BN(10),
+      );
+      transaction.add(consumeInstruction);
+    }
+
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
@@ -988,6 +1023,7 @@ export class MangoClient {
     owner: Account | WalletAdapter,
     perpMarket: PerpMarket,
     order: PerpOrder,
+    invalidIdOk = false, // Don't throw error if order is invalid
   ): Promise<TransactionSignature> {
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
@@ -998,6 +1034,7 @@ export class MangoClient {
       perpMarket.bids,
       perpMarket.asks,
       order,
+      invalidIdOk,
     );
 
     const transaction = new Transaction();
@@ -1176,16 +1213,16 @@ export class MangoClient {
 
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
 
-    const tokenIndex = side === 'buy' ? QUOTE_INDEX : spotMarketIndex;
-
     if (!mangoGroup.rootBankAccounts.length) {
       await mangoGroup.loadRootBanks(this.connection);
     }
 
-    const rootBank = mangoGroup.rootBankAccounts[tokenIndex];
-    const nodeBank = rootBank?.nodeBankAccounts[0];
+    const baseRootBank = mangoGroup.rootBankAccounts[spotMarketIndex];
+    const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
+    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
+    const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
 
-    if (!rootBank || !nodeBank) {
+    if (!baseRootBank || !baseNodeBank || !quoteRootBank || !quoteNodeBank) {
       throw new Error('Invalid or missing banks');
     }
 
@@ -1251,6 +1288,14 @@ export class MangoClient {
       openOrdersKeys.push({ pubkey, isWritable });
     }
 
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
     const placeOrderInstruction = makePlaceSpotOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -1265,10 +1310,14 @@ export class MangoClient {
       spotMarket['_decoded'].eventQueue,
       spotMarket['_decoded'].baseVault,
       spotMarket['_decoded'].quoteVault,
-      rootBank.publicKey,
-      nodeBank.publicKey,
-      nodeBank.vault,
+      baseRootBank.publicKey,
+      baseNodeBank.publicKey,
+      baseNodeBank.vault,
+      quoteRootBank.publicKey,
+      quoteNodeBank.publicKey,
+      quoteNodeBank.vault,
       mangoGroup.signerKey,
+      dexSigner,
       mangoGroup.srmVault, // TODO: choose msrm vault if it has any deposits
       openOrdersKeys,
       side,
@@ -1562,7 +1611,7 @@ export class MangoClient {
     // Calculate the profit or loss per market
   }
 
-  getMarginAccountsForOwner(
+  getMangoAccountsForOwner(
     mangoGroup: MangoGroup,
     owner: PublicKey,
     includeOpenOrders = false,

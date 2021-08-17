@@ -5,7 +5,6 @@ import { Account, Commitment, Connection } from '@solana/web3.js';
 import configFile from './ids.json';
 import { Config, getMarketByBaseSymbolAndKind, GroupConfig } from './config';
 import { Market } from '@project-serum/serum';
-import BN from 'bn.js';
 import { ZERO_BN } from './utils';
 
 function readKeypair() {
@@ -65,7 +64,7 @@ async function examplePerp() {
   // Place order
   const owner = new Account(readKeypair());
   const mangoAccount = (
-    await client.getMarginAccountsForOwner(mangoGroup, owner.publicKey)
+    await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
   await client.placePerpOrder(
     mangoGroup,
@@ -157,7 +156,7 @@ async function exampleSpot() {
   // Place order
   const owner = new Account(readKeypair());
   const mangoAccount = (
-    await client.getMarginAccountsForOwner(mangoGroup, owner.publicKey)
+    await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
   await client.placeSpotOrder(
     mangoGroup,

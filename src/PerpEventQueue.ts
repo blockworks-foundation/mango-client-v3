@@ -27,6 +27,9 @@ export default class PerpEventQueue {
     return events;
   }
 
+  // add getConsumedEventsSince()
+  // calls eventsSince and removes the last n elements from the array based on this.count
+
   eventsSince(
     lastSeqNum: BN,
   ): { fill?: FillEvent; out?: OutEvent; liquidate?: LiquidateEvent }[] {

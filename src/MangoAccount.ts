@@ -37,6 +37,11 @@ export default class MangoAccount {
   spotOpenOrdersAccounts: (OpenOrders | undefined)[];
 
   perpAccounts!: PerpAccount[];
+  orderMarket!: number[];
+  orderSide!: string[];
+  orders!: BN[];
+  clientOrderIds!: BN[];
+
   msrmAmount!: BN;
 
   beingLiquidated!: boolean;
@@ -163,7 +168,6 @@ export default class MangoAccount {
     healthType?: HealthType,
   ): I80F48 {
     let assetsVal = ZERO_I80F48;
-
     // quote currency deposits
     assetsVal = assetsVal.add(
       this.getUiDeposit(
@@ -184,7 +188,18 @@ export default class MangoAccount {
       const spotVal = this.getSpotVal(mangoGroup, mangoCache, i, assetWeight);
       assetsVal = assetsVal.add(spotVal);
 
-      // TODO get perp value
+      const price = mangoGroup.getPrice(i, mangoCache);
+      const perpsUiAssetVal = nativeI80F48ToUi(
+        this.perpAccounts[i].getAssetVal(
+          mangoGroup.perpMarkets[i],
+          price,
+          mangoCache.perpMarketCache[i].shortFunding,
+          mangoCache.perpMarketCache[i].longFunding,
+        ),
+        mangoGroup.tokens[QUOTE_INDEX].decimals,
+      );
+
+      assetsVal = assetsVal.add(perpsUiAssetVal);
     }
 
     return assetsVal;
@@ -227,7 +242,7 @@ export default class MangoAccount {
           mangoCache.perpMarketCache[i].shortFunding,
           mangoCache.perpMarketCache[i].longFunding,
         ),
-        mangoGroup.tokens[i].decimals,
+        mangoGroup.tokens[QUOTE_INDEX].decimals,
       );
 
       liabsVal = liabsVal.add(perpsUiLiabsVal);
@@ -398,14 +413,19 @@ export default class MangoAccount {
       if (!mangoGroup.perpMarkets[i].perpMarket.equals(zeroKey)) {
         const perpMarketCache = mangoCache.perpMarketCache[i];
         const perpAccount = this.perpAccounts[i];
-        const lotSize = mangoGroup.perpMarkets[i].baseLotSize;
-
-        const basePos = I80F48.fromI64(perpAccount.basePosition.mul(lotSize));
+        const baseLotSize = mangoGroup.perpMarkets[i].baseLotSize;
+        const quoteLotSize = mangoGroup.perpMarkets[i].quoteLotSize;
+        const takerQuote = I80F48.fromI64(
+          perpAccount.takerQuote.mul(quoteLotSize),
+        );
+        const basePos = I80F48.fromI64(
+          perpAccount.basePosition.add(perpAccount.takerBase).mul(baseLotSize),
+        );
         const bidsQuantity = I80F48.fromI64(
-          perpAccount.openOrders.bidsQuantity.mul(lotSize),
+          perpAccount.bidsQuantity.mul(baseLotSize),
         );
         const asksQuantity = I80F48.fromI64(
-          perpAccount.openOrders.asksQuantity.mul(lotSize),
+          perpAccount.asksQuantity.mul(baseLotSize),
         );
 
         const bidsBaseNet = basePos.add(bidsQuantity);
@@ -414,12 +434,14 @@ export default class MangoAccount {
         if (bidsBaseNet.abs().gt(asksBaseNet.abs())) {
           const quotePos = perpAccount
             .getQuotePosition(perpMarketCache)
+            .add(takerQuote)
             .sub(bidsQuantity.mul(price));
           quote = quote.add(quotePos);
           perps[i] = bidsBaseNet;
         } else {
           const quotePos = perpAccount
             .getQuotePosition(perpMarketCache)
+            .add(takerQuote)
             .add(asksQuantity.mul(price));
           quote = quote.add(quotePos);
           perps[i] = asksBaseNet;
@@ -430,116 +452,23 @@ export default class MangoAccount {
     return { spot, perps, quote };
   }
 
-  getSpotHealth(mangoCache, marketIndex, assetWeight, liabWeight): I80F48 {
-    const bankCache = mangoCache.rootBankCache[marketIndex];
-    const price = mangoCache.priceCache[marketIndex].price;
-
-    const baseNet = this.deposits[marketIndex]
-      .mul(bankCache.depositIndex)
-      .sub(this.borrows[marketIndex].mul(bankCache.borrowIndex));
-
-    let health = ZERO_I80F48;
-
-    if (
-      !this.inMarginBasket[marketIndex] ||
-      this.spotOpenOrders[marketIndex].equals(zeroKey)
-    ) {
-      if (!baseNet.isNeg()) {
-        health = baseNet.mul(assetWeight).mul(price);
-      } else {
-        health = baseNet.mul(liabWeight).mul(price);
-      }
-    } else {
-      const openOrders = this.spotOpenOrdersAccounts[marketIndex];
-      if (openOrders !== undefined) {
-        const { quoteFree, quoteLocked, baseFree, baseLocked } =
-          splitOpenOrders(openOrders);
-
-        const bidsBaseNet = baseNet
-          .add(quoteLocked.div(price))
-          .add(baseFree)
-          .add(baseLocked);
-        const bidsWeight = !bidsBaseNet.isNeg() ? assetWeight : liabWeight;
-        const bidsHealth = bidsBaseNet
-          .mul(bidsWeight)
-          .mul(price)
-          .add(quoteFree);
-
-        const asksBaseNet = baseNet.add(baseFree);
-        const asksWeight = !bidsBaseNet.isNeg() ? assetWeight : liabWeight;
-        const asksHealth = asksBaseNet
-          .mul(asksWeight)
-          .add(baseLocked)
-          .mul(price)
-          .add(quoteFree)
-          .add(quoteLocked);
-        health = bidsHealth.min(asksHealth);
-      }
-    }
-
-    return health;
-  }
-
   getHealth(
     mangoGroup: MangoGroup,
     mangoCache: MangoCache,
     healthType: HealthType,
   ): I80F48 {
-    const quoteDeposits = this.getNativeDeposit(
-      mangoCache.rootBankCache[QUOTE_INDEX],
-      QUOTE_INDEX,
+    const { spot, perps, quote } = this.getHealthComponents(
+      mangoGroup,
+      mangoCache,
     );
-    const quoteBorrows = this.getNativeBorrow(
-      mangoCache.rootBankCache[QUOTE_INDEX],
-      QUOTE_INDEX,
+    const health = this.getHealthFromComponents(
+      mangoGroup,
+      mangoCache,
+      spot,
+      perps,
+      quote,
+      healthType,
     );
-
-    let health = quoteDeposits.sub(quoteBorrows);
-
-    for (let i = 0; i < mangoGroup.numOracles; i++) {
-      const spotMarket = mangoGroup.spotMarkets[i];
-      const perpMarket = mangoGroup.perpMarkets[i];
-      const [spotAssetWeight, spotLiabWeight, perpAssetWeight, perpLiabWeight] =
-        healthType === 'Maint'
-          ? [
-              spotMarket.maintAssetWeight,
-              spotMarket.maintLiabWeight,
-              perpMarket.maintAssetWeight,
-              perpMarket.maintLiabWeight,
-            ]
-          : [
-              spotMarket.initAssetWeight,
-              spotMarket.initLiabWeight,
-              perpMarket.initAssetWeight,
-              perpMarket.initLiabWeight,
-            ];
-
-      if (!mangoGroup.spotMarkets[i].isEmpty()) {
-        const spotHealth = this.getSpotHealth(
-          mangoCache,
-          i,
-          spotAssetWeight,
-          spotLiabWeight,
-        );
-
-        health = health.add(spotHealth);
-      }
-
-      if (!mangoGroup.perpMarkets[i].isEmpty()) {
-        const perpsCache = mangoCache.perpMarketCache[i];
-        health = health.add(
-          this.perpAccounts[i].getHealth(
-            perpMarket,
-            mangoCache.priceCache[i].price,
-            perpAssetWeight,
-            perpLiabWeight,
-            perpsCache.longFunding,
-            perpsCache.shortFunding,
-          ),
-        );
-      }
-    }
-
     return health;
   }
 
@@ -570,56 +499,34 @@ export default class MangoAccount {
   }
 
   computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
-    let value = ZERO_I80F48;
+    return this.getAssetsVal(mangoGroup, mangoCache).sub(
+      this.getLiabsVal(mangoGroup, mangoCache),
+    );
+  }
 
-    value = value.add(
-      this.getUiDeposit(
-        mangoCache.rootBankCache[QUOTE_INDEX],
-        mangoGroup,
-        QUOTE_INDEX,
-      ).sub(
-        this.getUiBorrow(
-          mangoCache.rootBankCache[QUOTE_INDEX],
-          mangoGroup,
-          QUOTE_INDEX,
-        ),
-      ),
+  getLeverage(mangoGroup, mangoCache): I80F48 {
+    const liabs = this.getLiabsVal(mangoGroup, mangoCache);
+    const assets = this.getAssetsVal(mangoGroup, mangoCache);
+
+    if (assets.gt(ZERO_I80F48)) {
+      return liabs.div(assets.sub(liabs));
+    }
+    return ZERO_I80F48;
+  }
+
+  getMaxWithBorrowForToken(mangoGroup, mangoCache, tokenIndex): I80F48 {
+    const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
+    const price = mangoGroup.getPrice(tokenIndex, mangoCache);
+    const healthDecimals = I80F48.fromNumber(
+      Math.pow(10, mangoGroup.tokens[tokenIndex].decimals),
     );
 
-    for (let i = 0; i < mangoGroup.numOracles; i++) {
-      value = value.add(
-        this.getUiDeposit(mangoCache.rootBankCache[i], mangoGroup, i)
-          .sub(this.getUiBorrow(mangoCache.rootBankCache[i], mangoGroup, i))
-          .mul(mangoGroup.getPrice(i, mangoCache)),
-      );
-    }
+    const liabWeight =
+      tokenIndex === QUOTE_INDEX
+        ? ONE_I80F48
+        : mangoGroup.spotMarkets[tokenIndex].initLiabWeight;
 
-    // TODO add perp vals
-
-    for (let i = 0; i < this.spotOpenOrdersAccounts.length; i++) {
-      const oos = this.spotOpenOrdersAccounts[i];
-      if (oos != undefined) {
-        value = value.add(
-          I80F48.fromNumber(
-            nativeToUi(
-              oos.baseTokenTotal.toNumber(),
-              mangoGroup.tokens[i].decimals,
-            ),
-          ).mul(mangoGroup.getPrice(i, mangoCache)),
-        );
-        value = value.add(
-          I80F48.fromNumber(
-            nativeToUi(
-              oos.quoteTokenTotal.toNumber() +
-                oos['referrerRebatesAccrued'].toNumber(),
-              mangoGroup.tokens[QUOTE_INDEX].decimals,
-            ),
-          ),
-        );
-      }
-    }
-
-    return value;
+    return initHealth.div(healthDecimals).div(price.mul(liabWeight));
   }
 }
 

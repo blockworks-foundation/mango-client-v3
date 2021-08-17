@@ -1,6 +1,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Big } from 'big.js';
 import BN from 'bn.js';
+import { NodeBank, NodeBankLayout } from '.';
 import { I80F48, ONE_I80F48 } from './fixednum';
 import {
   MetaData,
@@ -156,16 +157,39 @@ export default class MangoGroup {
       .map((t) => t.rootBank)
       .filter((rB) => !rB.equals(zeroKey));
 
-    const accounts = await getMultipleAccounts(connection, rootBankPks);
+    const rootBankAccts = await getMultipleAccounts(connection, rootBankPks);
 
-    const parsedRootBanks = accounts.map((acc) => {
+    const parsedRootBanks = rootBankAccts.map((acc) => {
       const decoded = RootBankLayout.decode(acc.accountInfo.data);
       return new RootBank(acc.publicKey, decoded);
     });
 
-    await Promise.all(
-      parsedRootBanks.map((rootBank) => rootBank.loadNodeBanks(connection)),
+    const nodeBankPks = parsedRootBanks.map((bank) =>
+      bank.nodeBanks.filter((key) => !key.equals(zeroKey)),
     );
+    const nodeBankAccts = await getMultipleAccounts(
+      connection,
+      nodeBankPks.flat(),
+    );
+
+    const nodeBankAccounts = nodeBankAccts.map((acc) => {
+      const decoded = NodeBankLayout.decode(acc.accountInfo.data);
+      return new NodeBank(acc.publicKey, decoded);
+    });
+
+    let nodeBankIndex = 0;
+    for (let i = 0; i < parsedRootBanks.length; i++) {
+      const rootBank = parsedRootBanks[i];
+      const numNodeBanks = rootBank.nodeBanks.filter(
+        (pk) => !pk.equals(zeroKey),
+      ).length;
+
+      rootBank.nodeBankAccounts = nodeBankAccounts.slice(
+        nodeBankIndex,
+        nodeBankIndex + numNodeBanks,
+      );
+      nodeBankIndex += numNodeBanks;
+    }
 
     this.rootBankAccounts = this.tokens.map((t) => {
       const rootBank = parsedRootBanks.find((rB) =>
@@ -173,6 +197,7 @@ export default class MangoGroup {
       );
       return rootBank ?? undefined;
     });
+
     return this.rootBankAccounts;
   }
 

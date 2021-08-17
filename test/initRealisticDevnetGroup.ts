@@ -14,9 +14,13 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 10000000,
     quoteLot: 100,
-    price: 0.1,
+    price: 0.25,
+    initLeverage: 1.25,
+    maintLeverage: 2.5,
+    liquidationFee: 0.2,
     mint: 'Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC',
   },
+
   {
     symbol: 'USDC',
     decimals: 6,
@@ -55,30 +59,11 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 100000,
     quoteLot: 100,
-    price: 2,
+    price: 8,
     mint: '3YFQ7UYJ7sNGpXTKBxM3bYLVxKpzVudXAe4gLExh5b3n',
-  },
-  {
-    symbol: 'DOGE',
-    decimals: 6,
-    baseLot: 200000000,
-    quoteLot: 100,
-    mint: '6yr1xJP6Nfu8Bxp4L8WJQrtLqBGZrQm5n41PFm4ZmEyk',
-  },
-  {
-    symbol: 'SUSHI',
-    decimals: 6,
-    baseLot: 10000,
-    quoteLot: 10,
-    price: 10,
-    mint: 'Edi5KNs2LnonULNmoTQqSymJ7VuMC9amTjLN5RJ1YMcq',
-  },
-  {
-    symbol: 'FTT',
-    decimals: 6,
-    baseLot: 10000,
-    quoteLot: 10,
-    mint: 'Fxh4bpZnRCnpg2vcH11ttmSTDSEeC5qWbPRZNZWnRnqY',
+    initLeverage: 3,
+    maintLeverage: 6,
+    liquidationFee: 0.0833,
   },
   {
     symbol: 'USDT',
@@ -86,6 +71,9 @@ const FIXED_IDS: any[] = [
     baseLot: 1000000,
     quoteLot: 100,
     mint: 'DAwBSXe6w9g37wdE2tCrFbho3QHKZi4PjuBytQCULap2',
+    initLeverage: 10,
+    maintLeverage: 20,
+    liquidationFee: 0.025,
   },
 ];
 
@@ -101,39 +89,48 @@ const initNewGroup = async () => {
   console.log(`new group initialized`);
 
   for (let i = 0; i < FIXED_IDS.length; i++) {
-    if (FIXED_IDS[i].symbol === 'USDC') {
+    const fids = FIXED_IDS[i];
+    if (fids.symbol === 'USDC') {
       continue;
     }
 
-    if (!FIXED_IDS[i].mint) {
-      console.log(`adding ${FIXED_IDS[i].symbol} mint`);
+    if (!fids.mint) {
+      console.log(`adding ${fids.symbol} mint`);
       await execCommand(
         ``, // TODO: Create a function that creates the mint
       );
     }
 
-    console.log(`adding ${FIXED_IDS[i].symbol} oracle`);
-    if (FIXED_IDS[i].price) {
+    console.log(`adding ${fids.symbol} oracle`);
+    if (fids.price) {
+      await execCommand(`yarn cli add-oracle ${newGroupName} ${fids.symbol}`);
       await execCommand(
-        `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol}`,
-      );
-      await execCommand(
-        `yarn cli set-oracle ${newGroupName} ${FIXED_IDS[i].symbol} ${FIXED_IDS[i].price}`,
+        `yarn cli set-oracle ${newGroupName} ${fids.symbol} ${fids.price}`,
       );
     } else {
       await execCommand(
-        `yarn cli add-oracle ${newGroupName} ${FIXED_IDS[i].symbol} --provider pyth`,
+        `yarn cli add-oracle ${newGroupName} ${fids.symbol} --provider pyth`,
       );
     }
 
-    console.log(`listing and adding ${FIXED_IDS[i].symbol} spot market`);
+    console.log(`listing and adding ${fids.symbol} spot market`);
     await execCommand(
-      `yarn cli add-spot-market ${newGroupName} ${FIXED_IDS[i].symbol} ${FIXED_IDS[i].mint} --base_lot_size ${FIXED_IDS[i].baseLot} --quote_lot_size ${FIXED_IDS[i].quoteLot}`,
+      `yarn cli add-spot-market ${newGroupName} ${fids.symbol} ${
+        fids.mint
+      } --base_lot_size ${fids.baseLot} --quote_lot_size ${
+        fids.quoteLot
+      } --init_leverage ${fids.initLeverage || 5} --maint_leverage ${
+        fids.maintLeverage || 10
+      } --liquidation_fee ${fids.liquidationFee || 0.05}`,
     );
 
-    console.log(`adding ${FIXED_IDS[i].symbol} perp market`);
+    console.log(`adding ${fids.symbol} perp market`);
     await execCommand(
-      `yarn cli add-perp-market ${newGroupName} ${FIXED_IDS[i].symbol}`,
+      `yarn cli add-perp-market ${newGroupName} ${
+        fids.symbol
+      } --init_leverage ${2 * (fids.initLeverage || 5)} --maint_leverage ${
+        2 * (fids.maintLeverage || 10)
+      } --liquidation_fee ${(fids.liquidationFee || 0.05) / 2}`,
     );
     console.log('---');
   }
