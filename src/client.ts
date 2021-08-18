@@ -1499,7 +1499,6 @@ export class MangoClient {
     owner: Account | WalletAdapter,
   ) {
     const transactions: Transaction[] = [];
-    const assetGains: number[] = new Array(MAX_TOKENS).fill(0);
 
     for (let i = 0; i < spotMarkets.length; i++) {
       const transaction = new Transaction();
@@ -1514,11 +1513,6 @@ export class MangoClient {
       ) {
         continue;
       }
-
-      assetGains[i] += openOrdersAccount.baseTokenFree.toNumber();
-      assetGains[MAX_TOKENS - 1] +=
-        openOrdersAccount.quoteTokenFree.toNumber() +
-        openOrdersAccount['referrerRebatesAccrued'].toNumber();
 
       const spotMarket = spotMarkets[i];
       const dexSigner = await PublicKey.createProgramAddress(
