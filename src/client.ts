@@ -528,7 +528,7 @@ export class MangoClient {
 
     quantity: number,
     info?: string,
-  ) {
+  ): Promise<string> {
     const transaction = new Transaction();
     const accountInstruction = await createAccountInstruction(
       this.connection,
@@ -622,7 +622,7 @@ export class MangoClient {
 
     await this.sendTransaction(transaction, owner, additionalSigners);
 
-    return accountInstruction.account.publicKey;
+    return accountInstruction.account.publicKey.toString();
   }
 
   async deposit(
