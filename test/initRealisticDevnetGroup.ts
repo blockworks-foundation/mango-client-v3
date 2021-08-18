@@ -14,13 +14,12 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 10000000,
     quoteLot: 100,
-    price: 0.25,
     initLeverage: 1.25,
     maintLeverage: 2.5,
     liquidationFee: 0.2,
+    oracleProvider: 'switchboard',
     mint: 'Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC',
   },
-
   {
     symbol: 'USDC',
     decimals: 6,
@@ -31,6 +30,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 100,
     quoteLot: 10,
+    oracleProvider: 'pyth',
     mint: '3UNBZ6o52WTWwjac2kPUb4FyodhU1vFkRJheu1Sh2TvU',
   },
   {
@@ -38,6 +38,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 1000,
     quoteLot: 10,
+    oracleProvider: 'pyth',
     mint: 'Cu84KB3tDL6SbFgToHMLYVDJJXdJjenNzSKikeAvzmkA',
   },
   {
@@ -45,6 +46,7 @@ const FIXED_IDS: any[] = [
     decimals: 9,
     baseLot: 100000000,
     quoteLot: 100,
+    oracleProvider: 'pyth',
     mint: 'So11111111111111111111111111111111111111112',
   },
   {
@@ -52,6 +54,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 100000,
     quoteLot: 100,
+    oracleProvider: 'pyth',
     mint: 'AvtB6w9xboLwA145E221vhof5TddhqsChYcx7Fy3xVMH',
   },
   {
@@ -70,6 +73,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 1000000,
     quoteLot: 100,
+    oracleProvider: 'pyth',
     mint: 'DAwBSXe6w9g37wdE2tCrFbho3QHKZi4PjuBytQCULap2',
     initLeverage: 10,
     maintLeverage: 20,
@@ -109,7 +113,7 @@ const initNewGroup = async () => {
       );
     } else {
       await execCommand(
-        `yarn cli add-oracle ${newGroupName} ${fids.symbol} --provider pyth`,
+        `yarn cli add-oracle ${newGroupName} ${fids.symbol} --provider ${fids.oracleProvider}`,
       );
     }
 
