@@ -12,7 +12,7 @@ const FIXED_IDS: any[] = [
   {
     symbol: 'MNGO',
     decimals: 6,
-    baseLot: 10000000,
+    baseLot: 1000000,
     quoteLot: 100,
     initLeverage: 1.25,
     maintLeverage: 2.5,
@@ -134,7 +134,9 @@ const initNewGroup = async () => {
         fids.symbol
       } --init_leverage ${2 * (fids.initLeverage || 5)} --maint_leverage ${
         2 * (fids.maintLeverage || 10)
-      } --liquidation_fee ${(fids.liquidationFee || 0.05) / 2}`,
+      } --liquidation_fee ${
+        (fids.liquidationFee || 0.05) / 2
+      } --base_lot_size ${fids.baseLot} --quote_lot_size ${fids.quoteLot}`,
     );
     console.log('---');
   }
