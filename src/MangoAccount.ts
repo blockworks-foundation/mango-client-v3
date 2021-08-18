@@ -521,57 +521,66 @@ export default class MangoAccount {
     mangoGroup: MangoGroup,
     mangoCache: MangoCache,
     marketIndex: number,
-    assetWeight: I80F48,
-    liabWeight: I80F48,
     market: Market | PerpMarket,
     side: 'buy' | 'sell',
+    price: I80F48,
   ): I80F48 {
     const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
     const healthDecimals = I80F48.fromNumber(
       Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
     );
+    const uiInitHealth = initHealth.div(healthDecimals);
 
     let uiDepositVal = ZERO_I80F48;
     let uiBorrowVal = ZERO_I80F48;
+    let initLiabWeight, initAssetWeight;
     if (market instanceof PerpMarket) {
+      ({ initLiabWeight, initAssetWeight } =
+        mangoGroup.perpMarkets[marketIndex]);
       const basePos = this.perpAccounts[marketIndex].basePosition;
       if (basePos.gt(ZERO_BN)) {
         uiDepositVal = I80F48.fromNumber(market.baseLotsToNumber(basePos)).mul(
-          mangoGroup.getPrice(marketIndex, mangoCache),
+          price,
         );
       } else {
         uiBorrowVal = I80F48.fromNumber(market.baseLotsToNumber(basePos))
-          .mul(mangoGroup.getPrice(marketIndex, mangoCache))
+          .mul(price)
           .abs();
       }
     } else {
+      ({ initLiabWeight, initAssetWeight } =
+        mangoGroup.spotMarkets[marketIndex]);
       uiDepositVal = this.getUiDeposit(
         mangoCache.rootBankCache[marketIndex],
         mangoGroup,
         marketIndex,
-      ).mul(mangoGroup.getPrice(marketIndex, mangoCache));
+      ).mul(price);
 
       uiBorrowVal = this.getUiBorrow(
         mangoCache.rootBankCache[marketIndex],
         mangoGroup,
         marketIndex,
-      ).mul(mangoGroup.getPrice(marketIndex, mangoCache));
+      ).mul(price);
     }
 
     if (side === 'buy') {
       if (uiBorrowVal.gt(ZERO_I80F48)) {
-        const uiHealthAtZero = initHealth
-          .div(healthDecimals)
-          .add(uiBorrowVal.mul(liabWeight.sub(ONE_I80F48)));
-        return uiHealthAtZero.div(ONE_I80F48.sub(assetWeight)).add(uiBorrowVal);
+        const uiHealthAtZero = uiInitHealth.add(
+          uiBorrowVal.mul(initLiabWeight.sub(ONE_I80F48)),
+        );
+        return uiHealthAtZero
+          .div(ONE_I80F48.sub(initAssetWeight))
+          .add(uiBorrowVal);
       } else {
-        return initHealth.div(healthDecimals).div(ONE_I80F48.sub(assetWeight));
+        return uiInitHealth.div(ONE_I80F48.sub(initAssetWeight));
       }
     } else {
-      const uiHealthAtZero = initHealth
-        .div(healthDecimals)
-        .add(uiDepositVal.mul(ONE_I80F48.sub(assetWeight)));
-      return uiHealthAtZero.div(liabWeight.sub(ONE_I80F48)).add(uiDepositVal);
+      const uiHealthAtZero = uiInitHealth.add(
+        uiDepositVal.mul(ONE_I80F48.sub(initAssetWeight)),
+      );
+      return uiHealthAtZero
+        .div(initLiabWeight.sub(ONE_I80F48))
+        .add(uiDepositVal);
     }
   }
 
