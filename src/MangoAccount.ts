@@ -524,7 +524,7 @@ export default class MangoAccount {
     market: Market | PerpMarket,
     side: 'buy' | 'sell',
     price: I80F48,
-  ): I80F48 {
+  ): { max: I80F48; uiDepositVal: any; uiBorrowVal: any } {
     const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
     const healthDecimals = I80F48.fromNumber(
       Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
@@ -563,21 +563,24 @@ export default class MangoAccount {
       ).mul(price);
     }
 
+    let max;
     if (side === 'buy') {
       const uiHealthAtZero = uiInitHealth.add(
         uiBorrowVal.mul(initLiabWeight.sub(ONE_I80F48)),
       );
-      return uiHealthAtZero
+      max = uiHealthAtZero
         .div(ONE_I80F48.sub(initAssetWeight))
         .add(uiBorrowVal);
     } else {
       const uiHealthAtZero = uiInitHealth.add(
         uiDepositVal.mul(ONE_I80F48.sub(initAssetWeight)),
       );
-      return uiHealthAtZero
+      max = uiHealthAtZero
         .div(initLiabWeight.sub(ONE_I80F48))
         .add(uiDepositVal);
     }
+
+    return { max, uiBorrowVal, uiDepositVal };
   }
 
   getMaxWithBorrowForToken(
