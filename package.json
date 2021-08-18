@@ -20,7 +20,6 @@
     "liquidator": "ts-node src/liquidator.ts",
     "launch-group": "ts-node test/initDevnetGroup.ts",
     "launch-realistic-group": "ts-node test/initRealisticDevnetGroup.ts",
-    "start": "ts-node src/test.ts",
     "clean": "rm -rf lib",
     "prepare": "yarn clean && yarn build",
     "type-check": "tsc --pretty --noEmit",

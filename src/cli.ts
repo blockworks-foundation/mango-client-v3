@@ -91,6 +91,11 @@ yargs(hideBin(process.argv)).command(
         describe: 'the mint of the quote currency 💵',
         type: 'string',
       })
+      .positional('fees_vault', {
+        describe:
+          'the quote currency vault owned by Mango DAO token governance',
+        type: 'string',
+      })
       .option('quote_optimal_util', {
         describe: 'optimal utilization interest rate param for quote currency',
         default: 0.7,
@@ -120,6 +125,7 @@ yargs(hideBin(process.argv)).command(
     const mangoProgramId = new PublicKey(args.mangoProgramId as string);
     const serumProgramId = new PublicKey(args.serumProgramId as string);
     const quoteMint = new PublicKey(args.quote_mint as string);
+    const feesVault = new PublicKey(args.fees_vault as string);
     const account = readKeypair(args.keypair as string);
     const config = readConfig(args.config as string);
     const cluster = args.cluster as Cluster;
@@ -133,6 +139,7 @@ yargs(hideBin(process.argv)).command(
       serumProgramId,
       args.symbol as string,
       quoteMint,
+      feesVault,
       5,
       args.quote_optimal_util as number,
       args.quote_optimal_rate as number,
