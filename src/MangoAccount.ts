@@ -524,7 +524,13 @@ export default class MangoAccount {
     market: Market | PerpMarket,
     side: 'buy' | 'sell',
     price: I80F48,
-  ): { max: I80F48; uiDepositVal: any; uiBorrowVal: any } {
+  ): {
+    max: I80F48;
+    uiDepositVal: I80F48;
+    deposits: I80F48;
+    uiBorrowVal: I80F48;
+    borrows: I80F48;
+  } {
     const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
     const healthDecimals = I80F48.fromNumber(
       Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
@@ -533,34 +539,38 @@ export default class MangoAccount {
 
     let uiDepositVal = ZERO_I80F48;
     let uiBorrowVal = ZERO_I80F48;
-    let initLiabWeight, initAssetWeight;
+    let initLiabWeight, initAssetWeight, deposits, borrows;
+
     if (market instanceof PerpMarket) {
       ({ initLiabWeight, initAssetWeight } =
         mangoGroup.perpMarkets[marketIndex]);
+
       const basePos = this.perpAccounts[marketIndex].basePosition;
+
       if (basePos.gt(ZERO_BN)) {
-        uiDepositVal = I80F48.fromNumber(market.baseLotsToNumber(basePos)).mul(
-          price,
-        );
+        deposits = I80F48.fromNumber(market.baseLotsToNumber(basePos));
+        uiDepositVal = deposits.mul(price);
       } else {
-        uiBorrowVal = I80F48.fromNumber(market.baseLotsToNumber(basePos))
-          .mul(price)
-          .abs();
+        borrows = I80F48.fromNumber(market.baseLotsToNumber(basePos)).abs();
+        uiBorrowVal = borrows.mul(price);
       }
     } else {
       ({ initLiabWeight, initAssetWeight } =
         mangoGroup.spotMarkets[marketIndex]);
-      uiDepositVal = this.getUiDeposit(
-        mangoCache.rootBankCache[marketIndex],
-        mangoGroup,
-        marketIndex,
-      ).mul(price);
 
-      uiBorrowVal = this.getUiBorrow(
+      deposits = this.getUiDeposit(
         mangoCache.rootBankCache[marketIndex],
         mangoGroup,
         marketIndex,
-      ).mul(price);
+      );
+      uiDepositVal = deposits.mul(price);
+
+      borrows = this.getUiBorrow(
+        mangoCache.rootBankCache[marketIndex],
+        mangoGroup,
+        marketIndex,
+      );
+      uiBorrowVal = borrows.mul(price);
     }
 
     let max;
@@ -580,7 +590,7 @@ export default class MangoAccount {
         .add(uiDepositVal);
     }
 
-    return { max, uiBorrowVal, uiDepositVal };
+    return { max, uiBorrowVal, uiDepositVal, deposits, borrows };
   }
 
   getMaxWithBorrowForToken(
