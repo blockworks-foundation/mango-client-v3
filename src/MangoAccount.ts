@@ -564,16 +564,12 @@ export default class MangoAccount {
     }
 
     if (side === 'buy') {
-      if (uiBorrowVal.gt(ZERO_I80F48)) {
-        const uiHealthAtZero = uiInitHealth.add(
-          uiBorrowVal.mul(initLiabWeight.sub(ONE_I80F48)),
-        );
-        return uiHealthAtZero
-          .div(ONE_I80F48.sub(initAssetWeight))
-          .add(uiBorrowVal);
-      } else {
-        return uiInitHealth.div(ONE_I80F48.sub(initAssetWeight));
-      }
+      const uiHealthAtZero = uiInitHealth.add(
+        uiBorrowVal.mul(initLiabWeight.sub(ONE_I80F48)),
+      );
+      return uiHealthAtZero
+        .div(ONE_I80F48.sub(initAssetWeight))
+        .add(uiBorrowVal);
     } else {
       const uiHealthAtZero = uiInitHealth.add(
         uiDepositVal.mul(ONE_I80F48.sub(initAssetWeight)),
