@@ -527,7 +527,8 @@ export class MangoClient {
     tokenAcc: PublicKey,
 
     quantity: number,
-  ) {
+    info?: string,
+  ): Promise<string> {
     const transaction = new Transaction();
     const accountInstruction = await createAccountInstruction(
       this.connection,
@@ -596,8 +597,18 @@ export class MangoClient {
       wrappedSolAccount?.publicKey ?? tokenAcc,
       nativeQuantity,
     );
-
     transaction.add(instruction);
+
+    if (info) {
+      const addAccountNameinstruction = makeAddMangoAccountInfoInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        accountInstruction.account.publicKey,
+        owner.publicKey,
+        info,
+      );
+      transaction.add(addAccountNameinstruction);
+    }
 
     if (wrappedSolAccount) {
       transaction.add(
@@ -611,7 +622,7 @@ export class MangoClient {
 
     await this.sendTransaction(transaction, owner, additionalSigners);
 
-    return accountInstruction.account.publicKey;
+    return accountInstruction.account.publicKey.toString();
   }
 
   async deposit(
@@ -1362,6 +1373,7 @@ export class MangoClient {
     spotMarket: Market,
     order: Order,
   ): Promise<TransactionSignature> {
+    const transaction = new Transaction();
     const instruction = makeCancelSpotOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -1376,9 +1388,50 @@ export class MangoClient {
       spotMarket['_decoded'].eventQueue,
       order,
     );
-
-    const transaction = new Transaction();
     transaction.add(instruction);
+
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
+    const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
+    if (!mangoGroup.rootBankAccounts.length) {
+      await mangoGroup.loadRootBanks(this.connection);
+    }
+    const baseRootBank = mangoGroup.rootBankAccounts[marketIndex];
+    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
+    const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
+    const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
+
+    if (!baseNodeBank || !quoteNodeBank) {
+      throw new Error('Invalid or missing node banks');
+    }
+    const settleFundsInstruction = makeSettleFundsInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      owner.publicKey,
+      mangoAccount.publicKey,
+      spotMarket.programId,
+      spotMarket.publicKey,
+      mangoAccount.spotOpenOrders[marketIndex],
+      mangoGroup.signerKey,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      mangoGroup.tokens[marketIndex].rootBank,
+      baseNodeBank.publicKey,
+      mangoGroup.tokens[QUOTE_INDEX].rootBank,
+      quoteNodeBank.publicKey,
+      baseNodeBank.vault,
+      quoteNodeBank.vault,
+      dexSigner,
+    );
+    transaction.add(settleFundsInstruction);
+
     const additionalSigners = [];
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
@@ -1446,7 +1499,6 @@ export class MangoClient {
     owner: Account | WalletAdapter,
   ) {
     const transactions: Transaction[] = [];
-    const assetGains: number[] = new Array(MAX_TOKENS).fill(0);
 
     for (let i = 0; i < spotMarkets.length; i++) {
       const transaction = new Transaction();
@@ -1461,11 +1513,6 @@ export class MangoClient {
       ) {
         continue;
       }
-
-      assetGains[i] += openOrdersAccount.baseTokenFree.toNumber();
-      assetGains[MAX_TOKENS - 1] +=
-        openOrdersAccount.quoteTokenFree.toNumber() +
-        openOrdersAccount['referrerRebatesAccrued'].toNumber();
 
       const spotMarket = spotMarkets[i];
       const dexSigner = await PublicKey.createProgramAddress(
