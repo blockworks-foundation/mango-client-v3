@@ -13,7 +13,20 @@ const PYTH_ORACLES = {
   SUSHI: 'BLArYBCUYhdWiY8PCUTpvFE21iaJq85dvxLk9bYMobcU', // LTC
   FTT: '6vivTRs5ZPeeXbjo7dfburfaYDWoXjBtdtuYgQRuGfu',
   USDT: '38xoQ4oeJCBrcVvca2cGk7iV1dAfrmTR1kmhSCJQ8Jto',
-}
+};
+
+// const PYTH_ORACLES_MAINNET = {
+//   BTC: '2YDWKqoJ1jZgoirNC4c4WLj2JAAf8hxLz5A9HTmPG2AC',
+//   ETH: '3NBReDRTLKMQEKiLD5tGcx4kXbTf88b7f2xLS9UuGjym',
+//   SOL: '2k1qZ9ZMNUNmpGghq6ZQRj7z2d2ATNnzzYugVhiTDCPn',
+//   SRM: 'JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB',
+//   USDT: 'B8piRrj78PWq59VL5PJ4fZ8JxbsQB6sFKQTuaEEGsCuz',
+// };
+
+// const SWITCHBOARD_ORACLES_MAINNET = {
+//   RAY: 'AS2yMpqPY16tY5hQmpdkomaqSckMuDvR6K9P9tk9FA4d',
+//   MNGO: '49cnp1ejyvQi3CJw3kKXNCDGnNbWDuZd3UG3Y2zGvQkX',
+// };
 
 export default async function addPythOracle(
   connection: Connection,
