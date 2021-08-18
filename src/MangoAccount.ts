@@ -21,6 +21,7 @@ import RootBank from './RootBank';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
+import { EOL } from 'os';
 
 export default class MangoAccount {
   publicKey: PublicKey;
@@ -359,6 +360,33 @@ export default class MangoAccount {
 
     return health;
   }
+
+  getHealthsFromComponents(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    spot: I80F48[],
+    perps: I80F48[],
+    quote: I80F48,
+    healthType: HealthType,
+  ): { spot: I80F48; perp: I80F48 } {
+    let spotHealth,
+      perpHealth = quote;
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      const w = getWeights(mangoGroup, i, healthType);
+      const price = mangoCache.priceCache[i].price;
+      const _spotHealth = spot[i]
+        .mul(price)
+        .mul(spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight);
+      const _perpHealth = perps[i]
+        .mul(price)
+        .mul(perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight);
+
+      spotHealth = spotHealth.add(_spotHealth);
+      perpHealth = perpHealth.add(_perpHealth);
+    }
+
+    return { spot: spotHealth, perp: perpHealth };
+  }
   /**
    * Return the spot, perps and quote currency values after adjusting for
    * worst case open orders scenarios. These values are not adjusted for health
@@ -527,6 +555,51 @@ export default class MangoAccount {
         : mangoGroup.spotMarkets[tokenIndex].initLiabWeight;
 
     return initHealth.div(healthDecimals).div(price.mul(liabWeight));
+  }
+
+  toPrettyString(mangoGroup: MangoGroup, cache: MangoCache): string {
+    let lines: string[] = [];
+    lines.push('MangoAccount ' + this.publicKey.toBase58());
+    lines.push('Owner: ' + this.owner.toBase58());
+    lines.push(
+      'Maint Health Ratio: ' + this.getHealthRatio(mangoGroup, cache, 'Maint'),
+    );
+    lines.push('isBankrupt: ' + this.isBankrupt);
+
+    lines.push('Spot:');
+    for (let i = 0; i < this.deposits.length; i++) {
+      lines.push(
+        i +
+          ': ' +
+          this.deposits[i].toString() +
+          ' / ' +
+          this.borrows[i].toString(),
+      );
+    }
+    lines.push('Perps:');
+    for (let i = 0; i < this.perpAccounts.length; i++) {
+      const perpAccount = this.perpAccounts[i];
+      const perpMarketInfo = mangoGroup.perpMarkets[i];
+      lines.push(
+        i +
+          ': ' +
+          perpAccount.basePosition.toString() +
+          ' / ' +
+          perpAccount.quotePosition.toString() +
+          ' / ' +
+          perpAccount.getUnsettledFunding(cache.perpMarketCache[i]).toString() +
+          ' / ' +
+          perpAccount.getHealth(
+            perpMarketInfo,
+            cache.priceCache[i].price,
+            perpMarketInfo.maintAssetWeight,
+            perpMarketInfo.maintLiabWeight,
+            cache.perpMarketCache[i].longFunding,
+            cache.perpMarketCache[i].shortFunding,
+          ),
+      );
+    }
+    return lines.join(EOL);
   }
 }
 
