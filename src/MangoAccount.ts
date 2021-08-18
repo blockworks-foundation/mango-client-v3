@@ -21,7 +21,7 @@ import RootBank from './RootBank';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
-import { PerpMarketInfo, SpotMarketInfo, ZERO_BN } from '.';
+import { ZERO_BN } from '.';
 import PerpMarket from './PerpMarket';
 
 export default class MangoAccount {
