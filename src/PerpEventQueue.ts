@@ -1,13 +1,10 @@
 import BN from 'bn.js';
 import { FillEvent, LiquidateEvent, OutEvent } from '.';
-import { I80F48 } from './fixednum';
 
 export default class PerpEventQueue {
   head!: BN;
   count!: BN;
   seqNum!: BN;
-  makerFee!: I80F48;
-  takerFee!: I80F48;
   events!: any[];
 
   constructor(decoded: any) {
