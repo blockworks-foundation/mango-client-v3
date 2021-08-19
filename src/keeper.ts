@@ -26,7 +26,7 @@ import { PerpEventQueueLayout } from './layout';
 import { MangoGroup, PerpMarket } from '.';
 import PerpEventQueue from './PerpEventQueue';
 
-const groupName = process.env.GROUP || 'devnet.1';
+const groupName = process.env.GROUP || 'mainnet.0';
 const updateCacheInterval = parseInt(
   process.env.UPDATE_CACHE_INTERVAL || '1000',
 );
@@ -41,7 +41,7 @@ const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const consumeEvents = process.env.CONSUME_EVENTS
   ? process.env.CONSUME_EVENTS === 'true'
   : true;
-const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
+const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
 const config = new Config(configFile);
 const groupIds = config.getGroup(cluster, groupName);
 
@@ -53,7 +53,7 @@ const mangoGroupKey = groupIds.publicKey;
 const payer = new Account(
   JSON.parse(
     process.env.KEYPAIR ||
-      fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+      fs.readFileSync(os.homedir() + '/.config/solana/blw.json', 'utf-8'),
   ),
 );
 const connection = new Connection(
@@ -71,7 +71,7 @@ async function main() {
     groupIds.perpMarkets.map((m, i) => {
       return mangoGroup.loadPerpMarket(
         connection,
-        i,
+        m.marketIndex,
         m.baseDecimals,
         m.quoteDecimals,
       );
