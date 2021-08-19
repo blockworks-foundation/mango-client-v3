@@ -1,6 +1,6 @@
 {
   "cluster_urls": {
-    "devnet": "https://api.devnet.solana.com",
+    "devnet": "https://mango.devnet.rpcpool.com",
     "localnet": "http://127.0.0.1:8899",
     "mainnet": "https://mango.rpcpool.com/",
     "testnet": "https://testnet.solana.com"
@@ -19,63 +19,49 @@
           "mintKey": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
           "decimals": 6,
           "rootKey": "Dt61SCuvzLR8uyFCe2mA4of43Qh1YAxJxSTYR514UUwS",
-          "nodeKeys": [
-            "6prWMCYS4kcFJQREwwS1MJqRaLkMAxC6jpHLohw5YdVy"
-          ]
+          "nodeKeys": ["6prWMCYS4kcFJQREwwS1MJqRaLkMAxC6jpHLohw5YdVy"]
         },
         {
           "symbol": "MNGO",
           "mintKey": "MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac",
           "decimals": 6,
           "rootKey": "GsjGqHnHzojFRWjKMW9hitAfTSL17E2FoQHXGDkaA1hr",
-          "nodeKeys": [
-            "F3SQo98322eEaedB57aQSFJV17YQFXvAxN4cFhVcNTYR"
-          ]
+          "nodeKeys": ["F3SQo98322eEaedB57aQSFJV17YQFXvAxN4cFhVcNTYR"]
         },
         {
           "symbol": "BTC",
           "mintKey": "9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E",
           "decimals": 6,
           "rootKey": "5dcyvgVBmbRQJv8doYou1ZqbwYikxAnTjXDoffjQChMx",
-          "nodeKeys": [
-            "722MtoBQuJ8FMJDsbjrytMZJCuoyMhhPXu9MbvV9WLS2"
-          ]
+          "nodeKeys": ["722MtoBQuJ8FMJDsbjrytMZJCuoyMhhPXu9MbvV9WLS2"]
         },
         {
           "symbol": "ETH",
           "mintKey": "2FPyTwcZLUg1MDrwsyoP4D6s1tM7hAkHYRjkNb5w6Pxk",
           "decimals": 6,
           "rootKey": "bDGPPHJA1mu1HPnJsA27TS1mYWS5uhfySn3MDXxHULJ",
-          "nodeKeys": [
-            "Amm5xozypXYwzWAYjqvN9t2FpLnbgh1itMwNZuz6mAMX"
-          ]
+          "nodeKeys": ["Amm5xozypXYwzWAYjqvN9t2FpLnbgh1itMwNZuz6mAMX"]
         },
         {
           "symbol": "SOL",
           "mintKey": "So11111111111111111111111111111111111111112",
           "decimals": 9,
           "rootKey": "EgXmJWCVgmABc4BCT5XMWfJCWspBg5Mn9TvoJod5VyvN",
-          "nodeKeys": [
-            "G4s61NgGhytAhVsURhkiAxFjB3cCN5cnoFnjhbkGewTq"
-          ]
+          "nodeKeys": ["G4s61NgGhytAhVsURhkiAxFjB3cCN5cnoFnjhbkGewTq"]
         },
         {
           "symbol": "SRM",
           "mintKey": "SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt",
           "decimals": 6,
           "rootKey": "43fLrwXVnP7xjeqZxB9GLEooxp46wLKVnSQ7X7mQMZAj",
-          "nodeKeys": [
-            "8kun5JuAMwqjfNbuQLQ5vKsWh8rfynCBkS2APcUcpnLa"
-          ]
+          "nodeKeys": ["8kun5JuAMwqjfNbuQLQ5vKsWh8rfynCBkS2APcUcpnLa"]
         },
         {
           "symbol": "USDT",
           "mintKey": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
           "decimals": 6,
           "rootKey": "5VNa1LKJAf8wb1nm5wUhuS98bZARG3fF5XrK8LLH6FeD",
-          "nodeKeys": [
-            "Hr9p6TEttGwSAosSAaFrxLbAYUDNMErYcohyRRwZgCHT"
-          ]
+          "nodeKeys": ["Hr9p6TEttGwSAosSAaFrxLbAYUDNMErYcohyRRwZgCHT"]
         }
       ],
       "oracles": [
@@ -199,72 +185,56 @@
           "mintKey": "8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN",
           "decimals": 6,
           "rootKey": "GJyYtUJREpkwuwsFrfXArYThUj7Hs3wVmPbmdGerAtVG",
-          "nodeKeys": [
-            "49o1prxH3TRf5co1dRvUV19QE46j2XQ6frzryVbCpfyt"
-          ]
+          "nodeKeys": ["49o1prxH3TRf5co1dRvUV19QE46j2XQ6frzryVbCpfyt"]
         },
         {
           "symbol": "MNGO",
           "mintKey": "Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC",
           "decimals": 6,
           "rootKey": "6yEM5tYGXiFMCKjktaiFWoieByA2DDLUnYYfaAHc8xxF",
-          "nodeKeys": [
-            "8yXwmqWGmhfwLk4rhShbAR6XfM84gN33vftdQ9Th9Ghu"
-          ]
+          "nodeKeys": ["8yXwmqWGmhfwLk4rhShbAR6XfM84gN33vftdQ9Th9Ghu"]
         },
         {
           "symbol": "BTC",
           "mintKey": "3UNBZ6o52WTWwjac2kPUb4FyodhU1vFkRJheu1Sh2TvU",
           "decimals": 6,
           "rootKey": "8huj48WFnu8tG6CDg8giAMxAsABVAdvDexS26hT7bT5E",
-          "nodeKeys": [
-            "3R3AsDAt8mmnCjXz7S1rhRn8uFmeJVscDQormcrFpAdY"
-          ]
+          "nodeKeys": ["3R3AsDAt8mmnCjXz7S1rhRn8uFmeJVscDQormcrFpAdY"]
         },
         {
           "symbol": "ETH",
           "mintKey": "Cu84KB3tDL6SbFgToHMLYVDJJXdJjenNzSKikeAvzmkA",
           "decimals": 6,
           "rootKey": "EPc7knMpsFPKi7XhpcGkk3jXjauSWfawphUjmKpVPLoX",
-          "nodeKeys": [
-            "DrsaYfiuD9HZvKKMHqbcKLhDYNAV4sB3VHeFBqgvNnJJ"
-          ]
+          "nodeKeys": ["DrsaYfiuD9HZvKKMHqbcKLhDYNAV4sB3VHeFBqgvNnJJ"]
         },
         {
           "symbol": "SOL",
           "mintKey": "So11111111111111111111111111111111111111112",
           "decimals": 9,
           "rootKey": "9CaF5my2qTpmXnAja2ysByxbaZEDa25XNyrkoVtgCW33",
-          "nodeKeys": [
-            "8ZwrSgMrg7m4u2SS7uA5rQ9bNMvfvFYN8CSotmWW9ifE"
-          ]
+          "nodeKeys": ["8ZwrSgMrg7m4u2SS7uA5rQ9bNMvfvFYN8CSotmWW9ifE"]
         },
         {
           "symbol": "SRM",
           "mintKey": "AvtB6w9xboLwA145E221vhof5TddhqsChYcx7Fy3xVMH",
           "decimals": 6,
           "rootKey": "9ubXHB3PqH4RHa7zWJGjwi56bfYw1XhNRAeoonLXw2Tf",
-          "nodeKeys": [
-            "ECo7NB9x97STqujUfp8eYtdug8GW6Mj2gnjWRuPSiV1M"
-          ]
+          "nodeKeys": ["ECo7NB9x97STqujUfp8eYtdug8GW6Mj2gnjWRuPSiV1M"]
         },
         {
           "symbol": "RAY",
           "mintKey": "3YFQ7UYJ7sNGpXTKBxM3bYLVxKpzVudXAe4gLExh5b3n",
           "decimals": 6,
           "rootKey": "B7FZ3U3G223CAFc8YApgKcfvjWwaaYt5Fx3bmLq6XYgW",
-          "nodeKeys": [
-            "9rLZYD86A7uybZBopBd9TxmwSqW1PJbiuEnbqm3iBRuh"
-          ]
+          "nodeKeys": ["9rLZYD86A7uybZBopBd9TxmwSqW1PJbiuEnbqm3iBRuh"]
         },
         {
           "symbol": "USDT",
           "mintKey": "DAwBSXe6w9g37wdE2tCrFbho3QHKZi4PjuBytQCULap2",
           "decimals": 6,
           "rootKey": "HcfWd9dihnzeTw4KKDV386aNKTadUbTpf1ZnRhwxYWrH",
-          "nodeKeys": [
-            "GheRDg38QT7LVQ2o476HPtPXTiA9Jn3t78Shq8uMxMJN"
-          ]
+          "nodeKeys": ["GheRDg38QT7LVQ2o476HPtPXTiA9Jn3t78Shq8uMxMJN"]
         }
       ],
       "oracles": [
