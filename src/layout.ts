@@ -617,10 +617,11 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('dexProgramId'),
   publicKeyLayout('mangoCache'),
   u64('validInterval'),
-  publicKeyLayout('daoVault'),
+  publicKeyLayout('insuranceVault'),
   publicKeyLayout('srmVault'),
   publicKeyLayout('msrmVault'),
-  seq(u8(), 64, 'padding'),
+  publicKeyLayout('feesVault'),
+  seq(u8(), 32, 'padding'),
 ]);
 
 export const MangoAccountLayout = struct([

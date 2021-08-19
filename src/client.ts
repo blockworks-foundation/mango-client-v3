@@ -343,6 +343,7 @@ export class MangoClient {
     quoteMint: PublicKey,
     msrmMint: PublicKey,
     dexProgram: PublicKey,
+    feesVault: PublicKey, // owned by Mango DAO token governance
     validInterval: number,
     quoteOptimalUtil: number,
     quoteOptimalRate: number,
@@ -369,14 +370,15 @@ export class MangoClient {
       signerKey,
     );
 
-    const daoVaultAccount = new Account();
-    const daoVaultAccountInstructions = await createTokenAccountInstructions(
-      this.connection,
-      payer.publicKey,
-      daoVaultAccount.publicKey,
-      quoteMint,
-      signerKey,
-    );
+    const insuranceVaultAccount = new Account();
+    const insuranceVaultAccountInstructions =
+      await createTokenAccountInstructions(
+        this.connection,
+        payer.publicKey,
+        insuranceVaultAccount.publicKey,
+        quoteMint,
+        signerKey,
+      );
 
     const quoteNodeBankAccountInstruction = await createAccountInstruction(
       this.connection,
@@ -403,7 +405,7 @@ export class MangoClient {
     createAccountsTransaction.add(quoteNodeBankAccountInstruction.instruction);
     createAccountsTransaction.add(quoteRootBankAccountInstruction.instruction);
     createAccountsTransaction.add(cacheAccountInstruction.instruction);
-    createAccountsTransaction.add(...daoVaultAccountInstructions);
+    createAccountsTransaction.add(...insuranceVaultAccountInstructions);
 
     const signers = [
       accountInstruction.account,
@@ -411,7 +413,7 @@ export class MangoClient {
       quoteNodeBankAccountInstruction.account,
       quoteRootBankAccountInstruction.account,
       cacheAccountInstruction.account,
-      daoVaultAccount,
+      insuranceVaultAccount,
     ];
     await this.sendTransaction(createAccountsTransaction, payer, signers);
 
@@ -445,8 +447,9 @@ export class MangoClient {
       quoteVaultAccount.publicKey,
       quoteNodeBankAccountInstruction.account.publicKey,
       quoteRootBankAccountInstruction.account.publicKey,
-      daoVaultAccount.publicKey,
+      insuranceVaultAccount.publicKey,
       msrmVaultPk,
+      feesVault,
       cacheAccountInstruction.account.publicKey,
       dexProgram,
       new BN(signerNonce),
@@ -2140,7 +2143,7 @@ export class MangoClient {
       rootBank.publicKey,
       nodeBanks[0].publicKey,
       nodeBanks[0].vault,
-      mangoGroup.daoVault,
+      mangoGroup.feesVault,
       payer.publicKey,
       mangoGroup.admin,
     );
@@ -2172,7 +2175,7 @@ export class MangoClient {
       rootBank.publicKey,
       nodeBanks[0].publicKey,
       nodeBanks[0].vault,
-      mangoGroup.daoVault,
+      mangoGroup.insuranceVault,
       mangoGroup.signerKey,
       perpMarket.publicKey,
       liqorMangoAccount.spotOpenOrders,
@@ -2206,7 +2209,7 @@ export class MangoClient {
       quoteRootBank.publicKey,
       quoteRootBank.nodeBanks[0],
       quoteNodeBanks[0].vault,
-      mangoGroup.daoVault,
+      mangoGroup.insuranceVault,
       mangoGroup.signerKey,
       liabRootBank.publicKey,
       liabRootBank.nodeBanks[0],

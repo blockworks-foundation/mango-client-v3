@@ -74,7 +74,7 @@ export function writeConfig(configPath: string, config: Config) {
 }
 
 yargs(hideBin(process.argv)).command(
-  'init-group <group> <mangoProgramId> <serumProgramId> <quote_mint>',
+  'init-group <group> <mangoProgramId> <serumProgramId> <quote_mint> <fees_vault>',
   'initialize a new group',
   (y) => {
     return y
@@ -89,6 +89,11 @@ yargs(hideBin(process.argv)).command(
       })
       .positional('quote_mint', {
         describe: 'the mint of the quote currency 💵',
+        type: 'string',
+      })
+      .positional('fees_vault', {
+        describe:
+          'the quote currency vault owned by Mango DAO token governance',
         type: 'string',
       })
       .option('quote_optimal_util', {
@@ -120,6 +125,7 @@ yargs(hideBin(process.argv)).command(
     const mangoProgramId = new PublicKey(args.mangoProgramId as string);
     const serumProgramId = new PublicKey(args.serumProgramId as string);
     const quoteMint = new PublicKey(args.quote_mint as string);
+    const feesVault = new PublicKey(args.fees_vault as string);
     const account = readKeypair(args.keypair as string);
     const config = readConfig(args.config as string);
     const cluster = args.cluster as Cluster;
@@ -133,6 +139,7 @@ yargs(hideBin(process.argv)).command(
       serumProgramId,
       args.symbol as string,
       quoteMint,
+      feesVault,
       5,
       args.quote_optimal_util as number,
       args.quote_optimal_rate as number,
@@ -257,7 +264,7 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('taker_fee', {
-        default: 0.0001,
+        default: 0.0005,
         type: 'number',
       })
       .option('base_lot_size', {
@@ -273,7 +280,7 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('rate', {
-        default: 1,
+        default: 1, // think of better starting rate
         type: 'number',
       })
       .option('max_depth_bps', {
@@ -285,7 +292,8 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('mngo_per_period', {
-        default: 11400, // roughly corresponds to 100m MNGO per year
+        // default: 11400, // roughly corresponds to 100m MNGO per year
+        default: 0, // going to be 0 for internal release
         type: 'number',
       })
 
