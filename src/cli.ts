@@ -281,7 +281,7 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('max_num_events', {
-        default: 128,
+        default: 256,
         type: 'number',
       })
       .option('rate', {
