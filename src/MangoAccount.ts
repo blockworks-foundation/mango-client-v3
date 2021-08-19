@@ -371,8 +371,8 @@ export default class MangoAccount {
     quote: I80F48,
     healthType: HealthType,
   ): { spot: I80F48; perp: I80F48 } {
-    let spotHealth,
-      perpHealth = quote;
+    let spotHealth = quote;
+    let perpHealth = quote;
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const w = getWeights(mangoGroup, i, healthType);
       const price = mangoCache.priceCache[i].price;

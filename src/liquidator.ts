@@ -35,6 +35,7 @@ if (!groupIds) {
 }
 
 const TARGETS = [0, 1_000, 1_000, 20, 1_000_000, 100_000, 1_000_000];
+const blacklist = ['5ozgA49DjT5hgeC9XZ4LgTuC9d9uz4ttSGWQGV57T2wg'];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
@@ -104,8 +105,12 @@ async function main() {
       for (let mangoAccount of mangoAccounts) {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
-        if (health.lt(ZERO_I80F48) || mangoAccount.isBankrupt) {
-          if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
+        if (health.lt(ZERO_I80F48)) {
+          if (
+            !liquidating[mangoAccountKeyString] &&
+            numLiquidating < 1 &&
+            !blacklist.includes(mangoAccountKeyString)
+          ) {
             liquidating[mangoAccountKeyString] = true;
             numLiquidating++;
             console.log(
@@ -268,7 +273,22 @@ async function liquidateAccount(
     healthComponents.quote,
     'Maint',
   );
-  if (healths.spot.lt(ZERO_I80F48)) {
+
+  let shouldLiquidateSpot = false;
+  for (let i = 0; i < mangoGroup.tokens.length; i++) {
+    const price = cache.priceCache[i] ? cache.priceCache[i].price : ONE_I80F48;
+    if (
+      liqee
+        .getNativeDeposit(cache.rootBankCache[i], i)
+        .sub(liqee.getNativeBorrow(cache.rootBankCache[i], i))
+        .mul(price)
+        .lt(ZERO_I80F48)
+    ) {
+      shouldLiquidateSpot = true;
+    }
+  }
+
+  if (shouldLiquidateSpot) {
     await liquidateSpot(
       mangoGroup,
       cache,
@@ -406,7 +426,7 @@ async function liquidateSpot(
         }
       }
     }
-    //await balanceTokens();
+    //await balanceTokens(mangoGroup, liqor, spotMarkets);
   }
 }
 
@@ -432,7 +452,6 @@ async function liquidatePerps(
         perpMarketCache.longFunding,
         perpMarketCache.shortFunding,
       );
-
       return { perpHealth: perpHealth, marketIndex: marketIndex };
     })
     .sort((a, b) => {
@@ -548,7 +567,7 @@ async function liquidatePerps(
       await liqee.reload(connection);
     }
 
-    await closePositions(mangoGroup, liqor, perpMarkets);
+    //await closePositions(mangoGroup, liqor, perpMarkets);
   }
 }
 
