@@ -313,10 +313,6 @@ export default class MangoAccount {
     let assets = ZERO_I80F48;
     let liabs = ZERO_I80F48;
 
-    console.log('quote', quote);
-    for (let i = 0; i < mangoGroup.numOracles; i++) {
-      console.log(i, 'spot', spot[i], 'perp', perps[i]);
-    }
     if (quote.isPos()) {
       assets = assets.add(quote);
     } else {
