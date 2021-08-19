@@ -1,4 +1,4 @@
-import { OpenOrders } from '@project-serum/serum';
+import { Market, OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import {
@@ -22,6 +22,8 @@ import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
 import { EOL } from 'os';
+import { ZERO_BN } from '.';
+import PerpMarket from './PerpMarket';
 
 export default class MangoAccount {
   publicKey: PublicKey;
@@ -401,6 +403,7 @@ export default class MangoAccount {
     const spot = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
     const perps = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
     let quote = this.getNet(mangoCache.rootBankCache[QUOTE_INDEX], QUOTE_INDEX);
+
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const bankCache = mangoCache.rootBankCache[i];
       const price = mangoCache.priceCache[i].price;
@@ -532,7 +535,7 @@ export default class MangoAccount {
     );
   }
 
-  getLeverage(mangoGroup, mangoCache): I80F48 {
+  getLeverage(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
     const liabs = this.getLiabsVal(mangoGroup, mangoCache);
     const assets = this.getAssetsVal(mangoGroup, mangoCache);
 
@@ -542,11 +545,78 @@ export default class MangoAccount {
     return ZERO_I80F48;
   }
 
-  getMaxWithBorrowForToken(mangoGroup, mangoCache, tokenIndex): I80F48 {
+  getMaxLeverageForMarket(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    marketIndex: number,
+    market: Market | PerpMarket,
+    side: 'buy' | 'sell',
+    price: I80F48,
+  ): I80F48 {
+    const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
+    const healthDecimals = I80F48.fromNumber(
+      Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
+    );
+    const uiInitHealth = initHealth.div(healthDecimals);
+
+    let uiDepositVal = ZERO_I80F48;
+    let uiBorrowVal = ZERO_I80F48;
+    let initLiabWeight, initAssetWeight;
+    if (market instanceof PerpMarket) {
+      ({ initLiabWeight, initAssetWeight } =
+        mangoGroup.perpMarkets[marketIndex]);
+      const basePos = this.perpAccounts[marketIndex].basePosition;
+      if (basePos.gt(ZERO_BN)) {
+        uiDepositVal = I80F48.fromNumber(market.baseLotsToNumber(basePos)).mul(
+          price,
+        );
+      } else {
+        uiBorrowVal = I80F48.fromNumber(market.baseLotsToNumber(basePos))
+          .mul(price)
+          .abs();
+      }
+    } else {
+      ({ initLiabWeight, initAssetWeight } =
+        mangoGroup.spotMarkets[marketIndex]);
+      uiDepositVal = this.getUiDeposit(
+        mangoCache.rootBankCache[marketIndex],
+        mangoGroup,
+        marketIndex,
+      ).mul(price);
+
+      uiBorrowVal = this.getUiBorrow(
+        mangoCache.rootBankCache[marketIndex],
+        mangoGroup,
+        marketIndex,
+      ).mul(price);
+    }
+
+    if (side === 'buy') {
+      const uiHealthAtZero = uiInitHealth.add(
+        uiBorrowVal.mul(initLiabWeight.sub(ONE_I80F48)),
+      );
+      return uiHealthAtZero
+        .div(ONE_I80F48.sub(initAssetWeight))
+        .add(uiBorrowVal);
+    } else {
+      const uiHealthAtZero = uiInitHealth.add(
+        uiDepositVal.mul(ONE_I80F48.sub(initAssetWeight)),
+      );
+      return uiHealthAtZero
+        .div(initLiabWeight.sub(ONE_I80F48))
+        .add(uiDepositVal);
+    }
+  }
+
+  getMaxWithBorrowForToken(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    tokenIndex: number,
+  ): I80F48 {
     const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
     const price = mangoGroup.getPrice(tokenIndex, mangoCache);
     const healthDecimals = I80F48.fromNumber(
-      Math.pow(10, mangoGroup.tokens[tokenIndex].decimals),
+      Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
     );
 
     const liabWeight =

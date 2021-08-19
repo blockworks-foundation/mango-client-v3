@@ -23,7 +23,7 @@ import MangoGroup from '../src/MangoGroup';
 import MangoAccount from '../src/MangoAccount';
 
 export const MangoProgramId = new PublicKey(
-  '7TgHoQrdJkhMiJegHYtfsNwEmxTXuWB6oJBPnKgeMN6Y',
+  '5fP7Z7a87ZEVsKr2tQPApdtq83GcTW4kz919R6ou5h5E',
 );
 export const DexProgramId = new PublicKey(
   'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',

@@ -30,7 +30,6 @@ import {
   MangoAccountLayout,
   MangoCacheLayout,
   MangoGroupLayout,
-  MAX_TOKENS,
   NodeBankLayout,
   PerpEventLayout,
   PerpEventQueueHeaderLayout,

@@ -12,6 +12,7 @@ import {
   addSpotMarket,
   addStubOracle,
   addPythOracle,
+  addSwitchboardOracle,
   initGroup,
   setStubOracle,
   listMarket,
@@ -154,7 +155,7 @@ yargs(hideBin(process.argv)).command(
       .option('provider', {
         describe: 'oracle provider',
         default: 'stub',
-        choices: ['stub', 'pyth'],
+        choices: ['stub', 'pyth', 'switchboard'],
       })
       .option(...clusterDesc)
       .option(...configDesc)
@@ -170,6 +171,13 @@ yargs(hideBin(process.argv)).command(
     let result: any;
     if (args.provider === 'pyth') {
       result = await addPythOracle(
+        connection,
+        account,
+        group,
+        args.symbol as string,
+      );
+    } else if (args.provider === 'switchboard') {
+      result = await addSwitchboardOracle(
         connection,
         account,
         group,

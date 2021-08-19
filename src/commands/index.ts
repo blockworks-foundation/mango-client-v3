@@ -3,6 +3,7 @@ import addPerpMarket from './addPerpMarket';
 import addSpotMarket from './addSpotMarket';
 import addStubOracle from './addStubOracle';
 import addPythOracle from './addPythOracle';
+import addSwitchboardOracle from './addSwitchboardOracle';
 import setStubOracle from './setStubOracle';
 import listMarket from './listMarket';
 
@@ -11,6 +12,7 @@ export {
   addSpotMarket,
   addStubOracle,
   addPythOracle,
+  addSwitchboardOracle,
   initGroup,
   setStubOracle,
   listMarket,
