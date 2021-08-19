@@ -34,8 +34,8 @@ if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);
 }
 
-const TARGETS = [0, 1_000, 1_000, 20, 1_000_000, 100_000, 1_000_000];
-const blacklist = ['5ozgA49DjT5hgeC9XZ4LgTuC9d9uz4ttSGWQGV57T2wg'];
+const TARGETS = [0, 0, 0, 0, 0, 0, 0];
+const blacklist: string[] = [];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
@@ -53,7 +53,7 @@ const connection = new Connection(
 const client = new MangoClient(connection, mangoProgramId);
 
 const liqorMangoAccountKey = new PublicKey(
-  'FmkjrMZkQpThVXtgcUo8NZGnmH1r1xUdL9m1k44XbDuN',
+  'Cmpsn287bXTfySTm4E1xdDfoMLjjBWkBrshSt66xuwK5',
 );
 
 let mangoAccounts: MangoAccount[] = [];
@@ -100,7 +100,6 @@ async function main() {
         mangoGroup.dexProgramId,
       );
 
-      //await balanceTokens(mangoGroup, liqorMangoAccount, spotMarkets);
       console.time('checkAccounts');
       for (let mangoAccount of mangoAccounts) {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
@@ -426,7 +425,7 @@ async function liquidateSpot(
         }
       }
     }
-    //await balanceTokens(mangoGroup, liqor, spotMarkets);
+    await balanceTokens(mangoGroup, liqor, spotMarkets);
   }
 }
 
@@ -567,7 +566,7 @@ async function liquidatePerps(
       await liqee.reload(connection);
     }
 
-    //await closePositions(mangoGroup, liqor, perpMarkets);
+    await closePositions(mangoGroup, liqor, perpMarkets);
   }
 }
 
@@ -640,7 +639,7 @@ async function balanceTokens(
 
   for (let i = 0; i < groupIds!.spotMarkets.length; i++) {
     const diff = mangoAccount
-      .getUiDeposit(cache.rootBankCache[i + 1], mangoGroup, i + 1)
+      .getUiDeposit(cache.rootBankCache[i], mangoGroup, i)
       .sub(I80F48.fromNumber(TARGETS[i]));
     diffs.push(diff);
     netValues.push([i, diff.mul(cache.priceCache[i].price)]);
@@ -669,7 +668,7 @@ async function balanceTokens(
         payer,
         'sell',
         price.toNumber(),
-        diffs[marketIndex].toNumber(),
+        Math.abs(diffs[marketIndex].toNumber()),
         'ioc',
       );
       await client.settleFunds(
@@ -697,7 +696,7 @@ async function balanceTokens(
         payer,
         'buy',
         price.toNumber(),
-        diffs[marketIndex].toNumber(),
+        Math.abs(diffs[marketIndex].toNumber()),
         'ioc',
       );
       await client.settleFunds(
@@ -720,39 +719,51 @@ async function closePositions(
   for (let i = 0; i < mangoAccount.perpAccounts.length; i++) {
     const perpAccount = mangoAccount.perpAccounts[i];
     const perpMarket = perpMarkets[i];
-    const positionSize = perpMarket.baseLotsToNumber(perpAccount.basePosition);
-    const side = perpAccount.basePosition.gt(ZERO_BN) ? 'sell' : 'buy';
-    const liquidationFee = mangoGroup.perpMarkets[i].liquidationFee.toNumber();
-    const price = cache.priceCache[i].price;
-    console.log('price', price.toString());
-    const orderPrice = price.toNumber(); // TODO: base this on liquidation fee
-    console.log('orderPrice', orderPrice);
-
-    console.log(
-      side + 'ing ' + positionSize + ' of perp ' + i + ' for $' + orderPrice,
-    );
-    await client.placePerpOrder(
-      mangoGroup,
-      mangoAccount,
-      cache.publicKey,
-      perpMarket,
-      payer,
-      side,
-      orderPrice,
-      positionSize,
-      'ioc',
-    );
-
-    const quoteRootBank = mangoGroup.rootBankAccounts[i];
-    if (quoteRootBank) {
-      await client.settlePnl(
-        mangoGroup,
-        mangoAccount,
-        perpMarket,
-        quoteRootBank,
-        price,
-        payer,
+    if (perpMarket && perpAccount) {
+      const positionSize = Math.abs(
+        perpMarket.baseLotsToNumber(perpAccount.basePosition),
       );
+      if (positionSize != 0) {
+        const side = perpAccount.basePosition.gt(ZERO_BN) ? 'sell' : 'buy';
+        const liquidationFee =
+          mangoGroup.perpMarkets[i].liquidationFee.toNumber();
+        const price = cache.priceCache[i].price;
+        const orderPrice =
+          side == 'sell' ? price.toNumber() * 0.95 : price.toNumber() * 1.05; // TODO: base this on liquidation fee
+
+        console.log(
+          side +
+            'ing ' +
+            positionSize +
+            ' of perp ' +
+            i +
+            ' for $' +
+            orderPrice,
+        );
+        await client.placePerpOrder(
+          mangoGroup,
+          mangoAccount,
+          cache.publicKey,
+          perpMarket,
+          payer,
+          side,
+          orderPrice,
+          positionSize,
+          'ioc',
+        );
+
+        const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
+        if (quoteRootBank) {
+          await client.settlePnl(
+            mangoGroup,
+            mangoAccount,
+            perpMarket,
+            quoteRootBank,
+            price,
+            payer,
+          );
+        }
+      }
     }
   }
 }
