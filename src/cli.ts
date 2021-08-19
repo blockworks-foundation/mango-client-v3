@@ -111,6 +111,11 @@ yargs(hideBin(process.argv)).command(
         default: 1.5,
         type: 'number',
       })
+      .option('valid_interval', {
+        describe: 'the interval where caches are no longer valid',
+        default: 10,
+        type: 'number',
+      })
       .option('symbol', {
         describe: 'the quote symbol',
         default: 'USDC',
@@ -140,7 +145,7 @@ yargs(hideBin(process.argv)).command(
       args.symbol as string,
       quoteMint,
       feesVault,
-      5,
+      args.valid_interval as number,
       args.quote_optimal_util as number,
       args.quote_optimal_rate as number,
       args.quote_max_rate as number,
@@ -276,7 +281,7 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('max_num_events', {
-        default: 128,
+        default: 256,
         type: 'number',
       })
       .option('rate', {

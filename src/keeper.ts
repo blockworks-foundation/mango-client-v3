@@ -71,7 +71,7 @@ async function main() {
     groupIds.perpMarkets.map((m, i) => {
       return mangoGroup.loadPerpMarket(
         connection,
-        i,
+        m.marketIndex,
         m.baseDecimals,
         m.quoteDecimals,
       );

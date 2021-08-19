@@ -2,9 +2,16 @@ import { Account, Connection, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import { getOracleBySymbol, GroupConfig } from '../config';
 
-const SWITCHBOARD_ORACLES = {
+// devnet
+const SWITCHBOARD_ORACLES_DEVNET = {
   MNGO: '8k7F9Xb36oFJsjpCKpsXvg4cgBRoZtwNTc3EzG5Ttd2o',
-}
+};
+
+// mainnet
+const SWITCHBOARD_ORACLES_MAINNET = {
+  RAY: 'AS2yMpqPY16tY5hQmpdkomaqSckMuDvR6K9P9tk9FA4d',
+  MNGO: '49cnp1ejyvQi3CJw3kKXNCDGnNbWDuZd3UG3Y2zGvQkX',
+};
 
 export default async function addSwitchboardOracle(
   connection: Connection,
@@ -21,7 +28,12 @@ export default async function addSwitchboardOracle(
 
   const client = new MangoClient(connection, groupConfig.mangoProgramId);
   const group = await client.getMangoGroup(groupConfig.publicKey);
-  const oraclePk = new PublicKey(SWITCHBOARD_ORACLES[symbol]);
+  let oraclePk;
+  if (groupConfig.cluster === 'mainnet') {
+    oraclePk = new PublicKey(SWITCHBOARD_ORACLES_MAINNET[symbol]);
+  } else {
+    oraclePk = new PublicKey(SWITCHBOARD_ORACLES_DEVNET[symbol]);
+  }
   await client.addOracle(group, oraclePk, payer);
 
   const oracle = {
