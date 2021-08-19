@@ -453,6 +453,8 @@ export default class MangoAccount {
           quote = quote.add(quotePos);
           perps[i] = asksBaseNet;
         }
+      } else {
+        perps[i] = ZERO_I80F48;
       }
     }
 
