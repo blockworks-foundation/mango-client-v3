@@ -4,9 +4,11 @@
  * 2.) Run yarn launch-realistic-group
  * 3.) Update the mango group name in keeper.ts crank.ts and in the UI in useMangoStore.ts
  */
+
 const newGroupName = 'devnet.1';
 const mangoProgramId = '5fP7Z7a87ZEVsKr2tQPApdtq83GcTW4kz919R6ou5h5E';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
+const feesVault = '54PcMYTAZd8uRaYyb3Cwgctcfc1LchGMaqVrmxgr3yVs'; // devnet vault owned by daffy
 
 const FIXED_IDS: any[] = [
   {
@@ -87,8 +89,9 @@ const initNewGroup = async () => {
   console.log('starting');
   const quoteMint = FIXED_IDS.find((id) => id.symbol === 'USDC')
     ?.mint as string;
+
   await execCommand(
-    `yarn cli init-group ${newGroupName} ${mangoProgramId} ${serumProgramId} ${quoteMint}`,
+    `yarn cli init-group ${newGroupName} ${mangoProgramId} ${serumProgramId} ${quoteMint} ${feesVault}`,
   );
   console.log(`new group initialized`);
 

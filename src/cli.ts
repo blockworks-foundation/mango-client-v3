@@ -74,7 +74,7 @@ export function writeConfig(configPath: string, config: Config) {
 }
 
 yargs(hideBin(process.argv)).command(
-  'init-group <group> <mangoProgramId> <serumProgramId> <quote_mint>',
+  'init-group <group> <mangoProgramId> <serumProgramId> <quote_mint> <fees_vault>',
   'initialize a new group',
   (y) => {
     return y
@@ -264,7 +264,7 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('taker_fee', {
-        default: 0.0001,
+        default: 0.0005,
         type: 'number',
       })
       .option('base_lot_size', {
@@ -280,7 +280,7 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('rate', {
-        default: 1,
+        default: 1, // think of better starting rate
         type: 'number',
       })
       .option('max_depth_bps', {
@@ -292,7 +292,8 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('mngo_per_period', {
-        default: 11400, // roughly corresponds to 100m MNGO per year
+        // default: 11400, // roughly corresponds to 100m MNGO per year
+        default: 0, // going to be 0 for internal release
         type: 'number',
       })
 
