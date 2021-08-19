@@ -34,11 +34,13 @@ const processKeeperInterval = parseInt(
   process.env.PROCESS_KEEPER_INTERVAL || '15000',
 );
 const consumeEventsInterval = parseInt(
-  process.env.CONSUME_EVENTS_INTERVAL || '3000',
+  process.env.CONSUME_EVENTS_INTERVAL || '2000',
 );
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '20');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
-const consumeEvents = process.env.CONSUME_EVENTS === 'true';
+const consumeEvents = process.env.CONSUME_EVENTS
+  ? process.env.CONSUME_EVENTS === 'true'
+  : true;
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
 const config = new Config(configFile);
 const groupIds = config.getGroup(cluster, groupName);
