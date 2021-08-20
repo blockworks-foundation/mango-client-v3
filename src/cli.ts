@@ -16,6 +16,7 @@ import {
   initGroup,
   setStubOracle,
   listMarket,
+  sanityCheck,
 } from './commands';
 import { Cluster, Config, GroupConfig, getTokenBySymbol } from './config';
 import { MangoClient } from './client';
@@ -437,21 +438,40 @@ yargs(hideBin(process.argv)).command(
 ).argv;
 
 yargs(hideBin(process.argv)).command(
-  'show <mango_account_pk>',
+  'sanity-check <group>',
+  'check group conditions that always have to be true',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .option(...clusterDesc)
+      .option(...configDesc)
+  },
+  async (args) => {
+    console.log('sanity check', args);
+    const cluster = args.cluster as Cluster;
+    const config = readConfig(args.config as string);
+    const connection = openConnection(config, cluster);
+    const groupConfig = config.getGroup(cluster, args.group as string) as GroupConfig;
+    await sanityCheck(
+      connection,
+      groupConfig,
+    );
+    process.exit(0);
+  }
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'show <group> <mango_account_pk>',
   'Print relevant details about a mango account',
   (y) => {
     return y
+      .positional(...groupDesc)
       .positional('mango_account_pk', {
         describe: 'the public key of the MangoAccount',
         type: 'string',
       })
-      .option('group', {
-        describe: 'the mango group name 🥭',
-        default: 'mango_test_v3.4',
-        type: 'string',
-      })
-      .option(...configDesc)
-      .option(...clusterDesc);
+      .option(...clusterDesc)
+      .option(...configDesc);
   },
   async (args) => {
     console.log('show', args);
@@ -460,10 +480,7 @@ yargs(hideBin(process.argv)).command(
 
     const connection = openConnection(config, cluster);
 
-    const groupConfig = config.getGroup(
-      cluster,
-      args.group as string,
-    ) as GroupConfig;
+    const groupConfig = config.getGroup(cluster, args.group as string) as GroupConfig;
 
     const client = new MangoClient(connection, groupConfig.mangoProgramId);
     const mangoAccount = await client.getMangoAccount(

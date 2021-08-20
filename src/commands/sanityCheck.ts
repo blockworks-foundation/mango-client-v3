@@ -1,29 +1,12 @@
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
-import { MangoClient } from './client';
-import MangoAccount from './MangoAccount';
-import PerpMarket from './PerpMarket';
-import configFile from './ids.json';
-import { Cluster, Config } from './config';
-import { QUOTE_INDEX } from './layout';
-import { ZERO_I80F48 } from './fixednum';
+import { MangoClient } from '../client';
+import MangoAccount from '../MangoAccount';
+import PerpMarket from '../PerpMarket';
+import { GroupConfig } from '../config';
+import { QUOTE_INDEX } from '../layout';
+import { ZERO_I80F48 } from '../fixednum';
 
-const config = new Config(configFile);
-const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-const groupName = process.env.GROUP || 'devnet.1';
-const groupIds = config.getGroup(cluster, groupName);
-if (!groupIds) {
-  throw new Error(`Group ${groupName} not found`);
-}
-const mangoProgramId = groupIds.mangoProgramId;
-const mangoGroupKey = groupIds.publicKey;
-
-const connection = new Connection(
-  config.cluster_urls[cluster],
-  'processed' as Commitment,
-);
-const client = new MangoClient(connection, mangoProgramId);
-
-const setUp = async () => {
+const setUp = async (client, mangoGroupKey) => {
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
   const mangoAccounts = await client.getAllMangoAccounts(
     mangoGroup,
@@ -57,6 +40,7 @@ const checkSumOfBasePositions = async (mangoAccounts: MangoAccount[]) => {
 };
 
 const checkSumOfQuotePositions = async (
+  connection,
   mangoGroup,
   mangoAccounts,
   perpMarkets,
@@ -64,6 +48,7 @@ const checkSumOfQuotePositions = async (
   const mangoCache = await mangoGroup.loadCache(connection);
   const sumOfAllQuotePositions = mangoAccounts.reduce(
     (sumAll, mangoAccount) => {
+      console.log(mangoAccount.publicKey.toString());
       const sumOfQuotePositions = mangoAccount.perpAccounts.reduce(
         (sum, perpAccount, index) => {
           const perpMarketCache = mangoCache.perpMarketCache[index];
@@ -86,10 +71,12 @@ const checkSumOfQuotePositions = async (
   );
 };
 
-const main = async () => {
-  const { mangoGroup, mangoAccounts, perpMarkets } = await setUp();
+export default async function sanityCheck(
+  connection: Connection,
+  groupConfig: GroupConfig,
+) {
+  const client = new MangoClient(connection, groupConfig.mangoProgramId);
+  const { mangoGroup, mangoAccounts, perpMarkets } = await setUp(client, groupConfig.publicKey);
   await checkSumOfBasePositions(mangoAccounts);
-  await checkSumOfQuotePositions(mangoGroup, mangoAccounts, perpMarkets);
+  await checkSumOfQuotePositions(connection, mangoGroup, mangoAccounts, perpMarkets);
 };
-
-main();
