@@ -48,7 +48,6 @@ const checkSumOfQuotePositions = async (
   const mangoCache = await mangoGroup.loadCache(connection);
   const sumOfAllQuotePositions = mangoAccounts.reduce(
     (sumAll, mangoAccount) => {
-      console.log(mangoAccount.publicKey.toString());
       const sumOfQuotePositions = mangoAccount.perpAccounts.reduce(
         (sum, perpAccount, index) => {
           const perpMarketCache = mangoCache.perpMarketCache[index];
