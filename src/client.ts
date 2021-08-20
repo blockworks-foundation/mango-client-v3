@@ -1621,6 +1621,9 @@ export class MangoClient {
     } else {
       sign = -1;
 
+      if (!quoteRootBank.nodeBankAccounts) {
+        await quoteRootBank.loadNodeBanks(this.connection);
+      }
       // Can settle fees first against perpmarket
       const settleFeesInstr = makeSettleFeesInstruction(
         this.programId,
