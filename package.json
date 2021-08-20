@@ -18,6 +18,7 @@
     "build": "tsc",
     "cli": "ts-node src/cli.ts",
     "liquidator": "ts-node src/liquidator.ts",
+    "sanity-checks": "ts-node src/sanityChecks.ts",
     "launch-group": "ts-node test/initDevnetGroup.ts",
     "launch-realistic-group": "ts-node test/initRealisticDevnetGroup.ts",
     "clean": "rm -rf lib",
