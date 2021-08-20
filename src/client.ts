@@ -28,6 +28,7 @@ import {
   AssetType,
   BookSideLayout,
   MangoAccountLayout,
+  MangoCache,
   MangoCacheLayout,
   MangoGroupLayout,
   NodeBankLayout,
@@ -1593,6 +1594,7 @@ export class MangoClient {
    */
   async settlePnl(
     mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
     mangoAccount: MangoAccount,
     perpMarket: PerpMarket,
     quoteRootBank: RootBank,
@@ -1602,32 +1604,61 @@ export class MangoClient {
     // fetch all MangoAccounts filtered for having this perp market in basket
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
     const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
-    const pnl = mangoAccount.perpAccounts[marketIndex].getPnl(
+    let pnl = mangoAccount.perpAccounts[marketIndex].getPnl(
       perpMarketInfo,
+      mangoCache.perpMarketCache[marketIndex],
       price,
     );
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
 
-    // Can't settle pnl if there is no pnl
+    let sign;
     if (pnl.eq(ZERO_I80F48)) {
+      // Can't settle pnl if there is no pnl
       return null;
+    } else if (pnl.gt(ZERO_I80F48)) {
+      sign = 1;
+    } else {
+      sign = -1;
+
+      // Can settle fees first against perpmarket
+      const settleFeesInstr = makeSettleFeesInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoCache.publicKey,
+        perpMarket.publicKey,
+        mangoAccount.publicKey,
+        quoteRootBank.publicKey,
+        quoteRootBank.nodeBanks[0],
+        quoteRootBank.nodeBankAccounts[0].vault,
+        mangoGroup.feesVault,
+        mangoGroup.signerKey,
+      );
+      transaction.add(settleFeesInstr);
+      pnl = pnl.add(perpMarket.feesAccrued);
+    }
+
+    const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
+    if (remSign !== sign) {
+      // if pnl has changed sign, then we're done
+      return await this.sendTransaction(transaction, owner, additionalSigners);
     }
 
     const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
-    const sign = pnl.gt(ZERO_I80F48) ? 1 : -1;
 
     const accountsWithPnl = mangoAccounts
       .map((m) => ({
         account: m,
-        pnl: m.perpAccounts[marketIndex].getPnl(perpMarketInfo, price),
+        pnl: m.perpAccounts[marketIndex].getPnl(
+          perpMarketInfo,
+          mangoCache.perpMarketCache[marketIndex],
+          price,
+        ),
       }))
       .sort((a, b) => sign * a.pnl.cmp(b.pnl));
 
-    const transaction = new Transaction();
-    const additionalSigners: Account[] = [];
-
-    // TODO - make sure we limit number of instructions to not go over tx size limit
     for (const account of accountsWithPnl) {
-      // if pnl has changed sign, then we're down
+      // if pnl has changed sign, then we're done
       const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
       if (remSign !== sign) {
         break;
@@ -1635,8 +1666,9 @@ export class MangoClient {
 
       // Account pnl must have opposite signs
       if (
-        (pnl.isPos() && account.pnl.isNeg()) ||
-        (pnl.isNeg() && account.pnl.isPos())
+        ((pnl.isPos() && account.pnl.isNeg()) ||
+          (pnl.isNeg() && account.pnl.isPos())) &&
+        transaction.instructions.length < 10
       ) {
         const instr = makeSettlePnlInstruction(
           this.programId,
@@ -1648,9 +1680,11 @@ export class MangoClient {
           quoteRootBank.nodeBanks[0],
           new BN(marketIndex),
         );
-
         transaction.add(instr);
+        pnl = pnl.add(account.pnl);
       } else {
+        // means we ran out of accounts to settle against (shouldn't happen) OR transaction too big
+        // TODO - create a multi tx to be signed by user
         break;
       }
     }
@@ -2144,8 +2178,7 @@ export class MangoClient {
       nodeBanks[0].publicKey,
       nodeBanks[0].vault,
       mangoGroup.feesVault,
-      payer.publicKey,
-      mangoGroup.admin,
+      mangoGroup.signerKey,
     );
 
     const transaction = new Transaction();

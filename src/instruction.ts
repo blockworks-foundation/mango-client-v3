@@ -1094,7 +1094,6 @@ export function makeSettleFeesInstruction(
   bankVaultPk: PublicKey,
   feesVaultPk: PublicKey,
   signerPk: PublicKey,
-  adminPk: PublicKey,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -1106,7 +1105,6 @@ export function makeSettleFeesInstruction(
     { isSigner: false, isWritable: true, pubkey: bankVaultPk },
     { isSigner: false, isWritable: true, pubkey: feesVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
-    { isSigner: false, isWritable: false, pubkey: adminPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
   ];
 
