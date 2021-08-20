@@ -91,7 +91,7 @@ export default class PerpAccount {
       openingQuote = openingQuote.sub(baseChange.mul(price));
       currBase = currBase.sub(baseChange);
       if (currBase.eq(ZERO)) {
-        return openingQuote.abs().div(basePos);
+        return openingQuote.div(basePos).abs();
       }
     }
 
