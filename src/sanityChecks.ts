@@ -5,6 +5,7 @@ import PerpMarket from './PerpMarket';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
 import { QUOTE_INDEX } from './layout';
+import { ZERO_I80F48 } from './fixednum';
 
 const config = new Config(configFile);
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
@@ -40,40 +41,55 @@ const setUp = async () => {
     perpMarkets.push(perpMarket);
   }
   return { mangoGroup, mangoAccounts, perpMarkets };
-}
+};
 
 const checkSumOfBasePositions = async (mangoAccounts: MangoAccount[]) => {
   const sumOfAllBasePositions = mangoAccounts.reduce((sumAll, mangoAccount) => {
-    const sumOfBasePositions = mangoAccount.perpAccounts.reduce((sum, perpAccount) => {
-      return sum + perpAccount.basePosition.toNumber();
-    }, 0);
+    const sumOfBasePositions = mangoAccount.perpAccounts.reduce(
+      (sum, perpAccount) => {
+        return sum + perpAccount.basePosition.toNumber();
+      },
+      0,
+    );
     return sumAll + sumOfBasePositions;
   }, 0);
-  console.log("checkSumOfBasePositions", sumOfAllBasePositions);
-}
+  console.log('checkSumOfBasePositions', sumOfAllBasePositions);
+};
 
-const checkSumOfQuotePositions = async (mangoGroup, mangoAccounts, perpMarkets) => {
+const checkSumOfQuotePositions = async (
+  mangoGroup,
+  mangoAccounts,
+  perpMarkets,
+) => {
   const mangoCache = await mangoGroup.loadCache(connection);
-  const sumOfAllQuotePositions = mangoAccounts.reduce((sumAll, mangoAccount) => {
-    const sumOfQuotePositions = mangoAccount.perpAccounts.reduce((sum, perpAccount, index) => {
-      const perpMarketCache = mangoCache.perpMarketCache[index];
-      return sum + perpAccount.getQuotePosition(perpMarketCache).toNumber();
-    }, 0);
-    return sumAll + sumOfQuotePositions;
-  }, 0);
+  const sumOfAllQuotePositions = mangoAccounts.reduce(
+    (sumAll, mangoAccount) => {
+      const sumOfQuotePositions = mangoAccount.perpAccounts.reduce(
+        (sum, perpAccount, index) => {
+          const perpMarketCache = mangoCache.perpMarketCache[index];
+          return sum.add(perpAccount.getQuotePosition(perpMarketCache));
+        },
+        ZERO_I80F48,
+      );
+      return sumAll.add(sumOfQuotePositions);
+    },
+    ZERO_I80F48,
+  );
 
   const sumOfFeesAccrued = perpMarkets.reduce((sum, perpMarket) => {
-    return sum + perpMarket.feesAccrued.toNumber();
-  }, 0);
+    return sum.add(perpMarket.feesAccrued);
+  }, ZERO_I80F48);
 
-  console.log("checkSumOfQuotePositions: ", sumOfAllQuotePositions + sumOfFeesAccrued);
-
-}
+  console.log(
+    'checkSumOfQuotePositions:',
+    sumOfAllQuotePositions.add(sumOfFeesAccrued).toString(),
+  );
+};
 
 const main = async () => {
   const { mangoGroup, mangoAccounts, perpMarkets } = await setUp();
   await checkSumOfBasePositions(mangoAccounts);
   await checkSumOfQuotePositions(mangoGroup, mangoAccounts, perpMarkets);
-}
+};
 
 main();

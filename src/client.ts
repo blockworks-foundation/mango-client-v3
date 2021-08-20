@@ -1619,12 +1619,12 @@ export class MangoClient {
     } else if (pnl.gt(ZERO_I80F48)) {
       sign = 1;
     } else {
-      sign = -1;
+      // Can settle fees first against perpmarket
 
+      sign = -1;
       if (!quoteRootBank.nodeBankAccounts) {
         await quoteRootBank.loadNodeBanks(this.connection);
       }
-      // Can settle fees first against perpmarket
       const settleFeesInstr = makeSettleFeesInstruction(
         this.programId,
         mangoGroup.publicKey,
@@ -1639,16 +1639,18 @@ export class MangoClient {
       );
       transaction.add(settleFeesInstr);
       pnl = pnl.add(perpMarket.feesAccrued);
-    }
-
-    const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
-    if (remSign !== sign) {
-      // if pnl has changed sign, then we're done
-      return await this.sendTransaction(transaction, owner, additionalSigners);
+      const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
+      if (remSign !== sign) {
+        // if pnl has changed sign, then we're done
+        return await this.sendTransaction(
+          transaction,
+          owner,
+          additionalSigners,
+        );
+      }
     }
 
     const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
-
     const accountsWithPnl = mangoAccounts
       .map((m) => ({
         account: m,
@@ -1661,12 +1663,6 @@ export class MangoClient {
       .sort((a, b) => sign * a.pnl.cmp(b.pnl));
 
     for (const account of accountsWithPnl) {
-      // if pnl has changed sign, then we're done
-      const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
-      if (remSign !== sign) {
-        break;
-      }
-
       // Account pnl must have opposite signs
       if (
         ((pnl.isPos() && account.pnl.isNeg()) ||
@@ -1685,6 +1681,11 @@ export class MangoClient {
         );
         transaction.add(instr);
         pnl = pnl.add(account.pnl);
+        // if pnl has changed sign, then we're done
+        const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
+        if (remSign !== sign) {
+          break;
+        }
       } else {
         // means we ran out of accounts to settle against (shouldn't happen) OR transaction too big
         // TODO - create a multi tx to be signed by user
