@@ -52,6 +52,7 @@ import {
   makeCacheRootBankInstruction,
   makeCancelPerpOrderInstruction,
   makeCancelSpotOrderInstruction,
+  makeChangePerpMarketParamsInstruction,
   makeConsumeEventsInstruction,
   makeDepositInstruction,
   makeDepositMsrmInstruction,
@@ -99,6 +100,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
+import { TokenAccount } from './token';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -1663,12 +1665,16 @@ export class MangoClient {
       .sort((a, b) => sign * a.pnl.cmp(b.pnl));
 
     for (const account of accountsWithPnl) {
-      // Account pnl must have opposite signs
+      // ignore own account explicitly
+      if (account.account.publicKey.equals(mangoAccount.publicKey)) {
+        continue;
+      }
       if (
         ((pnl.isPos() && account.pnl.isNeg()) ||
           (pnl.isNeg() && account.pnl.isPos())) &&
         transaction.instructions.length < 10
       ) {
+        // Account pnl must have opposite signs
         const instr = makeSettlePnlInstruction(
           this.programId,
           mangoGroup.publicKey,
@@ -2394,5 +2400,43 @@ export class MangoClient {
     const additionalSigners = [];
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async changePerpMarketParams(
+    mangoGroup: MangoGroup,
+    perpMarket: PerpMarket,
+    admin: Account | WalletAdapter,
+
+    maintLeverage: number | undefined,
+    initLeverage: number | undefined,
+    liquidationFee: number | undefined,
+    makerFee: number | undefined,
+    takerFee: number | undefined,
+    rate: number | undefined,
+    maxDepthBps: number | undefined,
+    targetPeriodLength: number | undefined,
+    mngoPerPeriod: number | undefined,
+  ): Promise<TransactionSignature> {
+    const instruction = makeChangePerpMarketParamsInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      perpMarket.publicKey,
+      admin.publicKey,
+      I80F48.fromNumberOrUndef(maintLeverage),
+      I80F48.fromNumberOrUndef(initLeverage),
+      I80F48.fromNumberOrUndef(liquidationFee),
+      I80F48.fromNumberOrUndef(makerFee),
+      I80F48.fromNumberOrUndef(takerFee),
+      I80F48.fromNumberOrUndef(rate),
+      I80F48.fromNumberOrUndef(maxDepthBps),
+      targetPeriodLength !== undefined ? new BN(targetPeriodLength) : undefined,
+      mngoPerPeriod !== undefined ? new BN(mngoPerPeriod) : undefined,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 }

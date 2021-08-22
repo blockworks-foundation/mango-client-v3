@@ -17,8 +17,16 @@ import {
   setStubOracle,
   listMarket,
 } from './commands';
-import { Cluster, Config, GroupConfig, getTokenBySymbol } from './config';
+import {
+  Cluster,
+  Config,
+  GroupConfig,
+  getTokenBySymbol,
+  getPerpMarketByBaseSymbol,
+  PerpMarketConfig,
+} from './config';
 import { MangoClient } from './client';
+import { throwUndefined, uiToNative } from './utils';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -525,3 +533,93 @@ yargs(hideBin(process.argv)).command(
     process.exit(0);
   },
 ).argv;
+
+yargs(hideBin(process.argv)).command(
+  'change-perp-market-params <group> <symbol>',
+  'change params for a perp market',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional(...symbolDesc)
+      .option('maint_leverage', {
+        type: 'number',
+      })
+      .option('init_leverage', {
+        type: 'number',
+      })
+      .option('liquidation_fee', {
+        type: 'number',
+      })
+      .option('maker_fee', {
+        type: 'number',
+      })
+      .option('taker_fee', {
+        type: 'number',
+      })
+      .option('rate', {
+        type: 'number',
+      })
+      .option('max_depth_bps', {
+        type: 'number',
+      })
+      .option('target_period_length', {
+        type: 'number',
+      })
+      .option('mngo_per_period', {
+        type: 'number',
+      })
+
+      .option(...clusterDesc)
+      .option(...configDesc)
+      .option(...keypairDesc);
+  },
+  async (args) => {
+    console.log('change-perp-market-params', args);
+    const account = readKeypair(args.keypair as string);
+    const config = readConfig(args.config as string);
+    const cluster = args.cluster as Cluster;
+    const connection = openConnection(config, cluster);
+    const groupConfig = config.getGroup(
+      cluster,
+      args.group as string,
+    ) as GroupConfig;
+    const symbol = args.symbol as string;
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const perpMarketConfig: PerpMarketConfig = throwUndefined(
+      getPerpMarketByBaseSymbol(groupConfig, symbol),
+    );
+    const perpMarket = await client.getPerpMarket(
+      perpMarketConfig.publicKey,
+      perpMarketConfig.baseDecimals,
+      perpMarketConfig.quoteDecimals,
+    );
+
+    let mngoPerPeriod = getNumberOrUndef(args, 'mngo_per_period');
+    if (mngoPerPeriod !== undefined) {
+      const token = getTokenBySymbol(groupConfig, 'MNGO');
+      mngoPerPeriod = uiToNative(mngoPerPeriod, token.decimals).toNumber();
+    }
+
+    await client.changePerpMarketParams(
+      mangoGroup,
+      perpMarket,
+      account,
+      getNumberOrUndef(args, 'maint_leverage'),
+      getNumberOrUndef(args, 'init_leverage'),
+      getNumberOrUndef(args, 'liquidation_fee'),
+      getNumberOrUndef(args, 'maker_fee'),
+      getNumberOrUndef(args, 'taker_fee'),
+      getNumberOrUndef(args, 'rate'),
+      getNumberOrUndef(args, 'max_depth_bps'),
+      getNumberOrUndef(args, 'target_period_length'),
+      mngoPerPeriod,
+    );
+    process.exit(0);
+  },
+).argv;
+
+function getNumberOrUndef(args, k): number | undefined {
+  return args[k] === undefined ? undefined : (args[k] as number);
+}
