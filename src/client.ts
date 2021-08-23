@@ -1641,15 +1641,15 @@ export class MangoClient {
       );
       transaction.add(settleFeesInstr);
       pnl = pnl.add(perpMarket.feesAccrued);
-      const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
-      if (remSign !== sign) {
-        // if pnl has changed sign, then we're done
-        return await this.sendTransaction(
-          transaction,
-          owner,
-          additionalSigners,
-        );
-      }
+      // const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
+      // if (remSign !== sign) {
+      //   // if pnl has changed sign, then we're done
+      //   return await this.sendTransaction(
+      //     transaction,
+      //     owner,
+      //     additionalSigners,
+      //   );
+      // }
     }
 
     const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
