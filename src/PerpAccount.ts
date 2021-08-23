@@ -146,8 +146,8 @@ export default class PerpAccount {
 
         console.log(userPk, fe.maker, fe.taker);
         if (
-          (userPk === fe.taker && fe.takerSide === 'sell') ||
-          (userPk === fe.maker && fe.takerSide === 'buy')
+          (userPk === fe.taker.toString() && fe.takerSide === 'sell') ||
+          (userPk === fe.maker.toString() && fe.takerSide === 'buy')
         ) {
           quantity = quantity.mul(NEG_ONE);
         }
