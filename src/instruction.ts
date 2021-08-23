@@ -1378,3 +1378,24 @@ export function makeChangePerpMarketParamsInstruction(
     programId,
   });
 }
+
+export function makeSetGroupAdminInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  newAdminPk: PublicKey,
+  adminPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: newAdminPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMangoInstruction({
+    SetGroupAdmin: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

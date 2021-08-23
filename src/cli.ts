@@ -621,3 +621,39 @@ yargs(hideBin(process.argv)).command(
 function getNumberOrUndef(args, k): number | undefined {
   return args[k] === undefined ? undefined : (args[k] as number);
 }
+
+yargs(hideBin(process.argv)).command(
+  'set-admin <group> <admin_pk>',
+  'transfer admin permissions over group to another account',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional('admin_pk', {
+        describe: 'the public key of the new group admin',
+        type: 'string',
+      })
+      .option(...clusterDesc)
+      .option(...configDesc)
+      .option(...keypairDesc);
+  },
+  async (args) => {
+    console.log('set-admin', args);
+    const account = readKeypair(args.keypair as string);
+    const config = readConfig(args.config as string);
+    const cluster = args.cluster as Cluster;
+    const connection = openConnection(config, cluster);
+    const groupConfig = config.getGroup(
+      cluster,
+      args.group as string,
+    ) as GroupConfig;
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    await client.setGroupAdmin(
+      mangoGroup,
+      new PublicKey(args.admin_pk as string),
+      account,
+    );
+    process.exit(0);
+  },
+).argv;
