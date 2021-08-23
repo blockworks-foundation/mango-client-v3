@@ -369,6 +369,31 @@ export default class MangoAccount {
   }
 
   /**
+   * Amount of native quote currency available to expand your position in this market
+   */
+  getMarketMarginAvailable(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    marketIndex: number,
+    marketType: 'spot' | 'perp',
+  ): I80F48 {
+    const health = this.getHealth(mangoGroup, mangoCache, 'Init');
+
+    if (health.lte(ZERO_I80F48)) {
+      return ZERO_I80F48;
+    }
+    const w = getWeights(mangoGroup, marketIndex, 'Init');
+    const weight =
+      marketType === 'perp' ? w.spotAssetWeight : w.perpAssetWeight;
+    if (weight.gte(ONE_I80F48)) {
+      // This is actually an error state and should not happen
+      return health;
+    } else {
+      return health.div(ONE_I80F48.sub(weight));
+    }
+  }
+
+  /**
    * Get token amount available to withdraw without borrowing.
    */
   getAvailableBalance(
