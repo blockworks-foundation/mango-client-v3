@@ -7,7 +7,7 @@ import { AssetType, encodeMangoInstruction, INFO_LEN } from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
-import { I80F48 } from './fixednum';
+import { I80F48, ZERO_I80F48 } from './fixednum';
 import { PerpOrder } from '.';
 
 export function makeInitMangoGroupInstruction(
@@ -19,8 +19,9 @@ export function makeInitMangoGroupInstruction(
   quoteVaultPk: PublicKey,
   quoteNodeBankPk: PublicKey,
   quoteRootBankPk: PublicKey,
-  daoVaultPk: PublicKey,
+  insuranceVaultPk: PublicKey,
   msrmVaultPk: PublicKey,
+  feesVaultPk: PublicKey,
   mangoCachePk: PublicKey,
   dexProgramPk: PublicKey,
 
@@ -38,8 +39,9 @@ export function makeInitMangoGroupInstruction(
     { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
     { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteRootBankPk },
-    { isSigner: false, isWritable: false, pubkey: daoVaultPk },
+    { isSigner: false, isWritable: false, pubkey: insuranceVaultPk },
     { isSigner: false, isWritable: false, pubkey: msrmVaultPk },
+    { isSigner: false, isWritable: false, pubkey: feesVaultPk },
     { isSigner: false, isWritable: true, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: dexProgramPk },
   ];
@@ -1090,9 +1092,8 @@ export function makeSettleFeesInstruction(
   rootBankPk: PublicKey,
   nodeBankPk: PublicKey,
   bankVaultPk: PublicKey,
-  daoVaultPk: PublicKey,
+  feesVaultPk: PublicKey,
   signerPk: PublicKey,
-  adminPk: PublicKey,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -1102,9 +1103,8 @@ export function makeSettleFeesInstruction(
     { isSigner: false, isWritable: false, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
     { isSigner: false, isWritable: true, pubkey: bankVaultPk },
-    { isSigner: false, isWritable: true, pubkey: daoVaultPk },
+    { isSigner: false, isWritable: true, pubkey: feesVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
-    { isSigner: false, isWritable: false, pubkey: adminPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
   ];
 
@@ -1128,7 +1128,7 @@ export function makeResolvePerpBankruptcyInstruction(
   rootBankPk: PublicKey,
   nodeBankPk: PublicKey,
   vaultPk: PublicKey,
-  daoVaultPk: PublicKey,
+  insuranceVaultPk: PublicKey,
   signerPk: PublicKey,
   perpMarketPk: PublicKey,
   liqorOpenOrdersPks: PublicKey[],
@@ -1144,7 +1144,7 @@ export function makeResolvePerpBankruptcyInstruction(
     { isSigner: false, isWritable: false, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
     { isSigner: false, isWritable: true, pubkey: vaultPk },
-    { isSigner: false, isWritable: true, pubkey: daoVaultPk },
+    { isSigner: false, isWritable: true, pubkey: insuranceVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
@@ -1178,7 +1178,7 @@ export function makeResolveTokenBankruptcyInstruction(
   quoteRootBankPk: PublicKey,
   quoteNodeBankPk: PublicKey,
   quoteVaultPk: PublicKey,
-  daoVaultPk: PublicKey,
+  insuranceVaultPk: PublicKey,
   signerPk: PublicKey,
   liabRootBankPk: PublicKey,
   liabNodeBankPk: PublicKey,
@@ -1195,7 +1195,7 @@ export function makeResolveTokenBankruptcyInstruction(
     { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
-    { isSigner: false, isWritable: true, pubkey: daoVaultPk },
+    { isSigner: false, isWritable: true, pubkey: insuranceVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
     { isSigner: false, isWritable: true, pubkey: liabRootBankPk },
     { isSigner: false, isWritable: true, pubkey: liabNodeBankPk },
@@ -1325,4 +1325,77 @@ export function makeWithdrawMsrmInstruction(
 
   const data = encodeMangoInstruction({ WithdrawMsrm: { quantity } });
   return new TransactionInstruction({ keys, data, programId });
+}
+
+export function makeChangePerpMarketParamsInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  perpMarketPk: PublicKey,
+  adminPk: PublicKey,
+  maintLeverage: I80F48 | undefined,
+  initLeverage: I80F48 | undefined,
+  liquidationFee: I80F48 | undefined,
+  makerFee: I80F48 | undefined,
+  takerFee: I80F48 | undefined,
+  rate: I80F48 | undefined,
+  maxDepthBps: I80F48 | undefined,
+  targetPeriodLength: BN | undefined,
+  mngoPerPeriod: BN | undefined,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMangoInstruction({
+    ChangePerpMarketParams: {
+      maintLeverageOption: maintLeverage !== undefined,
+      maintLeverage: maintLeverage !== undefined ? maintLeverage : ZERO_I80F48,
+      initLeverageOption: initLeverage !== undefined,
+      initLeverage: initLeverage !== undefined ? initLeverage : ZERO_I80F48,
+      liquidationFeeOption: liquidationFee !== undefined,
+      liquidationFee:
+        liquidationFee !== undefined ? liquidationFee : ZERO_I80F48,
+      makerFeeOption: makerFee !== undefined,
+      makerFee: makerFee !== undefined ? makerFee : ZERO_I80F48,
+      takerFeeOption: takerFee !== undefined,
+      takerFee: takerFee !== undefined ? takerFee : ZERO_I80F48,
+      rateOption: rate !== undefined,
+      rate: rate !== undefined ? rate : ZERO_I80F48,
+      maxDepthBpsOption: maxDepthBps !== undefined,
+      maxDepthBps: maxDepthBps !== undefined ? maxDepthBps : ZERO_I80F48,
+      targetPeriodLengthOption: targetPeriodLength !== undefined,
+      targetPeriodLength:
+        targetPeriodLength !== undefined ? targetPeriodLength : new BN(0),
+      mngoPerPeriodOption: mngoPerPeriod !== undefined,
+      mngoPerPeriod: mngoPerPeriod !== undefined ? mngoPerPeriod : new BN(0),
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeSetGroupAdminInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  newAdminPk: PublicKey,
+  adminPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: newAdminPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMangoInstruction({
+    SetGroupAdmin: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
 }

@@ -28,9 +28,9 @@ import {
   AssetType,
   BookSideLayout,
   MangoAccountLayout,
+  MangoCache,
   MangoCacheLayout,
   MangoGroupLayout,
-  MAX_TOKENS,
   NodeBankLayout,
   PerpEventLayout,
   PerpEventQueueHeaderLayout,
@@ -52,6 +52,7 @@ import {
   makeCacheRootBankInstruction,
   makeCancelPerpOrderInstruction,
   makeCancelSpotOrderInstruction,
+  makeChangePerpMarketParamsInstruction,
   makeConsumeEventsInstruction,
   makeDepositInstruction,
   makeDepositMsrmInstruction,
@@ -68,6 +69,7 @@ import {
   makeRedeemMngoInstruction,
   makeResolvePerpBankruptcyInstruction,
   makeResolveTokenBankruptcyInstruction,
+  makeSetGroupAdminInstruction,
   makeSetOracleInstruction,
   makeSettleFeesInstruction,
   makeSettleFundsInstruction,
@@ -99,6 +101,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
+import { TokenAccount } from './token';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -344,6 +347,7 @@ export class MangoClient {
     quoteMint: PublicKey,
     msrmMint: PublicKey,
     dexProgram: PublicKey,
+    feesVault: PublicKey, // owned by Mango DAO token governance
     validInterval: number,
     quoteOptimalUtil: number,
     quoteOptimalRate: number,
@@ -370,14 +374,15 @@ export class MangoClient {
       signerKey,
     );
 
-    const daoVaultAccount = new Account();
-    const daoVaultAccountInstructions = await createTokenAccountInstructions(
-      this.connection,
-      payer.publicKey,
-      daoVaultAccount.publicKey,
-      quoteMint,
-      signerKey,
-    );
+    const insuranceVaultAccount = new Account();
+    const insuranceVaultAccountInstructions =
+      await createTokenAccountInstructions(
+        this.connection,
+        payer.publicKey,
+        insuranceVaultAccount.publicKey,
+        quoteMint,
+        signerKey,
+      );
 
     const quoteNodeBankAccountInstruction = await createAccountInstruction(
       this.connection,
@@ -404,7 +409,7 @@ export class MangoClient {
     createAccountsTransaction.add(quoteNodeBankAccountInstruction.instruction);
     createAccountsTransaction.add(quoteRootBankAccountInstruction.instruction);
     createAccountsTransaction.add(cacheAccountInstruction.instruction);
-    createAccountsTransaction.add(...daoVaultAccountInstructions);
+    createAccountsTransaction.add(...insuranceVaultAccountInstructions);
 
     const signers = [
       accountInstruction.account,
@@ -412,7 +417,7 @@ export class MangoClient {
       quoteNodeBankAccountInstruction.account,
       quoteRootBankAccountInstruction.account,
       cacheAccountInstruction.account,
-      daoVaultAccount,
+      insuranceVaultAccount,
     ];
     await this.sendTransaction(createAccountsTransaction, payer, signers);
 
@@ -446,8 +451,9 @@ export class MangoClient {
       quoteVaultAccount.publicKey,
       quoteNodeBankAccountInstruction.account.publicKey,
       quoteRootBankAccountInstruction.account.publicKey,
-      daoVaultAccount.publicKey,
+      insuranceVaultAccount.publicKey,
       msrmVaultPk,
+      feesVault,
       cacheAccountInstruction.account.publicKey,
       dexProgram,
       new BN(signerNonce),
@@ -1591,6 +1597,7 @@ export class MangoClient {
    */
   async settlePnl(
     mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
     mangoAccount: MangoAccount,
     perpMarket: PerpMarket,
     quoteRootBank: RootBank,
@@ -1600,42 +1607,75 @@ export class MangoClient {
     // fetch all MangoAccounts filtered for having this perp market in basket
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
     const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
-    const pnl = mangoAccount.perpAccounts[marketIndex].getPnl(
+    let pnl = mangoAccount.perpAccounts[marketIndex].getPnl(
       perpMarketInfo,
+      mangoCache.perpMarketCache[marketIndex],
       price,
     );
-
-    // Can't settle pnl if there is no pnl
-    if (pnl.eq(ZERO_I80F48)) {
-      return null;
-    }
-
-    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
-    const sign = pnl.gt(ZERO_I80F48) ? 1 : -1;
-
-    const accountsWithPnl = mangoAccounts
-      .map((m) => ({
-        account: m,
-        pnl: m.perpAccounts[marketIndex].getPnl(perpMarketInfo, price),
-      }))
-      .sort((a, b) => sign * a.pnl.cmp(b.pnl));
-
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
-    // TODO - make sure we limit number of instructions to not go over tx size limit
-    for (const account of accountsWithPnl) {
-      // if pnl has changed sign, then we're down
+    let sign;
+    if (pnl.eq(ZERO_I80F48)) {
+      // Can't settle pnl if there is no pnl
+      return null;
+    } else if (pnl.gt(ZERO_I80F48)) {
+      sign = 1;
+    } else {
+      // Can settle fees first against perpmarket
+
+      sign = -1;
+      if (!quoteRootBank.nodeBankAccounts) {
+        await quoteRootBank.loadNodeBanks(this.connection);
+      }
+      const settleFeesInstr = makeSettleFeesInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoCache.publicKey,
+        perpMarket.publicKey,
+        mangoAccount.publicKey,
+        quoteRootBank.publicKey,
+        quoteRootBank.nodeBanks[0],
+        quoteRootBank.nodeBankAccounts[0].vault,
+        mangoGroup.feesVault,
+        mangoGroup.signerKey,
+      );
+      transaction.add(settleFeesInstr);
+      pnl = pnl.add(perpMarket.feesAccrued).min(I80F48.fromString('-0.000001'));
       const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
       if (remSign !== sign) {
-        break;
+        // if pnl has changed sign, then we're done
+        return await this.sendTransaction(
+          transaction,
+          owner,
+          additionalSigners,
+        );
       }
+    }
 
-      // Account pnl must have opposite signs
+    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
+    const accountsWithPnl = mangoAccounts
+      .map((m) => ({
+        account: m,
+        pnl: m.perpAccounts[marketIndex].getPnl(
+          perpMarketInfo,
+          mangoCache.perpMarketCache[marketIndex],
+          price,
+        ),
+      }))
+      .sort((a, b) => sign * a.pnl.cmp(b.pnl));
+
+    for (const account of accountsWithPnl) {
+      // ignore own account explicitly
+      if (account.account.publicKey.equals(mangoAccount.publicKey)) {
+        continue;
+      }
       if (
-        (pnl.isPos() && account.pnl.isNeg()) ||
-        (pnl.isNeg() && account.pnl.isPos())
+        ((pnl.isPos() && account.pnl.isNeg()) ||
+          (pnl.isNeg() && account.pnl.isPos())) &&
+        transaction.instructions.length < 10
       ) {
+        // Account pnl must have opposite signs
         const instr = makeSettlePnlInstruction(
           this.programId,
           mangoGroup.publicKey,
@@ -1646,10 +1686,17 @@ export class MangoClient {
           quoteRootBank.nodeBanks[0],
           new BN(marketIndex),
         );
-
         transaction.add(instr);
+        pnl = pnl.add(account.pnl);
+        // if pnl has changed sign, then we're done
+        const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
+        if (remSign !== sign) {
+          break;
+        }
       } else {
-        break;
+        // means we ran out of accounts to settle against (shouldn't happen) OR transaction too big
+        // TODO - create a multi tx to be signed by user
+        continue;
       }
     }
 
@@ -2141,9 +2188,8 @@ export class MangoClient {
       rootBank.publicKey,
       nodeBanks[0].publicKey,
       nodeBanks[0].vault,
-      mangoGroup.daoVault,
-      payer.publicKey,
-      mangoGroup.admin,
+      mangoGroup.feesVault,
+      mangoGroup.signerKey,
     );
 
     const transaction = new Transaction();
@@ -2173,7 +2219,7 @@ export class MangoClient {
       rootBank.publicKey,
       nodeBanks[0].publicKey,
       nodeBanks[0].vault,
-      mangoGroup.daoVault,
+      mangoGroup.insuranceVault,
       mangoGroup.signerKey,
       perpMarket.publicKey,
       liqorMangoAccount.spotOpenOrders,
@@ -2207,7 +2253,7 @@ export class MangoClient {
       quoteRootBank.publicKey,
       quoteRootBank.nodeBanks[0],
       quoteNodeBanks[0].vault,
-      mangoGroup.daoVault,
+      mangoGroup.insuranceVault,
       mangoGroup.signerKey,
       liabRootBank.publicKey,
       liabRootBank.nodeBanks[0],
@@ -2355,5 +2401,60 @@ export class MangoClient {
     const additionalSigners = [];
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async changePerpMarketParams(
+    mangoGroup: MangoGroup,
+    perpMarket: PerpMarket,
+    admin: Account | WalletAdapter,
+
+    maintLeverage: number | undefined,
+    initLeverage: number | undefined,
+    liquidationFee: number | undefined,
+    makerFee: number | undefined,
+    takerFee: number | undefined,
+    rate: number | undefined,
+    maxDepthBps: number | undefined,
+    targetPeriodLength: number | undefined,
+    mngoPerPeriod: number | undefined,
+  ): Promise<TransactionSignature> {
+    const instruction = makeChangePerpMarketParamsInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      perpMarket.publicKey,
+      admin.publicKey,
+      I80F48.fromNumberOrUndef(maintLeverage),
+      I80F48.fromNumberOrUndef(initLeverage),
+      I80F48.fromNumberOrUndef(liquidationFee),
+      I80F48.fromNumberOrUndef(makerFee),
+      I80F48.fromNumberOrUndef(takerFee),
+      I80F48.fromNumberOrUndef(rate),
+      I80F48.fromNumberOrUndef(maxDepthBps),
+      targetPeriodLength !== undefined ? new BN(targetPeriodLength) : undefined,
+      mngoPerPeriod !== undefined ? new BN(mngoPerPeriod) : undefined,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async setGroupAdmin(
+    mangoGroup: MangoGroup,
+    newAdmin: PublicKey,
+    admin: Account | WalletAdapter,
+  ): Promise<TransactionSignature> {
+    const instruction = makeSetGroupAdminInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      newAdmin,
+      admin.publicKey,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 }

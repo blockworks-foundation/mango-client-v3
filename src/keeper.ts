@@ -34,11 +34,13 @@ const processKeeperInterval = parseInt(
   process.env.PROCESS_KEEPER_INTERVAL || '15000',
 );
 const consumeEventsInterval = parseInt(
-  process.env.CONSUME_EVENTS_INTERVAL || '3000',
+  process.env.CONSUME_EVENTS_INTERVAL || '2000',
 );
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '20');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
-const consumeEvents = process.env.CONSUME_EVENTS === 'true';
+const consumeEvents = process.env.CONSUME_EVENTS
+  ? process.env.CONSUME_EVENTS === 'true'
+  : true;
 const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
 const config = new Config(configFile);
 const groupIds = config.getGroup(cluster, groupName);
@@ -69,7 +71,7 @@ async function main() {
     groupIds.perpMarkets.map((m, i) => {
       return mangoGroup.loadPerpMarket(
         connection,
-        i,
+        m.marketIndex,
         m.baseDecimals,
         m.quoteDecimals,
       );
@@ -89,8 +91,13 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
     console.log('processUpdateCache');
     const batchSize = 8;
     const promises: Promise<string>[] = [];
+    const rootBanks = mangoGroup.tokens.map((t) => t.rootBank).filter((t) => !t.equals(zeroKey));
+    const oracles = mangoGroup.oracles.filter((o) => !o.equals(zeroKey));
+    const perpMarkets = mangoGroup.perpMarkets
+      .filter((pm) => !pm.isEmpty())
+      .map((pm) => pm.perpMarket);
 
-    for (let i = 0; i < mangoGroup.tokens.length / batchSize; i++) {
+    for (let i = 0; i < rootBanks.length / batchSize; i++) {
       const startIndex = i * batchSize;
       const endIndex = i * batchSize + batchSize;
       const cacheTransaction = new Transaction();
@@ -99,10 +106,8 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          mangoGroup.tokens
-            .map((t) => t.rootBank)
-            .slice(startIndex, endIndex)
-            .filter((x) => !x.equals(zeroKey)),
+          rootBanks
+            .slice(startIndex, endIndex),
         ),
       );
 
@@ -111,9 +116,8 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          mangoGroup.oracles
-            .slice(startIndex, endIndex)
-            .filter((x) => !x.equals(zeroKey)),
+          oracles
+            .slice(startIndex, endIndex),
         ),
       );
 
@@ -122,10 +126,8 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          mangoGroup.perpMarkets
-            .filter((pm) => !pm.isEmpty())
-            .slice(startIndex, endIndex)
-            .map((pm) => pm.perpMarket),
+          perpMarkets
+            .slice(startIndex, endIndex),
         ),
       );
       if (cacheTransaction.instructions.length > 0) {
@@ -226,7 +228,10 @@ async function processKeeperTransactions(
     console.log('processKeeperTransactions');
     const batchSize = 8;
     const promises: Promise<string>[] = [];
-    for (let i = 0; i < mangoGroup.tokens.length / batchSize; i++) {
+
+    const filteredPerpMarkets = perpMarkets.filter((pm) => !pm.publicKey.equals(zeroKey));
+
+    for (let i = 0; i < groupIds.tokens.length / batchSize; i++) {
       const startIndex = i * batchSize;
       const endIndex = i * batchSize + batchSize;
 
@@ -243,9 +248,8 @@ async function processKeeperTransactions(
       });
 
       const updateFundingTransaction = new Transaction();
-      perpMarkets
+      filteredPerpMarkets
         .slice(startIndex, endIndex)
-        .filter((pm) => !pm.publicKey.equals(zeroKey))
         .forEach((market) => {
           if (market) {
             updateFundingTransaction.add(

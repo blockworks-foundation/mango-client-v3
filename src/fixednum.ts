@@ -42,6 +42,9 @@ export class I80F48 {
   static fromNumber(x: number): I80F48 {
     return this.fromString(x.toString());
   }
+  static fromNumberOrUndef(x: number | undefined): I80F48 | undefined {
+    return x === undefined ? undefined : I80F48.fromNumber(x);
+  }
   static fromString(x: string): I80F48 {
     const initialValue = new Big(x).times(I80F48.MULTIPLIER_BIG);
     const fixedPointValue = new BN(initialValue.round().toFixed());

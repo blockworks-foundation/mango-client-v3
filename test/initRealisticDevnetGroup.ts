@@ -4,23 +4,24 @@
  * 2.) Run yarn launch-realistic-group
  * 3.) Update the mango group name in keeper.ts crank.ts and in the UI in useMangoStore.ts
  */
+
 const newGroupName = 'devnet.1';
 const mangoProgramId = '5fP7Z7a87ZEVsKr2tQPApdtq83GcTW4kz919R6ou5h5E';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
+const feesVault = '54PcMYTAZd8uRaYyb3Cwgctcfc1LchGMaqVrmxgr3yVs'; // devnet vault owned by daffy
 
 const FIXED_IDS: any[] = [
   {
     symbol: 'MNGO',
     decimals: 6,
-    baseLot: 10000000,
+    baseLot: 1000000,
     quoteLot: 100,
-    price: 0.25,
     initLeverage: 1.25,
     maintLeverage: 2.5,
     liquidationFee: 0.2,
+    oracleProvider: 'switchboard',
     mint: 'Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC',
   },
-
   {
     symbol: 'USDC',
     decimals: 6,
@@ -31,6 +32,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 100,
     quoteLot: 10,
+    oracleProvider: 'pyth',
     mint: '3UNBZ6o52WTWwjac2kPUb4FyodhU1vFkRJheu1Sh2TvU',
   },
   {
@@ -38,6 +40,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 1000,
     quoteLot: 10,
+    oracleProvider: 'pyth',
     mint: 'Cu84KB3tDL6SbFgToHMLYVDJJXdJjenNzSKikeAvzmkA',
   },
   {
@@ -45,6 +48,7 @@ const FIXED_IDS: any[] = [
     decimals: 9,
     baseLot: 100000000,
     quoteLot: 100,
+    oracleProvider: 'pyth',
     mint: 'So11111111111111111111111111111111111111112',
   },
   {
@@ -52,6 +56,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 100000,
     quoteLot: 100,
+    oracleProvider: 'pyth',
     mint: 'AvtB6w9xboLwA145E221vhof5TddhqsChYcx7Fy3xVMH',
   },
   {
@@ -70,6 +75,7 @@ const FIXED_IDS: any[] = [
     decimals: 6,
     baseLot: 1000000,
     quoteLot: 100,
+    oracleProvider: 'pyth',
     mint: 'DAwBSXe6w9g37wdE2tCrFbho3QHKZi4PjuBytQCULap2',
     initLeverage: 10,
     maintLeverage: 20,
@@ -83,8 +89,9 @@ const initNewGroup = async () => {
   console.log('starting');
   const quoteMint = FIXED_IDS.find((id) => id.symbol === 'USDC')
     ?.mint as string;
+
   await execCommand(
-    `yarn cli init-group ${newGroupName} ${mangoProgramId} ${serumProgramId} ${quoteMint}`,
+    `yarn cli init-group ${newGroupName} ${mangoProgramId} ${serumProgramId} ${quoteMint} ${feesVault}`,
   );
   console.log(`new group initialized`);
 
@@ -109,7 +116,7 @@ const initNewGroup = async () => {
       );
     } else {
       await execCommand(
-        `yarn cli add-oracle ${newGroupName} ${fids.symbol} --provider pyth`,
+        `yarn cli add-oracle ${newGroupName} ${fids.symbol} --provider ${fids.oracleProvider}`,
       );
     }
 
@@ -130,7 +137,9 @@ const initNewGroup = async () => {
         fids.symbol
       } --init_leverage ${2 * (fids.initLeverage || 5)} --maint_leverage ${
         2 * (fids.maintLeverage || 10)
-      } --liquidation_fee ${(fids.liquidationFee || 0.05) / 2}`,
+      } --liquidation_fee ${
+        (fids.liquidationFee || 0.05) / 2
+      } --base_lot_size ${fids.baseLot} --quote_lot_size ${fids.quoteLot}`,
     );
     console.log('---');
   }

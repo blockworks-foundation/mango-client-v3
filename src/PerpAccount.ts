@@ -91,7 +91,7 @@ export default class PerpAccount {
       openingQuote = openingQuote.sub(baseChange.mul(price));
       currBase = currBase.sub(baseChange);
       if (currBase.eq(ZERO)) {
-        return openingQuote.abs().div(basePos);
+        return openingQuote.div(basePos).abs();
       }
     }
 
@@ -175,10 +175,14 @@ export default class PerpAccount {
     // TODO - consider failing silently
     throw new Error('Trade history incomplete');
   }
-  getPnl(perpMarketInfo: PerpMarketInfo, price: I80F48): I80F48 {
+  getPnl(
+    perpMarketInfo: PerpMarketInfo,
+    perpMarketCache: PerpMarketCache,
+    price: I80F48,
+  ): I80F48 {
     return I80F48.fromI64(this.basePosition.mul(perpMarketInfo.baseLotSize))
       .mul(price)
-      .add(this.quotePosition);
+      .add(this.getQuotePosition(perpMarketCache));
   }
 
   getUnsettledFunding(perpMarketCache: PerpMarketCache): I80F48 {

@@ -12,12 +12,21 @@ import {
   addSpotMarket,
   addStubOracle,
   addPythOracle,
+  addSwitchboardOracle,
   initGroup,
   setStubOracle,
   listMarket,
 } from './commands';
-import { Cluster, Config, GroupConfig, getTokenBySymbol } from './config';
+import {
+  Cluster,
+  Config,
+  GroupConfig,
+  getTokenBySymbol,
+  getPerpMarketByBaseSymbol,
+  PerpMarketConfig,
+} from './config';
 import { MangoClient } from './client';
+import { throwUndefined, uiToNative } from './utils';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -73,7 +82,7 @@ export function writeConfig(configPath: string, config: Config) {
 }
 
 yargs(hideBin(process.argv)).command(
-  'init-group <group> <mangoProgramId> <serumProgramId> <quote_mint>',
+  'init-group <group> <mangoProgramId> <serumProgramId> <quote_mint> <fees_vault>',
   'initialize a new group',
   (y) => {
     return y
@@ -88,6 +97,11 @@ yargs(hideBin(process.argv)).command(
       })
       .positional('quote_mint', {
         describe: 'the mint of the quote currency 💵',
+        type: 'string',
+      })
+      .positional('fees_vault', {
+        describe:
+          'the quote currency vault owned by Mango DAO token governance',
         type: 'string',
       })
       .option('quote_optimal_util', {
@@ -105,6 +119,11 @@ yargs(hideBin(process.argv)).command(
         default: 1.5,
         type: 'number',
       })
+      .option('valid_interval', {
+        describe: 'the interval where caches are no longer valid',
+        default: 10,
+        type: 'number',
+      })
       .option('symbol', {
         describe: 'the quote symbol',
         default: 'USDC',
@@ -119,6 +138,7 @@ yargs(hideBin(process.argv)).command(
     const mangoProgramId = new PublicKey(args.mangoProgramId as string);
     const serumProgramId = new PublicKey(args.serumProgramId as string);
     const quoteMint = new PublicKey(args.quote_mint as string);
+    const feesVault = new PublicKey(args.fees_vault as string);
     const account = readKeypair(args.keypair as string);
     const config = readConfig(args.config as string);
     const cluster = args.cluster as Cluster;
@@ -132,7 +152,8 @@ yargs(hideBin(process.argv)).command(
       serumProgramId,
       args.symbol as string,
       quoteMint,
-      5,
+      feesVault,
+      args.valid_interval as number,
       args.quote_optimal_util as number,
       args.quote_optimal_rate as number,
       args.quote_max_rate as number,
@@ -154,7 +175,7 @@ yargs(hideBin(process.argv)).command(
       .option('provider', {
         describe: 'oracle provider',
         default: 'stub',
-        choices: ['stub', 'pyth'],
+        choices: ['stub', 'pyth', 'switchboard'],
       })
       .option(...clusterDesc)
       .option(...configDesc)
@@ -170,6 +191,13 @@ yargs(hideBin(process.argv)).command(
     let result: any;
     if (args.provider === 'pyth') {
       result = await addPythOracle(
+        connection,
+        account,
+        group,
+        args.symbol as string,
+      );
+    } else if (args.provider === 'switchboard') {
+      result = await addSwitchboardOracle(
         connection,
         account,
         group,
@@ -249,7 +277,7 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('taker_fee', {
-        default: 0.0001,
+        default: 0.0005,
         type: 'number',
       })
       .option('base_lot_size', {
@@ -261,11 +289,11 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('max_num_events', {
-        default: 128,
+        default: 256,
         type: 'number',
       })
       .option('rate', {
-        default: 1,
+        default: 1, // think of better starting rate
         type: 'number',
       })
       .option('max_depth_bps', {
@@ -277,7 +305,8 @@ yargs(hideBin(process.argv)).command(
         type: 'number',
       })
       .option('mngo_per_period', {
-        default: 11400, // roughly corresponds to 100m MNGO per year
+        // default: 11400, // roughly corresponds to 100m MNGO per year
+        default: 0, // going to be 0 for internal release
         type: 'number',
       })
 
@@ -501,6 +530,130 @@ yargs(hideBin(process.argv)).command(
       console.log(`Failure`);
     }
 
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'change-perp-market-params <group> <symbol>',
+  'change params for a perp market',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional(...symbolDesc)
+      .option('maint_leverage', {
+        type: 'number',
+      })
+      .option('init_leverage', {
+        type: 'number',
+      })
+      .option('liquidation_fee', {
+        type: 'number',
+      })
+      .option('maker_fee', {
+        type: 'number',
+      })
+      .option('taker_fee', {
+        type: 'number',
+      })
+      .option('rate', {
+        type: 'number',
+      })
+      .option('max_depth_bps', {
+        type: 'number',
+      })
+      .option('target_period_length', {
+        type: 'number',
+      })
+      .option('mngo_per_period', {
+        type: 'number',
+      })
+
+      .option(...clusterDesc)
+      .option(...configDesc)
+      .option(...keypairDesc);
+  },
+  async (args) => {
+    console.log('change-perp-market-params', args);
+    const account = readKeypair(args.keypair as string);
+    const config = readConfig(args.config as string);
+    const cluster = args.cluster as Cluster;
+    const connection = openConnection(config, cluster);
+    const groupConfig = config.getGroup(
+      cluster,
+      args.group as string,
+    ) as GroupConfig;
+    const symbol = args.symbol as string;
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const perpMarketConfig: PerpMarketConfig = throwUndefined(
+      getPerpMarketByBaseSymbol(groupConfig, symbol),
+    );
+    const perpMarket = await client.getPerpMarket(
+      perpMarketConfig.publicKey,
+      perpMarketConfig.baseDecimals,
+      perpMarketConfig.quoteDecimals,
+    );
+    let mngoPerPeriod = getNumberOrUndef(args, 'mngo_per_period');
+    if (mngoPerPeriod !== undefined) {
+      const token = getTokenBySymbol(groupConfig, 'MNGO');
+      mngoPerPeriod = uiToNative(mngoPerPeriod, token.decimals).toNumber();
+    }
+    await client.changePerpMarketParams(
+      mangoGroup,
+      perpMarket,
+      account,
+      getNumberOrUndef(args, 'maint_leverage'),
+      getNumberOrUndef(args, 'init_leverage'),
+      getNumberOrUndef(args, 'liquidation_fee'),
+      getNumberOrUndef(args, 'maker_fee'),
+      getNumberOrUndef(args, 'taker_fee'),
+      getNumberOrUndef(args, 'rate'),
+      getNumberOrUndef(args, 'max_depth_bps'),
+      getNumberOrUndef(args, 'target_period_length'),
+      mngoPerPeriod,
+    );
+    process.exit(0);
+  },
+).argv;
+
+function getNumberOrUndef(args, k): number | undefined {
+  return args[k] === undefined ? undefined : (args[k] as number);
+}
+
+yargs(hideBin(process.argv)).command(
+  'set-admin <group> <admin_pk>',
+  'transfer admin permissions over group to another account',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional('admin_pk', {
+        describe: 'the public key of the new group admin',
+        type: 'string',
+      })
+      .option(...clusterDesc)
+      .option(...configDesc)
+      .option(...keypairDesc);
+  },
+  async (args) => {
+    console.log('set-admin', args);
+    const account = readKeypair(args.keypair as string);
+    const config = readConfig(args.config as string);
+    const cluster = args.cluster as Cluster;
+    const connection = openConnection(config, cluster);
+    const groupConfig = config.getGroup(
+      cluster,
+      args.group as string,
+    ) as GroupConfig;
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    await client.setGroupAdmin(
+      mangoGroup,
+      new PublicKey(args.admin_pk as string),
+      account,
+    );
     process.exit(0);
   },
 ).argv;

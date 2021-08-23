@@ -2,7 +2,8 @@ import { Account, Connection, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import { getOracleBySymbol, GroupConfig } from '../config';
 
-const PYTH_ORACLES = {
+// devnet
+const PYTH_ORACLES_DEVNET = {
   BTC: 'HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J',
   ETH: 'EdVCmQ9FSPcVe5YySXDPCRmc8aDQLKJ9xvYBMZPie1Vw',
   SOL: 'J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix',
@@ -13,7 +14,16 @@ const PYTH_ORACLES = {
   SUSHI: 'BLArYBCUYhdWiY8PCUTpvFE21iaJq85dvxLk9bYMobcU', // LTC
   FTT: '6vivTRs5ZPeeXbjo7dfburfaYDWoXjBtdtuYgQRuGfu',
   USDT: '38xoQ4oeJCBrcVvca2cGk7iV1dAfrmTR1kmhSCJQ8Jto',
-}
+};
+
+// mainnet
+const PYTH_ORACLES_MAINNET = {
+  BTC: 'GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU',
+  ETH: 'JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB',
+  SOL: 'H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG',
+  SRM: '3NBReDRTLKMQEKiLD5tGcx4kXbTf88b7f2xLS9UuGjym',
+  USDT: '3vxLXJqLqF3JG5TCbYycbKWRBbCJQLxQmBGCkyqEEefL',
+};
 
 export default async function addPythOracle(
   connection: Connection,
@@ -30,7 +40,12 @@ export default async function addPythOracle(
 
   const client = new MangoClient(connection, groupConfig.mangoProgramId);
   const group = await client.getMangoGroup(groupConfig.publicKey);
-  const oraclePk = new PublicKey(PYTH_ORACLES[symbol]);
+  let oraclePk;
+  if (groupConfig.cluster === 'mainnet') {
+    oraclePk = new PublicKey(PYTH_ORACLES_MAINNET[symbol]);
+  } else {
+    oraclePk = new PublicKey(PYTH_ORACLES_DEVNET[symbol]);
+  }
   await client.addOracle(group, oraclePk, payer);
 
   const oracle = {
