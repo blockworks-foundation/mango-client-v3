@@ -1640,7 +1640,16 @@ export class MangoClient {
         mangoGroup.signerKey,
       );
       transaction.add(settleFeesInstr);
-      pnl = pnl.sub(perpMarket.feesAccrued);
+      pnl = pnl.add(perpMarket.feesAccrued).min(I80F48.fromString('-0.000001'));
+      const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
+      if (remSign !== sign) {
+        // if pnl has changed sign, then we're done
+        return await this.sendTransaction(
+          transaction,
+          owner,
+          additionalSigners,
+        );
+      }
     }
 
     const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
