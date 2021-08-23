@@ -69,6 +69,7 @@ import {
   makeRedeemMngoInstruction,
   makeResolvePerpBankruptcyInstruction,
   makeResolveTokenBankruptcyInstruction,
+  makeSetGroupAdminInstruction,
   makeSetOracleInstruction,
   makeSettleFeesInstruction,
   makeSettleFundsInstruction,
@@ -1640,7 +1641,7 @@ export class MangoClient {
         mangoGroup.signerKey,
       );
       transaction.add(settleFeesInstr);
-      pnl = pnl.add(perpMarket.feesAccrued);
+      pnl = pnl.add(perpMarket.feesAccrued).min(I80F48.fromString('-0.000001'));
       const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
       if (remSign !== sign) {
         // if pnl has changed sign, then we're done
@@ -1695,7 +1696,7 @@ export class MangoClient {
       } else {
         // means we ran out of accounts to settle against (shouldn't happen) OR transaction too big
         // TODO - create a multi tx to be signed by user
-        break;
+        continue;
       }
     }
 
@@ -2437,6 +2438,23 @@ export class MangoClient {
     transaction.add(instruction);
     const additionalSigners = [];
 
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async setGroupAdmin(
+    mangoGroup: MangoGroup,
+    newAdmin: PublicKey,
+    admin: Account | WalletAdapter,
+  ): Promise<TransactionSignature> {
+    const instruction = makeSetGroupAdminInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      newAdmin,
+      admin.publicKey,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 }
