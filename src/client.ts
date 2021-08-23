@@ -1640,16 +1640,7 @@ export class MangoClient {
         mangoGroup.signerKey,
       );
       transaction.add(settleFeesInstr);
-      pnl = pnl.add(perpMarket.feesAccrued);
-      // const remSign = pnl.gt(ZERO_I80F48) ? 1 : -1;
-      // if (remSign !== sign) {
-      //   // if pnl has changed sign, then we're done
-      //   return await this.sendTransaction(
-      //     transaction,
-      //     owner,
-      //     additionalSigners,
-      //   );
-      // }
+      pnl = pnl.sub(perpMarket.feesAccrued);
     }
 
     const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
@@ -1695,7 +1686,7 @@ export class MangoClient {
       } else {
         // means we ran out of accounts to settle against (shouldn't happen) OR transaction too big
         // TODO - create a multi tx to be signed by user
-        break;
+        continue;
       }
     }
 
