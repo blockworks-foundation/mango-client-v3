@@ -378,6 +378,7 @@ MangoInstructionLayout.addVariant(
   ]),
   'ChangePerpMarketParams',
 );
+MangoInstructionLayout.addVariant(38, struct([]), 'SetGroupAdmin');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore

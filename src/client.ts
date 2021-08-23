@@ -69,6 +69,7 @@ import {
   makeRedeemMngoInstruction,
   makeResolvePerpBankruptcyInstruction,
   makeResolveTokenBankruptcyInstruction,
+  makeSetGroupAdminInstruction,
   makeSetOracleInstruction,
   makeSettleFeesInstruction,
   makeSettleFundsInstruction,
@@ -2428,6 +2429,23 @@ export class MangoClient {
     transaction.add(instruction);
     const additionalSigners = [];
 
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async setGroupAdmin(
+    mangoGroup: MangoGroup,
+    newAdmin: PublicKey,
+    admin: Account | WalletAdapter,
+  ): Promise<TransactionSignature> {
+    const instruction = makeSetGroupAdminInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      newAdmin,
+      admin.publicKey,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 }
