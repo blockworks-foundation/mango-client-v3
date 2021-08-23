@@ -144,6 +144,7 @@ export default class PerpAccount {
         price = new Big(fe.price);
         let quantity = new Big(fe.quantity);
 
+        console.log(userPk, fe.maker, fe.taker);
         if (
           (userPk === fe.taker && fe.takerSide === 'sell') ||
           (userPk === fe.maker && fe.takerSide === 'buy')
