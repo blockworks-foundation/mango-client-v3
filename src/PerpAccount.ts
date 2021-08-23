@@ -70,8 +70,8 @@ export default class PerpAccount {
         let quantity = new Big(fe.quantity);
 
         if (
-          (userPk === fe.taker && fe.takerSide === 'sell') ||
-          (userPk === fe.maker && fe.takerSide === 'buy')
+          (userPk === fe.taker.toString() && fe.takerSide === 'sell') ||
+          (userPk === fe.maker.toString() && fe.takerSide === 'buy')
         ) {
           quantity = quantity.mul(NEG_ONE);
         }
@@ -116,7 +116,6 @@ export default class PerpAccount {
 
     let currBase = new Big(basePos);
     let totalQuoteChange = ZERO;
-
     for (const event of events) {
       let price, baseChange;
       if ('liqor' in event) {
@@ -146,8 +145,8 @@ export default class PerpAccount {
         let quantity = new Big(fe.quantity);
 
         if (
-          (userPk === fe.taker && fe.takerSide === 'sell') ||
-          (userPk === fe.maker && fe.takerSide === 'buy')
+          (userPk === fe.taker.toString() && fe.takerSide === 'sell') ||
+          (userPk === fe.maker.toString() && fe.takerSide === 'buy')
         ) {
           quantity = quantity.mul(NEG_ONE);
         }
