@@ -384,7 +384,7 @@ export default class MangoAccount {
     }
     const w = getWeights(mangoGroup, marketIndex, 'Init');
     const weight =
-      marketType === 'perp' ? w.spotAssetWeight : w.perpAssetWeight;
+      marketType === 'spot' ? w.spotAssetWeight : w.perpAssetWeight;
     if (weight.gte(ONE_I80F48)) {
       // This is actually an error state and should not happen
       return health;
