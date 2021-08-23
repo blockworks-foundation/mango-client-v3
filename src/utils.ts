@@ -318,7 +318,13 @@ export async function getMultipleAccounts(
   connection: Connection,
   publicKeys: PublicKey[],
   commitment?: Commitment,
-): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
+): Promise<
+  {
+    publicKey: PublicKey;
+    context: { slot: number };
+    accountInfo: AccountInfo<Buffer>;
+  }[]
+> {
   const len = publicKeys.length;
   if (len > 100) {
     const mid = Math.floor(publicKeys.length / 2);
@@ -340,6 +346,7 @@ export async function getMultipleAccounts(
   return resp.result.value.map(
     ({ data, executable, lamports, owner }, i: number) => ({
       publicKey: publicKeys[i],
+      context: resp.result.context,
       accountInfo: {
         data: Buffer.from(data[0], 'base64'),
         executable,
