@@ -173,6 +173,7 @@ export default class PerpAccount {
       }
     }
 
+    console.log(currBase.toString());
     // If we haven't returned yet, there was an error or missing data
     // TODO - consider failing silently
     throw new Error('Trade history incomplete');
