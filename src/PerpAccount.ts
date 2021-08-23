@@ -116,8 +116,9 @@ export default class PerpAccount {
 
     let currBase = new Big(basePos);
     let totalQuoteChange = ZERO;
-
+    console.log(userPk);
     for (const event of events) {
+      console.log(event);
       let price, baseChange;
       if ('liqor' in event) {
         // TODO - build cleaner way to distinguish events
@@ -150,6 +151,7 @@ export default class PerpAccount {
           (userPk === fe.maker && fe.takerSide === 'buy')
         ) {
           quantity = quantity.mul(NEG_ONE);
+          console.log(quantity.toString());
         }
 
         if (currBase.gt(ZERO) && quantity.gt(ZERO)) {
