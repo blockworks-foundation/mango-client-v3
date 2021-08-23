@@ -595,13 +595,11 @@ yargs(hideBin(process.argv)).command(
       perpMarketConfig.baseDecimals,
       perpMarketConfig.quoteDecimals,
     );
-
     let mngoPerPeriod = getNumberOrUndef(args, 'mngo_per_period');
     if (mngoPerPeriod !== undefined) {
       const token = getTokenBySymbol(groupConfig, 'MNGO');
       mngoPerPeriod = uiToNative(mngoPerPeriod, token.decimals).toNumber();
     }
-
     await client.changePerpMarketParams(
       mangoGroup,
       perpMarket,

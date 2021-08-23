@@ -5,6 +5,8 @@ import { getMultipleAccounts, nativeI80F48ToUi, zeroKey } from './utils';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 
+const YEAR = I80F48.fromString('31536000');
+
 export default class RootBank {
   publicKey: PublicKey;
   optimalUtil!: I80F48;
@@ -93,7 +95,7 @@ export default class RootBank {
       return ZERO_I80F48;
     }
     if (totalDeposits.lte(totalBorrows)) {
-      return this.maxRate;
+      return this.maxRate.mul(YEAR);
     }
 
     const utilization = totalBorrows.div(totalDeposits);
@@ -102,10 +104,10 @@ export default class RootBank {
       const slope = this.maxRate
         .sub(this.optimalRate)
         .div(I80F48.fromNumber(1).sub(this.optimalUtil));
-      return this.optimalRate.add(slope.mul(extraUtil));
+      return this.optimalRate.add(slope.mul(extraUtil)).mul(YEAR);
     } else {
       const slope = this.optimalRate.div(this.optimalUtil);
-      return slope.mul(utilization);
+      return slope.mul(utilization).mul(YEAR);
     }
   }
 
@@ -117,10 +119,10 @@ export default class RootBank {
     if (totalDeposits.eq(ZERO_I80F48) && totalBorrows.eq(ZERO_I80F48)) {
       return ZERO_I80F48;
     } else if (totalDeposits.eq(ZERO_I80F48)) {
-      return this.maxRate;
+      return this.maxRate.mul(YEAR);
     }
 
     const utilization = totalBorrows.div(totalDeposits);
-    return utilization.mul(borrowRate);
+    return utilization.mul(borrowRate).mul(YEAR);
   }
 }
