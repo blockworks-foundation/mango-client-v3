@@ -90,6 +90,14 @@ export default class PerpMarket {
       .toNumber();
   }
 
+  get minOrderSize() {
+    return this.baseLotsToNumber(new BN(1));
+  }
+
+  get tickSize() {
+    return this.priceLotsToNumber(new BN(1));
+  }
+
   async loadEventQueue(connection: Connection): Promise<PerpEventQueue> {
     const acc = await connection.getAccountInfo(this.eventQueue);
     const parsed = PerpEventQueueLayout.decode(acc?.data);

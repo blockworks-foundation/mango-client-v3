@@ -45,6 +45,7 @@ class _I80F48Layout extends Blob {
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
+
 export function I80F48Layout(property = '') {
   return new _I80F48Layout(property);
 }
@@ -352,6 +353,30 @@ MangoInstructionLayout.addVariant(
   36,
   struct([u64('quantity')]),
   'WithdrawMsrm',
+);
+MangoInstructionLayout.addVariant(
+  37,
+  struct([
+    bool('maintLeverageOption'),
+    I80F48Layout('maintLeverage'),
+    bool('initLeverageOption'),
+    I80F48Layout('initLeverage'),
+    bool('liquidationFeeOption'),
+    I80F48Layout('liquidationFee'),
+    bool('makerFeeOption'),
+    I80F48Layout('makerFee'),
+    bool('takerFeeOption'),
+    I80F48Layout('takerFee'),
+    bool('rateOption'),
+    I80F48Layout('rate'),
+    bool('maxDepthBpsOption'),
+    I80F48Layout('maxDepthBps'),
+    bool('targetPeriodLengthOption'),
+    u64('targetPeriodLength'),
+    bool('mngoPerPeriodOption'),
+    u64('mngoPerPeriod'),
+  ]),
+  'ChangePerpMarketParams',
 );
 
 const instructionMaxSpan = Math.max(
