@@ -91,8 +91,13 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
     console.log('processUpdateCache');
     const batchSize = 8;
     const promises: Promise<string>[] = [];
+    const rootBanks = mangoGroup.tokens.map((t) => t.rootBank).filter((t) => !t.equals(zeroKey));
+    const oracles = mangoGroup.oracles.filter((o) => !o.equals(zeroKey));
+    const perpMarkets = mangoGroup.perpMarkets
+      .filter((pm) => !pm.isEmpty())
+      .map((pm) => pm.perpMarket);
 
-    for (let i = 0; i < mangoGroup.tokens.length / batchSize; i++) {
+    for (let i = 0; i < rootBanks.length / batchSize; i++) {
       const startIndex = i * batchSize;
       const endIndex = i * batchSize + batchSize;
       const cacheTransaction = new Transaction();
@@ -101,10 +106,8 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          mangoGroup.tokens
-            .map((t) => t.rootBank)
-            .slice(startIndex, endIndex)
-            .filter((x) => !x.equals(zeroKey)),
+          rootBanks
+            .slice(startIndex, endIndex),
         ),
       );
 
@@ -113,9 +116,8 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          mangoGroup.oracles
-            .slice(startIndex, endIndex)
-            .filter((x) => !x.equals(zeroKey)),
+          oracles
+            .slice(startIndex, endIndex),
         ),
       );
 
@@ -124,10 +126,8 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          mangoGroup.perpMarkets
-            .filter((pm) => !pm.isEmpty())
-            .slice(startIndex, endIndex)
-            .map((pm) => pm.perpMarket),
+          perpMarkets
+            .slice(startIndex, endIndex),
         ),
       );
       if (cacheTransaction.instructions.length > 0) {
@@ -228,7 +228,10 @@ async function processKeeperTransactions(
     console.log('processKeeperTransactions');
     const batchSize = 8;
     const promises: Promise<string>[] = [];
-    for (let i = 0; i < mangoGroup.tokens.length / batchSize; i++) {
+
+    const filteredPerpMarkets = perpMarkets.filter((pm) => !pm.publicKey.equals(zeroKey));
+
+    for (let i = 0; i < groupIds.tokens.length / batchSize; i++) {
       const startIndex = i * batchSize;
       const endIndex = i * batchSize + batchSize;
 
@@ -245,9 +248,8 @@ async function processKeeperTransactions(
       });
 
       const updateFundingTransaction = new Transaction();
-      perpMarkets
+      filteredPerpMarkets
         .slice(startIndex, endIndex)
-        .filter((pm) => !pm.publicKey.equals(zeroKey))
         .forEach((market) => {
           if (market) {
             updateFundingTransaction.add(
