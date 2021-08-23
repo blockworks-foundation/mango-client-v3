@@ -123,6 +123,6 @@ export default class RootBank {
     }
 
     const utilization = totalBorrows.div(totalDeposits);
-    return utilization.mul(borrowRate).mul(YEAR);
+    return utilization.mul(borrowRate);
   }
 }
