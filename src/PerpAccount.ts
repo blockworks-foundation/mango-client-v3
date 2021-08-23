@@ -70,8 +70,8 @@ export default class PerpAccount {
         let quantity = new Big(fe.quantity);
 
         if (
-          (userPk === fe.taker && fe.takerSide === 'sell') ||
-          (userPk === fe.maker && fe.takerSide === 'buy')
+          (userPk === fe.taker.toString() && fe.takerSide === 'sell') ||
+          (userPk === fe.maker.toString() && fe.takerSide === 'buy')
         ) {
           quantity = quantity.mul(NEG_ONE);
         }
@@ -144,7 +144,6 @@ export default class PerpAccount {
         price = new Big(fe.price);
         let quantity = new Big(fe.quantity);
 
-        console.log(userPk, fe.maker, fe.taker);
         if (
           (userPk === fe.taker.toString() && fe.takerSide === 'sell') ||
           (userPk === fe.maker.toString() && fe.takerSide === 'buy')
@@ -161,15 +160,6 @@ export default class PerpAccount {
         } else {
           baseChange = quantity;
         }
-
-        console.log(
-          'currBase',
-          currBase.toString(),
-          'quantity',
-          quantity.toString(),
-          'baseChagne',
-          baseChange.toString(),
-        );
       }
 
       totalQuoteChange = totalQuoteChange.sub(baseChange.mul(price));
@@ -180,7 +170,6 @@ export default class PerpAccount {
       }
     }
 
-    console.log(currBase.toString());
     // If we haven't returned yet, there was an error or missing data
     // TODO - consider failing silently
     throw new Error('Trade history incomplete');
