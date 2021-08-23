@@ -64,7 +64,7 @@ export default class RootBank {
       totalBorrow = totalBorrow.add(this.nodeBankAccounts[i].borrows);
     }
 
-    return this.depositIndex.mul(totalBorrow);
+    return this.borrowIndex.mul(totalBorrow);
   }
 
   getUiTotalDeposit(mangoGroup: MangoGroup): I80F48 {
