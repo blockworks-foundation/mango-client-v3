@@ -1,10 +1,11 @@
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
+import { u64 } from '@solana/spl-token';
 import { MangoClient } from '../client';
 import MangoAccount from '../MangoAccount';
 import PerpMarket from '../PerpMarket';
 import { GroupConfig } from '../config';
 import { QUOTE_INDEX } from '../layout';
-import { ZERO_I80F48 } from '../fixednum';
+import { I80F48, ZERO_I80F48 } from '../fixednum';
 
 const setUp = async (client, mangoGroupKey) => {
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
@@ -70,12 +71,45 @@ const checkSumOfQuotePositions = async (
   );
 };
 
+const checkSumOfNetDeposit = async (
+  connection,
+  mangoGroup,
+  mangoAccounts,
+) => {
+  const mangoCache = await mangoGroup.loadCache(connection);
+  const rootBanks = await mangoGroup.loadRootBanks(connection);
+  for (let i = 0; i < mangoGroup.tokens.length; i++) {
+    console.log("======");
+    const sumOfNetDepositsAcrossMAs = mangoAccounts.reduce(
+      (sum, mangoAccount) => {
+        return sum.add(mangoAccount
+          .getNativeDeposit(mangoCache.rootBankCache[i], i)
+          .sub(mangoAccount.getNativeBorrow(mangoCache.rootBankCache[i], i))
+        );
+      },
+      ZERO_I80F48
+    );
+    console.log("sumOfNetDepositsAcrossMAs:", sumOfNetDepositsAcrossMAs.toString());
+    let vaultAmount = ZERO_I80F48;
+    const rootBank = rootBanks[i];
+    if (rootBank) {
+      const nodeBanks = await rootBanks[i].loadNodeBanks(connection);
+      for (let j = 0; j < nodeBanks.length; j++) {
+        const vault = await connection.getTokenAccountBalance(nodeBanks[j].vault);
+        vaultAmount = vaultAmount.add(I80F48.fromString(vault.value.amount));
+      }
+    }
+    console.log("vaultAmount:", vaultAmount.toString());
+  }
+}
+
 export default async function sanityCheck(
   connection: Connection,
   groupConfig: GroupConfig,
 ) {
   const client = new MangoClient(connection, groupConfig.mangoProgramId);
   const { mangoGroup, mangoAccounts, perpMarkets } = await setUp(client, groupConfig.publicKey);
-  await checkSumOfBasePositions(mangoAccounts);
-  await checkSumOfQuotePositions(connection, mangoGroup, mangoAccounts, perpMarkets);
+  // await checkSumOfBasePositions(mangoAccounts);
+  // await checkSumOfQuotePositions(connection, mangoGroup, mangoAccounts, perpMarkets);
+  await checkSumOfNetDeposit(connection, mangoGroup, mangoAccounts);
 };
