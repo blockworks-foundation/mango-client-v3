@@ -6,6 +6,7 @@ import addPythOracle from './addPythOracle';
 import addSwitchboardOracle from './addSwitchboardOracle';
 import setStubOracle from './setStubOracle';
 import listMarket from './listMarket';
+import sanityCheck from './sanityCheck';
 
 export {
   addPerpMarket,
@@ -16,4 +17,5 @@ export {
   initGroup,
   setStubOracle,
   listMarket,
+  sanityCheck,
 };
