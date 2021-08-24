@@ -152,7 +152,7 @@ export default class PerpMarket {
     ]);
     // @ts-ignore
     return [...bids, ...asks].filter(
-      (order) => order.owner === account.publicKey,
+      (order) => (order.owner).equals(account.publicKey),
     );
   }
 }
