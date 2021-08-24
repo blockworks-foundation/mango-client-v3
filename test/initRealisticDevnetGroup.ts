@@ -5,8 +5,8 @@
  * 3.) Update the mango group name in keeper.ts crank.ts and in the UI in useMangoStore.ts
  */
 
-const newGroupName = 'devnet.1';
-const mangoProgramId = '5fP7Z7a87ZEVsKr2tQPApdtq83GcTW4kz919R6ou5h5E';
+const newGroupName = 'devnet.2';
+const mangoProgramId = '4skJ85cdxQAFVKbcGgfun8iZPL7BadVYXG3kGEGkufqA';
 const serumProgramId = 'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY';
 const feesVault = '54PcMYTAZd8uRaYyb3Cwgctcfc1LchGMaqVrmxgr3yVs'; // devnet vault owned by daffy
 
@@ -131,16 +131,18 @@ const initNewGroup = async () => {
       } --liquidation_fee ${fids.liquidationFee || 0.05}`,
     );
 
-    console.log(`adding ${fids.symbol} perp market`);
-    await execCommand(
-      `yarn cli add-perp-market ${newGroupName} ${
-        fids.symbol
-      } --init_leverage ${2 * (fids.initLeverage || 5)} --maint_leverage ${
-        2 * (fids.maintLeverage || 10)
-      } --liquidation_fee ${
-        (fids.liquidationFee || 0.05) / 2
-      } --base_lot_size ${fids.baseLot} --quote_lot_size ${fids.quoteLot}`,
-    );
+    if (fids.symbol === 'BTC') {
+      console.log(`adding ${fids.symbol} perp market`);
+      await execCommand(
+        `yarn cli add-perp-market ${newGroupName} ${
+          fids.symbol
+        } --init_leverage ${2 * (fids.initLeverage || 5)} --maint_leverage ${
+          2 * (fids.maintLeverage || 10)
+        } --liquidation_fee ${
+          (fids.liquidationFee || 0.05) / 2
+        } --base_lot_size ${fids.baseLot} --quote_lot_size ${fids.quoteLot}`,
+      );
+    }
     console.log('---');
   }
   console.log('Succcessfully created new mango group.');
