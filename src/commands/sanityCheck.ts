@@ -6,6 +6,7 @@ import PerpMarket from '../PerpMarket';
 import { GroupConfig } from '../config';
 import { QUOTE_INDEX } from '../layout';
 import { I80F48, ZERO_I80F48 } from '../fixednum';
+import { zeroKey } from '../utils';
 
 const setUp = async (client, mangoGroupKey) => {
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
@@ -71,45 +72,56 @@ const checkSumOfQuotePositions = async (
   );
 };
 
-const checkSumOfNetDeposit = async (
-  connection,
-  mangoGroup,
-  mangoAccounts,
-) => {
+const checkSumOfNetDeposit = async (connection, mangoGroup, mangoAccounts) => {
   const mangoCache = await mangoGroup.loadCache(connection);
   const rootBanks = await mangoGroup.loadRootBanks(connection);
   for (let i = 0; i < mangoGroup.tokens.length; i++) {
-    console.log("======");
+    if (mangoGroup.tokens[i].mint.equals(zeroKey)) {
+      continue;
+    }
+
+    console.log('======');
     const sumOfNetDepositsAcrossMAs = mangoAccounts.reduce(
       (sum, mangoAccount) => {
-        return sum.add(mangoAccount
-          .getNativeDeposit(mangoCache.rootBankCache[i], i)
-          .sub(mangoAccount.getNativeBorrow(mangoCache.rootBankCache[i], i))
-        );
+        return sum.add(mangoAccount.getNet(mangoCache.rootBankCache[i], i));
       },
-      ZERO_I80F48
+      ZERO_I80F48,
     );
-    console.log("sumOfNetDepositsAcrossMAs:", sumOfNetDepositsAcrossMAs.toString());
+    console.log(
+      'sumOfNetDepositsAcrossMAs:',
+      sumOfNetDepositsAcrossMAs.toString(),
+    );
     let vaultAmount = ZERO_I80F48;
     const rootBank = rootBanks[i];
     if (rootBank) {
       const nodeBanks = await rootBanks[i].loadNodeBanks(connection);
       for (let j = 0; j < nodeBanks.length; j++) {
-        const vault = await connection.getTokenAccountBalance(nodeBanks[j].vault);
+        const vault = await connection.getTokenAccountBalance(
+          nodeBanks[j].vault,
+        );
         vaultAmount = vaultAmount.add(I80F48.fromString(vault.value.amount));
       }
     }
-    console.log("vaultAmount:", vaultAmount.toString());
+    console.log('vaultAmount:', vaultAmount.toString());
+    console.log('Diff', vaultAmount.sub(sumOfNetDepositsAcrossMAs).toString());
   }
-}
+};
 
 export default async function sanityCheck(
   connection: Connection,
   groupConfig: GroupConfig,
 ) {
   const client = new MangoClient(connection, groupConfig.mangoProgramId);
-  const { mangoGroup, mangoAccounts, perpMarkets } = await setUp(client, groupConfig.publicKey);
-  // await checkSumOfBasePositions(mangoAccounts);
-  // await checkSumOfQuotePositions(connection, mangoGroup, mangoAccounts, perpMarkets);
+  const { mangoGroup, mangoAccounts, perpMarkets } = await setUp(
+    client,
+    groupConfig.publicKey,
+  );
+  await checkSumOfBasePositions(mangoAccounts);
+  await checkSumOfQuotePositions(
+    connection,
+    mangoGroup,
+    mangoAccounts,
+    perpMarkets,
+  );
   await checkSumOfNetDeposit(connection, mangoGroup, mangoAccounts);
-};
+}
