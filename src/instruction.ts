@@ -268,6 +268,33 @@ export function makeCancelPerpOrderByClientIdInstruction(
   return new TransactionInstruction({ keys, data, programId });
 }
 
+export function makeCancelAllPerpOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  perpMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  limit: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    CancelAllPerpOrders: {
+      limit,
+    },
+  });
+  return new TransactionInstruction({ keys, data, programId });
+}
+
 export function makeDepositInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
