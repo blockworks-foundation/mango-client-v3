@@ -91,10 +91,30 @@ const checkSumOfNetDeposit = async (connection, mangoGroup, mangoAccounts) => {
       'sumOfNetDepositsAcrossMAs:',
       sumOfNetDepositsAcrossMAs.toString(),
     );
+
     let vaultAmount = ZERO_I80F48;
     const rootBank = rootBanks[i];
     if (rootBank) {
       const nodeBanks = await rootBanks[i].loadNodeBanks(connection);
+      const sumOfNetDepositsAcrossNodes = nodeBanks.reduce((sum, nodeBank) => {
+        return sum.add(
+          nodeBank.deposits.mul(mangoCache.rootBankCache[i].depositIndex),
+        );
+      }, ZERO_I80F48);
+      const sumOfNetBorrowsAcrossNodes = nodeBanks.reduce((sum, nodeBank) => {
+        return sum.add(
+          nodeBank.borrows.mul(mangoCache.rootBankCache[i].borrowIndex),
+        );
+      }, ZERO_I80F48);
+      console.log(
+        'sumOfNetDepositsAcrossNodes:',
+        sumOfNetDepositsAcrossNodes.toString(),
+      );
+      console.log(
+        'sumOfNetBorrowsAcrossNodes:',
+        sumOfNetBorrowsAcrossNodes.toString(),
+      );
+
       for (let j = 0; j < nodeBanks.length; j++) {
         const vault = await connection.getTokenAccountBalance(
           nodeBanks[j].vault,
