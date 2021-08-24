@@ -572,7 +572,7 @@ export default class MangoAccount {
     const assets = this.getAssetsVal(mangoGroup, mangoCache);
 
     if (assets.gt(ZERO_I80F48)) {
-      return liabs.div(assets.sub(liabs)).add(ONE_I80F48);
+      return liabs.div(assets.sub(liabs));
     }
     return ZERO_I80F48;
   }
