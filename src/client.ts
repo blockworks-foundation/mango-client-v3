@@ -1790,8 +1790,10 @@ export class MangoClient {
       ),
     );
 
-    const mangoAccounts = await mangoAccountProms;
-    const openOrders = await openOrdersProms;
+    const [mangoAccounts, openOrders] = await Promise.all([
+      mangoAccountProms,
+      openOrdersProms,
+    ]);
 
     const pkToOpenOrdersAccount = {};
     openOrders.forEach((openOrdersAccount) => {
