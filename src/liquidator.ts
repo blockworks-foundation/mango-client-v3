@@ -16,19 +16,21 @@ import {
   getMultipleAccounts,
   MangoAccount,
   MangoGroup,
+  nativeToUi,
   PerpMarket,
   RootBank,
   ZERO_BN,
 } from '.';
 import { QUOTE_INDEX, MangoAccountLayout } from './layout';
 import { Orderbook } from '@project-serum/serum/lib/market';
+import axios from 'axios';
 
 const interval = parseInt(process.env.INTERVAL || '3500');
 const refreshAccountsInterval = parseInt(process.env.INTERVAL || '60000');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
-const groupName = process.env.GROUP || 'mainnet.0';
+const groupName = process.env.GROUP || 'mainnet.1';
 const groupIds = config.getGroup(cluster, groupName);
 if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);
@@ -55,9 +57,7 @@ const connection = new Connection(
 );
 const client = new MangoClient(connection, mangoProgramId);
 
-const liqorMangoAccountKey = new PublicKey(
-  'CsHVBybrL2qsPQMmcLW2y4LKEDuEbv3vzWneNMYxHnXw',
-);
+const liqorMangoAccountKey = new PublicKey('');
 
 let mangoAccounts: MangoAccount[] = [];
 
@@ -93,7 +93,7 @@ async function main() {
     }),
   );
   const rootBanks = await mangoGroup.loadRootBanks(connection);
-
+  notify(`V3 Liquidator launched for group ${groupName}`);
   // eslint-disable-next-line
   while (true) {
     try {
@@ -102,9 +102,6 @@ async function main() {
         liqorMangoAccountKey,
         mangoGroup.dexProgramId,
       );
-      //console.log(liqorMangoAccount.toPrettyString(mangoGroup, cache));
-
-      //console.time('checkAccounts');
       for (let mangoAccount of mangoAccounts) {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
@@ -119,6 +116,7 @@ async function main() {
             console.log(
               `Sick account ${mangoAccountKeyString} health: ${health.toString()}`,
             );
+            notify(`Sick account ${mangoAccountKeyString} health: ${health.toString()}`);
             console.log(mangoAccount.toPrettyString(mangoGroup, cache));
             liquidateAccount(
               mangoGroup,
@@ -131,6 +129,7 @@ async function main() {
             )
               .then(() => {
                 console.log('Liquidated account', mangoAccountKeyString);
+                notify(`Liquidated account ${mangoAccountKeyString}`);
               })
               .catch((err) => {
                 console.error(
@@ -138,6 +137,7 @@ async function main() {
                   mangoAccountKeyString,
                   err,
                 );
+                notify(`Failed to liquidate account ${mangoAccountKeyString}`);
               })
               .finally(() => {
                 liquidating[mangoAccountKeyString] = false;
@@ -146,7 +146,6 @@ async function main() {
           }
         }
       }
-      //console.timeEnd('checkAccounts');
       await sleep(interval);
     } catch (err) {
       console.error('Error checking accounts:', err);
@@ -782,6 +781,10 @@ async function closePositions(
       }
     }
   }
+}
+
+function notify(content: string) {
+  axios.post('https://discord.com/api/webhooks/879503355205005353/2Uy1p-HISWLXKi90frExr2_rr7uqBFjswupUhUFctuWIhzPwjPpQJadlK22WGEGZSOiy', {content});
 }
 
 main();

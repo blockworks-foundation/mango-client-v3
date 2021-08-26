@@ -709,13 +709,14 @@ export default class MangoAccount {
     lines.push('isBankrupt: ' + this.isBankrupt);
 
     lines.push('Spot:');
+    
     for (let i = 0; i < this.deposits.length; i++) {
       lines.push(
         i +
           ': ' +
-          this.deposits[i].toString() +
+          nativeToUi(this.deposits[i].toNumber(), mangoGroup.tokens[i].decimals) +
           ' / ' +
-          this.borrows[i].toString(),
+          nativeToUi(this.borrows[i].toNumber(), mangoGroup.tokens[i].decimals),
       );
     }
     lines.push('Perps:');
