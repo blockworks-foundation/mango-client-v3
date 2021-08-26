@@ -236,11 +236,7 @@ export class MangoClient {
       let simulateResult: SimulatedTransactionResponse | null = null;
       try {
         simulateResult = (
-          await simulateTransaction(
-            this.connection,
-            transaction,
-            'singleGossip',
-          )
+          await simulateTransaction(this.connection, transaction, 'processed')
         ).value;
       } catch (e) {
         console.warn('Simulate transaction failed');
@@ -514,7 +510,7 @@ export class MangoClient {
   ): Promise<MangoAccount> {
     const acc = await this.connection.getAccountInfo(
       mangoAccountPk,
-      'singleGossip',
+      'processed',
     );
     const mangoAccount = new MangoAccount(
       mangoAccountPk,
@@ -738,7 +734,7 @@ export class MangoClient {
       const space = 165;
       const lamports = await this.connection.getMinimumBalanceForRentExemption(
         space,
-        'singleGossip',
+        'processed',
       );
       transaction.add(
         SystemProgram.createAccount({
@@ -1265,7 +1261,7 @@ export class MangoClient {
           const openOrdersLamports =
             await this.connection.getMinimumBalanceForRentExemption(
               openOrdersSpace,
-              'singleGossip',
+              'processed',
             );
 
           const accInstr = await createAccountInstruction(

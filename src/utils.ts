@@ -133,7 +133,7 @@ export async function awaitTransactionSignatureConfirmation(
               resolve(result);
             }
           },
-          'singleGossip',
+          'processed',
         );
         // console.log('Set up WS connection', txid);
       } catch (e) {
