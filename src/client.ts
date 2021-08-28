@@ -1022,7 +1022,7 @@ export class MangoClient {
         Array.from(accounts)
           .map((s) => new PublicKey(s))
           .sort(),
-        new BN(10),
+        new BN(4),
       );
       transaction.add(consumeInstruction);
     }
