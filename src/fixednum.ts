@@ -108,7 +108,9 @@ export class I80F48 {
   sub(x: I80F48): I80F48 {
     return new I80F48(this.data.sub(x.getData()));
   }
-
+  floor(): I80F48 {
+    return new I80F48(this.data.shrn(48).shln(48));
+  }
   /**
    * Multiply the two and shift
    * @param x
