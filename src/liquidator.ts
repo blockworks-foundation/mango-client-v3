@@ -41,13 +41,13 @@ const blacklist: string[] = [];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
+
 const payer = new Account(
   JSON.parse(
-    process.env.KEYPAIR ||
-      fs.readFileSync(
-        os.homedir() + '/.config/solana/my-mainnet.json',
-        'utf-8',
-      ),
+    fs.readFileSync(
+      process.env.KEYPAIR || os.homedir() + '/.config/solana/my-mainnet.json',
+      'utf-8',
+    ),
   ),
 );
 console.log(`Payer: ${payer.publicKey.toBase58()}`);
@@ -56,8 +56,6 @@ const connection = new Connection(
   'processed' as Commitment,
 );
 const client = new MangoClient(connection, mangoProgramId);
-
-const liqorMangoAccountKey = new PublicKey('');
 
 let mangoAccounts: MangoAccount[] = [];
 
@@ -69,6 +67,10 @@ async function main() {
   const liquidating = {};
   let numLiquidating = 0;
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
+  let liqorMangoAccount = (
+    await client.getMangoAccountsForOwner(mangoGroup, payer.publicKey)
+  )[0];
+  const liqorMangoAccountKey = liqorMangoAccount.publicKey;
 
   await refreshAccounts(mangoGroup);
   watchAccounts(groupIds.mangoProgramId, mangoGroup);
@@ -98,7 +100,7 @@ async function main() {
   while (true) {
     try {
       const cache = await mangoGroup.loadCache(connection);
-      const liqorMangoAccount = await client.getMangoAccount(
+      liqorMangoAccount = await client.getMangoAccount(
         liqorMangoAccountKey,
         mangoGroup.dexProgramId,
       );
