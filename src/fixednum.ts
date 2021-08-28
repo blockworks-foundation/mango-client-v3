@@ -1,5 +1,6 @@
 import BN from 'bn.js';
 import Big from 'big.js';
+import { ZERO_BN } from './utils';
 
 // TODO - this whole class is inefficient; consider optimizing
 export class I80F48 {
@@ -110,6 +111,18 @@ export class I80F48 {
   }
   floor(): I80F48 {
     return new I80F48(this.data.shrn(48).shln(48));
+  }
+  ceil(): I80F48 {
+    const frac = this.data.maskn(48);
+    if (frac.eq(ZERO_BN)) {
+      return this;
+    } else {
+      return this.floor().add(ONE_I80F48);
+    }
+  }
+  frac(): I80F48 {
+    // TODO verify this works for negative numbers
+    return new I80F48(this.data.maskn(48));
   }
   /**
    * Multiply the two and shift
