@@ -110,15 +110,20 @@ export class I80F48 {
     return new I80F48(this.data.sub(x.getData()));
   }
   floor(): I80F48 {
-    return new I80F48(this.data.shrn(I80F48.FRACTIONS).shln(I80F48.FRACTIONS));
+    // Low IQ method
+    return I80F48.fromBig(this.toBig().round(undefined, 0));
+    // return new I80F48(this.data.shrn(I80F48.FRACTIONS).shln(I80F48.FRACTIONS));
   }
   ceil(): I80F48 {
-    const frac = this.data.maskn(I80F48.FRACTIONS);
-    if (frac.eq(ZERO_BN)) {
-      return this;
-    } else {
-      return this.floor().add(ONE_I80F48);
-    }
+    // Low IQ method, 3 -> round up
+    return I80F48.fromBig(this.toBig().round(undefined, 3));
+
+    // const frac = this.data.maskn(I80F48.FRACTIONS);
+    // if (frac.eq(ZERO_BN)) {
+    //   return this;
+    // } else {
+    //   return this.floor().add(ONE_I80F48);
+    // }
   }
   frac(): I80F48 {
     // TODO verify this works for negative numbers
