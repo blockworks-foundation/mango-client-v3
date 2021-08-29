@@ -110,10 +110,10 @@ export class I80F48 {
     return new I80F48(this.data.sub(x.getData()));
   }
   floor(): I80F48 {
-    return new I80F48(this.data.shrn(48).shln(48));
+    return new I80F48(this.data.shrn(I80F48.FRACTIONS).shln(I80F48.FRACTIONS));
   }
   ceil(): I80F48 {
-    const frac = this.data.maskn(48);
+    const frac = this.data.maskn(I80F48.FRACTIONS);
     if (frac.eq(ZERO_BN)) {
       return this;
     } else {
@@ -122,11 +122,10 @@ export class I80F48 {
   }
   frac(): I80F48 {
     // TODO verify this works for negative numbers
-    return new I80F48(this.data.maskn(48));
+    return new I80F48(this.data.maskn(I80F48.FRACTIONS));
   }
   /**
    * Multiply the two and shift
-   * @param x
    */
   mul(x: I80F48): I80F48 {
     return new I80F48(this.data.mul(x.data).div(I80F48.MULTIPLIER_BN));
