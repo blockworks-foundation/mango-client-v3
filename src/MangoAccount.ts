@@ -21,14 +21,8 @@ import RootBank from './RootBank';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
-import { MarketConfig, PerpOrder, ZERO_BN } from '.';
+import { ZERO_BN } from '.';
 import PerpMarket from './PerpMarket';
-import { Order } from '@project-serum/serum/lib/market';
-
-type OrderInfo = {
-  order: Order | PerpOrder;
-  market: { account: Market | PerpMarket; config: MarketConfig };
-};
 
 export default class MangoAccount {
   publicKey: PublicKey;
