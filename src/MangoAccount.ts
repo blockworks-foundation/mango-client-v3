@@ -652,11 +652,15 @@ export default class MangoAccount {
     mangoCache: MangoCache,
     tokenIndex: number,
   ): I80F48 {
-    const oldInitHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
+    const oldInitHealth = this.getHealth(
+      mangoGroup,
+      mangoCache,
+      'Init',
+    ).floor();
     const tokenDeposits = this.getNativeDeposit(
       mangoCache.rootBankCache[tokenIndex],
       tokenIndex,
-    );
+    ).floor();
 
     let liabWeight, assetWeight, nativePrice;
     if (tokenIndex === QUOTE_INDEX) {
