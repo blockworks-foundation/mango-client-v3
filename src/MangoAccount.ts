@@ -652,18 +652,30 @@ export default class MangoAccount {
     mangoCache: MangoCache,
     tokenIndex: number,
   ): I80F48 {
-    const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
+    const oldInitHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
+    const tokenDeposits = this.getNativeDeposit(
+      mangoCache.rootBankCache[tokenIndex],
+      tokenIndex,
+    );
+
+    let liabWeight, assetWeight, nativePrice;
+    if (tokenIndex === QUOTE_INDEX) {
+      liabWeight = assetWeight = nativePrice = ONE_I80F48;
+    } else {
+      liabWeight = mangoGroup.spotMarkets[tokenIndex].initLiabWeight;
+      assetWeight = mangoGroup.spotMarkets[tokenIndex].initAssetWeight;
+      nativePrice = mangoCache.priceCache[tokenIndex].price;
+    }
+
+    const newInitHealth = oldInitHealth.sub(
+      tokenDeposits.mul(nativePrice).mul(assetWeight),
+    );
     const price = mangoGroup.getPrice(tokenIndex, mangoCache);
     const healthDecimals = I80F48.fromNumber(
       Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
     );
 
-    const liabWeight =
-      tokenIndex === QUOTE_INDEX
-        ? ONE_I80F48
-        : mangoGroup.spotMarkets[tokenIndex].initLiabWeight;
-
-    return initHealth.div(healthDecimals).div(price.mul(liabWeight));
+    return newInitHealth.div(healthDecimals).div(price.mul(liabWeight));
   }
 }
 
