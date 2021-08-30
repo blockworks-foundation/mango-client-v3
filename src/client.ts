@@ -58,6 +58,7 @@ import {
   makeDepositMsrmInstruction,
   makeForceCancelPerpOrdersInstruction,
   makeForceCancelSpotOrdersInstruction,
+  makeForceSettleQuotePositionsInstruction,
   makeInitMangoAccountInstruction,
   makeInitMangoGroupInstruction,
   makeInitSpotOpenOrdersInstruction,
@@ -101,7 +102,6 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import { TokenAccount } from './token';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -1022,7 +1022,7 @@ export class MangoClient {
         Array.from(accounts)
           .map((s) => new PublicKey(s))
           .sort(),
-        new BN(10),
+        new BN(4),
       );
       transaction.add(consumeInstruction);
     }
@@ -2511,5 +2511,30 @@ export class MangoClient {
     transaction.add(instruction);
     const additionalSigners = [];
     return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async forceSettleQuotePositions(
+    mangoGroup: MangoGroup,
+    liqeeMangoAccount: MangoAccount,
+    liqorMangoAccount: MangoAccount,
+    quoteRootBank: RootBank,
+    payer: Account,
+  ) {
+    const instruction = makeForceSettleQuotePositionsInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      liqeeMangoAccount.publicKey,
+      liqorMangoAccount.publicKey,
+      payer.publicKey,
+      quoteRootBank.publicKey,
+      quoteRootBank.nodeBanks[0],
+      liqeeMangoAccount.spotOpenOrders,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
   }
 }

@@ -384,6 +384,7 @@ MangoInstructionLayout.addVariant(
   struct([u8('limit')]),
   'CancelAllPerpOrders',
 );
+MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore

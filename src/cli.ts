@@ -452,20 +452,20 @@ yargs(hideBin(process.argv)).command(
     return y
       .positional(...groupDesc)
       .option(...clusterDesc)
-      .option(...configDesc)
+      .option(...configDesc);
   },
   async (args) => {
     console.log('sanity check', args);
     const cluster = args.cluster as Cluster;
     const config = readConfig(args.config as string);
     const connection = openConnection(config, cluster);
-    const groupConfig = config.getGroup(cluster, args.group as string) as GroupConfig;
-    await sanityCheck(
-      connection,
-      groupConfig,
-    );
+    const groupConfig = config.getGroup(
+      cluster,
+      args.group as string,
+    ) as GroupConfig;
+    await sanityCheck(connection, groupConfig);
     process.exit(0);
-  }
+  },
 ).argv;
 
 yargs(hideBin(process.argv)).command(
@@ -488,15 +488,26 @@ yargs(hideBin(process.argv)).command(
 
     const connection = openConnection(config, cluster);
 
-    const groupConfig = config.getGroup(cluster, args.group as string) as GroupConfig;
+    const groupConfig = config.getGroup(
+      cluster,
+      args.group as string,
+    ) as GroupConfig;
 
     const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
     const mangoAccount = await client.getMangoAccount(
       new PublicKey(args.mango_account_pk as string),
       groupConfig.serumProgramId,
     );
+
+    const cache = await mangoGroup.loadCache(connection);
+
     // TODO - write a proper to string
-    console.log(mangoAccount.perpAccounts[0].basePosition.toString());
+    console.log(
+      mangoAccount.deposits[5]
+        .mul(cache.rootBankCache[5].depositIndex)
+        .toString(),
+    );
     process.exit(0);
   },
 ).argv;
