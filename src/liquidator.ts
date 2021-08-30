@@ -36,7 +36,7 @@ if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);
 }
 
-const TARGETS = [0, 0, 0, 0, 0, 0,];
+const TARGETS = [0, 0, 0, 0, 0, 0, 0];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
@@ -343,8 +343,6 @@ async function liquidateSpot(
 
   for (let i = 0; i < mangoGroup.spotMarkets.length; i++) {
     const spotMarket = spotMarkets[i];
-    const spotMarketInfo = mangoGroup.spotMarkets[i];
-
     const baseRootBank = rootBanks[i];
     const quoteRootBank = rootBanks[QUOTE_INDEX];
 
@@ -541,23 +539,12 @@ async function liquidatePerps(
       }
     }
 
-    const assetRootBank = rootBanks[maxNetIndex];
+    const quoteRootBank = rootBanks[QUOTE_INDEX];
 
     if (perpAccount.basePosition.eq(new BN(0))) {
-      if (assetRootBank) {
-        console.log('liquidateTokenAndPerp ' + marketIndex);
-        await client.liquidateTokenAndPerp(
-          mangoGroup,
-          liqee,
-          liqor,
-          assetRootBank,
-          payer,
-          AssetType.Token,
-          maxNetIndex,
-          AssetType.Perp,
-          marketIndex,
-          maxNet.sub(ONE_I80F48).max(ONE_I80F48),
-        );
+      if (quoteRootBank) {
+        console.log('forceSettleQuotePositions');
+        await client.forceSettleQuotePositions(mangoGroup, liqee, liqor, quoteRootBank, payer);
       }
     } else {
       console.log('liquidatePerpMarket ' + marketIndex);
@@ -678,62 +665,63 @@ async function balanceTokens(
   for (let i = 0; i < groupIds!.spotMarkets.length; i++) {
     const marketIndex = netValues[i][0];
     const market = markets[marketIndex];
+    if (Math.abs(diffs[marketIndex].toNumber()) > market.minOrderSize) {
+      if (netValues[i][1].gt(ZERO_I80F48)) {
+        // sell to close
+        const price = cache.priceCache[marketIndex].price.mul(
+          I80F48.fromNumber(0.95),
+        );
+        console.log(
+          `Sell to close ${marketIndex} ${diffs[
+            marketIndex
+          ].toString()} @ ${price.toString()}`,
+        );
+        await client.placeSpotOrder(
+          mangoGroup,
+          mangoAccount,
+          mangoGroup.mangoCache,
+          markets[marketIndex],
+          payer,
+          'sell',
+          price.toNumber(),
+          Math.abs(diffs[marketIndex].toNumber()),
+          'ioc',
+        );
+        await client.settleFunds(
+          mangoGroup,
+          mangoAccount,
+          payer,
+          markets[marketIndex],
+        );
+      } else if (netValues[i][1].lt(ZERO_I80F48)) {
+        // buy to close
+        const price = cache.priceCache[marketIndex].price.mul(
+          I80F48.fromNumber(1.05),
+        );
 
-    if (netValues[i][1].gt(ZERO_I80F48)) {
-      // sell to close
-      const price = cache.priceCache[marketIndex].price.mul(
-        I80F48.fromNumber(0.95),
-      );
-      console.log(
-        `Sell to close ${marketIndex} ${diffs[
-          marketIndex
-        ].toString()} @ ${price.toString()}`,
-      );
-      await client.placeSpotOrder(
-        mangoGroup,
-        mangoAccount,
-        mangoGroup.mangoCache,
-        markets[marketIndex],
-        payer,
-        'sell',
-        price.toNumber(),
-        Math.abs(diffs[marketIndex].toNumber()),
-        'ioc',
-      );
-      await client.settleFunds(
-        mangoGroup,
-        mangoAccount,
-        payer,
-        markets[marketIndex],
-      );
-    } else if (netValues[i][1].lt(ZERO_I80F48)) {
-      // buy to close
-      const price = cache.priceCache[marketIndex].price.mul(
-        I80F48.fromNumber(1.05),
-      );
-
-      console.log(
-        `Buy to close ${marketIndex} ${diffs[
-          marketIndex
-        ].toString()} @ ${price.toString()}`,
-      );
-      await client.placeSpotOrder(
-        mangoGroup,
-        mangoAccount,
-        mangoGroup.mangoCache,
-        markets[marketIndex],
-        payer,
-        'buy',
-        price.toNumber(),
-        Math.abs(diffs[marketIndex].toNumber()),
-        'ioc',
-      );
-      await client.settleFunds(
-        mangoGroup,
-        mangoAccount,
-        payer,
-        markets[marketIndex],
-      );
+        console.log(
+          `Buy to close ${marketIndex} ${diffs[
+            marketIndex
+          ].toString()} @ ${price.toString()}`,
+        );
+        await client.placeSpotOrder(
+          mangoGroup,
+          mangoAccount,
+          mangoGroup.mangoCache,
+          markets[marketIndex],
+          payer,
+          'buy',
+          price.toNumber(),
+          Math.abs(diffs[marketIndex].toNumber()),
+          'ioc',
+        );
+        await client.settleFunds(
+          mangoGroup,
+          mangoAccount,
+          payer,
+          markets[marketIndex],
+        );
+      }
     }
   }
 }
