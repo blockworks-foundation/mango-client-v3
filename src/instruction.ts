@@ -1426,3 +1426,39 @@ export function makeSetGroupAdminInstruction(
     programId,
   });
 }
+
+export function makeForceSettleQuotePositionsInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
+  liqeeMangoAccountPk: PublicKey,
+  liqorMangoAccountPk: PublicKey,
+  liqorAccountPk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBankPk: PublicKey,
+  liqeeOpenOrdersPks: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
+    { isSigner: false, isWritable: true, pubkey: liqorMangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: liqorAccountPk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
+    ...liqeeOpenOrdersPks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMangoInstruction({
+    ForceSettleQuotePositions: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
