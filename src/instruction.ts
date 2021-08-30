@@ -1219,12 +1219,12 @@ export function makeResolveTokenBankruptcyInstruction(
     { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
     { isSigner: false, isWritable: true, pubkey: liqorMangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: liqorPk },
-    { isSigner: false, isWritable: true, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
     { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
     { isSigner: false, isWritable: true, pubkey: insuranceVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
-    { isSigner: false, isWritable: false, pubkey: liabRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: liabRootBankPk },
     { isSigner: false, isWritable: true, pubkey: liabNodeBankPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
     ...liqorOpenOrdersPks.map((pubkey) => ({
@@ -1419,6 +1419,42 @@ export function makeSetGroupAdminInstruction(
   ];
   const data = encodeMangoInstruction({
     SetGroupAdmin: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeForceSettleQuotePositionsInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
+  liqeeMangoAccountPk: PublicKey,
+  liqorMangoAccountPk: PublicKey,
+  liqorAccountPk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBankPk: PublicKey,
+  liqeeOpenOrdersPks: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
+    { isSigner: false, isWritable: true, pubkey: liqorMangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: liqorAccountPk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
+    ...liqeeOpenOrdersPks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMangoInstruction({
+    ForceSettleQuotePositions: {},
   });
   return new TransactionInstruction({
     keys,

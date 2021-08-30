@@ -58,6 +58,7 @@ import {
   makeDepositMsrmInstruction,
   makeForceCancelPerpOrdersInstruction,
   makeForceCancelSpotOrdersInstruction,
+  makeForceSettleQuotePositionsInstruction,
   makeInitMangoAccountInstruction,
   makeInitMangoGroupInstruction,
   makeInitSpotOpenOrdersInstruction,
@@ -2047,6 +2048,63 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Send multiple instructions to cancel all perp orders in this market
+   */
+  async forceCancelAllPerpOrdersInMarket(
+    mangoGroup: MangoGroup,
+    liqee: MangoAccount,
+    perpMarket: PerpMarket,
+    payer: Account | WalletAdapter,
+    limitPerInstruction: number,
+  ): Promise<TransactionSignature> {
+    const transaction = new Transaction();
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+    const instruction = makeForceCancelPerpOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      liqee.publicKey,
+      liqee.spotOpenOrders,
+      new BN(limitPerInstruction),
+    );
+    transaction.add(instruction);
+
+    let orderCount = 0;
+    for (let i = 0; i < liqee.orderMarket.length; i++) {
+      if (liqee.orderMarket[i] !== marketIndex) {
+        continue;
+      }
+      orderCount++;
+      if (orderCount === limitPerInstruction) {
+        orderCount = 0;
+        const instruction = makeForceCancelPerpOrdersInstruction(
+          this.programId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          perpMarket.publicKey,
+          perpMarket.bids,
+          perpMarket.asks,
+          liqee.publicKey,
+          liqee.spotOpenOrders,
+          new BN(limitPerInstruction),
+        );
+        transaction.add(instruction);
+
+        // TODO - verify how many such instructions can go into one tx
+        // right now 10 seems reasonable considering size of 800ish bytes if all spot open orders present
+        if (transaction.instructions.length === 10) {
+          break;
+        }
+      }
+    }
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
   async forceCancelPerpOrders(
     mangoGroup: MangoGroup,
     liqeeMangoAccount: MangoAccount,
@@ -2453,5 +2511,30 @@ export class MangoClient {
     transaction.add(instruction);
     const additionalSigners = [];
     return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async forceSettleQuotePositions(
+    mangoGroup: MangoGroup,
+    liqeeMangoAccount: MangoAccount,
+    liqorMangoAccount: MangoAccount,
+    quoteRootBank: RootBank,
+    payer: Account,
+  ) {
+    const instruction = makeForceSettleQuotePositionsInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      liqeeMangoAccount.publicKey,
+      liqorMangoAccount.publicKey,
+      payer.publicKey,
+      quoteRootBank.publicKey,
+      quoteRootBank.nodeBanks[0],
+      liqeeMangoAccount.spotOpenOrders,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
   }
 }
