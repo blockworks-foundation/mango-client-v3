@@ -22,14 +22,8 @@ import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
 import { EOL } from 'os';
-import { MarketConfig, PerpOrder, ZERO_BN } from '.';
+import { ZERO_BN } from '.';
 import PerpMarket from './PerpMarket';
-import { Order } from '@project-serum/serum/lib/market';
-
-type OrderInfo = {
-  order: Order | PerpOrder;
-  market: { account: Market | PerpMarket; config: MarketConfig };
-};
 
 export default class MangoAccount {
   publicKey: PublicKey;
@@ -117,7 +111,7 @@ export default class MangoAccount {
     tokenIndex: number,
   ): I80F48 {
     return nativeI80F48ToUi(
-      this.getNativeDeposit(rootBank, tokenIndex),
+      this.getNativeDeposit(rootBank, tokenIndex).floor(),
       mangoGroup.tokens[tokenIndex].decimals,
     );
   }
@@ -127,7 +121,7 @@ export default class MangoAccount {
     tokenIndex: number,
   ): I80F48 {
     return nativeI80F48ToUi(
-      this.getNativeBorrow(rootBank, tokenIndex),
+      this.getNativeBorrow(rootBank, tokenIndex).ceil(),
       mangoGroup.tokens[tokenIndex].decimals,
     );
   }
@@ -685,18 +679,34 @@ export default class MangoAccount {
     mangoCache: MangoCache,
     tokenIndex: number,
   ): I80F48 {
-    const initHealth = this.getHealth(mangoGroup, mangoCache, 'Init');
+    const oldInitHealth = this.getHealth(
+      mangoGroup,
+      mangoCache,
+      'Init',
+    ).floor();
+    const tokenDeposits = this.getNativeDeposit(
+      mangoCache.rootBankCache[tokenIndex],
+      tokenIndex,
+    ).floor();
+
+    let liabWeight, assetWeight, nativePrice;
+    if (tokenIndex === QUOTE_INDEX) {
+      liabWeight = assetWeight = nativePrice = ONE_I80F48;
+    } else {
+      liabWeight = mangoGroup.spotMarkets[tokenIndex].initLiabWeight;
+      assetWeight = mangoGroup.spotMarkets[tokenIndex].initAssetWeight;
+      nativePrice = mangoCache.priceCache[tokenIndex].price;
+    }
+
+    const newInitHealth = oldInitHealth
+      .sub(tokenDeposits.mul(nativePrice).mul(assetWeight))
+      .floor();
     const price = mangoGroup.getPrice(tokenIndex, mangoCache);
     const healthDecimals = I80F48.fromNumber(
       Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
     );
 
-    const liabWeight =
-      tokenIndex === QUOTE_INDEX
-        ? ONE_I80F48
-        : mangoGroup.spotMarkets[tokenIndex].initLiabWeight;
-
-    return initHealth.div(healthDecimals).div(price.mul(liabWeight));
+    return newInitHealth.div(healthDecimals).div(price.mul(liabWeight));
   }
 
   toPrettyString(mangoGroup: MangoGroup, cache: MangoCache): string {
@@ -709,7 +719,7 @@ export default class MangoAccount {
     lines.push('isBankrupt: ' + this.isBankrupt);
 
     lines.push('Spot:');
-    
+
     for (let i = 0; i < this.deposits.length; i++) {
       lines.push(
         i +

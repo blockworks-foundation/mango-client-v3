@@ -101,7 +101,6 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import { TokenAccount } from './token';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -1022,7 +1021,7 @@ export class MangoClient {
         Array.from(accounts)
           .map((s) => new PublicKey(s))
           .sort(),
-        new BN(10),
+        new BN(4),
       );
       transaction.add(consumeInstruction);
     }
