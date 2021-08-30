@@ -671,9 +671,9 @@ export default class MangoAccount {
       nativePrice = mangoCache.priceCache[tokenIndex].price;
     }
 
-    const newInitHealth = oldInitHealth.sub(
-      tokenDeposits.mul(nativePrice).mul(assetWeight),
-    );
+    const newInitHealth = oldInitHealth
+      .sub(tokenDeposits.mul(nativePrice).mul(assetWeight))
+      .floor();
     const price = mangoGroup.getPrice(tokenIndex, mangoCache);
     const healthDecimals = I80F48.fromNumber(
       Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals),
