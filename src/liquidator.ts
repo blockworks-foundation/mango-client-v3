@@ -36,8 +36,7 @@ if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);
 }
 
-const TARGETS = [0, 0, 0, 0, 0, 0, 0];
-const blacklist: string[] = [];
+const TARGETS = [0, 0, 0, 0, 0, 0,];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
@@ -57,8 +56,6 @@ const connection = new Connection(
 );
 const client = new MangoClient(connection, mangoProgramId);
 
-const liqorMangoAccountKey = new PublicKey('');
-
 let mangoAccounts: MangoAccount[] = [];
 
 async function main() {
@@ -69,6 +66,28 @@ async function main() {
   const liquidating = {};
   let numLiquidating = 0;
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
+  let cache = await mangoGroup.loadCache(connection);
+  let liqorMangoAccount: MangoAccount;
+  
+  if (process.env.LIQOR_PK) {    
+      liqorMangoAccount = await client.getMangoAccount(
+        new PublicKey(process.env.LIQOR_PK),
+        mangoGroup.dexProgramId,
+      );
+      if (!liqorMangoAccount.owner.equals(payer.publicKey)) {
+        throw new Error('Account not owned by Keypair')
+      }
+  } else {
+    let accounts = await client.getMangoAccountsForOwner(mangoGroup, payer.publicKey, true);
+    if (accounts.length) {
+      accounts.sort(((a, b) => b.computeValue(mangoGroup, cache).sub(a.computeValue(mangoGroup, cache)).toNumber()));
+      liqorMangoAccount = accounts[0];
+    } else {
+      throw new Error('No Mango Account found for this Keypair');
+    }
+  }
+
+  console.log(`Liqor Public Key: ${liqorMangoAccount.publicKey.toBase58()}`)
 
   await refreshAccounts(mangoGroup);
   watchAccounts(groupIds.mangoProgramId, mangoGroup);
@@ -94,22 +113,20 @@ async function main() {
   );
   const rootBanks = await mangoGroup.loadRootBanks(connection);
   notify(`V3 Liquidator launched for group ${groupName}`);
+
   // eslint-disable-next-line
   while (true) {
     try {
-      const cache = await mangoGroup.loadCache(connection);
-      const liqorMangoAccount = await client.getMangoAccount(
-        liqorMangoAccountKey,
-        mangoGroup.dexProgramId,
-      );
+      cache = await mangoGroup.loadCache(connection);
+      await liqorMangoAccount.reload(connection);
+
       for (let mangoAccount of mangoAccounts) {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
         if (health.lt(ZERO_I80F48)) {
           if (
             !liquidating[mangoAccountKeyString] &&
-            numLiquidating < 1 &&
-            !blacklist.includes(mangoAccountKeyString)
+            numLiquidating < 1
           ) {
             liquidating[mangoAccountKeyString] = true;
             numLiquidating++;
