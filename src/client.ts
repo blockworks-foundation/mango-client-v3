@@ -236,11 +236,7 @@ export class MangoClient {
       let simulateResult: SimulatedTransactionResponse | null = null;
       try {
         simulateResult = (
-          await simulateTransaction(
-            this.connection,
-            transaction,
-            'singleGossip',
-          )
+          await simulateTransaction(this.connection, transaction, 'processed')
         ).value;
       } catch (e) {
         console.warn('Simulate transaction failed');
@@ -514,7 +510,7 @@ export class MangoClient {
   ): Promise<MangoAccount> {
     const acc = await this.connection.getAccountInfo(
       mangoAccountPk,
-      'singleGossip',
+      'processed',
     );
     const mangoAccount = new MangoAccount(
       mangoAccountPk,
@@ -738,7 +734,7 @@ export class MangoClient {
       const space = 165;
       const lamports = await this.connection.getMinimumBalanceForRentExemption(
         space,
-        'singleGossip',
+        'processed',
       );
       transaction.add(
         SystemProgram.createAccount({
@@ -1265,7 +1261,7 @@ export class MangoClient {
           const openOrdersLamports =
             await this.connection.getMinimumBalanceForRentExemption(
               openOrdersSpace,
-              'singleGossip',
+              'processed',
             );
 
           const accInstr = await createAccountInstruction(
@@ -2048,6 +2044,63 @@ export class MangoClient {
 
     const transaction = new Transaction();
     transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, payer, []);
+  }
+
+  /**
+   * Send multiple instructions to cancel all perp orders in this market
+   */
+  async forceCancelAllPerpOrdersInMarket(
+    mangoGroup: MangoGroup,
+    liqee: MangoAccount,
+    perpMarket: PerpMarket,
+    payer: Account | WalletAdapter,
+    limitPerInstruction: number,
+  ): Promise<TransactionSignature> {
+    const transaction = new Transaction();
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+    const instruction = makeForceCancelPerpOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      liqee.publicKey,
+      liqee.spotOpenOrders,
+      new BN(limitPerInstruction),
+    );
+    transaction.add(instruction);
+
+    let orderCount = 0;
+    for (let i = 0; i < liqee.orderMarket.length; i++) {
+      if (liqee.orderMarket[i] !== marketIndex) {
+        continue;
+      }
+      orderCount++;
+      if (orderCount === limitPerInstruction) {
+        orderCount = 0;
+        const instruction = makeForceCancelPerpOrdersInstruction(
+          this.programId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          perpMarket.publicKey,
+          perpMarket.bids,
+          perpMarket.asks,
+          liqee.publicKey,
+          liqee.spotOpenOrders,
+          new BN(limitPerInstruction),
+        );
+        transaction.add(instruction);
+
+        // TODO - verify how many such instructions can go into one tx
+        // right now 10 seems reasonable considering size of 800ish bytes if all spot open orders present
+        if (transaction.instructions.length === 10) {
+          break;
+        }
+      }
+    }
 
     return await this.sendTransaction(transaction, payer, []);
   }

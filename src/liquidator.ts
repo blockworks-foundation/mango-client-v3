@@ -40,13 +40,13 @@ const TARGETS = [0, 0, 0, 0, 0, 0,];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
+
 const payer = new Account(
   JSON.parse(
-    process.env.KEYPAIR ||
-      fs.readFileSync(
-        os.homedir() + '/.config/solana/my-mainnet.json',
-        'utf-8',
-      ),
+    fs.readFileSync(
+      process.env.KEYPAIR || os.homedir() + '/.config/solana/my-mainnet.json',
+      'utf-8',
+    ),
   ),
 );
 console.log(`Payer: ${payer.publicKey.toBase58()}`);
@@ -92,7 +92,7 @@ async function main() {
   await refreshAccounts(mangoGroup);
   watchAccounts(groupIds.mangoProgramId, mangoGroup);
   const perpMarkets = await Promise.all(
-    groupIds.perpMarkets.map((perpMarket, index) => {
+    groupIds.perpMarkets.map((perpMarket) => {
       return mangoGroup.loadPerpMarket(
         connection,
         perpMarket.marketIndex,
@@ -133,7 +133,9 @@ async function main() {
             console.log(
               `Sick account ${mangoAccountKeyString} health: ${health.toString()}`,
             );
-            notify(`Sick account ${mangoAccountKeyString} health: ${health.toString()}`);
+            notify(
+              `Sick account ${mangoAccountKeyString} health: ${health.toString()}`,
+            );
             console.log(mangoAccount.toPrettyString(mangoGroup, cache));
             liquidateAccount(
               mangoGroup,
@@ -264,18 +266,18 @@ async function liquidateAccount(
   liqor: MangoAccount,
 ) {
   const hasPerpOpenOrders = liqee.perpAccounts.some(
-    (pa) => pa.bidsQuantity.gt(new BN(0)) || pa.asksQuantity.gt(new BN(0)),
+    (pa) => pa.bidsQuantity.gt(ZERO_BN) || pa.asksQuantity.gt(ZERO_BN),
   );
   if (hasPerpOpenOrders) {
     console.log('forceCancelPerpOrders');
     await Promise.all(
       perpMarkets.map((perpMarket) => {
-        return client.forceCancelPerpOrders(
+        return client.forceCancelAllPerpOrdersInMarket(
           mangoGroup,
           liqee,
           perpMarket,
           payer,
-          new BN(5),
+          10,
         );
       }),
     );
@@ -459,7 +461,7 @@ async function liquidatePerps(
 ) {
   console.log('liquidatePerps');
   const lowestHealthMarket = perpMarkets
-    .map((perpMarket, i) => {      
+    .map((perpMarket, i) => {
       const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
       const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
       const perpAccount = liqee.perpAccounts[marketIndex];
@@ -482,7 +484,7 @@ async function liquidatePerps(
   if (!lowestHealthMarket) {
     throw new Error('Couldnt find a perp market to liquidate');
   }
-  
+
   const marketIndex = lowestHealthMarket.marketIndex;
   const perpAccount = liqee.perpAccounts[marketIndex];
   const perpMarket = perpMarkets[lowestHealthMarket.i];
@@ -492,17 +494,13 @@ async function liquidatePerps(
     throw new Error(`Base root bank not found for ${marketIndex}`);
   }
 
-
   if (!perpMarket) {
     throw new Error(`Perp market not found for ${marketIndex}`);
   }
 
   if (liqee.isBankrupt) {
     const maxLiabTransfer = I80F48.fromNumber(
-      Math.max(
-        Math.abs(perpAccount.quotePosition.toNumber()),
-        1,
-      ),
+      Math.max(Math.abs(perpAccount.quotePosition.toNumber()), 1),
     );
 
     const quoteRootBank = rootBanks[QUOTE_INDEX];
@@ -801,7 +799,10 @@ async function closePositions(
 }
 
 function notify(content: string) {
-  axios.post('https://discord.com/api/webhooks/879503355205005353/2Uy1p-HISWLXKi90frExr2_rr7uqBFjswupUhUFctuWIhzPwjPpQJadlK22WGEGZSOiy', {content});
+  axios.post(
+    'https://discord.com/api/webhooks/879503355205005353/2Uy1p-HISWLXKi90frExr2_rr7uqBFjswupUhUFctuWIhzPwjPpQJadlK22WGEGZSOiy',
+    { content },
+  );
 }
 
 main();
