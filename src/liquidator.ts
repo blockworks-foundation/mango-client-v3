@@ -204,8 +204,13 @@ function watchAccounts(mangoProgramId: PublicKey, mangoGroup: MangoGroup) {
           account.publicKey.equals(mangoAccount.publicKey),
         );
 
-        mangoAccounts[index] = mangoAccount;
-        //console.log('Updated account ' + accountId.toBase58());
+        if (index == -1) {
+          //console.log('New Account');
+          mangoAccounts.push(mangoAccount);
+        } else {
+          mangoAccounts[index] = mangoAccount;
+          //console.log('Updated account ' + accountId.toBase58());
+        }
       },
       'singleGossip',
       [
@@ -308,6 +313,9 @@ async function liquidateAccount(
     await sleep(interval * 2);
   }
   await liqee.reload(connection);
+  if (!liqee.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
+    throw new Error('Account no longer liquidatable');
+  }
 
   const healthComponents = liqee.getHealthComponents(mangoGroup, cache);
   const healths = liqee.getHealthsFromComponents(
