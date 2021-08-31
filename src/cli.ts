@@ -27,7 +27,7 @@ import {
   PerpMarketConfig,
 } from './config';
 import { MangoClient } from './client';
-import { throwUndefined, uiToNative } from './utils';
+import { sleep, throwUndefined, uiToNative } from './utils';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -449,20 +449,17 @@ yargs(hideBin(process.argv)).command(
   'sanity-check <group>',
   'check group conditions that always have to be true',
   (y) => {
-    return y
-      .positional(...groupDesc)
-      .option(...clusterDesc)
-      .option(...configDesc);
+    return y.positional(...groupDesc).option(...configDesc);
   },
   async (args) => {
     console.log('sanity check', args);
-    const cluster = args.cluster as Cluster;
     const config = readConfig(args.config as string);
-    const connection = openConnection(config, cluster);
-    const groupConfig = config.getGroup(
-      cluster,
+    const groupConfig = config.getGroupWithName(
       args.group as string,
     ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
     await sanityCheck(connection, groupConfig);
     process.exit(0);
   },
@@ -502,12 +499,7 @@ yargs(hideBin(process.argv)).command(
 
     const cache = await mangoGroup.loadCache(connection);
 
-    // TODO - write a proper to string
-    console.log(
-      mangoAccount.deposits[5]
-        .mul(cache.rootBankCache[5].depositIndex)
-        .toString(),
-    );
+    console.log(mangoAccount.toPrettyString(mangoGroup, cache));
     process.exit(0);
   },
 ).argv;
@@ -618,11 +610,16 @@ yargs(hideBin(process.argv)).command(
     const perpMarketConfig: PerpMarketConfig = throwUndefined(
       getPerpMarketByBaseSymbol(groupConfig, symbol),
     );
-    const perpMarket = await client.getPerpMarket(
+    let perpMarket = await client.getPerpMarket(
       perpMarketConfig.publicKey,
       perpMarketConfig.baseDecimals,
       perpMarketConfig.quoteDecimals,
     );
+    console.log(perpMarket.liquidityMiningInfo.rate.toString());
+    console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
+    console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
+    console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
+    console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
     let mngoPerPeriod = getNumberOrUndef(args, 'mngo_per_period');
     if (mngoPerPeriod !== undefined) {
       const token = getTokenBySymbol(groupConfig, 'MNGO');
@@ -642,6 +639,18 @@ yargs(hideBin(process.argv)).command(
       getNumberOrUndef(args, 'target_period_length'),
       mngoPerPeriod,
     );
+    await sleep(2000);
+    perpMarket = await client.getPerpMarket(
+      perpMarketConfig.publicKey,
+      perpMarketConfig.baseDecimals,
+      perpMarketConfig.quoteDecimals,
+    );
+    console.log(perpMarket.liquidityMiningInfo.rate.toString());
+    console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
+    console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
+    console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
+    console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
+
     process.exit(0);
   },
 ).argv;
