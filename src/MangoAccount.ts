@@ -22,7 +22,7 @@ import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
 import { EOL } from 'os';
-import { ZERO_BN } from '.';
+import { getMultipleAccounts, ZERO_BN } from '.';
 import PerpMarket from './PerpMarket';
 
 export default class MangoAccount {
@@ -72,24 +72,28 @@ export default class MangoAccount {
     return this;
   }
 
-  // TODO: use getMultipleAccounts instead
   async loadOpenOrders(
     connection: Connection,
     serumDexPk: PublicKey,
   ): Promise<(OpenOrders | undefined)[]> {
-    const promises: Promise<OpenOrders | undefined>[] = [];
+    const accounts = await getMultipleAccounts(
+      connection,
+      this.spotOpenOrders.filter((pk) => !pk.equals(zeroKey)),
+    );
 
-    for (let i = 0; i < this.spotOpenOrders.length; i++) {
-      if (this.spotOpenOrders[i].equals(zeroKey)) {
-        promises.push(promiseUndef());
-      } else {
-        promises.push(
-          OpenOrders.load(connection, this.spotOpenOrders[i], serumDexPk),
-        );
+    this.spotOpenOrdersAccounts = this.spotOpenOrders.map((openOrderPk) => {
+      if (openOrderPk.equals(zeroKey)) {
+        return undefined;
       }
-    }
-
-    this.spotOpenOrdersAccounts = await Promise.all(promises);
+      const account = accounts.find((a) => a.publicKey.equals(openOrderPk));
+      return account
+        ? OpenOrders.fromAccountInfo(
+            openOrderPk,
+            account.accountInfo,
+            serumDexPk,
+          )
+        : undefined;
+    });
     return this.spotOpenOrdersAccounts;
   }
 
@@ -724,7 +728,10 @@ export default class MangoAccount {
       lines.push(
         i +
           ': ' +
-          nativeToUi(this.deposits[i].toNumber(), mangoGroup.tokens[i].decimals) +
+          nativeToUi(
+            this.deposits[i].toNumber(),
+            mangoGroup.tokens[i].decimals,
+          ) +
           ' / ' +
           nativeToUi(this.borrows[i].toNumber(), mangoGroup.tokens[i].decimals),
       );
