@@ -225,14 +225,14 @@ function watchAccounts(mangoProgramId: PublicKey, mangoGroup: MangoGroup) {
         const ownerIndex = mangoAccounts.findIndex((account) =>
           account.spotOpenOrders.some((key) => key.equals(accountId)),
         );
-        const openOrdersIndex = mangoAccounts[ownerIndex].spotOpenOrders.findIndex((key) => key.equals(accountId))
-        const openOrders = OpenOrders.fromAccountInfo(
-          accountId,
-          accountInfo,
-          mangoGroup.dexProgramId,
-        );
 
         if (ownerIndex > -1) {
+          const openOrdersIndex = mangoAccounts[ownerIndex].spotOpenOrders.findIndex((key) => key.equals(accountId))
+          const openOrders = OpenOrders.fromAccountInfo(
+            accountId,
+            accountInfo,
+            mangoGroup.dexProgramId,
+          );
           mangoAccounts[ownerIndex].spotOpenOrdersAccounts[openOrdersIndex] = openOrders;
           //console.log('Updated OpenOrders for account ' + mangoAccounts[ownerIndex].publicKey.toBase58());
         } else {
