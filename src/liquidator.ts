@@ -26,7 +26,8 @@ import { Orderbook } from '@project-serum/serum/lib/market';
 import axios from 'axios';
 
 const interval = parseInt(process.env.INTERVAL || '3500');
-const refreshAccountsInterval = parseInt(process.env.INTERVAL || '60000');
+const refreshAccountsInterval = parseInt(process.env.INTERVAL || '120000');
+const refreshWebsocketInterval = parseInt(process.env.INTERVAL || '300000');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -57,6 +58,9 @@ const connection = new Connection(
 const client = new MangoClient(connection, mangoProgramId);
 
 let mangoAccounts: MangoAccount[] = [];
+
+let mangoSubscriptionId = -1;
+let dexSubscriptionId = -1;
 
 async function main() {
   if (!groupIds) {
@@ -156,7 +160,7 @@ async function main() {
                   mangoAccountKeyString,
                   err,
                 );
-                notify(`Failed to liquidate account ${mangoAccountKeyString}`);
+                notify(`Failed to liquidate account ${mangoAccountKeyString}: ${err}`);
               })
               .finally(() => {
                 liquidating[mangoAccountKeyString] = false;
@@ -173,17 +177,25 @@ async function main() {
 }
 
 function watchAccounts(mangoProgramId: PublicKey, mangoGroup: MangoGroup) {
-  console.log('Watching accounts...');
-  const openOrdersAccountSpan = OpenOrders.getLayout(
-    mangoGroup.dexProgramId,
-  ).span;
-  const openOrdersAccountOwnerOffset = OpenOrders.getLayout(
-    mangoGroup.dexProgramId,
-  ).offsetOf('owner');
-  connection.onProgramAccountChange(
-    mangoProgramId,
-    ({ accountId, accountInfo }) => {
-      if (accountInfo.data.length == MangoAccountLayout.span) {
+  try {
+    console.log('Watching accounts...');
+    const openOrdersAccountSpan = OpenOrders.getLayout(
+      mangoGroup.dexProgramId,
+    ).span;
+    const openOrdersAccountOwnerOffset = OpenOrders.getLayout(
+      mangoGroup.dexProgramId,
+    ).offsetOf('owner');
+
+    if (mangoSubscriptionId != -1) {
+      connection.removeProgramAccountChangeListener(mangoSubscriptionId)
+    }
+    if (dexSubscriptionId != -1) {
+      connection.removeProgramAccountChangeListener(dexSubscriptionId)
+    }
+
+    mangoSubscriptionId = connection.onProgramAccountChange(
+      mangoProgramId,
+      ({ accountId, accountInfo }) => {
         const mangoAccount = new MangoAccount(
           accountId,
           MangoAccountLayout.decode(accountInfo.data),
@@ -194,48 +206,55 @@ function watchAccounts(mangoProgramId: PublicKey, mangoGroup: MangoGroup) {
 
         mangoAccounts[index] = mangoAccount;
         //console.log('Updated account ' + accountId.toBase58());
-      }
-    },
-    'singleGossip',
-    [{ dataSize: MangoAccountLayout.span }],
-  );
-  connection.onProgramAccountChange(
-    mangoGroup.dexProgramId,
-    ({ accountId, accountInfo }) => {
-      if (accountInfo.data.length == openOrdersAccountSpan) {
+      },
+      'singleGossip',
+      [
+        { dataSize: MangoAccountLayout.span },
+        {
+          memcmp: {
+            offset: MangoAccountLayout.offsetOf('mangoGroup'),
+            bytes: mangoGroup.publicKey.toBase58(),
+          },
+        },
+      ],
+    );
+
+    dexSubscriptionId = connection.onProgramAccountChange(
+      mangoGroup.dexProgramId,
+      ({ accountId, accountInfo }) => {
         const ownerIndex = mangoAccounts.findIndex((account) =>
           account.spotOpenOrders.some((key) => key.equals(accountId)),
         );
+        const openOrdersIndex = mangoAccounts[ownerIndex].spotOpenOrders.findIndex((key) => key.equals(accountId))
+        const openOrders = OpenOrders.fromAccountInfo(
+          accountId,
+          accountInfo,
+          mangoGroup.dexProgramId,
+        );
 
         if (ownerIndex > -1) {
-          mangoAccounts[ownerIndex].spotOpenOrdersAccounts.forEach((oo, i) => {
-            if (oo && oo.address.equals(accountId)) {
-              mangoAccounts[ownerIndex].spotOpenOrdersAccounts[i] =
-                OpenOrders.fromAccountInfo(
-                  accountId,
-                  accountInfo,
-                  mangoGroup.dexProgramId,
-                );
-              // console.log(
-              //   'Updated OpenOrders for account ' + accountId.toBase58(),
-              // );
-            }
-          });
+          mangoAccounts[ownerIndex].spotOpenOrdersAccounts[openOrdersIndex] = openOrders;
+          //console.log('Updated OpenOrders for account ' + mangoAccounts[ownerIndex].publicKey.toBase58());
         } else {
           console.error('Could not match OpenOrdersAccount to MangoAccount');
         }
-      }
-    },
-    'singleGossip',
-    [
-      {
-        memcmp: {
-          offset: openOrdersAccountOwnerOffset,
-          bytes: mangoGroup.signerKey.toBase58(),
-        },
       },
-    ],
-  );
+      'singleGossip',
+      [
+        { dataSize: openOrdersAccountSpan },
+        {
+          memcmp: {
+            offset: openOrdersAccountOwnerOffset,
+            bytes: mangoGroup.signerKey.toBase58(),
+          },
+        },
+      ],
+    );
+  } catch (err) {
+    console.error('Error watching accounts', err)
+  } finally {
+    setTimeout(watchAccounts, refreshWebsocketInterval, mangoProgramId, mangoGroup);
+  }
 }
 
 async function refreshAccounts(mangoGroup: MangoGroup) {
@@ -268,6 +287,11 @@ async function liquidateAccount(
   const hasPerpOpenOrders = liqee.perpAccounts.some(
     (pa) => pa.bidsQuantity.gt(ZERO_BN) || pa.asksQuantity.gt(ZERO_BN),
   );
+  await liqee.reload(connection);
+  if (!liqee.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
+    throw new Error('Account no longer liquidatable');
+  }
+
   if (hasPerpOpenOrders) {
     console.log('forceCancelPerpOrders');
     await Promise.all(
