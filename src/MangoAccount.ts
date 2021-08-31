@@ -66,36 +66,9 @@ export default class MangoAccount {
       : '';
   }
 
-  async reload(
-    connection: Connection,
-    serumDexPk: PublicKey,
-  ): Promise<MangoAccount> {
-    const [mangoAccountInfo, ...openOrderAccountInfos] =
-      await getMultipleAccounts(connection, [
-        this.publicKey,
-        ...this.spotOpenOrders.filter((pk) => !pk.equals(zeroKey)),
-      ]);
-    Object.assign(
-      this,
-      MangoAccountLayout.decode(mangoAccountInfo.accountInfo.data),
-    );
-
-    this.spotOpenOrdersAccounts = this.spotOpenOrders.map((openOrderPk) => {
-      if (openOrderPk.equals(zeroKey)) {
-        return undefined;
-      }
-      const account = openOrderAccountInfos.find((a) =>
-        a.publicKey.equals(openOrderPk),
-      );
-      return account
-        ? OpenOrders.fromAccountInfo(
-            openOrderPk,
-            account.accountInfo,
-            serumDexPk,
-          )
-        : undefined;
-    });
-
+  async reload(connection: Connection): Promise<MangoAccount> {
+    const acc = await connection.getAccountInfo(this.publicKey);
+    Object.assign(this, MangoAccountLayout.decode(acc?.data));
     return this;
   }
 
