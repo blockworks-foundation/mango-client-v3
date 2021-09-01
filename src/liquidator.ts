@@ -11,17 +11,15 @@ import { Cluster, Config } from './config';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import { Market, OpenOrders } from '@project-serum/serum';
 import BN from 'bn.js';
-import { AssetType, MangoCache } from './layout';
+import { MangoAccountLayout, MangoCache, QUOTE_INDEX } from './layout';
 import {
   getMultipleAccounts,
   MangoAccount,
   MangoGroup,
-  nativeToUi,
   PerpMarket,
   RootBank,
   ZERO_BN,
 } from '.';
-import { QUOTE_INDEX, MangoAccountLayout } from './layout';
 import { Orderbook } from '@project-serum/serum/lib/market';
 import axios from 'axios';
 
@@ -72,26 +70,35 @@ async function main() {
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
   let cache = await mangoGroup.loadCache(connection);
   let liqorMangoAccount: MangoAccount;
-  
-  if (process.env.LIQOR_PK) {    
-      liqorMangoAccount = await client.getMangoAccount(
-        new PublicKey(process.env.LIQOR_PK),
-        mangoGroup.dexProgramId,
-      );
-      if (!liqorMangoAccount.owner.equals(payer.publicKey)) {
-        throw new Error('Account not owned by Keypair')
-      }
+
+  if (process.env.LIQOR_PK) {
+    liqorMangoAccount = await client.getMangoAccount(
+      new PublicKey(process.env.LIQOR_PK),
+      mangoGroup.dexProgramId,
+    );
+    if (!liqorMangoAccount.owner.equals(payer.publicKey)) {
+      throw new Error('Account not owned by Keypair');
+    }
   } else {
-    let accounts = await client.getMangoAccountsForOwner(mangoGroup, payer.publicKey, true);
+    let accounts = await client.getMangoAccountsForOwner(
+      mangoGroup,
+      payer.publicKey,
+      true,
+    );
     if (accounts.length) {
-      accounts.sort(((a, b) => b.computeValue(mangoGroup, cache).sub(a.computeValue(mangoGroup, cache)).toNumber()));
+      accounts.sort((a, b) =>
+        b
+          .computeValue(mangoGroup, cache)
+          .sub(a.computeValue(mangoGroup, cache))
+          .toNumber(),
+      );
       liqorMangoAccount = accounts[0];
     } else {
       throw new Error('No Mango Account found for this Keypair');
     }
   }
 
-  console.log(`Liqor Public Key: ${liqorMangoAccount.publicKey.toBase58()}`)
+  console.log(`Liqor Public Key: ${liqorMangoAccount.publicKey.toBase58()}`);
 
   await refreshAccounts(mangoGroup);
   watchAccounts(groupIds.mangoProgramId, mangoGroup);
@@ -128,10 +135,7 @@ async function main() {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
         if (health.lt(ZERO_I80F48)) {
-          if (
-            !liquidating[mangoAccountKeyString] &&
-            numLiquidating < 1
-          ) {
+          if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
             liquidating[mangoAccountKeyString] = true;
             numLiquidating++;
             console.log(
@@ -160,7 +164,9 @@ async function main() {
                   mangoAccountKeyString,
                   err,
                 );
-                notify(`Failed to liquidate account ${mangoAccountKeyString}: ${err}`);
+                notify(
+                  `Failed to liquidate account ${mangoAccountKeyString}: ${err}`,
+                );
               })
               .finally(() => {
                 liquidating[mangoAccountKeyString] = false;
@@ -187,10 +193,10 @@ function watchAccounts(mangoProgramId: PublicKey, mangoGroup: MangoGroup) {
     ).offsetOf('owner');
 
     if (mangoSubscriptionId != -1) {
-      connection.removeProgramAccountChangeListener(mangoSubscriptionId)
+      connection.removeProgramAccountChangeListener(mangoSubscriptionId);
     }
     if (dexSubscriptionId != -1) {
-      connection.removeProgramAccountChangeListener(dexSubscriptionId)
+      connection.removeProgramAccountChangeListener(dexSubscriptionId);
     }
 
     mangoSubscriptionId = connection.onProgramAccountChange(
@@ -232,13 +238,16 @@ function watchAccounts(mangoProgramId: PublicKey, mangoGroup: MangoGroup) {
         );
 
         if (ownerIndex > -1) {
-          const openOrdersIndex = mangoAccounts[ownerIndex].spotOpenOrders.findIndex((key) => key.equals(accountId))
+          const openOrdersIndex = mangoAccounts[
+            ownerIndex
+          ].spotOpenOrders.findIndex((key) => key.equals(accountId));
           const openOrders = OpenOrders.fromAccountInfo(
             accountId,
             accountInfo,
             mangoGroup.dexProgramId,
           );
-          mangoAccounts[ownerIndex].spotOpenOrdersAccounts[openOrdersIndex] = openOrders;
+          mangoAccounts[ownerIndex].spotOpenOrdersAccounts[openOrdersIndex] =
+            openOrders;
           //console.log('Updated OpenOrders for account ' + mangoAccounts[ownerIndex].publicKey.toBase58());
         } else {
           console.error('Could not match OpenOrdersAccount to MangoAccount');
@@ -256,9 +265,14 @@ function watchAccounts(mangoProgramId: PublicKey, mangoGroup: MangoGroup) {
       ],
     );
   } catch (err) {
-    console.error('Error watching accounts', err)
+    console.error('Error watching accounts', err);
   } finally {
-    setTimeout(watchAccounts, refreshWebsocketInterval, mangoProgramId, mangoGroup);
+    setTimeout(
+      watchAccounts,
+      refreshWebsocketInterval,
+      mangoProgramId,
+      mangoGroup,
+    );
   }
 }
 
@@ -574,7 +588,13 @@ async function liquidatePerps(
     if (perpAccount.basePosition.eq(new BN(0))) {
       if (quoteRootBank) {
         console.log('forceSettleQuotePositions');
-        await client.forceSettleQuotePositions(mangoGroup, liqee, liqor, quoteRootBank, payer);
+        await client.forceSettleQuotePositions(
+          mangoGroup,
+          liqee,
+          liqor,
+          quoteRootBank,
+          payer,
+        );
       }
     } else {
       console.log('liquidatePerpMarket ' + marketIndex);

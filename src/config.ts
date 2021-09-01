@@ -289,6 +289,10 @@ export class Config {
     return this.groups.find((g) => g.cluster === cluster && g.name === name);
   }
 
+  public getGroupWithName(name: string) {
+    return this.groups.find((g) => g.name === name);
+  }
+
   public storeGroup(group: GroupConfig) {
     const _group = this.getGroup(group.cluster, group.name);
     if (_group) {
