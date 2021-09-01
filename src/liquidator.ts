@@ -838,10 +838,14 @@ async function closePositions(
 
 function notify(content: string) {
   if (content && process.env.WEBHOOK_URL) {
-    axios.post(
-      process.env.WEBHOOK_URL,
-      { content },
-    );
+    try {
+      axios.post(
+        process.env.WEBHOOK_URL,
+        { content },
+      );
+    } catch(err) {
+      console.error('Error posting to notify webhook:', err);
+    }
   }
 }
 
