@@ -121,18 +121,11 @@ export class MangoClient {
     transactions: Transaction[],
     payer: Account | WalletAdapter,
     additionalSigners: Account[],
-    timeout = 30000,
     confirmLevel: TransactionConfirmationStatus = 'confirmed',
   ): Promise<TransactionSignature[]> {
     return await Promise.all(
       transactions.map((tx) =>
-        this.sendTransaction(
-          tx,
-          payer,
-          additionalSigners,
-          timeout,
-          confirmLevel,
-        ),
+        this.sendTransaction(tx, payer, additionalSigners, confirmLevel),
       ),
     );
   }
