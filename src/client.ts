@@ -4,7 +4,6 @@ import {
   Connection,
   LAMPORTS_PER_SOL,
   PublicKey,
-  sendAndConfirmRawTransaction,
   SimulatedTransactionResponse,
   SystemProgram,
   Transaction,
@@ -186,6 +185,7 @@ export class MangoClient {
     transaction: Transaction,
     payer: Account | WalletAdapter,
     additionalSigners: Account[],
+    timeout = 30000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
     await this.signTransaction({
@@ -195,14 +195,66 @@ export class MangoClient {
     });
 
     const rawTransaction = transaction.serialize();
-
-    const txId = await sendAndConfirmRawTransaction(
-      this.connection,
+    const startTime = getUnixTs();
+    const txid: TransactionSignature = await this.connection.sendRawTransaction(
       rawTransaction,
-      { skipPreflight: true, commitment: confirmLevel },
+      { skipPreflight: true },
     );
+    console.log('Started awaiting confirmation for', txid);
 
-    return txId;
+    let done = false;
+    (async () => {
+      // TODO - make sure this works well on mainnet
+      await sleep(2000);
+      while (!done && getUnixTs() - startTime < timeout / 1000) {
+        console.log(new Date().toUTCString(), ' sending tx ', txid);
+        this.connection.sendRawTransaction(rawTransaction, {
+          skipPreflight: true,
+        });
+        await sleep(2000);
+      }
+    })();
+
+    try {
+      await awaitTransactionSignatureConfirmation(
+        txid,
+        timeout,
+        this.connection,
+        confirmLevel,
+      );
+    } catch (err) {
+      if (err.timeout) {
+        throw new Error('Timed out awaiting confirmation on transaction');
+      }
+      let simulateResult: SimulatedTransactionResponse | null = null;
+      try {
+        simulateResult = (
+          await simulateTransaction(this.connection, transaction, 'processed')
+        ).value;
+      } catch (e) {
+        console.warn('Simulate transaction failed');
+      }
+
+      if (simulateResult && simulateResult.err) {
+        if (simulateResult.logs) {
+          for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
+            const line = simulateResult.logs[i];
+            if (line.startsWith('Program log: ')) {
+              throw new Error(
+                'Transaction failed: ' + line.slice('Program log: '.length),
+              );
+            }
+          }
+        }
+        throw new Error(JSON.stringify(simulateResult.err));
+      }
+      throw new Error('Transaction failed');
+    } finally {
+      done = true;
+    }
+
+    // console.log('Latency', txid, getUnixTs() - startTime);
+    return txid;
   }
 
   async sendSignedTransaction({
