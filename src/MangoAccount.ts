@@ -66,9 +66,12 @@ export default class MangoAccount {
       : '';
   }
 
-  async reload(connection: Connection): Promise<MangoAccount> {
+  async reload(connection: Connection, dexProgramId: PublicKey | undefined = undefined): Promise<MangoAccount> {
     const acc = await connection.getAccountInfo(this.publicKey);
     Object.assign(this, MangoAccountLayout.decode(acc?.data));
+    if (dexProgramId) {
+      await this.loadOpenOrders(connection, dexProgramId);
+    }
     return this;
   }
 

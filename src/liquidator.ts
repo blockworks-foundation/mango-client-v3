@@ -268,8 +268,6 @@ async function refreshAccounts(mangoGroup: MangoGroup) {
     console.time('getAllMangoAccounts');
     mangoAccounts = await client.getAllMangoAccounts(
       mangoGroup,
-      undefined,
-      true,
     );
     console.timeEnd('getAllMangoAccounts');
     console.log(`Fetched ${mangoAccounts.length} accounts`);
@@ -292,7 +290,7 @@ async function liquidateAccount(
   const hasPerpOpenOrders = liqee.perpAccounts.some(
     (pa) => pa.bidsQuantity.gt(ZERO_BN) || pa.asksQuantity.gt(ZERO_BN),
   );
-  await liqee.reload(connection);
+  await liqee.reload(connection, mangoGroup.dexProgramId);
   if (!liqee.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
     throw new Error('Account no longer liquidatable');
   }
@@ -312,7 +310,7 @@ async function liquidateAccount(
     );
     await sleep(interval * 2);
   }
-  await liqee.reload(connection);
+  await liqee.reload(connection, mangoGroup.dexProgramId);
   if (!liqee.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
     throw new Error('Account no longer liquidatable');
   }
@@ -442,7 +440,7 @@ async function liquidateSpot(
           payer,
           maxLiabTransfer,
         );
-        liqee = await liqee.reload(connection);
+        await liqee.reload(connection, mangoGroup.dexProgramId);
       }
     } else {
       await client.liquidateTokenAndToken(
@@ -455,7 +453,7 @@ async function liquidateSpot(
         maxLiabTransfer,
       );
 
-      liqee = await liqee.reload(connection);
+      await liqee.reload(connection, mangoGroup.dexProgramId);
       if (liqee.isBankrupt) {
         console.log('Bankrupt account', liqee.publicKey.toBase58());
         const quoteRootBank = rootBanks[QUOTE_INDEX];
@@ -473,7 +471,7 @@ async function liquidateSpot(
             payer,
             maxLiabTransfer,
           );
-          liqee = await liqee.reload(connection);
+          await liqee.reload(connection, mangoGroup.dexProgramId);
         }
       }
     }
@@ -546,7 +544,7 @@ async function liquidatePerps(
         marketIndex,
         maxLiabTransfer,
       );
-      await liqee.reload(connection);
+      await liqee.reload(connection, mangoGroup.dexProgramId);
       return;
     }
   }
@@ -591,7 +589,7 @@ async function liquidatePerps(
       );
     }
     await sleep(interval);
-    await liqee.reload(connection);
+    await liqee.reload(connection, mangoGroup.dexProgramId);
     if (liqee.isBankrupt) {
       const maxLiabTransfer = I80F48.fromNumber(
         Math.abs(liqee.perpAccounts[marketIndex].quotePosition.toNumber()),
@@ -611,7 +609,7 @@ async function liquidatePerps(
           maxLiabTransfer,
         );
       }
-      await liqee.reload(connection);
+      await liqee.reload(connection, mangoGroup.dexProgramId);
     }
 
     await closePositions(mangoGroup, liqor, perpMarkets);
