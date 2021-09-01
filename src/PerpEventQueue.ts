@@ -31,61 +31,46 @@ export default class PerpEventQueue {
   eventsSince(
     lastSeqNum?: BN,
   ): { fill?: FillEvent; out?: OutEvent; liquidate?: LiquidateEvent }[] {
-    const filtered: {
-      fill?: FillEvent;
-      out?: OutEvent;
-      liquidate?: LiquidateEvent;
-    }[] = [];
+    const flatEvents: (FillEvent | OutEvent | LiquidateEvent)[] = [];
     for (const e of this.events) {
+      let event;
       if (e.fill) {
-        if (lastSeqNum === undefined && e.fill.timestamp.gt(ZERO_BN)) {
-          filtered.push(e);
-        } else if (lastSeqNum !== undefined && e.fill.seqNum.gt(lastSeqNum)) {
-          filtered.push(e);
-        }
+        event = e.fill;
+        event['eventType'] = 'fill';
       } else if (e.out) {
-        if (lastSeqNum === undefined && e.out.timestamp.gt(ZERO_BN)) {
-          filtered.push(e);
-        } else if (lastSeqNum !== undefined && e.out.seqNum.gt(lastSeqNum)) {
-          filtered.push(e);
-        }
+        event = e.out;
+        event['eventType'] = 'out';
       } else if (e.liquidate) {
-        if (lastSeqNum === undefined && e.liquidate.timestamp.gt(ZERO_BN)) {
-          filtered.push(e);
-        } else if (
-          lastSeqNum !== undefined &&
-          e.liquidate.seqNum.gt(lastSeqNum)
-        ) {
-          filtered.push(e);
-        }
+        event = e.liquidate;
+        event['eventType'] = 'liquidate';
+      } else {
+        continue;
       }
+      flatEvents.push(event);
     }
 
-    // No need to sort because events already sorted
-    return filtered;
+    let filtered: (FillEvent | OutEvent | LiquidateEvent)[];
+    if (lastSeqNum === undefined) {
+      filtered = flatEvents
+        .filter((e) => e.timestamp.gt(ZERO_BN))
+        .sort((a, b) => a.seqNum.cmp(b.seqNum));
+    } else {
+      filtered = flatEvents
+        .filter((e) => e.seqNum.gt(lastSeqNum))
+        .sort((a, b) => a.seqNum.cmp(b.seqNum));
+    }
 
-    // let filtered: (FillEvent | OutEvent | LiquidateEvent)[];
-    // if (lastSeqNum === undefined) {
-    //   filtered = flatEvents
-    //     .filter((e) => e.timestamp.gt(ZERO_BN))
-    //     .sort((a, b) => a.seqNum.cmp(b.seqNum));
-    // } else {
-    //   filtered = flatEvents
-    //     .filter((e) => e.seqNum.gt(lastSeqNum))
-    //     .sort((a, b) => a.seqNum.cmp(b.seqNum));
-    // }
-    //
-    // // @ts-ignore
-    // return filtered.map((e) => {
-    //   if (e['eventType'] === 'fill') {
-    //     return { fill: e };
-    //   } else if (e['eventType'] === 'out') {
-    //     return { out: e };
-    //   } else if (e['eventType'] === 'liquidate') {
-    //     return { liquidate: e };
-    //   }
-    //   // undefined if it's not one of those event types which it shouldn't be anyway
-    // });
+    // @ts-ignore
+    return filtered.map((e) => {
+      if (e['eventType'] === 'fill') {
+        return { fill: e };
+      } else if (e['eventType'] === 'out') {
+        return { out: e };
+      } else if (e['eventType'] === 'liquidate') {
+        return { liquidate: e };
+      }
+      // undefined if it's not one of those event types which it shouldn't be anyway
+    });
 
     // const modulo64Uint = new BN('10000000000000000', 'hex');
     // let missedEvents = this.seqNum
