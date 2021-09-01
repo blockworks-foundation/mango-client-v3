@@ -32,46 +32,61 @@ export default class PerpEventQueue {
     lastSeqNum?: BN,
   ): { fill?: FillEvent; out?: OutEvent; liquidate?: LiquidateEvent }[] {
     // if there are less thatn 256 events
-    const flatEvents: (FillEvent | OutEvent | LiquidateEvent)[] = [];
+    const flatEvents: {
+      fill?: FillEvent;
+      out?: OutEvent;
+      liquidate?: LiquidateEvent;
+    }[] = [];
     for (const e of this.events) {
-      let event;
       if (e.fill) {
-        event = e.fill;
-        event['eventType'] = 'fill';
+        if (lastSeqNum === undefined && e.fill.timestamp.gt(ZERO_BN)) {
+          flatEvents.push(e);
+        } else if (lastSeqNum !== undefined && e.fill.seqNum.gt(lastSeqNum)) {
+          flatEvents.push(e);
+        }
       } else if (e.out) {
-        event = e.out;
-        event['eventType'] = 'out';
+        if (lastSeqNum === undefined && e.out.timestamp.gt(ZERO_BN)) {
+          flatEvents.push(e);
+        } else if (lastSeqNum !== undefined && e.out.seqNum.gt(lastSeqNum)) {
+          flatEvents.push(e);
+        }
       } else if (e.liquidate) {
-        event = e.liquidate;
-        event['eventType'] = 'liquidate';
-      } else {
-        continue;
+        if (lastSeqNum === undefined && e.liquidate.timestamp.gt(ZERO_BN)) {
+          flatEvents.push(e);
+        } else if (
+          lastSeqNum !== undefined &&
+          e.liquidate.seqNum.gt(lastSeqNum)
+        ) {
+          flatEvents.push(e);
+        }
       }
-      flatEvents.push(event);
     }
 
-    let filtered: (FillEvent | OutEvent | LiquidateEvent)[];
-    if (lastSeqNum === undefined) {
-      filtered = flatEvents
-        .filter((e) => e.timestamp.gt(ZERO_BN))
-        .sort((a, b) => a.seqNum.cmp(b.seqNum));
-    } else {
-      filtered = flatEvents
-        .filter((e) => e.seqNum.gt(lastSeqNum))
-        .sort((a, b) => a.seqNum.cmp(b.seqNum));
-    }
+    // No need to sort because events already sorted
+    return flatEvents;
 
-    // @ts-ignore
-    return filtered.map((e) => {
-      if (e['eventType'] === 'fill') {
-        return { fill: e };
-      } else if (e['eventType'] === 'out') {
-        return { out: e };
-      } else if (e['eventType'] === 'liquidate') {
-        return { liquidate: e };
-      }
-      // undefined if it's not one of those event types which it shouldn't be anyway
-    });
+    // let filtered: (FillEvent | OutEvent | LiquidateEvent)[];
+    // if (lastSeqNum === undefined) {
+    //   filtered = flatEvents
+    //     .filter((e) => e.timestamp.gt(ZERO_BN))
+    //     .sort((a, b) => a.seqNum.cmp(b.seqNum));
+    // } else {
+    //   filtered = flatEvents
+    //     .filter((e) => e.seqNum.gt(lastSeqNum))
+    //     .sort((a, b) => a.seqNum.cmp(b.seqNum));
+    // }
+    //
+    // // @ts-ignore
+    // return filtered.map((e) => {
+    //   if (e['eventType'] === 'fill') {
+    //     return { fill: e };
+    //   } else if (e['eventType'] === 'out') {
+    //     return { out: e };
+    //   } else if (e['eventType'] === 'liquidate') {
+    //     return { liquidate: e };
+    //   }
+    //   // undefined if it's not one of those event types which it shouldn't be anyway
+    // });
 
     // const modulo64Uint = new BN('10000000000000000', 'hex');
     // let missedEvents = this.seqNum
