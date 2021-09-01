@@ -31,8 +31,7 @@ export default class PerpEventQueue {
   eventsSince(
     lastSeqNum?: BN,
   ): { fill?: FillEvent; out?: OutEvent; liquidate?: LiquidateEvent }[] {
-    // if there are less thatn 256 events
-    const flatEvents: {
+    const filtered: {
       fill?: FillEvent;
       out?: OutEvent;
       liquidate?: LiquidateEvent;
@@ -40,30 +39,30 @@ export default class PerpEventQueue {
     for (const e of this.events) {
       if (e.fill) {
         if (lastSeqNum === undefined && e.fill.timestamp.gt(ZERO_BN)) {
-          flatEvents.push(e);
+          filtered.push(e);
         } else if (lastSeqNum !== undefined && e.fill.seqNum.gt(lastSeqNum)) {
-          flatEvents.push(e);
+          filtered.push(e);
         }
       } else if (e.out) {
         if (lastSeqNum === undefined && e.out.timestamp.gt(ZERO_BN)) {
-          flatEvents.push(e);
+          filtered.push(e);
         } else if (lastSeqNum !== undefined && e.out.seqNum.gt(lastSeqNum)) {
-          flatEvents.push(e);
+          filtered.push(e);
         }
       } else if (e.liquidate) {
         if (lastSeqNum === undefined && e.liquidate.timestamp.gt(ZERO_BN)) {
-          flatEvents.push(e);
+          filtered.push(e);
         } else if (
           lastSeqNum !== undefined &&
           e.liquidate.seqNum.gt(lastSeqNum)
         ) {
-          flatEvents.push(e);
+          filtered.push(e);
         }
       }
     }
 
     // No need to sort because events already sorted
-    return flatEvents;
+    return filtered;
 
     // let filtered: (FillEvent | OutEvent | LiquidateEvent)[];
     // if (lastSeqNum === undefined) {
