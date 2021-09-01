@@ -819,10 +819,12 @@ async function closePositions(
 }
 
 function notify(content: string) {
-  axios.post(
-    'https://discord.com/api/webhooks/879503355205005353/2Uy1p-HISWLXKi90frExr2_rr7uqBFjswupUhUFctuWIhzPwjPpQJadlK22WGEGZSOiy',
-    { content },
-  );
+  if (content && process.env.WEBHOOK_URL) {
+    axios.post(
+      process.env.WEBHOOK_URL,
+      { content },
+    );
+  }
 }
 
 main();
