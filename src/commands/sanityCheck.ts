@@ -1,5 +1,4 @@
-import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
-import { u64 } from '@solana/spl-token';
+import { Connection } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import MangoAccount from '../MangoAccount';
 import PerpMarket from '../PerpMarket';
@@ -121,8 +120,17 @@ const checkSumOfNetDeposit = async (connection, mangoGroup, mangoAccounts) => {
         );
         vaultAmount = vaultAmount.add(I80F48.fromString(vault.value.amount));
       }
+      console.log('vaultAmount:', vaultAmount.toString());
+
+      console.log(
+        'nodesDiff:',
+        vaultAmount
+          .sub(sumOfNetDepositsAcrossNodes)
+          .add(sumOfNetBorrowsAcrossNodes)
+          .toString(),
+      );
     }
-    console.log('vaultAmount:', vaultAmount.toString());
+
     console.log('Diff', vaultAmount.sub(sumOfNetDepositsAcrossMAs).toString());
   }
 };

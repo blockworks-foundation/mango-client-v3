@@ -9,25 +9,25 @@ import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 
 import {
   addPerpMarket,
+  addPythOracle,
   addSpotMarket,
   addStubOracle,
-  addPythOracle,
   addSwitchboardOracle,
   initGroup,
-  setStubOracle,
   listMarket,
   sanityCheck,
+  setStubOracle,
 } from './commands';
 import {
   Cluster,
   Config,
-  GroupConfig,
-  getTokenBySymbol,
   getPerpMarketByBaseSymbol,
+  getTokenBySymbol,
+  GroupConfig,
   PerpMarketConfig,
 } from './config';
 import { MangoClient } from './client';
-import { sleep, throwUndefined, uiToNative } from './utils';
+import { throwUndefined, uiToNative } from './utils';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -610,16 +610,16 @@ yargs(hideBin(process.argv)).command(
     const perpMarketConfig: PerpMarketConfig = throwUndefined(
       getPerpMarketByBaseSymbol(groupConfig, symbol),
     );
-    let perpMarket = await client.getPerpMarket(
+    const perpMarket = await client.getPerpMarket(
       perpMarketConfig.publicKey,
       perpMarketConfig.baseDecimals,
       perpMarketConfig.quoteDecimals,
     );
-    console.log(perpMarket.liquidityMiningInfo.rate.toString());
-    console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
-    console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
-    console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
-    console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
+    // console.log(perpMarket.liquidityMiningInfo.rate.toString());
+    // console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
+    // console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
+    // console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
+    // console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
     let mngoPerPeriod = getNumberOrUndef(args, 'mngo_per_period');
     if (mngoPerPeriod !== undefined) {
       const token = getTokenBySymbol(groupConfig, 'MNGO');
@@ -639,17 +639,17 @@ yargs(hideBin(process.argv)).command(
       getNumberOrUndef(args, 'target_period_length'),
       mngoPerPeriod,
     );
-    await sleep(2000);
-    perpMarket = await client.getPerpMarket(
-      perpMarketConfig.publicKey,
-      perpMarketConfig.baseDecimals,
-      perpMarketConfig.quoteDecimals,
-    );
-    console.log(perpMarket.liquidityMiningInfo.rate.toString());
-    console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
-    console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
-    console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
-    console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
+    // await sleep(2000);
+    // perpMarket = await client.getPerpMarket(
+    //   perpMarketConfig.publicKey,
+    //   perpMarketConfig.baseDecimals,
+    //   perpMarketConfig.quoteDecimals,
+    // );
+    // console.log(perpMarket.liquidityMiningInfo.rate.toString());
+    // console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
+    // console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
+    // console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
+    // console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
 
     process.exit(0);
   },
