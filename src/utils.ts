@@ -121,25 +121,25 @@ export async function awaitTransactionSignatureConfirmation(
         console.log('Timed out for txid', txid);
         reject({ timeout: true });
       }, timeout);
-      // try {
-      //   connection.onSignature(
-      //     txid,
-      //     (result) => {
-      //       // console.log('WS confirmed', txid, result);
-      //       done = true;
-      //       if (result.err) {
-      //         reject(result.err);
-      //       } else {
-      //         resolve(result);
-      //       }
-      //     },
-      //     'processed',
-      //   );
-      //   // console.log('Set up WS connection', txid);
-      // } catch (e) {
-      //   done = true;
-      //   console.log('WS error in setup', txid, e);
-      // }
+      try {
+        connection.onSignature(
+          txid,
+          (result) => {
+            // console.log('WS confirmed', txid, result);
+            done = true;
+            if (result.err) {
+              reject(result.err);
+            } else {
+              resolve(result);
+            }
+          },
+          'processed',
+        );
+        // console.log('Set up WS connection', txid);
+      } catch (e) {
+        done = true;
+        console.log('WS error in setup', txid, e);
+      }
       while (!done) {
         // eslint-disable-next-line no-loop-func
         (async () => {
@@ -174,7 +174,7 @@ export async function awaitTransactionSignatureConfirmation(
             }
           }
         })();
-        await sleep(300);
+        await sleep(750);
       }
     })();
   });

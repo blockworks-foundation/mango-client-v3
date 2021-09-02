@@ -1758,53 +1758,12 @@ export class MangoClient {
       return await mangoAccountProms;
     }
 
-    const ordersFilters = [
-      {
-        memcmp: {
-          offset: OpenOrders.getLayout(mangoGroup.dexProgramId).offsetOf(
-            'owner',
-          ),
-          bytes: mangoGroup.signerKey.toBase58(),
-        },
-      },
-      {
-        dataSize: OpenOrders.getLayout(mangoGroup.dexProgramId).span,
-      },
-    ];
-
-    const openOrdersProms = getFilteredProgramAccounts(
-      this.connection,
-      mangoGroup.dexProgramId,
-      ordersFilters,
-    ).then((accounts) =>
-      accounts.map(({ publicKey, accountInfo }) =>
-        OpenOrders.fromAccountInfo(
-          publicKey,
-          accountInfo,
-          mangoGroup.dexProgramId,
-        ),
+    const mangoAccounts = await mangoAccountProms;
+    await Promise.all(
+      mangoAccounts.map((ma) =>
+        ma.loadOpenOrders(this.connection, mangoGroup.dexProgramId),
       ),
     );
-
-    const [mangoAccounts, openOrders] = await Promise.all([
-      mangoAccountProms,
-      openOrdersProms,
-    ]);
-
-    const pkToOpenOrdersAccount = {};
-    openOrders.forEach((openOrdersAccount) => {
-      pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
-        openOrdersAccount;
-    });
-
-    for (const ma of mangoAccounts) {
-      for (let i = 0; i < ma.spotOpenOrders.length; i++) {
-        if (ma.spotOpenOrders[i].toBase58() in pkToOpenOrdersAccount) {
-          ma.spotOpenOrdersAccounts[i] =
-            pkToOpenOrdersAccount[ma.spotOpenOrders[i].toBase58()];
-        }
-      }
-    }
 
     return mangoAccounts;
   }
