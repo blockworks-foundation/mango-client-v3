@@ -1759,11 +1759,15 @@ export class MangoClient {
     }
 
     const mangoAccounts = await mangoAccountProms;
-    await Promise.all(
+    console.log('loading accounts');
+
+    const test = await Promise.all(
       mangoAccounts.map((ma) =>
         ma.loadOpenOrders(this.connection, mangoGroup.dexProgramId),
       ),
     );
+
+    console.log('test', test);
 
     return mangoAccounts;
   }
