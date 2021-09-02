@@ -22,7 +22,15 @@ import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
 import { EOL } from 'os';
-import { getMultipleAccounts, ZERO_BN } from '.';
+import {
+  getMarketByPublicKey,
+  getMultipleAccounts,
+  getTokenByMint,
+  GroupConfig,
+  PerpMarketConfig,
+  TokenConfig,
+  ZERO_BN,
+} from '.';
 import PerpMarket from './PerpMarket';
 
 export default class MangoAccount {
@@ -66,7 +74,10 @@ export default class MangoAccount {
       : '';
   }
 
-  async reload(connection: Connection, dexProgramId: PublicKey | undefined = undefined): Promise<MangoAccount> {
+  async reload(
+    connection: Connection,
+    dexProgramId: PublicKey | undefined = undefined,
+  ): Promise<MangoAccount> {
     const acc = await connection.getAccountInfo(this.publicKey);
     Object.assign(this, MangoAccountLayout.decode(acc?.data));
     if (dexProgramId) {
@@ -716,8 +727,12 @@ export default class MangoAccount {
     return newInitHealth.div(healthDecimals).div(price.mul(liabWeight));
   }
 
-  toPrettyString(mangoGroup: MangoGroup, cache: MangoCache): string {
-    let lines: string[] = [];
+  toPrettyString(
+    groupConfig: GroupConfig,
+    mangoGroup: MangoGroup,
+    cache: MangoCache,
+  ): string {
+    const lines: string[] = [];
     lines.push('MangoAccount ' + this.publicKey.toBase58());
     lines.push('Owner: ' + this.owner.toBase58());
     lines.push(
@@ -727,24 +742,44 @@ export default class MangoAccount {
 
     lines.push('Spot:');
 
-    for (let i = 0; i < this.deposits.length; i++) {
+    for (let i = 0; i < mangoGroup.tokens.length; i++) {
+      if (mangoGroup.tokens[i].mint.equals(zeroKey)) {
+        continue;
+      }
+
+      const token = getTokenByMint(
+        groupConfig,
+        mangoGroup.tokens[i].mint,
+      ) as TokenConfig;
+
       lines.push(
-        i +
+        token.symbol +
           ': ' +
-          nativeToUi(
-            this.deposits[i].toNumber(),
+          nativeI80F48ToUi(
+            this.deposits[i].mul(cache.rootBankCache[i].depositIndex),
             mangoGroup.tokens[i].decimals,
           ) +
           ' / ' +
-          nativeToUi(this.borrows[i].toNumber(), mangoGroup.tokens[i].decimals),
+          nativeI80F48ToUi(
+            this.borrows[i].mul(cache.rootBankCache[i].borrowIndex),
+            mangoGroup.tokens[i].decimals,
+          ),
       );
     }
     lines.push('Perps:');
     for (let i = 0; i < this.perpAccounts.length; i++) {
+      if (mangoGroup.perpMarkets[i].perpMarket.equals(zeroKey)) {
+        continue;
+      }
+      const market = getMarketByPublicKey(
+        groupConfig,
+        mangoGroup.perpMarkets[i].perpMarket,
+      ) as PerpMarketConfig;
+
       const perpAccount = this.perpAccounts[i];
       const perpMarketInfo = mangoGroup.perpMarkets[i];
       lines.push(
-        i +
+        market.name +
           ': ' +
           perpAccount.basePosition.toString() +
           ' / ' +

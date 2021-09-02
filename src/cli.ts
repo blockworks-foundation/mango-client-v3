@@ -475,20 +475,16 @@ yargs(hideBin(process.argv)).command(
         describe: 'the public key of the MangoAccount',
         type: 'string',
       })
-      .option(...clusterDesc)
       .option(...configDesc);
   },
   async (args) => {
     console.log('show', args);
-    const cluster = args.cluster as Cluster;
     const config = readConfig(args.config as string);
-
-    const connection = openConnection(config, cluster);
-
-    const groupConfig = config.getGroup(
-      cluster,
+    const groupConfig = config.getGroupWithName(
       args.group as string,
     ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
 
     const client = new MangoClient(connection, groupConfig.mangoProgramId);
     const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
@@ -499,7 +495,7 @@ yargs(hideBin(process.argv)).command(
 
     const cache = await mangoGroup.loadCache(connection);
 
-    console.log(mangoAccount.toPrettyString(mangoGroup, cache));
+    console.log(mangoAccount.toPrettyString(groupConfig, mangoGroup, cache));
     process.exit(0);
   },
 ).argv;

@@ -145,7 +145,9 @@ async function main() {
             notify(
               `Sick account ${mangoAccountKeyString} health: ${health.toString()}`,
             );
-            console.log(mangoAccount.toPrettyString(mangoGroup, cache));
+            console.log(
+              mangoAccount.toPrettyString(groupIds, mangoGroup, cache),
+            );
             liquidateAccount(
               mangoGroup,
               cache,
