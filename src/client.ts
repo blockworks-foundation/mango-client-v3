@@ -1649,7 +1649,7 @@ export class MangoClient {
       }
     }
 
-    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
+    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
     const accountsWithPnl = mangoAccounts
       .map((m) => ({
         account: m,
