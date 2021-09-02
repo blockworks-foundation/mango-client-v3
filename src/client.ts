@@ -1759,6 +1759,7 @@ export class MangoClient {
     }
 
     const mangoAccounts = await mangoAccountProms;
+
     await Promise.all(
       mangoAccounts.map((ma) =>
         ma.loadOpenOrders(this.connection, mangoGroup.dexProgramId),
