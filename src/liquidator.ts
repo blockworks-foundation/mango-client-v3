@@ -49,8 +49,9 @@ const payer = new Account(
   ),
 );
 console.log(`Payer: ${payer.publicKey.toBase58()}`);
+
 const connection = new Connection(
-  config.cluster_urls[cluster],
+  process.env.ENDPOINT_URL || config.cluster_urls[cluster],
   'processed' as Commitment,
 );
 const client = new MangoClient(connection, mangoProgramId);
@@ -280,9 +281,7 @@ async function refreshAccounts(mangoGroup: MangoGroup) {
   try {
     console.log('Refreshing accounts...');
     console.time('getAllMangoAccounts');
-    mangoAccounts = await client.getAllMangoAccounts(
-      mangoGroup,
-    );
+    mangoAccounts = await client.getAllMangoAccounts(mangoGroup);
     console.timeEnd('getAllMangoAccounts');
     console.log(`Fetched ${mangoAccounts.length} accounts`);
   } catch (err) {
@@ -839,11 +838,8 @@ async function closePositions(
 function notify(content: string) {
   if (content && process.env.WEBHOOK_URL) {
     try {
-      axios.post(
-        process.env.WEBHOOK_URL,
-        { content },
-      );
-    } catch(err) {
+      axios.post(process.env.WEBHOOK_URL, { content });
+    } catch (err) {
       console.error('Error posting to notify webhook:', err);
     }
   }
