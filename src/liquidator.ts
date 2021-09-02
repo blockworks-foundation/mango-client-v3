@@ -61,6 +61,8 @@ let mangoAccounts: MangoAccount[] = [];
 let mangoSubscriptionId = -1;
 let dexSubscriptionId = -1;
 
+const blacklist = ['GsTdr2TsCpfWnbLYmAJaDa9JucDAvfmcHQpUFtHuxJ7U'];
+
 async function main() {
   if (!groupIds) {
     throw new Error(`Group ${groupName} not found`);
@@ -136,7 +138,7 @@ async function main() {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
         if (health.lt(ZERO_I80F48)) {
-          if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
+          if (!liquidating[mangoAccountKeyString] && numLiquidating < 1 && !blacklist.includes(mangoAccountKeyString)) {
             liquidating[mangoAccountKeyString] = true;
             numLiquidating++;
             console.log(
