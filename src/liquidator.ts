@@ -13,6 +13,7 @@ import { Market, OpenOrders } from '@project-serum/serum';
 import BN from 'bn.js';
 import { MangoAccountLayout, MangoCache, QUOTE_INDEX } from './layout';
 import {
+  AssetType,
   getMultipleAccounts,
   MangoAccount,
   MangoGroup,
@@ -586,17 +587,22 @@ async function liquidatePerps(
       }
     }
 
-    const quoteRootBank = rootBanks[QUOTE_INDEX];
+    const assetRootBank = rootBanks[maxNetIndex];
 
     if (perpAccount.basePosition.eq(new BN(0))) {
-      if (quoteRootBank) {
-        console.log('forceSettleQuotePositions');
-        await client.forceSettleQuotePositions(
+      if (assetRootBank) {
+        console.log('liquidateTokenAndPerp ' + marketIndex);
+        await client.liquidateTokenAndPerp(
           mangoGroup,
           liqee,
           liqor,
-          quoteRootBank,
+          assetRootBank,
           payer,
+          AssetType.Token,
+          maxNetIndex,
+          AssetType.Perp,
+          marketIndex,
+          maxNet.sub(ONE_I80F48).max(ONE_I80F48),
         );
       }
     } else {
@@ -722,13 +728,13 @@ async function balanceTokens(
     if (Math.abs(diffs[marketIndex].toNumber()) > market.minOrderSize) {
       if (netValues[i][1].gt(ZERO_I80F48)) {
         // sell to close
-        const price = cache.priceCache[marketIndex].price.mul(
+        const price = mangoGroup.getPrice(marketIndex, cache).mul(
           I80F48.fromNumber(0.95),
         );
         console.log(
-          `Sell to close ${marketIndex} ${diffs[
+          `Sell to close ${marketIndex} ${Math.abs(diffs[
             marketIndex
-          ].toString()} @ ${price.toString()}`,
+          ].toNumber())} @ ${price.toString()}`,
         );
         await client.placeSpotOrder(
           mangoGroup,
@@ -748,15 +754,15 @@ async function balanceTokens(
           markets[marketIndex],
         );
       } else if (netValues[i][1].lt(ZERO_I80F48)) {
-        // buy to close
-        const price = cache.priceCache[marketIndex].price.mul(
+        //buy to close
+        const price = mangoGroup.getPrice(marketIndex, cache).mul(
           I80F48.fromNumber(1.05),
         );
 
         console.log(
-          `Buy to close ${marketIndex} ${diffs[
+          `Buy to close ${marketIndex} ${Math.abs(diffs[
             marketIndex
-          ].toString()} @ ${price.toString()}`,
+          ].toNumber())} @ ${price.toString()}`,
         );
         await client.placeSpotOrder(
           mangoGroup,
