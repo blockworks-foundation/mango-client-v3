@@ -793,29 +793,34 @@ async function closePositions(
 ) {
   console.log('closePositions');
   const cache = await mangoGroup.loadCache(connection);
-  for (let i = 0; i < mangoAccount.perpAccounts.length; i++) {
-    const perpAccount = mangoAccount.perpAccounts[i];
+
+  for (let i = 0; i < perpMarkets.length; i++) {
     const perpMarket = perpMarkets[i];
+    const index = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+    const perpAccount = mangoAccount.perpAccounts[index];
+
     if (perpMarket && perpAccount) {
-      const positionSize = Math.abs(
+      const basePositionSize = Math.abs(
         perpMarket.baseLotsToNumber(perpAccount.basePosition),
       );
-      if (positionSize != 0) {
+      const price = cache.priceCache[index].price;
+
+      if (basePositionSize != 0) {
         const side = perpAccount.basePosition.gt(ZERO_BN) ? 'sell' : 'buy';
         const liquidationFee =
-          mangoGroup.perpMarkets[i].liquidationFee.toNumber();
-        const price = cache.priceCache[i].price;
+          mangoGroup.perpMarkets[index].liquidationFee.toNumber();
+        
         const orderPrice =
           side == 'sell' ? price.toNumber() * 0.95 : price.toNumber() * 1.05; // TODO: base this on liquidation fee
 
         console.log(
           side +
-            'ing ' +
-            positionSize +
-            ' of perp ' +
-            i +
-            ' for $' +
-            orderPrice,
+          'ing ' +
+          basePositionSize +
+          ' of perp ' +
+          i +
+          ' for $' +
+          orderPrice,
         );
         await client.placePerpOrder(
           mangoGroup,
@@ -825,10 +830,14 @@ async function closePositions(
           payer,
           side,
           orderPrice,
-          positionSize,
+          basePositionSize,
           'ioc',
         );
+      }
 
+      await mangoAccount.reload(connection, mangoGroup.dexProgramId);
+      
+      if(!perpAccount.quotePosition.eq(ZERO_I80F48)) {
         const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
         if (quoteRootBank) {
           await client.settlePnl(
