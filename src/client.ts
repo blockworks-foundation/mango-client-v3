@@ -1649,7 +1649,30 @@ export class MangoClient {
       }
     }
 
-    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+    const mangoAccounts = this.connection.getProgramAccounts(this.programId, {
+      commitment: 'processed',
+      filters: [
+        {
+          memcmp: {
+            offset: MangoAccountLayout.offsetOf('mangoGroup'),
+            bytes: mangoGroup.publicKey.toBase58(),
+          },
+        },
+        {
+          dataSize: MangoAccountLayout.span,
+        },
+      ],
+    }).then(accounts => {
+      return accounts.map(({ pubkey, account }) => {
+        return new MangoAccount(
+          pubkey,
+          MangoAccountLayout.decode(
+            account == null ? undefined : account.data,
+          ),
+        );
+      }),
+    })
+
     const accountsWithPnl = mangoAccounts
       .map((m) => ({
         account: m,
