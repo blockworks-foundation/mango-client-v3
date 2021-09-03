@@ -1794,18 +1794,25 @@ export class MangoClient {
 
     if (includeOpenOrders) {
       const openOrderPks = mangoAccounts
-        .map((ma) => {
-          return ma.spotOpenOrders.filter((pk) => !pk.equals(zeroKey));
-        })
+        .map((ma) => ma.spotOpenOrders.filter((pk) => !pk.equals(zeroKey)))
         .flat();
 
-      const openOrderAccounts = await getMultipleAccounts(
+      const openOrderAccountInfos = await getMultipleAccounts(
         this.connection,
         openOrderPks,
       );
 
+      const openOrders = openOrderAccountInfos.map(
+        ({ publicKey, accountInfo }) =>
+          OpenOrders.fromAccountInfo(
+            publicKey,
+            accountInfo,
+            mangoGroup.dexProgramId,
+          ),
+      );
+
       const pkToOpenOrdersAccount = {};
-      openOrderAccounts.forEach((openOrdersAccount) => {
+      openOrders.forEach((openOrdersAccount) => {
         pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
           openOrdersAccount;
       });
