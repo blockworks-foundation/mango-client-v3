@@ -207,7 +207,13 @@ export class MangoClient {
       rawTransaction,
       { skipPreflight: true },
     );
-    console.log('Started awaiting confirmation for', txid);
+
+    console.log(
+      'Started awaiting confirmation for',
+      txid,
+      'size:',
+      rawTransaction.length,
+    );
 
     let done = false;
     (async () => {
