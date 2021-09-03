@@ -1656,37 +1656,7 @@ export class MangoClient {
       }
     }
 
-    let mangoAccounts;
-    try {
-      mangoAccounts = await this.connection
-        .getProgramAccounts(this.programId, {
-          commitment: 'processed',
-          filters: [
-            {
-              memcmp: {
-                offset: MangoAccountLayout.offsetOf('mangoGroup'),
-                bytes: mangoGroup.publicKey.toBase58(),
-              },
-            },
-            {
-              dataSize: MangoAccountLayout.span,
-            },
-          ],
-        })
-        .then((accounts) => {
-          return accounts.map(
-            ({ pubkey, account }) =>
-              new MangoAccount(
-                pubkey,
-                MangoAccountLayout.decode(
-                  account == null ? undefined : account.data,
-                ),
-              ),
-          );
-        });
-    } catch (e) {
-      console.error(`Error fetching mango accounts ${e}`);
-    }
+    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
 
     const accountsWithPnl = mangoAccounts
       .map((m) => ({
