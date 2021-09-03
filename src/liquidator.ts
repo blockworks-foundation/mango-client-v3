@@ -61,8 +61,6 @@ let mangoAccounts: MangoAccount[] = [];
 let mangoSubscriptionId = -1;
 let dexSubscriptionId = -1;
 
-const blacklist = ['GsTdr2TsCpfWnbLYmAJaDa9JucDAvfmcHQpUFtHuxJ7U'];
-
 async function main() {
   if (!groupIds) {
     throw new Error(`Group ${groupName} not found`);
@@ -138,7 +136,13 @@ async function main() {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
         if (health.lt(ZERO_I80F48)) {
-          if (!liquidating[mangoAccountKeyString] && numLiquidating < 1 && !blacklist.includes(mangoAccountKeyString)) {
+          if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
+            await mangoAccount.reload(connection, mangoGroup.dexProgramId);
+            if (!mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
+              console.log(`Account ${mangoAccountKeyString} no longer liquidatable`);
+              continue;
+            }
+
             liquidating[mangoAccountKeyString] = true;
             numLiquidating++;
             console.log(
@@ -307,10 +311,6 @@ async function liquidateAccount(
   const hasPerpOpenOrders = liqee.perpAccounts.some(
     (pa) => pa.bidsQuantity.gt(ZERO_BN) || pa.asksQuantity.gt(ZERO_BN),
   );
-  await liqee.reload(connection, mangoGroup.dexProgramId);
-  if (!liqee.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
-    throw new Error('Account no longer liquidatable');
-  }
 
   if (hasPerpOpenOrders) {
     console.log('forceCancelPerpOrders');
@@ -709,6 +709,7 @@ async function balanceTokens(
   for (let i = 0; i < groupIds!.spotMarkets.length; i++) {
     const diff = mangoAccount
       .getUiDeposit(cache.rootBankCache[i], mangoGroup, i)
+      .sub(mangoAccount.getUiBorrow(cache.rootBankCache[i], mangoGroup, i))
       .sub(I80F48.fromNumber(TARGETS[i]));
     diffs.push(diff);
     netValues.push([i, diff.mul(cache.priceCache[i].price)]);
