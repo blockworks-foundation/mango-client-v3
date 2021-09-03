@@ -102,6 +102,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
+import { getMultipleAccounts } from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -1776,7 +1777,7 @@ export class MangoClient {
       accountFilters.push(...filters);
     }
 
-    const mangoAccountProms = getFilteredProgramAccounts(
+    const mangoAccounts = await getFilteredProgramAccounts(
       this.connection,
       this.programId,
       accountFilters,
@@ -1792,16 +1793,34 @@ export class MangoClient {
     );
 
     if (includeOpenOrders) {
-      const mangoAccounts = await mangoAccountProms;
-      await Promise.all(
-        mangoAccounts.map((ma) =>
-          ma.loadOpenOrders(this.connection, mangoGroup.dexProgramId),
-        ),
+      const openOrderPks = mangoAccounts
+        .map((ma) => {
+          return ma.spotOpenOrders.filter((pk) => !pk.equals(zeroKey));
+        })
+        .flat();
+
+      const openOrderAccounts = await getMultipleAccounts(
+        this.connection,
+        openOrderPks,
       );
-      return mangoAccounts;
-    } else {
-      return await mangoAccountProms;
+
+      const pkToOpenOrdersAccount = {};
+      openOrderAccounts.forEach((openOrdersAccount) => {
+        pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
+          openOrdersAccount;
+      });
+
+      for (const ma of mangoAccounts) {
+        for (let i = 0; i < ma.spotOpenOrders.length; i++) {
+          if (ma.spotOpenOrders[i].toBase58() in pkToOpenOrdersAccount) {
+            ma.spotOpenOrdersAccounts[i] =
+              pkToOpenOrdersAccount[ma.spotOpenOrders[i].toBase58()];
+          }
+        }
+      }
     }
+
+    return mangoAccounts;
   }
 
   async addStubOracle(mangoGroupPk: PublicKey, admin: Account) {
