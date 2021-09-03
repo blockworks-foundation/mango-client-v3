@@ -237,18 +237,16 @@ async function processKeeperTransactions(
       const endIndex = i * batchSize + batchSize;
 
       const updateRootBankTransaction = new Transaction();
-      const batchTokens: TokenConfig[] = [];
       groupIds.tokens.slice(startIndex, endIndex).forEach((token) => {
         updateRootBankTransaction.add(
           makeUpdateRootBankInstruction(
             mangoProgramId,
             mangoGroup.publicKey,
+            mangoGroup.mangoCache,
             token.rootKey,
             token.nodeKeys,
           ),
         );
-
-        batchTokens.push(token);
       });
 
       const updateFundingTransaction = new Transaction();
@@ -268,15 +266,6 @@ async function processKeeperTransactions(
       });
 
       if (updateRootBankTransaction.instructions.length > 0) {
-        updateRootBankTransaction.add(
-          makeCacheRootBankInstruction(
-            mangoProgramId,
-            mangoGroup.publicKey,
-            mangoGroup.mangoCache,
-            batchTokens.map((t) => t.rootKey),
-          ),
-        );
-
         promises.push(
           client.sendTransaction(updateRootBankTransaction, payer, []),
         );

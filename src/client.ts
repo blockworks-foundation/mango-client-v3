@@ -873,14 +873,15 @@ export class MangoClient {
   }
 
   async updateRootBank(
-    mangoGroup: PublicKey,
+    mangoGroup: MangoGroup,
     rootBank: PublicKey,
     nodeBanks: PublicKey[],
     payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const updateRootBanksInstruction = makeUpdateRootBankInstruction(
       this.programId,
-      mangoGroup,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
       rootBank,
       nodeBanks,
     );

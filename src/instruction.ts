@@ -578,11 +578,13 @@ export function makePlaceSpotOrderInstruction(
 export function makeUpdateRootBankInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
   rootBankPk: PublicKey,
   nodeBanks: PublicKey[],
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoCachePk },
     { isSigner: false, isWritable: true, pubkey: rootBankPk },
     ...nodeBanks.map((pubkey) => ({
       isSigner: false,
