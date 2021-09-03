@@ -1754,19 +1754,17 @@ export class MangoClient {
       }),
     );
 
-    if (!includeOpenOrders) {
+    if (includeOpenOrders) {
+      const mangoAccounts = await mangoAccountProms;
+      await Promise.all(
+        mangoAccounts.map((ma) =>
+          ma.loadOpenOrders(this.connection, mangoGroup.dexProgramId),
+        ),
+      );
+      return mangoAccounts;
+    } else {
       return await mangoAccountProms;
     }
-
-    const mangoAccounts = await mangoAccountProms;
-
-    await Promise.all(
-      mangoAccounts.map((ma) =>
-        ma.loadOpenOrders(this.connection, mangoGroup.dexProgramId),
-      ),
-    );
-
-    return mangoAccounts;
   }
 
   async addStubOracle(mangoGroupPk: PublicKey, admin: Account) {
