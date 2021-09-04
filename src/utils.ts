@@ -174,7 +174,7 @@ export async function awaitTransactionSignatureConfirmation(
             }
           }
         })();
-        await sleep(750);
+        await sleep(300);
       }
     })();
   });
