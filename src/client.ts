@@ -965,6 +965,7 @@ export class MangoClient {
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId = 0,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
+    preSendCallback?: () => any,
   ): Promise<TransactionSignature> {
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
 
@@ -1034,7 +1035,13 @@ export class MangoClient {
       );
       transaction.add(consumeInstruction);
     }
-
+    if (preSendCallback) {
+      try {
+        preSendCallback();
+      } catch (e) {
+        console.log(`preSendCallback error ${e}`);
+      }
+    }
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
@@ -1045,6 +1052,7 @@ export class MangoClient {
     perpMarket: PerpMarket,
     order: PerpOrder,
     invalidIdOk = false, // Don't throw error if order is invalid
+    preSendCallback?: () => any,
   ): Promise<TransactionSignature> {
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
@@ -1061,7 +1069,13 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(instruction);
     const additionalSigners = [];
-
+    if (preSendCallback) {
+      try {
+        preSendCallback();
+      } catch (e) {
+        console.log(`preSendCallback error ${e}`);
+      }
+    }
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
@@ -1208,6 +1222,7 @@ export class MangoClient {
     price: number,
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
+    preSendCallback?: () => any,
   ): Promise<TransactionSignature> {
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
@@ -1357,6 +1372,13 @@ export class MangoClient {
         openOrdersKeys[spotMarketIndex - 1].pubkey.toBase58(),
       );
     }
+    if (preSendCallback) {
+      try {
+        preSendCallback();
+      } catch (e) {
+        console.log(`preSendCallback error ${e}`);
+      }
+    }
     const txid = await this.sendTransaction(
       transaction,
       owner,
@@ -1382,6 +1404,7 @@ export class MangoClient {
     owner: Account | WalletAdapter,
     spotMarket: Market,
     order: Order,
+    preSendCallback?: () => any,
   ): Promise<TransactionSignature> {
     const transaction = new Transaction();
     const instruction = makeCancelSpotOrderInstruction(
@@ -1443,7 +1466,13 @@ export class MangoClient {
     transaction.add(settleFundsInstruction);
 
     const additionalSigners = [];
-
+    if (preSendCallback) {
+      try {
+        preSendCallback();
+      } catch (e) {
+        console.log(`preSendCallback error ${e}`);
+      }
+    }
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
