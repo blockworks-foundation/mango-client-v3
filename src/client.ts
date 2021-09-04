@@ -965,7 +965,7 @@ export class MangoClient {
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId = 0,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
-    preSendCallback?: () => any,
+    preSendCallback?: () => any | void,
   ): Promise<TransactionSignature> {
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
 
@@ -1052,7 +1052,7 @@ export class MangoClient {
     perpMarket: PerpMarket,
     order: PerpOrder,
     invalidIdOk = false, // Don't throw error if order is invalid
-    preSendCallback?: () => any,
+    preSendCallback?: () => any | void,
   ): Promise<TransactionSignature> {
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
@@ -1222,7 +1222,7 @@ export class MangoClient {
     price: number,
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
-    preSendCallback?: () => any,
+    preSendCallback?: () => any | void,
   ): Promise<TransactionSignature> {
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
@@ -1404,7 +1404,7 @@ export class MangoClient {
     owner: Account | WalletAdapter,
     spotMarket: Market,
     order: Order,
-    preSendCallback?: () => any,
+    preSendCallback?: () => any | void,
   ): Promise<TransactionSignature> {
     const transaction = new Transaction();
     const instruction = makeCancelSpotOrderInstruction(
