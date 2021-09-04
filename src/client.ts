@@ -195,13 +195,20 @@ export class MangoClient {
     additionalSigners: Account[],
     timeout = 30000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
+    postSignTxCallback?: any,
   ): Promise<TransactionSignature> {
     await this.signTransaction({
       transaction,
       payer,
       signers: additionalSigners,
     });
-
+    if (postSignTxCallback) {
+      try {
+        postSignTxCallback();
+      } catch (e) {
+        console.log(`postSignTxCallback error ${e}`);
+      }
+    }
     const rawTransaction = transaction.serialize();
     const startTime = getUnixTs();
     const txid: TransactionSignature = await this.connection.sendRawTransaction(
@@ -1035,14 +1042,13 @@ export class MangoClient {
       );
       transaction.add(consumeInstruction);
     }
-    if (preSendCallback) {
-      try {
-        preSendCallback();
-      } catch (e) {
-        console.log(`preSendCallback error ${e}`);
-      }
-    }
-    return await this.sendTransaction(transaction, owner, additionalSigners);
+
+    return await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+      preSendCallback,
+    );
   }
 
   async cancelPerpOrder(
@@ -1069,14 +1075,13 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(instruction);
     const additionalSigners = [];
-    if (preSendCallback) {
-      try {
-        preSendCallback();
-      } catch (e) {
-        console.log(`preSendCallback error ${e}`);
-      }
-    }
-    return await this.sendTransaction(transaction, owner, additionalSigners);
+
+    return await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+      preSendCallback,
+    );
   }
 
   /*
@@ -1372,17 +1377,12 @@ export class MangoClient {
         openOrdersKeys[spotMarketIndex - 1].pubkey.toBase58(),
       );
     }
-    if (preSendCallback) {
-      try {
-        preSendCallback();
-      } catch (e) {
-        console.log(`preSendCallback error ${e}`);
-      }
-    }
+
     const txid = await this.sendTransaction(
       transaction,
       owner,
       additionalSigners,
+      preSendCallback,
     );
 
     // update MangoAccount to have new OpenOrders pubkey
@@ -1466,14 +1466,13 @@ export class MangoClient {
     transaction.add(settleFundsInstruction);
 
     const additionalSigners = [];
-    if (preSendCallback) {
-      try {
-        preSendCallback();
-      } catch (e) {
-        console.log(`preSendCallback error ${e}`);
-      }
-    }
-    return await this.sendTransaction(transaction, owner, additionalSigners);
+
+    return await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+      preSendCallback,
+    );
   }
 
   async settleFunds(
