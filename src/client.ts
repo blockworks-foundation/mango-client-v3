@@ -202,6 +202,9 @@ export class MangoClient {
       payer,
       signers: additionalSigners,
     });
+
+    const rawTransaction = transaction.serialize();
+    const startTime = getUnixTs();
     if (postSignTxCallback) {
       try {
         postSignTxCallback();
@@ -209,8 +212,6 @@ export class MangoClient {
         console.log(`postSignTxCallback error ${e}`);
       }
     }
-    const rawTransaction = transaction.serialize();
-    const startTime = getUnixTs();
     const txid: TransactionSignature = await this.connection.sendRawTransaction(
       rawTransaction,
       { skipPreflight: true },

@@ -74,7 +74,6 @@
     "big.js": "^6.1.1",
     "bigint-buffer": "^1.1.5",
     "bn.js": "^5.1.0",
-    "borsh": "https://github.com/defactojob/borsh-js#field-mapper",
     "buffer-layout": "^1.2.1",
     "yargs": "^17.0.1"
   },
