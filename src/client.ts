@@ -2794,7 +2794,6 @@ export class MangoClient {
     perpMarket: PerpMarket,
     owner: Account | WalletAdapter,
     order: PerpOrder,
-    invalidIdOk = false, // Don't throw error if order is invalid
 
     side: 'buy' | 'sell',
     price: number,
@@ -2802,6 +2801,7 @@ export class MangoClient {
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId = 0,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
+    invalidIdOk = false, // Don't throw error if order is invalid
   ): Promise<TransactionSignature> {
 
     const transaction = new Transaction();
