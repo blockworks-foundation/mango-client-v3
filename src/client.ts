@@ -1254,7 +1254,7 @@ export class MangoClient {
 
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
 
-    if (!mangoGroup.rootBankAccounts.length) {
+    if (!mangoGroup.rootBankAccounts.filter((a) => !!a).length) {
       await mangoGroup.loadRootBanks(this.connection);
     }
 
