@@ -743,7 +743,10 @@ export default class MangoAccount {
     lines.push('Spot:');
 
     for (let i = 0; i < mangoGroup.tokens.length; i++) {
-      if (mangoGroup.tokens[i].mint.equals(zeroKey)) {
+      if (
+        mangoGroup.tokens[i].mint.equals(zeroKey) ||
+        (this.deposits[i].eq(ZERO_I80F48) && this.borrows[i].eq(ZERO_I80F48))
+      ) {
         continue;
       }
 
@@ -758,12 +761,12 @@ export default class MangoAccount {
           nativeI80F48ToUi(
             this.deposits[i].mul(cache.rootBankCache[i].depositIndex),
             mangoGroup.tokens[i].decimals,
-          ) +
+          ).toFixed(4) +
           ' / ' +
           nativeI80F48ToUi(
             this.borrows[i].mul(cache.rootBankCache[i].borrowIndex),
             mangoGroup.tokens[i].decimals,
-          ),
+          ).toFixed(4),
       );
     }
     lines.push('Perps:');
