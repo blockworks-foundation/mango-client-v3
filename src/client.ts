@@ -2539,7 +2539,7 @@ export class MangoClient {
   }
 
   /**
-   * Make sure mangoAccount has recent and valid inMarginBasket and spotOpenOrders
+   * Add allowance for orders to be cancelled and replaced in a single transaction
    */
    async modifySpotOrder(
     mangoGroup: MangoGroup,
@@ -2784,5 +2784,114 @@ export class MangoClient {
     );
 
     return txid;
+  }
+
+  
+  async modifyPerpOrder(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    mangoCache: PublicKey,
+    perpMarket: PerpMarket,
+    owner: Account | WalletAdapter,
+    order: PerpOrder,
+    invalidIdOk = false, // Don't throw error if order is invalid
+
+    side: 'buy' | 'sell',
+    price: number,
+    quantity: number,
+    orderType?: 'limit' | 'ioc' | 'postOnly',
+    clientOrderId = 0,
+    bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
+  ): Promise<TransactionSignature> {
+
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
+
+    // START OF CANCEL TX
+    const cancelInstruction = makeCancelPerpOrderInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      order,
+      invalidIdOk,
+    );
+
+    transaction.add(cancelInstruction);
+    // END OF CANCEL TX INSTRUCTION
+
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+
+    // TODO: this will not work for perp markets without spot market
+    const baseTokenInfo = mangoGroup.tokens[marketIndex];
+    const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
+    const baseUnit = Math.pow(10, baseTokenInfo.decimals);
+    const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
+
+    const nativePrice = new BN(price * quoteUnit)
+      .mul(perpMarket.baseLotSize)
+      .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
+    const nativeQuantity = new BN(quantity * baseUnit).div(
+      perpMarket.baseLotSize,
+    );
+
+//    const transaction = new Transaction();
+//    const additionalSigners: Account[] = [];
+
+    const placeInstruction = makePlacePerpOrderInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      mangoCache,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      perpMarket.eventQueue,
+      mangoAccount.spotOpenOrders,
+      nativePrice,
+      nativeQuantity,
+      new BN(clientOrderId),
+      side,
+      orderType,
+    );
+    transaction.add(placeInstruction);
+
+    if (bookSideInfo) {
+      const bookSide = bookSideInfo.data
+        ? new BookSide(
+            side === 'buy' ? perpMarket.asks : perpMarket.bids,
+            perpMarket,
+            BookSideLayout.decode(bookSideInfo.data),
+          )
+        : [];
+      const accounts: Set<string> = new Set();
+      accounts.add(mangoAccount.publicKey.toBase58());
+
+      for (const order of bookSide) {
+        accounts.add(order.owner.toBase58());
+        if (accounts.size >= 10) {
+          break;
+        }
+      }
+
+      const consumeInstruction = makeConsumeEventsInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoGroup.mangoCache,
+        perpMarket.publicKey,
+        perpMarket.eventQueue,
+        Array.from(accounts)
+          .map((s) => new PublicKey(s))
+          .sort(),
+        new BN(4),
+      );
+      transaction.add(consumeInstruction);
+    }
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 }
