@@ -806,7 +806,8 @@ export function makePlacePerpOrderInstruction(
   quantity: BN,
   clientOrderId: BN,
   side: 'buy' | 'sell',
-  orderType?: 'limit' | 'ioc' | 'postOnly',
+  orderType?: 'limit' | 'ioc' | 'postOnly' | 'market',
+  reduceOnly?: boolean,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -830,6 +831,7 @@ export function makePlacePerpOrderInstruction(
       clientOrderId,
       side,
       orderType,
+      reduceOnly: reduceOnly ? reduceOnly : false,
     },
   });
 

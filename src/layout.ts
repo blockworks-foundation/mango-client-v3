@@ -166,7 +166,11 @@ export function sideLayout(span, property?) {
 }
 
 export function orderTypeLayout(property, span) {
-  return new EnumLayout({ limit: 0, ioc: 1, postOnly: 2 }, span, property);
+  return new EnumLayout(
+    { limit: 0, ioc: 1, postOnly: 2, market: 3 },
+    span,
+    property,
+  );
 }
 
 export function selfTradeBehaviorLayout(property) {
@@ -261,6 +265,7 @@ MangoInstructionLayout.addVariant(
     u64('clientOrderId'),
     sideLayout(1, 'side'),
     orderTypeLayout('orderType', 1),
+    bool('reduceOnly'),
   ]),
   'PlacePerpOrder',
 );

@@ -970,10 +970,11 @@ export class MangoClient {
     side: 'buy' | 'sell',
     price: number,
     quantity: number,
-    orderType?: 'limit' | 'ioc' | 'postOnly',
+    orderType?: 'limit' | 'ioc' | 'postOnly' | 'market',
     clientOrderId = 0,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     preSendCallback?: any,
+    reduceOnly?: boolean,
   ): Promise<TransactionSignature> {
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
 
@@ -1009,6 +1010,7 @@ export class MangoClient {
       new BN(clientOrderId),
       side,
       orderType,
+      reduceOnly,
     );
     transaction.add(instruction);
 
