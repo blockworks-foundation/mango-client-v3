@@ -1229,6 +1229,7 @@ export class MangoClient {
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
     preSendCallback?: any,
+    clientId?: BN,
   ): Promise<TransactionSignature> {
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
@@ -1252,6 +1253,7 @@ export class MangoClient {
       throw new Error('invalid price');
     }
     const selfTradeBehavior = 'decrementTake';
+    clientId = clientId ?? new BN(Date.now());
 
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
 
@@ -1368,6 +1370,7 @@ export class MangoClient {
       maxQuoteQuantity,
       selfTradeBehavior,
       orderType,
+      clientId,
     );
     transaction.add(placeOrderInstruction);
 
