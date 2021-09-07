@@ -973,7 +973,6 @@ export class MangoClient {
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId = 0,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
-    preSendCallback?: any,
   ): Promise<TransactionSignature> {
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
 
@@ -1044,12 +1043,7 @@ export class MangoClient {
       transaction.add(consumeInstruction);
     }
 
-    return await this.sendTransaction(
-      transaction,
-      owner,
-      additionalSigners,
-      preSendCallback,
-    );
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
   async cancelPerpOrder(
@@ -1059,7 +1053,6 @@ export class MangoClient {
     perpMarket: PerpMarket,
     order: PerpOrder,
     invalidIdOk = false, // Don't throw error if order is invalid
-    preSendCallback?: any,
   ): Promise<TransactionSignature> {
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
@@ -1077,12 +1070,7 @@ export class MangoClient {
     transaction.add(instruction);
     const additionalSigners = [];
 
-    return await this.sendTransaction(
-      transaction,
-      owner,
-      additionalSigners,
-      preSendCallback,
-    );
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
   /*
@@ -1228,7 +1216,6 @@ export class MangoClient {
     price: number,
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
-    preSendCallback?: any,
     clientId?: BN,
   ): Promise<TransactionSignature> {
     const limitPrice = spotMarket.priceNumberToLots(price);
@@ -1386,7 +1373,6 @@ export class MangoClient {
       transaction,
       owner,
       additionalSigners,
-      preSendCallback,
     );
 
     // update MangoAccount to have new OpenOrders pubkey
@@ -1408,7 +1394,6 @@ export class MangoClient {
     owner: Account | WalletAdapter,
     spotMarket: Market,
     order: Order,
-    preSendCallback?: any,
   ): Promise<TransactionSignature> {
     const transaction = new Transaction();
     const instruction = makeCancelSpotOrderInstruction(
@@ -1471,12 +1456,7 @@ export class MangoClient {
 
     const additionalSigners = [];
 
-    return await this.sendTransaction(
-      transaction,
-      owner,
-      additionalSigners,
-      preSendCallback,
-    );
+    return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
   async settleFunds(
