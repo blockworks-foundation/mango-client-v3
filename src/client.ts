@@ -227,13 +227,13 @@ export class MangoClient {
     let done = false;
     (async () => {
       // TODO - make sure this works well on mainnet
-      await sleep(500);
+      await sleep(1000);
       while (!done && getUnixTs() - startTime < timeout / 1000) {
         console.log(new Date().toUTCString(), ' sending tx ', txid);
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(1000);
+        await sleep(2000);
       }
     })();
 
