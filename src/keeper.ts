@@ -13,7 +13,7 @@ import {
 } from '@solana/web3.js';
 import { getMultipleAccounts, zeroKey } from './utils';
 import configFile from './ids.json';
-import { Cluster, Config, TokenConfig } from './config';
+import { Cluster, Config } from './config';
 import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
