@@ -302,11 +302,12 @@ export class MangoClient {
 
     let done = false;
     (async () => {
+      await sleep(500);
       while (!done && getUnixTs() - startTime < timeout) {
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(300);
+        await sleep(500);
       }
     })();
     try {

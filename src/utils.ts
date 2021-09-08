@@ -104,13 +104,15 @@ export async function awaitTransactionSignatureConfirmation(
   const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] = [
     'finalized',
   ];
+  console.log('confirmLevel = ', confirmLevel);
+
   if (confirmLevel === 'confirmed') {
     confirmLevels.push('confirmed');
   } else if (confirmLevel === 'processed') {
     confirmLevels.push('confirmed');
     confirmLevels.push('processed');
   }
-
+  let listenerId;
   const result = await new Promise((resolve, reject) => {
     (async () => {
       setTimeout(() => {
@@ -122,7 +124,7 @@ export async function awaitTransactionSignatureConfirmation(
         reject({ timeout: true });
       }, timeout);
       try {
-        connection.onSignature(
+        listenerId = connection.onSignature(
           txid,
           (result) => {
             // console.log('WS confirmed', txid, result);
@@ -174,10 +176,11 @@ export async function awaitTransactionSignatureConfirmation(
             }
           }
         })();
-        await sleep(300);
+        await sleep(600);
       }
     })();
   });
+  connection.removeSignatureListener(listenerId);
   done = true;
   return result;
 }
