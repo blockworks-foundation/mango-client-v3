@@ -13,7 +13,7 @@ import {
 } from '@solana/web3.js';
 import { getMultipleAccounts, zeroKey } from './utils';
 import configFile from './ids.json';
-import { Cluster, Config } from './config';
+import { Cluster, Config, TokenConfig } from './config';
 import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
@@ -26,7 +26,7 @@ import { PerpEventQueueLayout } from './layout';
 import { MangoGroup, PerpMarket } from '.';
 import PerpEventQueue from './PerpEventQueue';
 
-const groupName = process.env.GROUP || 'devnet.1';
+const groupName = process.env.GROUP || 'devnet.2';
 const updateCacheInterval = parseInt(
   process.env.UPDATE_CACHE_INTERVAL || '1000',
 );
@@ -242,6 +242,7 @@ async function processKeeperTransactions(
           makeUpdateRootBankInstruction(
             mangoProgramId,
             mangoGroup.publicKey,
+            mangoGroup.mangoCache,
             token.rootKey,
             token.nodeKeys,
           ),

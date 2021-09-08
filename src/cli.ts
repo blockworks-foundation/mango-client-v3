@@ -9,25 +9,25 @@ import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 
 import {
   addPerpMarket,
+  addPythOracle,
   addSpotMarket,
   addStubOracle,
-  addPythOracle,
   addSwitchboardOracle,
   initGroup,
-  setStubOracle,
   listMarket,
   sanityCheck,
+  setStubOracle,
 } from './commands';
 import {
   Cluster,
   Config,
-  GroupConfig,
-  getTokenBySymbol,
   getPerpMarketByBaseSymbol,
+  getTokenBySymbol,
+  GroupConfig,
   PerpMarketConfig,
 } from './config';
 import { MangoClient } from './client';
-import { sleep, throwUndefined, uiToNative } from './utils';
+import { throwUndefined, uiToNative } from './utils';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -475,20 +475,16 @@ yargs(hideBin(process.argv)).command(
         describe: 'the public key of the MangoAccount',
         type: 'string',
       })
-      .option(...clusterDesc)
       .option(...configDesc);
   },
   async (args) => {
     console.log('show', args);
-    const cluster = args.cluster as Cluster;
     const config = readConfig(args.config as string);
-
-    const connection = openConnection(config, cluster);
-
-    const groupConfig = config.getGroup(
-      cluster,
+    const groupConfig = config.getGroupWithName(
       args.group as string,
     ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
 
     const client = new MangoClient(connection, groupConfig.mangoProgramId);
     const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
@@ -499,7 +495,7 @@ yargs(hideBin(process.argv)).command(
 
     const cache = await mangoGroup.loadCache(connection);
 
-    console.log(mangoAccount.toPrettyString(mangoGroup, cache));
+    console.log(mangoAccount.toPrettyString(groupConfig, mangoGroup, cache));
     process.exit(0);
   },
 ).argv;
@@ -610,16 +606,16 @@ yargs(hideBin(process.argv)).command(
     const perpMarketConfig: PerpMarketConfig = throwUndefined(
       getPerpMarketByBaseSymbol(groupConfig, symbol),
     );
-    let perpMarket = await client.getPerpMarket(
+    const perpMarket = await client.getPerpMarket(
       perpMarketConfig.publicKey,
       perpMarketConfig.baseDecimals,
       perpMarketConfig.quoteDecimals,
     );
-    console.log(perpMarket.liquidityMiningInfo.rate.toString());
-    console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
-    console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
-    console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
-    console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
+    // console.log(perpMarket.liquidityMiningInfo.rate.toString());
+    // console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
+    // console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
+    // console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
+    // console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
     let mngoPerPeriod = getNumberOrUndef(args, 'mngo_per_period');
     if (mngoPerPeriod !== undefined) {
       const token = getTokenBySymbol(groupConfig, 'MNGO');
@@ -639,17 +635,17 @@ yargs(hideBin(process.argv)).command(
       getNumberOrUndef(args, 'target_period_length'),
       mngoPerPeriod,
     );
-    await sleep(2000);
-    perpMarket = await client.getPerpMarket(
-      perpMarketConfig.publicKey,
-      perpMarketConfig.baseDecimals,
-      perpMarketConfig.quoteDecimals,
-    );
-    console.log(perpMarket.liquidityMiningInfo.rate.toString());
-    console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
-    console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
-    console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
-    console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
+    // await sleep(2000);
+    // perpMarket = await client.getPerpMarket(
+    //   perpMarketConfig.publicKey,
+    //   perpMarketConfig.baseDecimals,
+    //   perpMarketConfig.quoteDecimals,
+    // );
+    // console.log(perpMarket.liquidityMiningInfo.rate.toString());
+    // console.log(perpMarket.liquidityMiningInfo.mngoPerPeriod.toString());
+    // console.log(perpMarket.liquidityMiningInfo.mngoLeft.toString());
+    // console.log(perpMarket.liquidityMiningInfo.periodStart.toString());
+    // console.log(perpMarket.liquidityMiningInfo.targetPeriodLength.toString());
 
     process.exit(0);
   },

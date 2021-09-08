@@ -102,6 +102,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
+import { getMultipleAccounts } from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -194,6 +195,7 @@ export class MangoClient {
     additionalSigners: Account[],
     timeout = 30000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
+    postSignTxCallback?: any,
   ): Promise<TransactionSignature> {
     await this.signTransaction({
       transaction,
@@ -203,22 +205,35 @@ export class MangoClient {
 
     const rawTransaction = transaction.serialize();
     const startTime = getUnixTs();
+    if (postSignTxCallback) {
+      try {
+        postSignTxCallback();
+      } catch (e) {
+        console.log(`postSignTxCallback error ${e}`);
+      }
+    }
     const txid: TransactionSignature = await this.connection.sendRawTransaction(
       rawTransaction,
       { skipPreflight: true },
     );
-    console.log('Started awaiting confirmation for', txid);
+
+    console.log(
+      'Started awaiting confirmation for',
+      txid,
+      'size:',
+      rawTransaction.length,
+    );
 
     let done = false;
     (async () => {
       // TODO - make sure this works well on mainnet
-      await sleep(2000);
+      await sleep(500);
       while (!done && getUnixTs() - startTime < timeout / 1000) {
         console.log(new Date().toUTCString(), ' sending tx ', txid);
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(2000);
+        await sleep(1000);
       }
     })();
 
@@ -866,14 +881,15 @@ export class MangoClient {
   }
 
   async updateRootBank(
-    mangoGroup: PublicKey,
+    mangoGroup: MangoGroup,
     rootBank: PublicKey,
     nodeBanks: PublicKey[],
     payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const updateRootBanksInstruction = makeUpdateRootBankInstruction(
       this.programId,
-      mangoGroup,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
       rootBank,
       nodeBanks,
     );
@@ -1200,6 +1216,7 @@ export class MangoClient {
     price: number,
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
+    clientId?: BN,
   ): Promise<TransactionSignature> {
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
@@ -1223,10 +1240,11 @@ export class MangoClient {
       throw new Error('invalid price');
     }
     const selfTradeBehavior = 'decrementTake';
+    clientId = clientId ?? new BN(Date.now());
 
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
 
-    if (!mangoGroup.rootBankAccounts.length) {
+    if (!mangoGroup.rootBankAccounts.filter((a) => !!a).length) {
       await mangoGroup.loadRootBanks(this.connection);
     }
 
@@ -1339,6 +1357,7 @@ export class MangoClient {
       maxQuoteQuantity,
       selfTradeBehavior,
       orderType,
+      clientId,
     );
     transaction.add(placeOrderInstruction);
 
@@ -1349,6 +1368,7 @@ export class MangoClient {
         openOrdersKeys[spotMarketIndex - 1].pubkey.toBase58(),
       );
     }
+
     const txid = await this.sendTransaction(
       transaction,
       owner,
@@ -1649,7 +1669,8 @@ export class MangoClient {
       }
     }
 
-    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, []);
+    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+
     const accountsWithPnl = mangoAccounts
       .map((m) => ({
         account: m,
@@ -1739,7 +1760,7 @@ export class MangoClient {
       accountFilters.push(...filters);
     }
 
-    const mangoAccountProms = getFilteredProgramAccounts(
+    const mangoAccounts = await getFilteredProgramAccounts(
       this.connection,
       this.programId,
       accountFilters,
@@ -1754,54 +1775,37 @@ export class MangoClient {
       }),
     );
 
-    if (!includeOpenOrders) {
-      return await mangoAccountProms;
-    }
+    if (includeOpenOrders) {
+      const openOrderPks = mangoAccounts
+        .map((ma) => ma.spotOpenOrders.filter((pk) => !pk.equals(zeroKey)))
+        .flat();
 
-    const ordersFilters = [
-      {
-        memcmp: {
-          offset: OpenOrders.getLayout(mangoGroup.dexProgramId).offsetOf(
-            'owner',
+      const openOrderAccountInfos = await getMultipleAccounts(
+        this.connection,
+        openOrderPks,
+      );
+
+      const openOrders = openOrderAccountInfos.map(
+        ({ publicKey, accountInfo }) =>
+          OpenOrders.fromAccountInfo(
+            publicKey,
+            accountInfo,
+            mangoGroup.dexProgramId,
           ),
-          bytes: mangoGroup.signerKey.toBase58(),
-        },
-      },
-      {
-        dataSize: OpenOrders.getLayout(mangoGroup.dexProgramId).span,
-      },
-    ];
+      );
 
-    const openOrdersProms = getFilteredProgramAccounts(
-      this.connection,
-      mangoGroup.dexProgramId,
-      ordersFilters,
-    ).then((accounts) =>
-      accounts.map(({ publicKey, accountInfo }) =>
-        OpenOrders.fromAccountInfo(
-          publicKey,
-          accountInfo,
-          mangoGroup.dexProgramId,
-        ),
-      ),
-    );
+      const pkToOpenOrdersAccount = {};
+      openOrders.forEach((openOrdersAccount) => {
+        pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
+          openOrdersAccount;
+      });
 
-    const [mangoAccounts, openOrders] = await Promise.all([
-      mangoAccountProms,
-      openOrdersProms,
-    ]);
-
-    const pkToOpenOrdersAccount = {};
-    openOrders.forEach((openOrdersAccount) => {
-      pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
-        openOrdersAccount;
-    });
-
-    for (const ma of mangoAccounts) {
-      for (let i = 0; i < ma.spotOpenOrders.length; i++) {
-        if (ma.spotOpenOrders[i].toBase58() in pkToOpenOrdersAccount) {
-          ma.spotOpenOrdersAccounts[i] =
-            pkToOpenOrdersAccount[ma.spotOpenOrders[i].toBase58()];
+      for (const ma of mangoAccounts) {
+        for (let i = 0; i < ma.spotOpenOrders.length; i++) {
+          if (ma.spotOpenOrders[i].toBase58() in pkToOpenOrdersAccount) {
+            ma.spotOpenOrdersAccounts[i] =
+              pkToOpenOrdersAccount[ma.spotOpenOrders[i].toBase58()];
+          }
         }
       }
     }
