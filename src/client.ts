@@ -1136,11 +1136,11 @@ export class MangoClient {
 
   async addSpotMarket(
     mangoGroup: MangoGroup,
+    oracle: PublicKey,
     spotMarket: PublicKey,
     mint: PublicKey,
     admin: Account,
 
-    marketIndex: number,
     maintLeverage: number,
     initLeverage: number,
     liquidationFee: number,
@@ -1174,6 +1174,7 @@ export class MangoClient {
     const instruction = makeAddSpotMarketInstruction(
       this.programId,
       mangoGroup.publicKey,
+      oracle,
       spotMarket,
       mangoGroup.dexProgramId,
       mint,
@@ -1181,7 +1182,6 @@ export class MangoClient {
       vaultAccount.publicKey,
       rootBankAccountInstruction.account.publicKey,
       admin.publicKey,
-      new BN(marketIndex),
       I80F48.fromNumber(maintLeverage),
       I80F48.fromNumber(initLeverage),
       I80F48.fromNumber(liquidationFee),
@@ -1860,9 +1860,9 @@ export class MangoClient {
 
   async addPerpMarket(
     mangoGroup: MangoGroup,
+    oraclePk: PublicKey,
     mngoMintPk: PublicKey,
     admin: Account,
-    marketIndex: number,
     maintLeverage: number,
     initLeverage: number,
     liquidationFee: number,
@@ -1916,13 +1916,13 @@ export class MangoClient {
     const instruction = await makeAddPerpMarketInstruction(
       this.programId,
       mangoGroup.publicKey,
+      oraclePk,
       makePerpMarketAccountInstruction.account.publicKey,
       makeEventQueueAccountInstruction.account.publicKey,
       makeBidAccountInstruction.account.publicKey,
       makeAskAccountInstruction.account.publicKey,
       mngoVaultAccount.publicKey,
       admin.publicKey,
-      new BN(marketIndex),
       I80F48.fromNumber(maintLeverage),
       I80F48.fromNumber(initLeverage),
       I80F48.fromNumber(liquidationFee),

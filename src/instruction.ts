@@ -414,6 +414,7 @@ export function makeCachePerpMarketInstruction(
 export function makeAddSpotMarketInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
+  oraclePk: PublicKey,
   spotMarketPk: PublicKey,
   serumDexPk: PublicKey,
   mintPk: PublicKey,
@@ -422,7 +423,6 @@ export function makeAddSpotMarketInstruction(
   rootBankPk: PublicKey,
   adminPk: PublicKey,
 
-  marketIndex: BN,
   maintLeverage: I80F48,
   initLeverage: I80F48,
   liquidationFee: I80F48,
@@ -432,6 +432,7 @@ export function makeAddSpotMarketInstruction(
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: oraclePk },
     { isSigner: false, isWritable: false, pubkey: spotMarketPk },
     { isSigner: false, isWritable: false, pubkey: serumDexPk },
     { isSigner: false, isWritable: false, pubkey: mintPk },
@@ -443,7 +444,6 @@ export function makeAddSpotMarketInstruction(
 
   const data = encodeMangoInstruction({
     AddSpotMarket: {
-      marketIndex,
       maintLeverage,
       initLeverage,
       liquidationFee,
@@ -652,13 +652,13 @@ export function makeSetOracleInstruction(
 export function makeAddPerpMarketInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
+  oraclePk: PublicKey,
   perpMarketPk: PublicKey,
   eventQueuePk: PublicKey,
   bidsPk: PublicKey,
   asksPk: PublicKey,
   mngoVaultPk: PublicKey,
   adminPk: PublicKey,
-  marketIndex: BN,
   maintLeverage: I80F48,
   initLeverage: I80F48,
   liquidationFee: I80F48,
@@ -673,6 +673,7 @@ export function makeAddPerpMarketInstruction(
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: oraclePk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
@@ -682,7 +683,6 @@ export function makeAddPerpMarketInstruction(
   ];
   const data = encodeMangoInstruction({
     AddPerpMarket: {
-      marketIndex,
       maintLeverage,
       initLeverage,
       liquidationFee,

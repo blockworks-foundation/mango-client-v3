@@ -57,9 +57,9 @@ export default async function addPerpMarket(
 
   await client.addPerpMarket(
     group,
+    oracleDesc.publicKey,
     mngoMints[groupConfig.cluster],
     payer,
-    marketIndex,
     maintLeverage,
     initLeverage,
     liquidationFee,

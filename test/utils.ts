@@ -502,10 +502,10 @@ export async function addSpotMarketToMangoGroup(
   const liquidationFee = 1 / (2 * maintLeverage);
   await client.addSpotMarket(
     mangoGroup,
+    oraclePk,
     spotMarketPk,
     mint.publicKey,
     payer,
-    marketIndex,
     maintLeverage,
     initLeverage,
     liquidationFee,
