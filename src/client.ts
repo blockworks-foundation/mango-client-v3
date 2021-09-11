@@ -2558,7 +2558,7 @@ export class MangoClient {
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
   ): Promise<TransactionSignature> {
-    // START OF CANCEL TX
+
     const transaction = new Transaction();
 
     const instruction = makeCancelSpotOrderInstruction(
@@ -2620,9 +2620,7 @@ export class MangoClient {
     transaction.add(settleFundsInstruction);
 
     const additionalSigners: Account[] = [];
-    // END OF CANCEL TX
 
-    // START OF PLACE TX
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
 
@@ -2638,6 +2636,7 @@ export class MangoClient {
         .mul(spotMarket.priceNumberToLots(price)),
     );
 
+    // Checks already completed as only price modified
     if (maxBaseQuantity.lte(ZERO_BN)) {
       throw new Error('size too small');
     }
@@ -2646,23 +2645,10 @@ export class MangoClient {
     }
     const selfTradeBehavior = 'decrementTake';
 
-//    const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
-
-//    if (!mangoGroup.rootBankAccounts.length) {
-//      await mangoGroup.loadRootBanks(this.connection);
-//    }
-
-//    const baseRootBank = mangoGroup.rootBankAccounts[spotMarketIndex];
-//    const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
-//    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
-//    const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
-
     if (!baseRootBank || !baseNodeBank || !quoteRootBank || !quoteNodeBank) {
       throw new Error('Invalid or missing banks');
     }
 
-//    const transaction = new Transaction();
-//    const additionalSigners: Account[] = [];
     const openOrdersKeys: { pubkey: PublicKey; isWritable: boolean }[] = [];
 
     // Only pass in open orders if in margin basket or current market index, and
@@ -2722,14 +2708,6 @@ export class MangoClient {
 
       openOrdersKeys.push({ pubkey, isWritable });
     }
-
-//    const dexSigner = await PublicKey.createProgramAddress(
-//      [
-//        spotMarket.publicKey.toBuffer(),
-//        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
-//      ],
-//      spotMarket.programId,
-//    );
 
     const placeOrderInstruction = makePlaceSpotOrderInstruction(
       this.programId,
@@ -2811,7 +2789,6 @@ export class MangoClient {
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
-    // START OF CANCEL TX
     const cancelInstruction = makeCancelPerpOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -2825,11 +2802,9 @@ export class MangoClient {
     );
 
     transaction.add(cancelInstruction);
-    // END OF CANCEL TX INSTRUCTION
 
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
 
-    // TODO: this will not work for perp markets without spot market
     const baseTokenInfo = mangoGroup.tokens[marketIndex];
     const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
     const baseUnit = Math.pow(10, baseTokenInfo.decimals);
@@ -2841,9 +2816,6 @@ export class MangoClient {
     const nativeQuantity = new BN(quantity * baseUnit).div(
       perpMarket.baseLotSize,
     );
-
-//    const transaction = new Transaction();
-//    const additionalSigners: Account[] = [];
 
     const placeInstruction = makePlacePerpOrderInstruction(
       this.programId,
