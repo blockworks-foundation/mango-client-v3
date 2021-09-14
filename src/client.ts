@@ -1561,7 +1561,6 @@ export class MangoClient {
       transaction,
       owner,
       additionalSigners,
-      preSendCallback,
     );
 
     // update MangoAccount to have new OpenOrders pubkey
