@@ -13,7 +13,7 @@ import {
 } from '@solana/web3.js';
 import { getMultipleAccounts, zeroKey } from './utils';
 import configFile from './ids.json';
-import { Cluster, Config, TokenConfig } from './config';
+import { Cluster, Config } from './config';
 import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
@@ -26,9 +26,13 @@ import { PerpEventQueueLayout } from './layout';
 import { MangoGroup, PerpMarket } from '.';
 import PerpEventQueue from './PerpEventQueue';
 
+let lastRootBankCacheUpdate = 0;
 const groupName = process.env.GROUP || 'devnet.2';
 const updateCacheInterval = parseInt(
   process.env.UPDATE_CACHE_INTERVAL || '1000',
+);
+const updateRootBankCacheInterval = parseInt(
+  process.env.UPDATE_ROOT_BANK_CACHE_INTERVAL || '5000',
 );
 const processKeeperInterval = parseInt(
   process.env.PROCESS_KEEPER_INTERVAL || '15000',
@@ -98,20 +102,26 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
     const perpMarkets = mangoGroup.perpMarkets
       .filter((pm) => !pm.isEmpty())
       .map((pm) => pm.perpMarket);
-
+    let nowTs = Date.now();
+    let shouldUpdateRootBankCache = false;
+    if (nowTs - lastRootBankCacheUpdate > updateRootBankCacheInterval) {
+      shouldUpdateRootBankCache = true;
+      lastRootBankCacheUpdate = nowTs;
+    }
     for (let i = 0; i < rootBanks.length / batchSize; i++) {
       const startIndex = i * batchSize;
       const endIndex = i * batchSize + batchSize;
       const cacheTransaction = new Transaction();
-      cacheTransaction.add(
-        makeCacheRootBankInstruction(
-          mangoProgramId,
-          mangoGroup.publicKey,
-          mangoGroup.mangoCache,
-          rootBanks.slice(startIndex, endIndex),
-        ),
-      );
-
+      if (shouldUpdateRootBankCache) {
+        cacheTransaction.add(
+          makeCacheRootBankInstruction(
+            mangoProgramId,
+            mangoGroup.publicKey,
+            mangoGroup.mangoCache,
+            rootBanks.slice(startIndex, endIndex),
+          ),
+        );
+      }
       cacheTransaction.add(
         makeCachePricesInstruction(
           mangoProgramId,

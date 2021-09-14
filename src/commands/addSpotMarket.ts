@@ -27,14 +27,13 @@ export default async function addSpotMarket(
 
   let group = await client.getMangoGroup(groupConfig.publicKey);
   const oracleDesc = getOracleBySymbol(groupConfig, symbol) as OracleConfig;
-  const marketIndex = group.getOracleIndex(oracleDesc.publicKey);
 
   await client.addSpotMarket(
     group,
+    oracleDesc.publicKey,
     spotMarket,
     baseMint,
     payer,
-    marketIndex,
     maintLeverage,
     initLeverage,
     liquidationFee,
@@ -75,7 +74,7 @@ export default async function addSpotMarket(
     baseSymbol: symbol,
     baseDecimals: market['_baseSplTokenDecimals'],
     quoteDecimals: market['_quoteSplTokenDecimals'],
-    marketIndex,
+    marketIndex: tokenIndex,
     bidsKey: market.bidsAddress,
     asksKey: market.asksAddress,
     eventsKey: market['_decoded'].eventQueue,

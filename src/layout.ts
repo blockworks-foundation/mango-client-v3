@@ -173,10 +173,10 @@ export function orderTypeLayout(property, span) {
   );
 }
 
-export function selfTradeBehaviorLayout(property) {
+export function selfTradeBehaviorLayout(property, span) {
   return new EnumLayout(
     { decrementTake: 0, cancelProvide: 1, abortTransaction: 2 },
-    4,
+    span,
     property,
   );
 }
@@ -231,7 +231,7 @@ MangoInstructionLayout.addVariant(
     u64('limitPrice'),
     u64('maxBaseQuantity'),
     u64('maxQuoteQuantity'),
-    selfTradeBehaviorLayout('selfTradeBehavior'),
+    selfTradeBehaviorLayout('selfTradeBehavior', 4),
     orderTypeLayout('orderType', 4),
     u64('clientId'),
     u16('limit'),
@@ -390,6 +390,20 @@ MangoInstructionLayout.addVariant(
   'CancelAllPerpOrders',
 );
 MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
+MangoInstructionLayout.addVariant(
+  42,
+  struct([
+    u64('limitPrice'),
+    u64('maxBaseQuantity'),
+    u64('maxQuoteQuantity'),
+    u64('clientOrderId'),
+    selfTradeBehaviorLayout('selfTradeBehavior', 1),
+    sideLayout(4, 'side'),
+    orderTypeLayout('orderType', 4),
+    u16('limit'),
+  ]),
+  'PlaceSpotOrder2',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
