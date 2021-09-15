@@ -400,7 +400,7 @@ MangoInstructionLayout.addVariant(
     sideLayout(1, 'side'),
     selfTradeBehaviorLayout('selfTradeBehavior', 1),
     orderTypeLayout('orderType', 1),
-    u16('limit'),
+    u8('limit'),
   ]),
   'PlaceSpotOrder2',
 );
