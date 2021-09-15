@@ -644,14 +644,14 @@ export function makePlaceSpotOrder2Instruction(
 
   const data = encodeMangoInstruction({
     PlaceSpotOrder2: {
+      side,
       limitPrice,
       maxBaseQuantity,
       maxQuoteQuantity,
-      clientOrderId,
-      side,
       selfTradeBehavior,
       orderType,
-      limit: 255,
+      clientOrderId,
+      limit: 65535,
     },
   });
 
