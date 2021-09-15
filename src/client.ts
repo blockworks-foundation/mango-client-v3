@@ -1405,7 +1405,7 @@ export class MangoClient {
     price: number,
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
-    clientOrderId?: any,
+    clientOrderId = 0,
   ): Promise<TransactionSignature> {
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
@@ -1545,7 +1545,7 @@ export class MangoClient {
       maxQuoteQuantity,
       selfTradeBehavior,
       orderType,
-      clientOrderId,
+      new BN(clientOrderId),
     );
     transaction.add(placeOrderInstruction);
 

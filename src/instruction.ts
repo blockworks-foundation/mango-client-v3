@@ -647,7 +647,7 @@ export function makePlaceSpotOrder2Instruction(
       limitPrice,
       maxBaseQuantity,
       maxQuoteQuantity,
-      clientOrderId: clientOrderId ? clientOrderId : new BN(0),
+      clientOrderId,
       side,
       selfTradeBehavior,
       orderType,
