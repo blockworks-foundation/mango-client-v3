@@ -609,7 +609,7 @@ export function makePlaceSpotOrder2Instruction(
   maxQuoteQuantity: BN,
   selfTradeBehavior: string,
   orderType?: 'limit' | 'ioc' | 'postOnly',
-  clientOrderId?: number,
+  clientOrderId?: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -647,7 +647,7 @@ export function makePlaceSpotOrder2Instruction(
       limitPrice,
       maxBaseQuantity,
       maxQuoteQuantity,
-      clientOrderId,
+      clientOrderId: clientOrderId ? clientOrderId : new BN(0),
       side,
       selfTradeBehavior,
       orderType,
