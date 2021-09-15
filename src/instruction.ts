@@ -651,7 +651,7 @@ export function makePlaceSpotOrder2Instruction(
       side,
       selfTradeBehavior,
       orderType,
-      limit: new BN(5),
+      limit: 255,
     },
   });
 
