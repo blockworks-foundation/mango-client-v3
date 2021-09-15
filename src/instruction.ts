@@ -648,10 +648,10 @@ export function makePlaceSpotOrder2Instruction(
       maxBaseQuantity,
       maxQuoteQuantity,
       clientOrderId,
-      selfTradeBehavior,
       side,
+      selfTradeBehavior,
       orderType,
-      limit: 65535,
+      limit: 255,
     },
   });
 
