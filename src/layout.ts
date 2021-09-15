@@ -397,10 +397,10 @@ MangoInstructionLayout.addVariant(
     u64('maxBaseQuantity'),
     u64('maxQuoteQuantity'),
     u64('clientOrderId'),
+    sideLayout(1, 'side'),
     selfTradeBehaviorLayout('selfTradeBehavior', 1),
-    sideLayout(4, 'side'),
-    orderTypeLayout('orderType', 4),
-    u16('limit'),
+    orderTypeLayout('orderType', 1),
+    u8('limit'),
   ]),
   'PlaceSpotOrder2',
 );
