@@ -1555,6 +1555,31 @@ export function makeForceSettleQuotePositionsInstruction(
   });
 }
 
+export function makeInitAdvancedOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  advancedOrdersPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+  ];
+
+  const data = encodeMangoInstruction({
+    InitAdvancedOrders: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
 export function makeAddPerpTriggerOrderInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
@@ -1566,12 +1591,12 @@ export function makeAddPerpTriggerOrderInstruction(
   openOrders: PublicKey[],
   price: BN,
   quantity: BN,
-  clientOrderId: BN,
   side: 'buy' | 'sell',
   triggerCondition: 'above' | 'below',
   triggerPrice: I80F48,
   orderType?: 'limit' | 'ioc' | 'postOnly',
   reduceOnly?: boolean,
+  clientOrderId?: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },

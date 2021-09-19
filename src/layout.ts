@@ -714,7 +714,10 @@ export const MangoAccountLayout = struct([
   bool('beingLiquidated'),
   bool('isBankrupt'),
   seq(u8(), INFO_LEN, 'info'),
-  seq(u8(), 70, 'padding'),
+
+  publicKeyLayout('advanceOrders'),
+
+  seq(u8(), 38, 'padding'),
 ]);
 
 export const RootBankLayout = struct([

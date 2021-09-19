@@ -58,6 +58,7 @@ export default class MangoAccount {
   beingLiquidated!: boolean;
   isBankrupt!: boolean;
   info!: number[];
+  advancedOrders!: PublicKey;
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;

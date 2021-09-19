@@ -46,6 +46,7 @@ import {
   makeAddMangoAccountInfoInstruction,
   makeAddOracleInstruction,
   makeAddPerpMarketInstruction,
+  makeAddPerpTriggerOrderInstruction,
   makeAddSpotMarketInstruction,
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
@@ -102,7 +103,11 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import { getMultipleAccounts, makePlaceSpotOrder2Instruction } from '.';
+import {
+  getMultipleAccounts,
+  makeInitAdvancedOrdersInstruction,
+  makePlaceSpotOrder2Instruction,
+} from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -2733,7 +2738,7 @@ export class MangoClient {
   /**
    * Add allowance for orders to be cancelled and replaced in a single transaction
    */
-   async modifySpotOrder(
+  async modifySpotOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     mangoCache: PublicKey,
@@ -2746,7 +2751,6 @@ export class MangoClient {
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
   ): Promise<TransactionSignature> {
-
     const transaction = new Transaction();
 
     const instruction = makeCancelSpotOrderInstruction(
@@ -2956,7 +2960,6 @@ export class MangoClient {
     return txid;
   }
 
-  
   async modifyPerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -2973,7 +2976,6 @@ export class MangoClient {
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     invalidIdOk = false, // Don't throw error if order is invalid
   ): Promise<TransactionSignature> {
-
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
@@ -3055,6 +3057,81 @@ export class MangoClient {
       );
       transaction.add(consumeInstruction);
     }
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async addPerpTriggerOrder(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    owner: Account | WalletAdapter,
+
+    side: 'buy' | 'sell',
+    price: number,
+    quantity: number,
+    triggerCondition: 'above' | 'below',
+    triggerPrice: number,
+    orderType?: 'limit' | 'ioc' | 'postOnly',
+    reduceOnly?: boolean,
+    clientOrderId?: number,
+  ): Promise<TransactionSignature> {
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
+
+    let advancedOrders = mangoAccount.advancedOrders;
+
+    if (!advancedOrders || advancedOrders.equals(new PublicKey(''))) {
+      [advancedOrders] = await PublicKey.findProgramAddress(
+        [mangoAccount.publicKey.toBytes()],
+        this.programId,
+      );
+
+      transaction.add(
+        makeInitAdvancedOrdersInstruction(
+          this.programId,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
+          owner.publicKey,
+          advancedOrders,
+        ),
+      );
+    }
+
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+
+    const baseTokenInfo = mangoGroup.tokens[marketIndex];
+    const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
+    const baseUnit = Math.pow(10, baseTokenInfo.decimals);
+    const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
+
+    const nativePrice = new BN(price * quoteUnit)
+      .mul(perpMarket.baseLotSize)
+      .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
+    const nativeQuantity = new BN(quantity * baseUnit).div(
+      perpMarket.baseLotSize,
+    );
+
+    transaction.add(
+      makeAddPerpTriggerOrderInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoAccount.publicKey,
+        owner.publicKey,
+        advancedOrders,
+        mangoGroup.mangoCache,
+        perpMarket.publicKey,
+        mangoAccount.spotOpenOrders,
+        nativePrice,
+        nativeQuantity,
+        side,
+        triggerCondition,
+        I80F48.fromNumber(triggerPrice),
+        orderType,
+        reduceOnly,
+        new BN(clientOrderId ?? Date.now()),
+      ),
+    );
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
