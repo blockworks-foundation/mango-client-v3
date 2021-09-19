@@ -166,13 +166,17 @@ export function sideLayout(span, property?) {
 }
 
 export function orderTypeLayout(property, span) {
-  return new EnumLayout({ limit: 0, ioc: 1, postOnly: 2 }, span, property);
+  return new EnumLayout(
+    { limit: 0, ioc: 1, postOnly: 2, market: 3 },
+    span,
+    property,
+  );
 }
 
-export function selfTradeBehaviorLayout(property) {
+export function selfTradeBehaviorLayout(property, span) {
   return new EnumLayout(
     { decrementTake: 0, cancelProvide: 1, abortTransaction: 2 },
-    4,
+    span,
     property,
   );
 }
@@ -226,7 +230,7 @@ MangoInstructionLayout.addVariant(
     u64('limitPrice'),
     u64('maxBaseQuantity'),
     u64('maxQuoteQuantity'),
-    selfTradeBehaviorLayout('selfTradeBehavior'),
+    selfTradeBehaviorLayout('selfTradeBehavior', 4),
     orderTypeLayout('orderType', 4),
     u64('clientId'),
     u16('limit'),
@@ -259,6 +263,7 @@ MangoInstructionLayout.addVariant(
     u64('clientOrderId'),
     sideLayout(1, 'side'),
     orderTypeLayout('orderType', 1),
+    bool('reduceOnly'),
   ]),
   'PlacePerpOrder',
 );
@@ -391,9 +396,9 @@ MangoInstructionLayout.addVariant(
     u64('limitPrice'),
     u64('maxBaseQuantity'),
     u64('maxQuoteQuantity'),
-    selfTradeBehaviorLayout('selfTradeBehavior'),
+    selfTradeBehaviorLayout('selfTradeBehavior', 4),
     orderTypeLayout('orderType', 4),
-    u64('clientId'),
+    u64('clientOrderId'),
     u16('limit'),
   ]),
   'PlaceSpotOrder2',
