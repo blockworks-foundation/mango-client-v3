@@ -383,6 +383,40 @@ MangoInstructionLayout.addVariant(
   'CancelAllPerpOrders',
 );
 MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
+MangoInstructionLayout.addVariant(41, struct([]), 'InitAdvancedOrders');
+MangoInstructionLayout.addVariant(
+  42,
+  struct([
+    sideLayout(4, 'side'),
+    u64('limitPrice'),
+    u64('maxBaseQuantity'),
+    u64('maxQuoteQuantity'),
+    selfTradeBehaviorLayout('selfTradeBehavior'),
+    orderTypeLayout('orderType', 4),
+    u64('clientId'),
+    u16('limit'),
+  ]),
+  'PlaceSpotOrder2',
+);
+MangoInstructionLayout.addVariant(
+  43,
+  struct([
+    orderTypeLayout('orderType', 1),
+    sideLayout(1, 'side'),
+    u8('triggerCondition'),
+    u8('reduceOnly'),
+    u64('clientOrderId'),
+    u64('price'),
+    u64('quantity'),
+    I80F48Layout('triggerPrice'),
+  ]),
+  'AddPerpTriggerOrder',
+);
+MangoInstructionLayout.addVariant(
+  44,
+  struct([u8('advancedOrderId')]),
+  'ExecutePerpTriggerOrder',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
