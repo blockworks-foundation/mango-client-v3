@@ -217,7 +217,7 @@
         {
           "name": "COPE/USDC",
           "publicKey": "6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk",
-          "baseSymbol": "RAY",
+          "baseSymbol": "COPE",
           "baseDecimals": 6,
           "quoteDecimals": 6,
           "marketIndex": 7,
