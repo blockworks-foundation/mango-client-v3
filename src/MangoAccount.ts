@@ -13,7 +13,6 @@ import {
   getWeights,
   nativeI80F48ToUi,
   nativeToUi,
-  promiseUndef,
   splitOpenOrders,
   zeroKey,
 } from './utils';
@@ -209,7 +208,7 @@ export default class MangoAccount {
       const spotVal = this.getSpotVal(mangoGroup, mangoCache, i, assetWeight);
       assetsVal = assetsVal.add(spotVal);
 
-      const price = mangoGroup.getPrice(i, mangoCache);
+      const price = mangoCache.priceCache[i].price;
       const perpsUiAssetVal = nativeI80F48ToUi(
         this.perpAccounts[i].getAssetVal(
           mangoGroup.perpMarkets[i],
@@ -243,7 +242,7 @@ export default class MangoAccount {
 
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       let liabWeight = ONE_I80F48;
-      const price = mangoGroup.getPrice(i, mangoCache);
+      const price = mangoCache.priceCache[i].price;
       if (healthType === 'Maint') {
         liabWeight = mangoGroup.spotMarkets[i].maintLiabWeight;
       } else if (healthType === 'Init') {
