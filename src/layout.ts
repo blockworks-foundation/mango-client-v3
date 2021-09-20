@@ -393,14 +393,14 @@ MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
 MangoInstructionLayout.addVariant(
   42,
   struct([
+    sideLayout(4, 'side'),
     u64('limitPrice'),
     u64('maxBaseQuantity'),
     u64('maxQuoteQuantity'),
+    selfTradeBehaviorLayout('selfTradeBehavior', 4),
+    orderTypeLayout('orderType', 4),
     u64('clientOrderId'),
-    sideLayout(1, 'side'),
-    selfTradeBehaviorLayout('selfTradeBehavior', 1),
-    orderTypeLayout('orderType', 1),
-    u8('limit'),
+    u16('limit'),
   ]),
   'PlaceSpotOrder2',
 );

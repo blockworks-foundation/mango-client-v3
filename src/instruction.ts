@@ -609,7 +609,7 @@ export function makePlaceSpotOrder2Instruction(
   maxQuoteQuantity: BN,
   selfTradeBehavior: string,
   orderType?: 'limit' | 'ioc' | 'postOnly',
-  clientOrderId?: number,
+  clientOrderId?: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -644,14 +644,14 @@ export function makePlaceSpotOrder2Instruction(
 
   const data = encodeMangoInstruction({
     PlaceSpotOrder2: {
+      side,
       limitPrice,
       maxBaseQuantity,
       maxQuoteQuantity,
-      clientOrderId,
-      side,
       selfTradeBehavior,
       orderType,
-      limit: new BN(5),
+      clientOrderId,
+      limit: 65535,
     },
   });
 
