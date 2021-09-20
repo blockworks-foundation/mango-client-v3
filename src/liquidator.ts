@@ -25,8 +25,8 @@ import { Orderbook } from '@project-serum/serum/lib/market';
 import axios from 'axios';
 
 const interval = parseInt(process.env.INTERVAL || '3500');
-const refreshAccountsInterval = parseInt(process.env.INTERVAL || '120000');
-const refreshWebsocketInterval = parseInt(process.env.INTERVAL || '300000');
+const refreshAccountsInterval = parseInt(process.env.INTERVAL_ACCOUNTS || '120000');
+const refreshWebsocketInterval = parseInt(process.env.INTERVAL_WEBSOCKET || '300000');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -44,7 +44,7 @@ const mangoGroupKey = groupIds.publicKey;
 const payer = new Account(
   JSON.parse(
     fs.readFileSync(
-      process.env.KEYPAIR || os.homedir() + '/.config/solana/my-mainnet.json',
+      process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
       'utf-8',
     ),
   ),
