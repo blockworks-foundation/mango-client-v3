@@ -217,7 +217,7 @@ export default class MangoAccount {
           mangoCache.perpMarketCache[i].shortFunding,
           mangoCache.perpMarketCache[i].longFunding,
         ),
-        mangoGroup.tokens[QUOTE_INDEX].decimals,
+        mangoGroup.tokens[i].decimals,
       );
 
       assetsVal = assetsVal.add(perpsUiAssetVal);
@@ -263,7 +263,7 @@ export default class MangoAccount {
           mangoCache.perpMarketCache[i].shortFunding,
           mangoCache.perpMarketCache[i].longFunding,
         ),
-        mangoGroup.tokens[QUOTE_INDEX].decimals,
+        mangoGroup.tokens[i].decimals,
       );
 
       liabsVal = liabsVal.add(perpsUiLiabsVal);
