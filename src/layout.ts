@@ -389,9 +389,9 @@ MangoInstructionLayout.addVariant(
   struct([u8('limit')]),
   'CancelAllPerpOrders',
 );
-MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
+
 MangoInstructionLayout.addVariant(
-  42,
+  41,
   struct([
     sideLayout(4, 'side'),
     u64('limitPrice'),
