@@ -2729,4 +2729,333 @@ export class MangoClient {
 
     return await this.sendTransaction(transaction, payer, []);
   }
+
+  /**
+   * Add allowance for orders to be cancelled and replaced in a single transaction
+   */
+   async modifySpotOrder(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    mangoCache: PublicKey,
+    spotMarket: Market,
+    owner: Account | WalletAdapter,
+    order: Order,
+
+    side: 'buy' | 'sell',
+    price: number,
+    size: number,
+    orderType?: 'limit' | 'ioc' | 'postOnly',
+  ): Promise<TransactionSignature> {
+
+    const transaction = new Transaction();
+
+    const instruction = makeCancelSpotOrderInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      owner.publicKey,
+      mangoAccount.publicKey,
+      spotMarket.programId,
+      spotMarket.publicKey,
+      spotMarket['_decoded'].bids,
+      spotMarket['_decoded'].asks,
+      order.openOrdersAddress,
+      mangoGroup.signerKey,
+      spotMarket['_decoded'].eventQueue,
+      order,
+    );
+    transaction.add(instruction);
+
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
+    const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
+    if (!mangoGroup.rootBankAccounts.length) {
+      await mangoGroup.loadRootBanks(this.connection);
+    }
+    const baseRootBank = mangoGroup.rootBankAccounts[spotMarketIndex];
+    const baseNodeBank = baseRootBank?.nodeBankAccounts[0];
+    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
+    const quoteNodeBank = quoteRootBank?.nodeBankAccounts[0];
+
+    if (!baseNodeBank || !quoteNodeBank) {
+      throw new Error('Invalid or missing node banks');
+    }
+    const settleFundsInstruction = makeSettleFundsInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      owner.publicKey,
+      mangoAccount.publicKey,
+      spotMarket.programId,
+      spotMarket.publicKey,
+      mangoAccount.spotOpenOrders[spotMarketIndex],
+      mangoGroup.signerKey,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      mangoGroup.tokens[spotMarketIndex].rootBank,
+      baseNodeBank.publicKey,
+      mangoGroup.tokens[QUOTE_INDEX].rootBank,
+      quoteNodeBank.publicKey,
+      baseNodeBank.vault,
+      quoteNodeBank.vault,
+      dexSigner,
+    );
+    transaction.add(settleFundsInstruction);
+
+    const additionalSigners: Account[] = [];
+
+    const limitPrice = spotMarket.priceNumberToLots(price);
+    const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
+
+    // TODO implement srm vault fee discount
+    // const feeTier = getFeeTier(0, nativeToUi(mangoGroup.nativeSrm || 0, SRM_DECIMALS));
+    const feeTier = getFeeTier(0, nativeToUi(0, 0));
+    const rates = getFeeRates(feeTier);
+    const maxQuoteQuantity = new BN(
+      spotMarket['_decoded'].quoteLotSize.toNumber() * (1 + rates.taker),
+    ).mul(
+      spotMarket
+        .baseSizeNumberToLots(size)
+        .mul(spotMarket.priceNumberToLots(price)),
+    );
+
+    // Checks already completed as only price modified
+    if (maxBaseQuantity.lte(ZERO_BN)) {
+      throw new Error('size too small');
+    }
+    if (limitPrice.lte(ZERO_BN)) {
+      throw new Error('invalid price');
+    }
+    const selfTradeBehavior = 'decrementTake';
+
+    if (!baseRootBank || !baseNodeBank || !quoteRootBank || !quoteNodeBank) {
+      throw new Error('Invalid or missing banks');
+    }
+
+    const openOrdersKeys: { pubkey: PublicKey; isWritable: boolean }[] = [];
+
+    // Only pass in open orders if in margin basket or current market index, and
+    // the only writable account should be OpenOrders for current market index
+    for (let i = 0; i < mangoAccount.spotOpenOrders.length; i++) {
+      let pubkey = zeroKey;
+      let isWritable = false;
+
+      if (i === spotMarketIndex) {
+        isWritable = true;
+
+        if (mangoAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)) {
+          // open orders missing for this market; create a new one now
+          const openOrdersSpace = OpenOrders.getLayout(
+            mangoGroup.dexProgramId,
+          ).span;
+
+          const openOrdersLamports =
+            await this.connection.getMinimumBalanceForRentExemption(
+              openOrdersSpace,
+              'processed',
+            );
+
+          const accInstr = await createAccountInstruction(
+            this.connection,
+            owner.publicKey,
+            openOrdersSpace,
+            mangoGroup.dexProgramId,
+            openOrdersLamports,
+          );
+
+          const initOpenOrders = makeInitSpotOpenOrdersInstruction(
+            this.programId,
+            mangoGroup.publicKey,
+            mangoAccount.publicKey,
+            owner.publicKey,
+            mangoGroup.dexProgramId,
+            accInstr.account.publicKey,
+            spotMarket.publicKey,
+            mangoGroup.signerKey,
+          );
+
+          const initTx = new Transaction();
+
+          initTx.add(accInstr.instruction);
+          initTx.add(initOpenOrders);
+
+          await this.sendTransaction(initTx, owner, [accInstr.account]);
+
+          pubkey = accInstr.account.publicKey;
+        } else {
+          pubkey = mangoAccount.spotOpenOrders[i];
+        }
+      } else if (mangoAccount.inMarginBasket[i]) {
+        pubkey = mangoAccount.spotOpenOrders[i];
+      }
+
+      openOrdersKeys.push({ pubkey, isWritable });
+    }
+
+    const placeOrderInstruction = makePlaceSpotOrderInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      mangoCache,
+      spotMarket.programId,
+      spotMarket.publicKey,
+      spotMarket['_decoded'].bids,
+      spotMarket['_decoded'].asks,
+      spotMarket['_decoded'].requestQueue,
+      spotMarket['_decoded'].eventQueue,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      baseRootBank.publicKey,
+      baseNodeBank.publicKey,
+      baseNodeBank.vault,
+      quoteRootBank.publicKey,
+      quoteNodeBank.publicKey,
+      quoteNodeBank.vault,
+      mangoGroup.signerKey,
+      dexSigner,
+      mangoGroup.srmVault, // TODO: choose msrm vault if it has any deposits
+      openOrdersKeys,
+      side,
+      limitPrice,
+      maxBaseQuantity,
+      maxQuoteQuantity,
+      selfTradeBehavior,
+      orderType,
+    );
+    transaction.add(placeOrderInstruction);
+
+    if (spotMarketIndex > 0) {
+      console.log(
+        spotMarketIndex - 1,
+        mangoAccount.spotOpenOrders[spotMarketIndex - 1].toBase58(),
+        openOrdersKeys[spotMarketIndex - 1].pubkey.toBase58(),
+      );
+    }
+    const txid = await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+    );
+
+    // update MangoAccount to have new OpenOrders pubkey
+    mangoAccount.spotOpenOrders[spotMarketIndex] =
+      openOrdersKeys[spotMarketIndex].pubkey;
+    mangoAccount.inMarginBasket[spotMarketIndex] = true;
+    console.log(
+      spotMarketIndex,
+      mangoAccount.spotOpenOrders[spotMarketIndex].toBase58(),
+      openOrdersKeys[spotMarketIndex].pubkey.toBase58(),
+    );
+
+    return txid;
+  }
+
+  
+  async modifyPerpOrder(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    mangoCache: PublicKey,
+    perpMarket: PerpMarket,
+    owner: Account | WalletAdapter,
+    order: PerpOrder,
+
+    side: 'buy' | 'sell',
+    price: number,
+    quantity: number,
+    orderType?: 'limit' | 'ioc' | 'postOnly',
+    clientOrderId = 0,
+    bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
+    invalidIdOk = false, // Don't throw error if order is invalid
+  ): Promise<TransactionSignature> {
+
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
+
+    const cancelInstruction = makeCancelPerpOrderInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      order,
+      invalidIdOk,
+    );
+
+    transaction.add(cancelInstruction);
+
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+
+    const baseTokenInfo = mangoGroup.tokens[marketIndex];
+    const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
+    const baseUnit = Math.pow(10, baseTokenInfo.decimals);
+    const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
+
+    const nativePrice = new BN(price * quoteUnit)
+      .mul(perpMarket.baseLotSize)
+      .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
+    const nativeQuantity = new BN(quantity * baseUnit).div(
+      perpMarket.baseLotSize,
+    );
+
+    const placeInstruction = makePlacePerpOrderInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      mangoCache,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      perpMarket.eventQueue,
+      mangoAccount.spotOpenOrders,
+      nativePrice,
+      nativeQuantity,
+      new BN(clientOrderId),
+      side,
+      orderType,
+    );
+    transaction.add(placeInstruction);
+
+    if (bookSideInfo) {
+      const bookSide = bookSideInfo.data
+        ? new BookSide(
+            side === 'buy' ? perpMarket.asks : perpMarket.bids,
+            perpMarket,
+            BookSideLayout.decode(bookSideInfo.data),
+          )
+        : [];
+      const accounts: Set<string> = new Set();
+      accounts.add(mangoAccount.publicKey.toBase58());
+
+      for (const order of bookSide) {
+        accounts.add(order.owner.toBase58());
+        if (accounts.size >= 10) {
+          break;
+        }
+      }
+
+      const consumeInstruction = makeConsumeEventsInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoGroup.mangoCache,
+        perpMarket.publicKey,
+        perpMarket.eventQueue,
+        Array.from(accounts)
+          .map((s) => new PublicKey(s))
+          .sort(),
+        new BN(4),
+      );
+      transaction.add(consumeInstruction);
+    }
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
 }

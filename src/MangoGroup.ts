@@ -127,6 +127,12 @@ export default class MangoGroup {
     );
   }
 
+  getPriceNative(tokenIndex: number, mangoCache: MangoCache): I80F48 {
+    if (tokenIndex === QUOTE_INDEX) return ONE_I80F48;
+
+    return mangoCache.priceCache[tokenIndex].price;
+  }
+
   getUiTotalDeposit(tokenIndex: number): I80F48 {
     const rootBank = this.rootBankAccounts[tokenIndex];
     if (!rootBank)

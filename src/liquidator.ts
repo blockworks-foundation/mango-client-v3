@@ -25,8 +25,8 @@ import { Orderbook } from '@project-serum/serum/lib/market';
 import axios from 'axios';
 
 const interval = parseInt(process.env.INTERVAL || '3500');
-const refreshAccountsInterval = parseInt(process.env.INTERVAL || '120000');
-const refreshWebsocketInterval = parseInt(process.env.INTERVAL || '300000');
+const refreshAccountsInterval = parseInt(process.env.INTERVAL_ACCOUNTS || '120000');
+const refreshWebsocketInterval = parseInt(process.env.INTERVAL_WEBSOCKET || '300000');
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -44,7 +44,7 @@ const mangoGroupKey = groupIds.publicKey;
 const payer = new Account(
   JSON.parse(
     fs.readFileSync(
-      process.env.KEYPAIR || os.homedir() + '/.config/solana/my-mainnet.json',
+      process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
       'utf-8',
     ),
   ),
@@ -443,11 +443,14 @@ async function liquidateSpot(
   const assetRootBank = rootBanks[maxNetIndex];
 
   if (assetRootBank && liabRootBank) {
-    const maxLiabTransfer = liqee.getNativeBorrow(liabRootBank, minNetIndex);
+    const liqorInitHealth = liqor.getHealth(mangoGroup, cache, 'Init');
+    const liabAssetWeight = mangoGroup.spotMarkets[minNetIndex] ? mangoGroup.spotMarkets[minNetIndex].initAssetWeight : ONE_I80F48;
+    const assetAssetWeight = mangoGroup.spotMarkets[maxNetIndex] ? mangoGroup.spotMarkets[maxNetIndex].initAssetWeight : ONE_I80F48;
+    const maxLiabTransfer = liqorInitHealth.div(mangoGroup.getPriceNative(minNetIndex, cache).mul(liabAssetWeight.sub(assetAssetWeight).abs()));
+
     if (liqee.isBankrupt) {
       console.log('Bankrupt account', liqee.publicKey.toBase58());
       const quoteRootBank = rootBanks[QUOTE_INDEX];
-      const maxLiabTransfer = liqee.getNativeBorrow(liabRootBank, minNetIndex);
       if (quoteRootBank) {
         await client.resolveTokenBankruptcy(
           mangoGroup,
@@ -461,6 +464,7 @@ async function liquidateSpot(
         await liqee.reload(connection, mangoGroup.dexProgramId);
       }
     } else {
+      console.log(`Liquidating max ${maxLiabTransfer.toString()}/${liqee.getNativeBorrow(liabRootBank, minNetIndex)} of liab ${minNetIndex}, asset ${maxNetIndex}`)
       await client.liquidateTokenAndToken(
         mangoGroup,
         liqee,
@@ -475,10 +479,6 @@ async function liquidateSpot(
       if (liqee.isBankrupt) {
         console.log('Bankrupt account', liqee.publicKey.toBase58());
         const quoteRootBank = rootBanks[QUOTE_INDEX];
-        const maxLiabTransfer = liqee.getNativeBorrow(
-          liabRootBank,
-          minNetIndex,
-        );
         if (quoteRootBank) {
           await client.resolveTokenBankruptcy(
             mangoGroup,
@@ -512,7 +512,7 @@ async function liquidatePerps(
       const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
       const perpAccount = liqee.perpAccounts[marketIndex];
       const perpMarketCache = cache.perpMarketCache[marketIndex];
-      const price = mangoGroup.getPrice(marketIndex, cache);
+      const price = mangoGroup.getPriceNative(marketIndex, cache);
       const perpHealth = perpAccount.getHealth(
         perpMarketInfo,
         price,

@@ -206,7 +206,6 @@ MangoInstructionLayout.addVariant(
 MangoInstructionLayout.addVariant(
   4,
   struct([
-    u64('marketIndex'),
     I80F48Layout('maintLeverage'),
     I80F48Layout('initLeverage'),
     I80F48Layout('liquidationFee'),
@@ -242,7 +241,6 @@ MangoInstructionLayout.addVariant(10, struct([]), 'AddOracle');
 MangoInstructionLayout.addVariant(
   11,
   struct([
-    u64('marketIndex'),
     I80F48Layout('maintLeverage'),
     I80F48Layout('initLeverage'),
     I80F48Layout('liquidationFee'),
