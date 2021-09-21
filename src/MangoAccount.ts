@@ -22,6 +22,7 @@ import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
 import { EOL } from 'os';
 import {
+  AdvancedOrdersLayout,
   getMarketByPublicKey,
   getMultipleAccounts,
   getTokenByMint,
@@ -57,6 +58,9 @@ export default class MangoAccount {
   beingLiquidated!: boolean;
   isBankrupt!: boolean;
   info!: number[];
+
+  advancedOrdersPk!: PublicKey;
+  advancedOrders!: any[]
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
@@ -108,6 +112,16 @@ export default class MangoAccount {
         : undefined;
     });
     return this.spotOpenOrdersAccounts;
+  }
+
+  async loadAdvancedOrders(
+    connection: Connection,
+  ): Promise<any> {
+    const acc = await connection.getAccountInfo(this.advancedOrdersPk);
+    const decoded = AdvancedOrdersLayout.decode(acc?.data);
+    console.log(decoded);
+    this.advancedOrders = decoded.orders;
+    return decoded.orders;
   }
 
   getNativeDeposit(

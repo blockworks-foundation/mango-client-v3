@@ -32,6 +32,7 @@
     "test-compute": "ts-node test/compute.test.ts",
     "test-liquidator": "ts-node test/liquidator.test.ts",
     "test-accounts": "ts-node test/accounts.test.ts",
+    "test-stoploss": "ts-node test/stoploss.test.ts",
     "mint-devnet": "ts-node src/mintDevnet.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
     "test:build": "yarn build && yarn",

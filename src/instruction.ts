@@ -1531,7 +1531,7 @@ export function makeInitAdvancedOrdersInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: true, pubkey: ownerPk },
-    { isSigner: true, isWritable: false, pubkey: advancedOrdersPk },
+    { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
     { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
   ];
   const data = encodeMangoInstruction({
