@@ -415,9 +415,9 @@ MangoInstructionLayout.addVariant(42, struct([]), 'InitAdvancedOrders');
 MangoInstructionLayout.addVariant(
   43,
   struct([
-    orderTypeLayout('orderType', 4),
-    sideLayout(4, 'side'),
-    triggerConditionLayout('triggerCondition', 2),
+    orderTypeLayout('orderType', 1),
+    sideLayout(1, 'side'),
+    triggerConditionLayout('triggerCondition', 1),
     bool('reduceOnly'),
     u64('clientOrderId'),
     i64('price'),
@@ -1113,7 +1113,7 @@ const AdvancedOrderLayout = struct([
 
   seq(u8(), 32, 'padding'),
 ]);
-console.log('spannnnn', AdvancedOrderLayout.span)
+console.log('spannnnn', AdvancedOrderLayout.span);
 // export const AdvancedOrderLayout = union(
 //   u8('advancedOrderType'),
 //   bool('isActive'),
@@ -1130,4 +1130,3 @@ export const AdvancedOrdersLayout = struct([
   metaDataLayout('metaData'),
   seq(AdvancedOrderLayout, MAX_ADVANCED_ORDERS, 'orders'),
 ]);
-
