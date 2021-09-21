@@ -1647,3 +1647,124 @@ export function makeExecutePerpTriggerOrderInstruction(
     programId,
   });
 }
+
+export function makeInitAdvancedOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  advancedOrdersPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+  ];
+
+  const data = encodeMangoInstruction({
+    InitAdvancedOrders: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeAddPerpTriggerOrderInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  advancedOrdersPk: PublicKey,
+  mangoCachePk: PublicKey,
+  perpMarketPk: PublicKey,
+  openOrders: PublicKey[],
+  price: BN,
+  quantity: BN,
+  side: 'buy' | 'sell',
+  triggerCondition: 'above' | 'below',
+  triggerPrice: I80F48,
+  orderType?: 'limit' | 'ioc' | 'postOnly',
+  reduceOnly?: boolean,
+  clientOrderId?: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: advancedOrdersPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+    ...openOrders.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+  const data = encodeMangoInstruction({
+    AddPerpTriggerOrder: {
+      price,
+      quantity,
+      clientOrderId,
+      side,
+      orderType,
+      triggerCondition,
+      triggerPrice,
+      reduceOnly,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeExecutePerpTriggerOrder(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  advancedOrdersPk: PublicKey,
+  agentPk: PublicKey,
+  mangoCachePk: PublicKey,
+  perpMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  eventQueuePk: PublicKey,
+  openOrders: PublicKey[],
+  advancedOrderId: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
+    { isSigner: true, isWritable: true, pubkey: agentPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+    ...openOrders.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+  const data = encodeMangoInstruction({
+    ExecutePerpTriggerOrder: {
+      advancedOrderId,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

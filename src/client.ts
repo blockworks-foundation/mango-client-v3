@@ -46,6 +46,7 @@ import {
   makeAddMangoAccountInfoInstruction,
   makeAddOracleInstruction,
   makeAddPerpMarketInstruction,
+  makeAddPerpTriggerOrderInstruction,
   makeAddSpotMarketInstruction,
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
@@ -103,11 +104,16 @@ import {
 import MangoGroup from './MangoGroup';
 import {
   getMultipleAccounts,
+<<<<<<< HEAD
   makeAddPerpTriggerOrderInstruction,
   makeExecutePerpTriggerOrderInstruction,
   makeInitAdvancedOrdersInstruction,
   makePlaceSpotOrder2Instruction,
   makeRemoveAdvancedOrderInstruction,
+=======
+  makeInitAdvancedOrdersInstruction,
+  makePlaceSpotOrder2Instruction,
+>>>>>>> max/stoploss
 } from '.';
 
 export const getUnixTs = () => {
@@ -3037,67 +3043,78 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
-  async initAdvancedOrders(
-    mangoGroup: MangoGroup,
-    mangoAccount: MangoAccount,
-    owner: Account | WalletAdapter,
-  ): Promise<TransactionSignature> {
-    const accountInstruction = await createAccountInstruction(
-      this.connection,
-      owner.publicKey,
-      MangoAccountLayout.span,
-      this.programId,
-    );
-    const instruction = makeInitAdvancedOrdersInstruction(
-      this.programId,
-      mangoGroup.publicKey,
-      mangoAccount.publicKey,
-      owner.publicKey,
-      accountInstruction.account.publicKey,
-    );
-    const transaction = new Transaction();
-    transaction.add(accountInstruction.instruction);
-    transaction.add(instruction);
-    const additionalSigners = [];
-    return await this.sendTransaction(transaction, owner, additionalSigners);
-  }
-
   async addPerpTriggerOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
-    mangoCache: MangoCache,
     perpMarket: PerpMarket,
-    advancedOrdersAccountPk: PublicKey,
     owner: Account | WalletAdapter,
-    orderType: 'limit' | 'ioc' | 'postOnly',
+
     side: 'buy' | 'sell',
+    price: number,
+    quantity: number,
     triggerCondition: 'above' | 'below',
-    reduceOnly: boolean,
-    clientOrderId: BN,
-    price: BN,
-    quantity: BN,
-    triggerPrice: I80F48,
+    triggerPrice: number,
+    orderType?: 'limit' | 'ioc' | 'postOnly',
+    reduceOnly?: boolean,
+    clientOrderId?: number,
   ): Promise<TransactionSignature> {
-    const instruction = makeAddPerpTriggerOrderInstruction(
-      this.programId,
-      mangoGroup.publicKey,
-      mangoAccount.publicKey,
-      owner.publicKey,
-      advancedOrdersAccountPk,
-      mangoCache.publicKey,
-      perpMarket.publicKey,
-      orderType,
-      side,
-      triggerCondition,
-      reduceOnly,
-      clientOrderId,
-      price,
-      quantity,
-      triggerPrice,
-    );
     const transaction = new Transaction();
-    transaction.add(instruction);
-    const additionalSigners = [];
+    const additionalSigners: Account[] = [];
+
+    let advancedOrders = mangoAccount.advancedOrders;
+
+    if (!advancedOrders || advancedOrders.equals(new PublicKey(''))) {
+      [advancedOrders] = await PublicKey.findProgramAddress(
+        [mangoAccount.publicKey.toBytes()],
+        this.programId,
+      );
+
+      transaction.add(
+        makeInitAdvancedOrdersInstruction(
+          this.programId,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
+          owner.publicKey,
+          advancedOrders,
+        ),
+      );
+    }
+
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+
+    const baseTokenInfo = mangoGroup.tokens[marketIndex];
+    const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
+    const baseUnit = Math.pow(10, baseTokenInfo.decimals);
+    const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
+
+    const nativePrice = new BN(price * quoteUnit)
+      .mul(perpMarket.baseLotSize)
+      .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
+    const nativeQuantity = new BN(quantity * baseUnit).div(
+      perpMarket.baseLotSize,
+    );
+
+    transaction.add(
+      makeAddPerpTriggerOrderInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoAccount.publicKey,
+        owner.publicKey,
+        advancedOrders,
+        mangoGroup.mangoCache,
+        perpMarket.publicKey,
+        mangoAccount.spotOpenOrders,
+        nativePrice,
+        nativeQuantity,
+        side,
+        triggerCondition,
+        I80F48.fromNumber(triggerPrice),
+        orderType,
+        reduceOnly,
+        new BN(clientOrderId ?? Date.now()),
+      ),
+    );
+
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
@@ -3146,6 +3163,6 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(instruction);
     const additionalSigners = [];
-    return await this.sendTransaction(transaction, payer, additionalSigners);
+    return await this.sendTransaction(transaction, payer, additionalSigners);  
   }
 }

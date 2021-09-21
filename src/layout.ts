@@ -181,10 +181,6 @@ export function selfTradeBehaviorLayout(property, span) {
   );
 }
 
-export function triggerConditionLayout(property, span) {
-  return new EnumLayout({ above: 0, below: 1 }, span, property);
-}
-
 /**
  * Need to implement layouts for each of the structs found in state.rs
  */
@@ -391,9 +387,10 @@ MangoInstructionLayout.addVariant(
   struct([u8('limit')]),
   'CancelAllPerpOrders',
 );
-
+MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
+MangoInstructionLayout.addVariant(41, struct([]), 'InitAdvancedOrders');
 MangoInstructionLayout.addVariant(
-  41,
+  42,
   struct([
     sideLayout(4, 'side'),
     u64('limitPrice'),
@@ -406,30 +403,23 @@ MangoInstructionLayout.addVariant(
   ]),
   'PlaceSpotOrder2',
 );
-
-MangoInstructionLayout.addVariant(42, struct([]), 'InitAdvancedOrders');
 MangoInstructionLayout.addVariant(
   43,
   struct([
-    orderTypeLayout('orderType', 4),
-    sideLayout(4, 'side'),
-    triggerConditionLayout('triggerCondition', 2),
-    bool('reduceOnly'),
+    orderTypeLayout('orderType', 1),
+    sideLayout(1, 'side'),
+    u8('triggerCondition'),
+    u8('reduceOnly'),
     u64('clientOrderId'),
-    i64('price'),
-    i64('quantity'),
+    u64('price'),
+    u64('quantity'),
     I80F48Layout('triggerPrice'),
   ]),
   'AddPerpTriggerOrder',
 );
 MangoInstructionLayout.addVariant(
   44,
-  struct([u8('orderIndex')]),
-  'RemoveAdvancedOrder',
-);
-MangoInstructionLayout.addVariant(
-  45,
-  struct([u8('orderIndex')]),
+  struct([u8('advancedOrderId')]),
   'ExecutePerpTriggerOrder',
 );
 
@@ -724,7 +714,10 @@ export const MangoAccountLayout = struct([
   bool('beingLiquidated'),
   bool('isBankrupt'),
   seq(u8(), INFO_LEN, 'info'),
-  seq(u8(), 70, 'padding'),
+
+  publicKeyLayout('advanceOrders'),
+
+  seq(u8(), 38, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
