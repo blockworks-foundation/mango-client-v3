@@ -104,16 +104,11 @@ import {
 import MangoGroup from './MangoGroup';
 import {
   getMultipleAccounts,
-<<<<<<< HEAD
   makeAddPerpTriggerOrderInstruction,
   makeExecutePerpTriggerOrderInstruction,
   makeInitAdvancedOrdersInstruction,
   makePlaceSpotOrder2Instruction,
   makeRemoveAdvancedOrderInstruction,
-=======
-  makeInitAdvancedOrdersInstruction,
-  makePlaceSpotOrder2Instruction,
->>>>>>> max/stoploss
 } from '.';
 
 export const getUnixTs = () => {
@@ -3163,6 +3158,6 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(instruction);
     const additionalSigners = [];
-    return await this.sendTransaction(transaction, payer, additionalSigners);  
+    return await this.sendTransaction(transaction, payer, additionalSigners);
   }
 }
