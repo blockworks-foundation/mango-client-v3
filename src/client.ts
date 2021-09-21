@@ -58,7 +58,6 @@ import {
   makeDepositMsrmInstruction,
   makeForceCancelPerpOrdersInstruction,
   makeForceCancelSpotOrdersInstruction,
-  makeForceSettleQuotePositionsInstruction,
   makeInitMangoAccountInstruction,
   makeInitMangoGroupInstruction,
   makeInitSpotOpenOrdersInstruction,
@@ -102,7 +101,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import { getMultipleAccounts, makePlaceSpotOrder2Instruction } from '.';
+import { getMultipleAccounts, makeAddPerpTriggerOrderInstruction, makeExecutePerpTriggerOrderInstruction, makeInitAdvancedOrdersInstruction, makePlaceSpotOrder2Instruction, makeRemoveAdvancedOrderInstruction } from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -2705,31 +2704,6 @@ export class MangoClient {
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 
-  async forceSettleQuotePositions(
-    mangoGroup: MangoGroup,
-    liqeeMangoAccount: MangoAccount,
-    liqorMangoAccount: MangoAccount,
-    quoteRootBank: RootBank,
-    payer: Account,
-  ) {
-    const instruction = makeForceSettleQuotePositionsInstruction(
-      this.programId,
-      mangoGroup.publicKey,
-      mangoGroup.mangoCache,
-      liqeeMangoAccount.publicKey,
-      liqorMangoAccount.publicKey,
-      payer.publicKey,
-      quoteRootBank.publicKey,
-      quoteRootBank.nodeBanks[0],
-      liqeeMangoAccount.spotOpenOrders,
-    );
-
-    const transaction = new Transaction();
-    transaction.add(instruction);
-
-    return await this.sendTransaction(transaction, payer, []);
-  }
-
   /**
    * Add allowance for orders to be cancelled and replaced in a single transaction
    */
@@ -3057,5 +3031,117 @@ export class MangoClient {
     }
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async initAdvancedOrders(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+  ): Promise<TransactionSignature> {
+    const accountInstruction = await createAccountInstruction(
+      this.connection,
+      owner.publicKey,
+      MangoAccountLayout.span,
+      this.programId,
+    );
+    const instruction = makeInitAdvancedOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      accountInstruction.account.publicKey
+    );
+    const transaction = new Transaction();
+    transaction.add(accountInstruction.instruction);
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async addPerpTriggerOrder(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    mangoCache: MangoCache,
+    perpMarket: PerpMarket,
+    advancedOrdersAccountPk: PublicKey,
+    owner: Account | WalletAdapter,
+    orderType: 'limit' | 'ioc' | 'postOnly',
+    side: 'buy' | 'sell',
+    triggerCondition: 'above' | 'below',
+    reduceOnly: boolean,
+    clientOrderId: BN,
+    price: BN,
+    quantity: BN,
+    triggerPrice: I80F48
+  ): Promise<TransactionSignature> {
+    const instruction = makeAddPerpTriggerOrderInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      advancedOrdersAccountPk,
+      mangoCache.publicKey,
+      perpMarket.publicKey,
+      orderType,
+      side,
+      triggerCondition,
+      reduceOnly,
+      clientOrderId,
+      price,
+      quantity,
+      triggerPrice
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async removeAdvancedOrder(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    advancedOrdersAccountPk: PublicKey,
+    owner: Account | WalletAdapter,
+    orderIndex: number,
+  ): Promise<TransactionSignature> {
+    const instruction = makeRemoveAdvancedOrderInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      advancedOrdersAccountPk,
+      orderIndex,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  async executePerpTriggerOrder(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    mangoCache: MangoCache,
+    perpMarket: PerpMarket,
+    advancedOrdersAccountPk: PublicKey,
+    payer: Account | WalletAdapter,
+    orderIndex: number,
+  ): Promise<TransactionSignature> {
+    const instruction = makeExecutePerpTriggerOrderInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      advancedOrdersAccountPk,
+      mangoCache.publicKey,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      perpMarket.eventQueue,
+      orderIndex,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
   }
 }

@@ -181,6 +181,10 @@ export function selfTradeBehaviorLayout(property, span) {
   );
 }
 
+export function triggerConditionLayout(property, span) {
+  return new EnumLayout({ above: 0, below: 1 }, span, property);
+}
+
 /**
  * Need to implement layouts for each of the structs found in state.rs
  */
@@ -402,6 +406,24 @@ MangoInstructionLayout.addVariant(
   ]),
   'PlaceSpotOrder2',
 );
+
+MangoInstructionLayout.addVariant(42, struct([]), 'InitAdvancedOrders');
+MangoInstructionLayout.addVariant(
+  43,
+  struct([
+    orderTypeLayout('orderType', 4),
+    sideLayout(4, 'side'),
+    triggerConditionLayout('triggerCondition', 2),
+    bool('reduceOnly'),
+    u64('clientOrderId'),
+    i64('price'),
+    i64('quantity'),
+    I80F48Layout('triggerPrice'),
+  ]),
+  'AddPerpTriggerOrder',
+);
+MangoInstructionLayout.addVariant(44, struct([u8('orderIndex')]), 'RemoveAdvancedOrder');
+MangoInstructionLayout.addVariant(45, struct([u8('orderIndex')]), 'ExecutePerpTriggerOrder');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
