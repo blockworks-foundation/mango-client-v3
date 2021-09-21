@@ -101,7 +101,14 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import { getMultipleAccounts, makeAddPerpTriggerOrderInstruction, makeExecutePerpTriggerOrderInstruction, makeInitAdvancedOrdersInstruction, makePlaceSpotOrder2Instruction, makeRemoveAdvancedOrderInstruction } from '.';
+import {
+  getMultipleAccounts,
+  makeAddPerpTriggerOrderInstruction,
+  makeExecutePerpTriggerOrderInstruction,
+  makeInitAdvancedOrdersInstruction,
+  makePlaceSpotOrder2Instruction,
+  makeRemoveAdvancedOrderInstruction,
+} from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -2707,7 +2714,7 @@ export class MangoClient {
   /**
    * Add allowance for orders to be cancelled and replaced in a single transaction
    */
-   async modifySpotOrder(
+  async modifySpotOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     mangoCache: PublicKey,
@@ -2720,7 +2727,6 @@ export class MangoClient {
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
   ): Promise<TransactionSignature> {
-
     const transaction = new Transaction();
 
     const instruction = makeCancelSpotOrderInstruction(
@@ -2930,7 +2936,6 @@ export class MangoClient {
     return txid;
   }
 
-  
   async modifyPerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -2947,7 +2952,6 @@ export class MangoClient {
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     invalidIdOk = false, // Don't throw error if order is invalid
   ): Promise<TransactionSignature> {
-
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
@@ -3049,7 +3053,7 @@ export class MangoClient {
       mangoGroup.publicKey,
       mangoAccount.publicKey,
       owner.publicKey,
-      accountInstruction.account.publicKey
+      accountInstruction.account.publicKey,
     );
     const transaction = new Transaction();
     transaction.add(accountInstruction.instruction);
@@ -3072,7 +3076,7 @@ export class MangoClient {
     clientOrderId: BN,
     price: BN,
     quantity: BN,
-    triggerPrice: I80F48
+    triggerPrice: I80F48,
   ): Promise<TransactionSignature> {
     const instruction = makeAddPerpTriggerOrderInstruction(
       this.programId,
@@ -3089,7 +3093,7 @@ export class MangoClient {
       clientOrderId,
       price,
       quantity,
-      triggerPrice
+      triggerPrice,
     );
     const transaction = new Transaction();
     transaction.add(instruction);

@@ -1532,10 +1532,10 @@ export function makeInitAdvancedOrdersInstruction(
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: true, pubkey: ownerPk },
     { isSigner: true, isWritable: false, pubkey: advancedOrdersPk },
-    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId }
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
   ];
   const data = encodeMangoInstruction({
-    InitAdvancedOrders: {}, 
+    InitAdvancedOrders: {},
   });
   return new TransactionInstruction({
     keys,
@@ -1568,7 +1568,7 @@ export function makeAddPerpTriggerOrderInstruction(
     { isSigner: true, isWritable: false, pubkey: advancedOrdersPk },
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: perpMarketPk },
-    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId }
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
   ];
   const data = encodeMangoInstruction({
     AddPerpTriggerOrder: {
@@ -1579,8 +1579,8 @@ export function makeAddPerpTriggerOrderInstruction(
       clientOrderId,
       price,
       quantity,
-      triggerPrice
-    }, 
+      triggerPrice,
+    },
   });
   return new TransactionInstruction({
     keys,
@@ -1602,11 +1602,11 @@ export function makeRemoveAdvancedOrderInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: true, pubkey: ownerPk },
     { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
-    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId }
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
   ];
 
   const data = encodeMangoInstruction({
-    RemoveAdvancedOrder: { orderIndex }, 
+    RemoveAdvancedOrder: { orderIndex },
   });
   return new TransactionInstruction({
     keys,
@@ -1636,10 +1636,10 @@ export function makeExecutePerpTriggerOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
-    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId }
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
   ];
   const data = encodeMangoInstruction({
-    ExecutePerpTriggerOrder: { orderIndex }, 
+    ExecutePerpTriggerOrder: { orderIndex },
   });
   return new TransactionInstruction({
     keys,

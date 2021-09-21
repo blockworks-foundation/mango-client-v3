@@ -422,8 +422,16 @@ MangoInstructionLayout.addVariant(
   ]),
   'AddPerpTriggerOrder',
 );
-MangoInstructionLayout.addVariant(44, struct([u8('orderIndex')]), 'RemoveAdvancedOrder');
-MangoInstructionLayout.addVariant(45, struct([u8('orderIndex')]), 'ExecutePerpTriggerOrder');
+MangoInstructionLayout.addVariant(
+  44,
+  struct([u8('orderIndex')]),
+  'RemoveAdvancedOrder',
+);
+MangoInstructionLayout.addVariant(
+  45,
+  struct([u8('orderIndex')]),
+  'ExecutePerpTriggerOrder',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
