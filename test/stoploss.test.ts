@@ -1,21 +1,11 @@
 import fs from 'fs';
 import os from 'os';
-import {
-  Cluster,
-  Config,
-  MangoClient,
-  MAX_PAIRS,
-  sleep,
-  throwUndefined,
-  MAX_NUM_IN_MARGIN_BASKET,
-  QUOTE_INDEX,
-  I80F48,
-} from '../src';
+import { Cluster, Config, MangoClient, sleep } from '../src';
 import configFile from '../src/ids.json';
 import { Account, Commitment, Connection } from '@solana/web3.js';
-import { Market } from '@project-serum/serum';
-import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { BN } from 'bn.js';
+// import { Market } from '@project-serum/serum';
+// import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+// import { BN } from 'bn.js';
 
 async function testStopLoss() {
   // Load all the details for mango group
@@ -69,12 +59,12 @@ async function testStopLoss() {
     account,
     perpMarkets[0],
     payer,
+    'limit',
     'sell',
     39000,
     0.0001,
     'below',
     39000,
-    'limit',
   );
   console.log(await account.loadAdvancedOrders(connection));
 }
