@@ -501,6 +501,42 @@ yargs(hideBin(process.argv)).command(
 ).argv;
 
 yargs(hideBin(process.argv)).command(
+  'show-perp-market <group> <symbol>',
+  'Print relevant details about a perp market',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional('symbol', {
+        describe: 'The ticker symbol of the perp market',
+        type: 'string',
+      })
+      .option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-perp-market', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const perpMarketConfig: PerpMarketConfig = throwUndefined(
+      getPerpMarketByBaseSymbol(groupConfig, args.symbol as string),
+    );
+
+    const connection = openConnection(config, groupConfig.cluster);
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+
+    const perpMarket = await client.getPerpMarket(
+      perpMarketConfig.publicKey,
+      perpMarketConfig.baseDecimals,
+      perpMarketConfig.quoteDecimals,
+    );
+    console.log(perpMarket.toPrettyString(perpMarketConfig));
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
   'verify-token-gov <token_account> <owner>',
   'Verify the owner of token_account is a governance PDA',
   (y) => {
