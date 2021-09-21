@@ -3053,7 +3053,7 @@ export class MangoClient {
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
-    let advancedOrders = mangoAccount.advancedOrders;
+    let advancedOrders = mangoAccount.advancedOrdersPk;
 
     if (!advancedOrders || advancedOrders.equals(new PublicKey(''))) {
       [advancedOrders] = await PublicKey.findProgramAddress(

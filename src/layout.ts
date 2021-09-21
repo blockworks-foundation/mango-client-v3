@@ -181,6 +181,14 @@ export function selfTradeBehaviorLayout(property, span) {
   );
 }
 
+export function triggerConditionLayout(property, span) {
+  return new EnumLayout({ above: 0, below: 1 }, span, property);
+}
+
+export function advancedOrderTypeLayout(property, span) {
+  return new EnumLayout({ perpTrigger: 0, spotTrigger: 1 }, span, property);
+}
+
 /**
  * Need to implement layouts for each of the structs found in state.rs
  */
@@ -467,6 +475,11 @@ export const enum AssetType {
   Perp = 1,
 }
 
+export const enum AdvancedOrderType {
+  PerpTrigger = 0,
+  SpotTrigger = 1,
+}
+
 export class MetaData {
   dataType!: number;
   version!: number;
@@ -714,9 +727,7 @@ export const MangoAccountLayout = struct([
   bool('beingLiquidated'),
   bool('isBankrupt'),
   seq(u8(), INFO_LEN, 'info'),
-
-  publicKeyLayout('advanceOrders'),
-
+  publicKeyLayout('advancedOrders'),
   seq(u8(), 38, 'padding'),
 ]);
 
@@ -1080,4 +1091,36 @@ export const TokenAccountLayout = struct([
   publicKeyLayout('owner'),
   nu64('amount'),
   blob(93),
+]);
+
+const AdvancedOrderLayout = struct([
+  u8('marketIndex'),
+  orderTypeLayout('orderType', 4),
+  sideLayout(4, 'side'),
+  triggerConditionLayout('triggerCondition', 1),
+  bool('reduceOnly'),
+  seq(u8(), 1, 'padding0'),
+  u64('clientOrderId'),
+  i64('price'),
+  i64('quantity'),
+  I80F48Layout('triggerPrice'),
+
+  seq(u8(), 32, 'padding'),
+]);
+console.log('spannnnn', AdvancedOrderLayout.span);
+// export const AdvancedOrderLayout = union(
+//   u8('advancedOrderType'),
+//   bool('isActive'),
+//   blob(perpTriggerOrderStruct.span),
+//   'event',
+// );
+// AdvancedOrderLayout.addVariant(
+//   0,
+//   perpTriggerOrderStruct,
+//   'perpTriggerOrder',
+// );
+const MAX_ADVANCED_ORDERS = 32;
+export const AdvancedOrdersLayout = struct([
+  metaDataLayout('metaData'),
+  seq(AdvancedOrderLayout, MAX_ADVANCED_ORDERS, 'orders'),
 ]);
