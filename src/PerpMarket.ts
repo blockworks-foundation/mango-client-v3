@@ -5,23 +5,14 @@ import {
   BookSide,
   BookSideLayout,
   FillEvent,
-  getMarketByPublicKey,
-  getTokenByMint,
-  GroupConfig,
   MangoAccount,
-  MangoCache,
-  nativeI80F48ToUi,
   PerpEventQueue,
   PerpEventQueueLayout,
   PerpMarketConfig,
-  TokenConfig,
-  ZERO_I80F48,
-  zeroKey,
 } from '.';
 import { I80F48 } from './fixednum';
 import { Modify } from './types';
 import { ZERO_BN } from './utils';
-import MangoGroup from './MangoGroup';
 import { EOL } from 'os';
 
 export type ParsedFillEvent = Modify<
@@ -187,7 +178,9 @@ export default class PerpMarket {
       `longFunding: ${this.longFunding.toString()}`,
       `shortFunding: ${this.shortFunding.toString()}`,
       `openInterest: ${this.openInterest.toString()}`,
-      `lastUpdated: ${this.lastUpdated.toString()}`,
+      `lastUpdated: ${new Date(
+        this.lastUpdated.toNumber() * 1000,
+      ).toUTCString()}`,
       `seqNum: ${this.seqNum.toString()}`,
       `feesAccrued: ${this.feesAccrued.toString()}`,
       `\n----- ${perpMarketConfig.name} Liquidity Mining Info -----`,
