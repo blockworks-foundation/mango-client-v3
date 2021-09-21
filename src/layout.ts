@@ -396,9 +396,8 @@ MangoInstructionLayout.addVariant(
   'CancelAllPerpOrders',
 );
 MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
-MangoInstructionLayout.addVariant(41, struct([]), 'InitAdvancedOrders');
 MangoInstructionLayout.addVariant(
-  42,
+  41,
   struct([
     sideLayout(4, 'side'),
     u64('limitPrice'),
@@ -411,6 +410,7 @@ MangoInstructionLayout.addVariant(
   ]),
   'PlaceSpotOrder2',
 );
+MangoInstructionLayout.addVariant(42, struct([]), 'InitAdvancedOrders');
 MangoInstructionLayout.addVariant(
   43,
   struct([
