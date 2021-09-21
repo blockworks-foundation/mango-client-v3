@@ -3113,7 +3113,6 @@ export class MangoClient {
   async removeAdvancedOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
-    advancedOrdersAccountPk: PublicKey,
     owner: Account | WalletAdapter,
     orderIndex: number,
   ): Promise<TransactionSignature> {
@@ -3122,7 +3121,7 @@ export class MangoClient {
       mangoGroup.publicKey,
       mangoAccount.publicKey,
       owner.publicKey,
-      advancedOrdersAccountPk,
+      mangoAccount.advancedOrdersPk,
       orderIndex,
     );
     const transaction = new Transaction();
@@ -3136,7 +3135,6 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     mangoCache: MangoCache,
     perpMarket: PerpMarket,
-    advancedOrdersAccountPk: PublicKey,
     payer: Account | WalletAdapter,
     orderIndex: number,
   ): Promise<TransactionSignature> {
@@ -3144,7 +3142,7 @@ export class MangoClient {
       this.programId,
       mangoGroup.publicKey,
       mangoAccount.publicKey,
-      advancedOrdersAccountPk,
+      mangoAccount.advancedOrdersPk,
       mangoCache.publicKey,
       perpMarket.publicKey,
       perpMarket.bids,

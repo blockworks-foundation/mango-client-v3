@@ -54,20 +54,28 @@ async function testStopLoss() {
     }),
   );
 
-
   const cache = await mangoGroup.loadCache(connection);
 
   const accountPk = await client.initMangoAccount(mangoGroup, payer);
   console.log('Created Account:', accountPk.toBase58());
   await sleep(sleepTime);
   const account = await client.getMangoAccount(
-      accountPk,
-      mangoGroup.dexProgramId,
+    accountPk,
+    mangoGroup.dexProgramId,
   );
 
-  await client.initAdvancedOrders(mangoGroup, account, payer);
-  await account.reload(connection, mangoGroup.dexProgramId);
-  await client.addPerpTriggerOrder(mangoGroup, account, cache, perpMarkets[0], account.advancedOrdersPk, payer, 'limit', 'sell', 'below', true, new BN(123), new BN(39000), new BN(1), I80F48.fromNumber(39000));
+  await client.addPerpTriggerOrder(
+    mangoGroup,
+    account,
+    perpMarkets[0],
+    payer,
+    'sell',
+    39000,
+    0.0001,
+    'below',
+    39000,
+    'limit',
+  );
   console.log(await account.loadAdvancedOrders(connection));
 }
 
