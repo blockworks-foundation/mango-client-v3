@@ -1107,7 +1107,6 @@ const AdvancedOrderLayout = struct([
 
   seq(u8(), 32, 'padding'),
 ]);
-console.log('spannnnn', AdvancedOrderLayout.span);
 // export const AdvancedOrderLayout = union(
 //   u8('advancedOrderType'),
 //   bool('isActive'),

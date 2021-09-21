@@ -3059,6 +3059,7 @@ export class MangoClient {
         [mangoAccount.publicKey.toBytes()],
         this.programId,
       );
+      console.log('AdvancedOrders PDA:', advancedOrders.toBase58());
 
       transaction.add(
         makeInitAdvancedOrdersInstruction(

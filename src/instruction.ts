@@ -1589,7 +1589,7 @@ export function makeInitAdvancedOrdersInstruction(
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
-    { isSigner: true, isWritable: true, pubkey: ownerPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
     { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
     { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
   ];
