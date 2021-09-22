@@ -59,7 +59,8 @@ export default class MangoAccount {
   isBankrupt!: boolean;
   info!: number[];
 
-  advancedOrdersPk!: PublicKey;
+  advancedOrdersKey!: PublicKey;
+  advancedOrdersBumpSeed!: number;
   advancedOrders!: any[];
 
   constructor(publicKey: PublicKey, decoded: any) {
@@ -115,7 +116,7 @@ export default class MangoAccount {
   }
 
   async loadAdvancedOrders(connection: Connection): Promise<any> {
-    const acc = await connection.getAccountInfo(this.advancedOrdersPk);
+    const acc = await connection.getAccountInfo(this.advancedOrdersKey);
     const decoded = AdvancedOrdersLayout.decode(acc?.data);
     this.advancedOrders = decoded.orders;
     return decoded.orders;

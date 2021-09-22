@@ -3056,13 +3056,14 @@ export class MangoClient {
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
-    let advancedOrders = mangoAccount.advancedOrdersPk;
-
-    if (!advancedOrders || advancedOrders.equals(new PublicKey(''))) {
-      [advancedOrders] = await PublicKey.findProgramAddress(
+    let advancedOrders = mangoAccount.advancedOrdersKey;
+    let bumpSeed = mangoAccount.advancedOrdersBumpSeed;
+    if (mangoAccount.advancedOrdersKey.equals(zeroKey)) {
+      [advancedOrders, bumpSeed] = await PublicKey.findProgramAddress(
         [mangoAccount.publicKey.toBytes()],
         this.programId,
       );
+
       console.log('AdvancedOrders PDA:', advancedOrders.toBase58());
 
       transaction.add(
@@ -3119,7 +3120,8 @@ export class MangoClient {
       owner,
       additionalSigners,
     );
-    mangoAccount.advancedOrdersPk = advancedOrders;
+    mangoAccount.advancedOrdersKey = advancedOrders;
+    mangoAccount.advancedOrdersBumpSeed = bumpSeed;
     return txid;
   }
 
@@ -3134,7 +3136,7 @@ export class MangoClient {
       mangoGroup.publicKey,
       mangoAccount.publicKey,
       owner.publicKey,
-      mangoAccount.advancedOrdersPk,
+      mangoAccount.advancedOrdersKey,
       orderIndex,
     );
     const transaction = new Transaction();
@@ -3159,7 +3161,7 @@ export class MangoClient {
       this.programId,
       mangoGroup.publicKey,
       mangoAccount.publicKey,
-      mangoAccount.advancedOrdersPk,
+      mangoAccount.advancedOrdersKey,
       payer.publicKey,
       mangoCache.publicKey,
       perpMarket.publicKey,

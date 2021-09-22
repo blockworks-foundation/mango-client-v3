@@ -474,6 +474,7 @@ export const DataType = {
   Asks: 6,
   MangoCache: 7,
   EventQueue: 8,
+  AdvancedOrders: 9,
 };
 
 export const enum AssetType {
@@ -733,8 +734,9 @@ export const MangoAccountLayout = struct([
   bool('beingLiquidated'),
   bool('isBankrupt'),
   seq(u8(), INFO_LEN, 'info'),
-  publicKeyLayout('advancedOrders'),
-  seq(u8(), 38, 'padding'),
+  publicKeyLayout('advancedOrdersKey'),
+  u8('advancedOrdersBumpSeed'),
+  seq(u8(), 37, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
