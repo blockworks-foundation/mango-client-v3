@@ -24,7 +24,7 @@ export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
 export const INFO_LEN = 32;
 export const QUOTE_INDEX = MAX_TOKENS - 1;
-export const MAX_NUM_IN_MARGIN_BASKET = 10;
+export const MAX_NUM_IN_MARGIN_BASKET = 9;
 export const MAX_PERP_OPEN_ORDERS = 64;
 export const FREE_ORDER_SLOT = 255; // u8::MAX
 
@@ -1105,7 +1105,6 @@ const ADVANCED_ORDER_LAYOUT = union(
   blob(ADVANCED_ORDER_SIZE - 1),
   'advancedOrder',
 );
-console.log(ADVANCED_ORDER_LAYOUT.span);
 
 ADVANCED_ORDER_LAYOUT.addVariant(
   0,
