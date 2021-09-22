@@ -1,6 +1,6 @@
 import fs from 'fs';
 import os from 'os';
-import { Cluster, Config, MangoClient, sleep } from '../src';
+import { Cluster, Config, MangoClient, QUOTE_INDEX, sleep } from '../src';
 import configFile from '../src/ids.json';
 import {
   Account,
@@ -11,6 +11,7 @@ import {
   SystemProgram,
   Transaction,
 } from '@solana/web3.js';
+import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 async function testStopLoss() {
   // Load all the details for mango group
@@ -50,6 +51,12 @@ async function testStopLoss() {
   );
 
   const cache = await mangoGroup.loadCache(connection);
+  const rootBanks = await mangoGroup.loadRootBanks(connection);
+  const quoteRootBank = rootBanks[QUOTE_INDEX];
+  if (!quoteRootBank) {
+    throw new Error('Quote Rootbank Not Found');
+  }
+  const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
 
   const accountPk = await client.initMangoAccount(mangoGroup, payer);
   console.log('Created Account:', accountPk.toBase58());
@@ -59,7 +66,20 @@ async function testStopLoss() {
     mangoGroup.dexProgramId,
   );
 
-  // Add the trigger order
+  const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
+  const rayToken = new Token(
+    connection,
+    quoteTokenInfo.mint,
+    TOKEN_PROGRAM_ID,
+    payer,
+  );
+  const quoteWallet = await rayToken.getOrCreateAssociatedAccountInfo(
+    payer.publicKey,
+  );
+
+  await client.deposit(mangoGroup, account, payer, quoteRootBank.publicKey, quoteNodeBanks[0].publicKey, quoteNodeBanks[0].vault, quoteWallet.address, 100);
+
+  // Add the trigger order, this should be executable immediately
   await sleep(sleepTime);
   const txid = await client.addPerpTriggerOrder(
     mangoGroup,
@@ -68,10 +88,10 @@ async function testStopLoss() {
     payer,
     'limit',
     'sell',
-    39000,
+    45000,
     0.0001,
     'below',
-    39000,
+    45000,
   );
   console.log('add perp trigger order successful', txid.toString());
   const advanced = await account.loadAdvancedOrders(connection);
@@ -98,7 +118,7 @@ async function testStopLoss() {
   );
 
   // Now trigger the order
-  // TODO
+  await client.executePerpTriggerOrder(mangoGroup, account, cache, perpMarkets[0], agent, 0);
 }
 
 testStopLoss();
