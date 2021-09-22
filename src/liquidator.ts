@@ -668,6 +668,7 @@ async function balanceTokens(
   markets: Market[],
 ) {
   console.log('balanceTokens');
+  await mangoAccount.reload(connection, mangoGroup.dexProgramId);
   const cache = await mangoGroup.loadCache(connection);
   const cancelOrdersPromises: Promise<string>[] = [];
   const bidsInfo = await getMultipleAccounts(
@@ -819,6 +820,7 @@ async function closePositions(
   perpMarkets: PerpMarket[],
 ) {
   console.log('closePositions');
+  await mangoAccount.reload(connection, mangoGroup.dexProgramId);
   const cache = await mangoGroup.loadCache(connection);
 
   for (let i = 0; i < perpMarkets.length; i++) {
