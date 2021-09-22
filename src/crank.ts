@@ -45,7 +45,7 @@ const payer = new Account(
 );
 
 const connection = new Connection(
-  config.cluster_urls[cluster],
+  process.env.ENDPOINT_URL || config.cluster_urls[cluster],
   'processed' as Commitment,
 );
 const client = new MangoClient(connection, mangoProgramId);
