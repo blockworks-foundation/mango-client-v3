@@ -59,6 +59,7 @@ async function testStopLoss() {
     mangoGroup.dexProgramId,
   );
 
+  // Add the trigger order
   await sleep(sleepTime);
   const txid = await client.addPerpTriggerOrder(
     mangoGroup,
@@ -76,9 +77,9 @@ async function testStopLoss() {
   const advanced = await account.loadAdvancedOrders(connection);
   console.log(advanced.filter((o) => o.perpTrigger && o.perpTrigger.isActive));
 
+  // Agent trigger the order
+  // First create an agent SOL account and fund it
   const agent = new Account();
-  console.log('agent:', agent.publicKey.toBase58());
-
   const tx = new Transaction().add(
     SystemProgram.transfer({
       fromPubkey: payer.publicKey,
@@ -89,7 +90,15 @@ async function testStopLoss() {
   await sendAndConfirmTransaction(connection, tx, [payer]);
   await sleep(sleepTime);
   const agentAcc = await connection.getAccountInfo(agent.publicKey);
-  console.log(agentAcc?.lamports);
+  console.log(
+    'agent:',
+    agent.publicKey.toBase58(),
+    'sol:',
+    agentAcc ? agentAcc.lamports / LAMPORTS_PER_SOL : 0,
+  );
+
+  // Now trigger the order
+  // TODO
 }
 
 testStopLoss();
