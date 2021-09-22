@@ -32,6 +32,7 @@ import {
   MangoCache,
   MangoCacheLayout,
   MangoGroupLayout,
+  MAX_NUM_IN_MARGIN_BASKET,
   NodeBankLayout,
   PerpEventLayout,
   PerpEventQueueHeaderLayout,
@@ -1508,7 +1509,10 @@ export class MangoClient {
         pubkey = mangoAccount.spotOpenOrders[i];
       }
 
-      openOrdersKeys.push({ pubkey, isWritable });
+      // new design does not require zero keys to be passed in
+      if (!pubkey.equals(zeroKey)) {
+        openOrdersKeys.push({ pubkey, isWritable });
+      }
     }
 
     const dexSigner = await PublicKey.createProgramAddress(
@@ -3086,6 +3090,10 @@ export class MangoClient {
       perpMarket.baseLotSize,
     );
 
+    const openOrders = mangoAccount.spotOpenOrders.filter(
+      (pk, i) => mangoAccount.inMarginBasket[i],
+    );
+
     transaction.add(
       makeAddPerpTriggerOrderInstruction(
         this.programId,
@@ -3095,7 +3103,7 @@ export class MangoClient {
         advancedOrders,
         mangoGroup.mangoCache,
         perpMarket.publicKey,
-        mangoAccount.spotOpenOrders,
+        openOrders,
         orderType,
         side,
         nativePrice,
@@ -3106,8 +3114,13 @@ export class MangoClient {
         new BN(clientOrderId ?? Date.now()),
       ),
     );
-
-    return await this.sendTransaction(transaction, owner, additionalSigners);
+    const txid = await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+    );
+    mangoAccount.advancedOrdersPk = advancedOrders;
+    return txid;
   }
 
   async removeAdvancedOrder(
@@ -3138,17 +3151,23 @@ export class MangoClient {
     payer: Account | WalletAdapter,
     orderIndex: number,
   ): Promise<TransactionSignature> {
+    const openOrders = mangoAccount.spotOpenOrders.filter(
+      (pk, i) => mangoAccount.inMarginBasket[i],
+    );
+
     const instruction = makeExecutePerpTriggerOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
       mangoAccount.publicKey,
       mangoAccount.advancedOrdersPk,
+      payer.publicKey,
       mangoCache.publicKey,
       perpMarket.publicKey,
       perpMarket.bids,
       perpMarket.asks,
       perpMarket.eventQueue,
-      orderIndex,
+      openOrders,
+      new BN(orderIndex),
     );
     const transaction = new Transaction();
     transaction.add(instruction);

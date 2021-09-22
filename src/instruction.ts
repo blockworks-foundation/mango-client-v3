@@ -1546,39 +1546,6 @@ export function makeRemoveAdvancedOrderInstruction(
   });
 }
 
-export function makeExecutePerpTriggerOrderInstruction(
-  programId: PublicKey,
-  mangoGroupPk: PublicKey,
-  mangoAccountPk: PublicKey,
-  advancedOrdersPk: PublicKey,
-  mangoCachePk: PublicKey,
-  perpMarketPk: PublicKey,
-  bidsPk: PublicKey,
-  asksPk: PublicKey,
-  eventQueuePk: PublicKey,
-  orderIndex: number,
-): TransactionInstruction {
-  const keys = [
-    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
-    { isSigner: false, isWritable: false, pubkey: mangoAccountPk },
-    { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
-    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
-    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
-    { isSigner: false, isWritable: true, pubkey: bidsPk },
-    { isSigner: false, isWritable: true, pubkey: asksPk },
-    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
-    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
-  ];
-  const data = encodeMangoInstruction({
-    ExecutePerpTriggerOrder: { orderIndex },
-  });
-  return new TransactionInstruction({
-    keys,
-    data,
-    programId,
-  });
-}
-
 export function makeInitAdvancedOrdersInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
@@ -1656,7 +1623,7 @@ export function makeAddPerpTriggerOrderInstruction(
   });
 }
 
-export function makeExecutePerpTriggerOrder(
+export function makeExecutePerpTriggerOrderInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   mangoAccountPk: PublicKey,
@@ -1668,7 +1635,7 @@ export function makeExecutePerpTriggerOrder(
   asksPk: PublicKey,
   eventQueuePk: PublicKey,
   openOrders: PublicKey[],
-  advancedOrderId: BN,
+  orderIndex: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -1689,7 +1656,7 @@ export function makeExecutePerpTriggerOrder(
   ];
   const data = encodeMangoInstruction({
     ExecutePerpTriggerOrder: {
-      advancedOrderId,
+      orderIndex,
     },
   });
 

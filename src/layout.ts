@@ -1099,34 +1099,34 @@ export const TokenAccountLayout = struct([
   blob(93),
 ]);
 
-const AdvancedOrderLayout = struct([
-  u8('marketIndex'),
-  orderTypeLayout('orderType', 4),
-  sideLayout(4, 'side'),
-  triggerConditionLayout('triggerCondition', 1),
-  bool('reduceOnly'),
-  seq(u8(), 1, 'padding0'),
-  u64('clientOrderId'),
-  i64('price'),
-  i64('quantity'),
-  I80F48Layout('triggerPrice'),
+const ADVANCED_ORDER_SIZE = 80;
+const ADVANCED_ORDER_LAYOUT = union(
+  u8('advancedOrderType'),
+  blob(ADVANCED_ORDER_SIZE - 1),
+  'advancedOrder',
+);
+console.log(ADVANCED_ORDER_LAYOUT.span);
 
-  seq(u8(), 32, 'padding'),
-]);
-console.log('spannnnn', AdvancedOrderLayout.span);
-// export const AdvancedOrderLayout = union(
-//   u8('advancedOrderType'),
-//   bool('isActive'),
-//   blob(perpTriggerOrderStruct.span),
-//   'event',
-// );
-// AdvancedOrderLayout.addVariant(
-//   0,
-//   perpTriggerOrderStruct,
-//   'perpTriggerOrder',
-// );
+ADVANCED_ORDER_LAYOUT.addVariant(
+  0,
+  struct([
+    bool('isActive'),
+    u8('marketIndex'),
+    orderTypeLayout('orderType', 1),
+    sideLayout(1, 'side'),
+    triggerConditionLayout('triggerCondition', 1),
+    bool('reduceOnly'),
+    seq(u8(), 1, 'padding0'),
+    u64('clientOrderId'),
+    i64('price'),
+    i64('quantity'),
+    I80F48Layout('triggerPrice'),
+    seq(u8(), 32, 'padding1'),
+  ]),
+  'perpTrigger',
+);
 const MAX_ADVANCED_ORDERS = 32;
 export const AdvancedOrdersLayout = struct([
   metaDataLayout('metaData'),
-  seq(AdvancedOrderLayout, MAX_ADVANCED_ORDERS, 'orders'),
+  seq(ADVANCED_ORDER_LAYOUT, MAX_ADVANCED_ORDERS, 'orders'),
 ]);

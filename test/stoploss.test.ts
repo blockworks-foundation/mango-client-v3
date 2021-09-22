@@ -1,11 +1,6 @@
 import fs from 'fs';
 import os from 'os';
-import {
-  Cluster,
-  Config,
-  MangoClient,
-  sleep,
-} from '../src';
+import { Cluster, Config, MangoClient, sleep } from '../src';
 import configFile from '../src/ids.json';
 import { Account, Commitment, Connection } from '@solana/web3.js';
 
@@ -13,7 +8,7 @@ async function testStopLoss() {
   // Load all the details for mango group
   const groupName = process.env.GROUP || 'devnet.2';
   const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-  const sleepTime = 500;
+  const sleepTime = 2000;
   const config = new Config(configFile);
   const groupIds = config.getGroup(cluster, groupName);
 
@@ -56,7 +51,8 @@ async function testStopLoss() {
     mangoGroup.dexProgramId,
   );
 
-  await client.addPerpTriggerOrder(
+  await sleep(sleepTime);
+  const txid = await client.addPerpTriggerOrder(
     mangoGroup,
     account,
     perpMarkets[0],
@@ -68,6 +64,7 @@ async function testStopLoss() {
     'below',
     39000,
   );
+  console.log('add perp trigger order successful', txid.toString());
   console.log(await account.loadAdvancedOrders(connection));
 }
 
