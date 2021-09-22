@@ -395,7 +395,7 @@ MangoInstructionLayout.addVariant(
   struct([u8('limit')]),
   'CancelAllPerpOrders',
 );
-MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
+
 MangoInstructionLayout.addVariant(
   41,
   struct([
@@ -410,24 +410,30 @@ MangoInstructionLayout.addVariant(
   ]),
   'PlaceSpotOrder2',
 );
+
 MangoInstructionLayout.addVariant(42, struct([]), 'InitAdvancedOrders');
 MangoInstructionLayout.addVariant(
   43,
   struct([
     orderTypeLayout('orderType', 1),
     sideLayout(1, 'side'),
-    u8('triggerCondition'),
-    u8('reduceOnly'),
+    triggerConditionLayout('triggerCondition', 1),
+    bool('reduceOnly'),
     u64('clientOrderId'),
-    u64('price'),
-    u64('quantity'),
+    i64('price'),
+    i64('quantity'),
     I80F48Layout('triggerPrice'),
   ]),
   'AddPerpTriggerOrder',
 );
 MangoInstructionLayout.addVariant(
   44,
-  struct([u8('advancedOrderId')]),
+  struct([u8('orderIndex')]),
+  'RemoveAdvancedOrder',
+);
+MangoInstructionLayout.addVariant(
+  45,
+  struct([u8('orderIndex')]),
   'ExecutePerpTriggerOrder',
 );
 
@@ -1107,6 +1113,7 @@ const AdvancedOrderLayout = struct([
 
   seq(u8(), 32, 'padding'),
 ]);
+console.log('spannnnn', AdvancedOrderLayout.span);
 // export const AdvancedOrderLayout = union(
 //   u8('advancedOrderType'),
 //   bool('isActive'),
