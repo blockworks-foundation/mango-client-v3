@@ -2,7 +2,15 @@ import fs from 'fs';
 import os from 'os';
 import { Cluster, Config, MangoClient, sleep } from '../src';
 import configFile from '../src/ids.json';
-import { Account, Commitment, Connection } from '@solana/web3.js';
+import {
+  Account,
+  Commitment,
+  Connection,
+  LAMPORTS_PER_SOL,
+  sendAndConfirmTransaction,
+  SystemProgram,
+  Transaction,
+} from '@solana/web3.js';
 
 async function testStopLoss() {
   // Load all the details for mango group
@@ -65,7 +73,23 @@ async function testStopLoss() {
     39000,
   );
   console.log('add perp trigger order successful', txid.toString());
-  console.log(await account.loadAdvancedOrders(connection));
+  const advanced = await account.loadAdvancedOrders(connection);
+  console.log(advanced.filter((o) => o.perpTrigger && o.perpTrigger.isActive));
+
+  const agent = new Account();
+  console.log('agent:', agent.publicKey.toBase58());
+
+  const tx = new Transaction().add(
+    SystemProgram.transfer({
+      fromPubkey: payer.publicKey,
+      toPubkey: agent.publicKey,
+      lamports: 0.1 * LAMPORTS_PER_SOL,
+    }),
+  );
+  await sendAndConfirmTransaction(connection, tx, [payer]);
+  await sleep(sleepTime);
+  const agentAcc = await connection.getAccountInfo(agent.publicKey);
+  console.log(agentAcc?.lamports);
 }
 
 testStopLoss();

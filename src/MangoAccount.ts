@@ -117,7 +117,6 @@ export default class MangoAccount {
   async loadAdvancedOrders(connection: Connection): Promise<any> {
     const acc = await connection.getAccountInfo(this.advancedOrdersPk);
     const decoded = AdvancedOrdersLayout.decode(acc?.data);
-    console.log(decoded);
     this.advancedOrders = decoded.orders;
     return decoded.orders;
   }
