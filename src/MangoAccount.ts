@@ -61,11 +61,12 @@ export default class MangoAccount {
 
   advancedOrdersKey!: PublicKey;
   advancedOrdersBumpSeed!: number;
-  advancedOrders!: any[];
+  advancedOrders: any[];
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);
+    this.advancedOrders = [];
     Object.assign(this, decoded);
   }
 
@@ -115,7 +116,7 @@ export default class MangoAccount {
     return this.spotOpenOrdersAccounts;
   }
 
-  async loadAdvancedOrders(connection: Connection): Promise<any> {
+  async loadAdvancedOrders(connection: Connection): Promise<any[]> {
     const acc = await connection.getAccountInfo(this.advancedOrdersKey);
     const decoded = AdvancedOrdersLayout.decode(acc?.data);
     this.advancedOrders = decoded.orders;
