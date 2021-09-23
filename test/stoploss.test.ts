@@ -88,6 +88,19 @@ async function testStopLoss() {
     100,
   );
 
+  // Get a position on the perps
+  await client.placePerpOrder(
+    mangoGroup,
+    account,
+    mangoGroup.mangoCache,
+    perpMarkets[0],
+    payer,
+    'buy',
+    50000,
+    0.001,
+    'market',
+  );
+
   // Add the trigger order, this should be executable immediately
   await sleep(sleepTime);
   const txid = await client.addPerpTriggerOrder(
@@ -97,10 +110,10 @@ async function testStopLoss() {
     payer,
     'limit',
     'sell',
-    45000,
+    40000,
     0.0001,
     'below',
-    45000,
+    50000,
     true,
   );
   console.log('add perp trigger order successful', txid.toString());

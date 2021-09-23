@@ -969,7 +969,7 @@ export class MangoClient {
   async placePerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
-    mangoCache: PublicKey,
+    mangoCache: PublicKey, // TODO - remove; already in MangoGroup
     perpMarket: PerpMarket,
     owner: Account | WalletAdapter,
 
