@@ -1133,13 +1133,13 @@ export const AdvancedOrdersLayout = struct([
 ]);
 
 export interface PerpTriggerOrder {
-  isActive: boolean
-  marketIndex: number
-  orderType: 'limit' | 'ioc' | 'postOnly' | 'market'
-  side: 'buy' | 'sell'
-  triggerCondition: 'above' | 'below'
-  clientOrderId: number
-  price: number
-  quantity: number  
-  triggerPrice: I80F48
+  isActive: boolean;
+  marketIndex: number;
+  orderType: 'limit' | 'ioc' | 'postOnly' | 'market';
+  side: 'buy' | 'sell';
+  triggerCondition: 'above' | 'below';
+  clientOrderId: BN;
+  price: BN;
+  quantity: BN;
+  triggerPrice: I80F48;
 }
