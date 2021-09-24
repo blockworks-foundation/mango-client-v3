@@ -120,6 +120,8 @@ export default class MangoAccount {
   async loadAdvancedOrders(
     connection: Connection,
   ): Promise<{ perpTrigger?: PerpTriggerOrder }[]> {
+    if (this.advancedOrdersKey.equals(zeroKey)) return [];
+
     const acc = await connection.getAccountInfo(this.advancedOrdersKey);
     const decoded = AdvancedOrdersLayout.decode(acc?.data);
     this.advancedOrders = decoded.orders;
