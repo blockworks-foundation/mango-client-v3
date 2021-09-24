@@ -28,6 +28,7 @@ import {
   getTokenByMint,
   GroupConfig,
   PerpMarketConfig,
+  PerpTriggerOrder,
   TokenConfig,
   ZERO_BN,
 } from '.';
@@ -61,7 +62,7 @@ export default class MangoAccount {
 
   advancedOrdersKey!: PublicKey;
   advancedOrdersBumpSeed!: number;
-  advancedOrders!: any[];
+  advancedOrders!: { perpTrigger?: PerpTriggerOrder }[];
 
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
@@ -115,7 +116,7 @@ export default class MangoAccount {
     return this.spotOpenOrdersAccounts;
   }
 
-  async loadAdvancedOrders(connection: Connection): Promise<any> {
+  async loadAdvancedOrders(connection: Connection): Promise<{ perpTrigger?: PerpTriggerOrder | undefined }[]> {
     const acc = await connection.getAccountInfo(this.advancedOrdersKey);
     const decoded = AdvancedOrdersLayout.decode(acc?.data);
     this.advancedOrders = decoded.orders;

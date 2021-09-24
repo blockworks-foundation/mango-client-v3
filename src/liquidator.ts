@@ -19,14 +19,20 @@ import {
   MangoGroup,
   PerpMarket,
   RootBank,
+  zeroKey,
   ZERO_BN,
 } from '.';
 import { Orderbook } from '@project-serum/serum/lib/market';
 import axios from 'axios';
+import { group } from 'console';
 
 const interval = parseInt(process.env.INTERVAL || '3500');
-const refreshAccountsInterval = parseInt(process.env.INTERVAL_ACCOUNTS || '120000');
-const refreshWebsocketInterval = parseInt(process.env.INTERVAL_WEBSOCKET || '300000');
+const refreshAccountsInterval = parseInt(
+  process.env.INTERVAL_ACCOUNTS || '120000',
+);
+const refreshWebsocketInterval = parseInt(
+  process.env.INTERVAL_WEBSOCKET || '300000',
+);
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -136,11 +142,67 @@ async function main() {
       for (let mangoAccount of mangoAccounts) {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
+        if (process.env.CHECK_TRIGGERS) {
+          try {
+            if (
+              mangoAccount.advancedOrdersKey &&
+              !mangoAccount.advancedOrdersKey.equals(zeroKey)
+            ) {
+              await mangoAccount.loadAdvancedOrders(connection);
+              if (mangoAccount.advancedOrders) {
+                for (let i = 0; i < mangoAccount.advancedOrders.length; i++) {
+                  const order = mangoAccount.advancedOrders[i];
+                  if (
+                    order.perpTrigger &&
+                    order.perpTrigger.isActive &&
+                    order.perpTrigger['reduceOnly'] == true
+                  ) {
+                    const trigger = order.perpTrigger;
+                    const currentPrice =
+                      cache.priceCache[trigger.marketIndex].price;
+                    const marketIndex = groupIds.perpMarkets.findIndex(
+                      (pm) => pm.marketIndex == trigger.marketIndex,
+                    );
+                    if (
+                      (trigger.triggerCondition == 'above' &&
+                        currentPrice.gt(trigger.triggerPrice)) ||
+                      (trigger.triggerCondition == 'below' &&
+                        currentPrice.lt(trigger.triggerPrice))
+                    ) {
+                      console.log(
+                        `Executing order for account ${mangoAccount.publicKey.toBase58()}`,
+                      );
+                      await client.executePerpTriggerOrder(
+                        mangoGroup,
+                        mangoAccount,
+                        cache,
+                        perpMarkets[marketIndex],
+                        payer,
+                        i,
+                      );
+                    }
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.error(
+              `Failed to execute trigger order for ${mangoAccountKeyString}`,
+              err,
+            );
+          }
+        }
         if (health.lt(ZERO_I80F48)) {
           if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
             await mangoAccount.reload(connection, mangoGroup.dexProgramId);
-            if (!mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
-              console.log(`Account ${mangoAccountKeyString} no longer liquidatable`);
+            if (
+              !mangoAccount
+                .getHealthRatio(mangoGroup, cache, 'Maint')
+                .lt(ZERO_I80F48)
+            ) {
+              console.log(
+                `Account ${mangoAccountKeyString} no longer liquidatable`,
+              );
               continue;
             }
 
@@ -444,9 +506,17 @@ async function liquidateSpot(
 
   if (assetRootBank && liabRootBank) {
     const liqorInitHealth = liqor.getHealth(mangoGroup, cache, 'Init');
-    const liabAssetWeight = mangoGroup.spotMarkets[minNetIndex] ? mangoGroup.spotMarkets[minNetIndex].initAssetWeight : ONE_I80F48;
-    const assetAssetWeight = mangoGroup.spotMarkets[maxNetIndex] ? mangoGroup.spotMarkets[maxNetIndex].initAssetWeight : ONE_I80F48;
-    const maxLiabTransfer = liqorInitHealth.div(mangoGroup.getPriceNative(minNetIndex, cache).mul(liabAssetWeight.sub(assetAssetWeight).abs()));
+    const liabAssetWeight = mangoGroup.spotMarkets[minNetIndex]
+      ? mangoGroup.spotMarkets[minNetIndex].initAssetWeight
+      : ONE_I80F48;
+    const assetAssetWeight = mangoGroup.spotMarkets[maxNetIndex]
+      ? mangoGroup.spotMarkets[maxNetIndex].initAssetWeight
+      : ONE_I80F48;
+    const maxLiabTransfer = liqorInitHealth.div(
+      mangoGroup
+        .getPriceNative(minNetIndex, cache)
+        .mul(liabAssetWeight.sub(assetAssetWeight).abs()),
+    );
 
     if (liqee.isBankrupt) {
       console.log('Bankrupt account', liqee.publicKey.toBase58());
@@ -464,7 +534,12 @@ async function liquidateSpot(
         await liqee.reload(connection, mangoGroup.dexProgramId);
       }
     } else {
-      console.log(`Liquidating max ${maxLiabTransfer.toString()}/${liqee.getNativeBorrow(liabRootBank, minNetIndex)} of liab ${minNetIndex}, asset ${maxNetIndex}`)
+      console.log(
+        `Liquidating max ${maxLiabTransfer.toString()}/${liqee.getNativeBorrow(
+          liabRootBank,
+          minNetIndex,
+        )} of liab ${minNetIndex}, asset ${maxNetIndex}`,
+      );
       await client.liquidateTokenAndToken(
         mangoGroup,
         liqee,
@@ -728,13 +803,13 @@ async function balanceTokens(
     if (Math.abs(diffs[marketIndex].toNumber()) > market.minOrderSize) {
       if (netValues[i][1].gt(ZERO_I80F48)) {
         // sell to close
-        const price = mangoGroup.getPrice(marketIndex, cache).mul(
-          I80F48.fromNumber(0.95),
-        );
+        const price = mangoGroup
+          .getPrice(marketIndex, cache)
+          .mul(I80F48.fromNumber(0.95));
         console.log(
-          `Sell to close ${marketIndex} ${Math.abs(diffs[
-            marketIndex
-          ].toNumber())} @ ${price.toString()}`,
+          `Sell to close ${marketIndex} ${Math.abs(
+            diffs[marketIndex].toNumber(),
+          )} @ ${price.toString()}`,
         );
         await client.placeSpotOrder(
           mangoGroup,
@@ -755,14 +830,14 @@ async function balanceTokens(
         );
       } else if (netValues[i][1].lt(ZERO_I80F48)) {
         //buy to close
-        const price = mangoGroup.getPrice(marketIndex, cache).mul(
-          I80F48.fromNumber(1.05),
-        );
+        const price = mangoGroup
+          .getPrice(marketIndex, cache)
+          .mul(I80F48.fromNumber(1.05));
 
         console.log(
-          `Buy to close ${marketIndex} ${Math.abs(diffs[
-            marketIndex
-          ].toNumber())} @ ${price.toString()}`,
+          `Buy to close ${marketIndex} ${Math.abs(
+            diffs[marketIndex].toNumber(),
+          )} @ ${price.toString()}`,
         );
         await client.placeSpotOrder(
           mangoGroup,
@@ -809,18 +884,18 @@ async function closePositions(
         const side = perpAccount.basePosition.gt(ZERO_BN) ? 'sell' : 'buy';
         const liquidationFee =
           mangoGroup.perpMarkets[index].liquidationFee.toNumber();
-        
+
         const orderPrice =
           side == 'sell' ? price.toNumber() * 0.95 : price.toNumber() * 1.05; // TODO: base this on liquidation fee
 
         console.log(
           side +
-          'ing ' +
-          basePositionSize +
-          ' of perp ' +
-          i +
-          ' for $' +
-          orderPrice,
+            'ing ' +
+            basePositionSize +
+            ' of perp ' +
+            i +
+            ' for $' +
+            orderPrice,
         );
         await client.placePerpOrder(
           mangoGroup,
@@ -836,8 +911,8 @@ async function closePositions(
       }
 
       await mangoAccount.reload(connection, mangoGroup.dexProgramId);
-      
-      if(!perpAccount.quotePosition.eq(ZERO_I80F48)) {
+
+      if (!perpAccount.quotePosition.eq(ZERO_I80F48)) {
         const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
         if (quoteRootBank) {
           await client.settlePnl(
