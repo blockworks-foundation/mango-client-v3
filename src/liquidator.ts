@@ -36,7 +36,7 @@ if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);
 }
 
-const TARGETS = [0, 0, 0, 0, 0, 0, 0];
+const TARGETS = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
@@ -651,10 +651,11 @@ function getDiffsAndNet(mangoGroup: MangoGroup, mangoAccount: MangoAccount, cach
   // Go to each base currency and see if it's above or below target
 
   for (let i = 0; i < groupIds!.spotMarkets.length; i++) {
+    const target = TARGETS[i] !== undefined ? TARGETS[i] : 0;
     const diff = mangoAccount
       .getUiDeposit(cache.rootBankCache[i], mangoGroup, i)
       .sub(mangoAccount.getUiBorrow(cache.rootBankCache[i], mangoGroup, i))
-      .sub(I80F48.fromNumber(TARGETS[i]));
+      .sub(I80F48.fromNumber(target));
     diffs.push(diff);
     netValues.push([i, diff.mul(cache.priceCache[i].price)]);
   }
@@ -730,10 +731,11 @@ async function balanceTokens(
   // Go to each base currency and see if it's above or below target
 
   for (let i = 0; i < groupIds!.spotMarkets.length; i++) {
+    const target = TARGETS[i] !== undefined ? TARGETS[i] : 0;
     const diff = mangoAccount
       .getUiDeposit(cache.rootBankCache[i], mangoGroup, i)
       .sub(mangoAccount.getUiBorrow(cache.rootBankCache[i], mangoGroup, i))
-      .sub(I80F48.fromNumber(TARGETS[i]));
+      .sub(I80F48.fromNumber(target));
     diffs.push(diff);
     netValues.push([i, diff.mul(cache.priceCache[i].price)]);
   }
