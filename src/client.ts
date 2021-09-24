@@ -1553,7 +1553,7 @@ export class MangoClient {
       maxQuoteQuantity,
       selfTradeBehavior,
       orderType,
-      clientOrderId,
+      clientOrderId ?? new BN(Date.now()),
     );
     transaction.add(placeOrderInstruction);
 
@@ -2909,6 +2909,7 @@ export class MangoClient {
       maxQuoteQuantity,
       selfTradeBehavior,
       orderType,
+      order.clientId,
     );
     transaction.add(placeOrderInstruction);
 
@@ -2950,7 +2951,7 @@ export class MangoClient {
     price: number,
     quantity: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
-    clientOrderId = 0,
+    clientOrderId?: number,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     invalidIdOk = false, // Don't throw error if order is invalid
   ): Promise<TransactionSignature> {
@@ -2998,7 +2999,9 @@ export class MangoClient {
       mangoAccount.spotOpenOrders,
       nativePrice,
       nativeQuantity,
-      new BN(clientOrderId),
+      clientOrderId
+        ? new BN(clientOrderId)
+        : order.clientId ?? new BN(Date.now()),
       side,
       orderType,
     );

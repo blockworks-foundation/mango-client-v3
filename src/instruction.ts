@@ -1593,7 +1593,7 @@ export function makeAddPerpTriggerOrderInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: true, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: advancedOrdersPk },
+    { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: false, pubkey: perpMarketPk },
     { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
