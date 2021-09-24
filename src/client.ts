@@ -969,7 +969,7 @@ export class MangoClient {
   async placePerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
-    mangoCache: PublicKey,
+    mangoCache: PublicKey, // TODO - remove; already in MangoGroup
     perpMarket: PerpMarket,
     owner: Account | WalletAdapter,
 
@@ -3050,7 +3050,6 @@ export class MangoClient {
     quantity: number,
     triggerCondition: 'above' | 'below',
     triggerPrice: number,
-    reduceOnly?: boolean,
     clientOrderId?: number,
   ): Promise<TransactionSignature> {
     const transaction = new Transaction();
@@ -3111,7 +3110,7 @@ export class MangoClient {
         nativeQuantity,
         triggerCondition,
         I80F48.fromNumber(triggerPrice),
-        reduceOnly,
+        true, // Must be true for now
         new BN(clientOrderId ?? Date.now()),
       ),
     );

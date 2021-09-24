@@ -77,7 +77,29 @@ async function testStopLoss() {
     payer.publicKey,
   );
 
-  await client.deposit(mangoGroup, account, payer, quoteRootBank.publicKey, quoteNodeBanks[0].publicKey, quoteNodeBanks[0].vault, quoteWallet.address, 100);
+  await client.deposit(
+    mangoGroup,
+    account,
+    payer,
+    quoteRootBank.publicKey,
+    quoteNodeBanks[0].publicKey,
+    quoteNodeBanks[0].vault,
+    quoteWallet.address,
+    100,
+  );
+
+  // Get a position on the perps
+  await client.placePerpOrder(
+    mangoGroup,
+    account,
+    mangoGroup.mangoCache,
+    perpMarkets[0],
+    payer,
+    'buy',
+    50000,
+    0.001,
+    'market',
+  );
 
   // Add the trigger order, this should be executable immediately
   await sleep(sleepTime);
@@ -88,10 +110,10 @@ async function testStopLoss() {
     payer,
     'limit',
     'sell',
-    45000,
+    40000,
     0.0001,
     'below',
-    45000,
+    50000,
   );
   console.log('add perp trigger order successful', txid.toString());
   const advanced = await account.loadAdvancedOrders(connection);
@@ -118,7 +140,14 @@ async function testStopLoss() {
   );
 
   // Now trigger the order
-  await client.executePerpTriggerOrder(mangoGroup, account, cache, perpMarkets[0], agent, 0);
+  await client.executePerpTriggerOrder(
+    mangoGroup,
+    account,
+    cache,
+    perpMarkets[0],
+    agent,
+    0,
+  );
 }
 
 testStopLoss();

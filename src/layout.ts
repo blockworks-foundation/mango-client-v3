@@ -1131,3 +1131,15 @@ export const AdvancedOrdersLayout = struct([
   metaDataLayout('metaData'),
   seq(ADVANCED_ORDER_LAYOUT, MAX_ADVANCED_ORDERS, 'orders'),
 ]);
+
+export interface PerpTriggerOrder {
+  isActive: boolean
+  marketIndex: number
+  orderType: 'limit' | 'ioc' | 'postOnly' | 'market'
+  side: 'buy' | 'sell'
+  triggerCondition: 'above' | 'below'
+  clientOrderId: number
+  price: number
+  quantity: number  
+  triggerPrice: I80F48
+}

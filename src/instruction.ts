@@ -1647,7 +1647,6 @@ export function makeExecutePerpTriggerOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
-    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
     ...openOrders.map((pubkey) => ({
       isSigner: false,
       isWritable: false,
