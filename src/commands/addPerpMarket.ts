@@ -27,6 +27,7 @@ export default async function addPerpMarket(
   maxDepthBps: number,
   targetPeriodLength: number,
   mngoPerPeriod: number,
+  exp: number,
 ): Promise<GroupConfig> {
   console.log({
     connection,
@@ -72,6 +73,7 @@ export default async function addPerpMarket(
     maxDepthBps,
     targetPeriodLength,
     nativeMngoPerPeriod,
+    exp,
   );
 
   group = await client.getMangoGroup(groupConfig.publicKey);

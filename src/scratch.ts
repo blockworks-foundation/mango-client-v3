@@ -1,28 +1,14 @@
-import { PublicKey } from '@solana/web3.js';
+import {
+  deserializeBorsh,
+  LOGGABLE_SCHEMA,
+  LoggableFillEvent,
+} from './loggable';
 
-async function verify(
-  programId: PublicKey,
-  realm: PublicKey,
-  tokenAccount: PublicKey,
-) {
-  const [address, nonce] = await PublicKey.findProgramAddress(
-    [
-      Buffer.from('token-governance', 'utf-8'),
-      realm.toBuffer(),
-      tokenAccount.toBuffer(),
-    ],
-    programId,
-  );
-
-  console.log(address.toBase58());
+function deserializeEvent(b64string: string) {
+  const data = Buffer.from(b64string, 'base64');
+  const x = deserializeBorsh(LOGGABLE_SCHEMA, LoggableFillEvent, data);
+  console.log(x.quantity.toString());
 }
-
-const dao_program_id = new PublicKey(
-  'GqTPL6qRf5aUuqscLh8Rg2HTxPUXfhhAXDptTLhp1t2J',
+deserializeEvent(
+  'AAAHAAHsUGEAAAAAPBgBAAAAAAC4kVf55PTy0BmUBbr41IxHf1A9JU8WSrCUWGSI8WTJlExiDwAAAAAAd6QGAAAAAADV4BkkfAEAAAAAAAAAAAAAAAAAAAAAAACtpAYAAAAAAADsUGEAAAAARuIL33wGLo2fQ4HMUgyFM8qr6nKFpEX/UaC1A8l4kMOvnfD//////7X5BgAAAAAAAAAAAAAAAAAdWmQ73///////////////iVv5//////8BAAAAAAAAAA==',
 );
-const realm = new PublicKey('DPiH3H3c7t47BMxqTxLsuPQpEC6Kne8GA9VXbxpnZxFE');
-const tokenAccount = new PublicKey(
-  '4PdEyhrV3gaUj4ffwjKGXBLo42jF2CQCCBoXenwCRWXf',
-);
-
-verify(dao_program_id, realm, tokenAccount);

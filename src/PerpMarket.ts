@@ -6,6 +6,7 @@ import {
   BookSideLayout,
   FillEvent,
   MangoAccount,
+  MetaData,
   PerpEventQueue,
   PerpEventQueueLayout,
   PerpMarketConfig,
@@ -24,6 +25,7 @@ export type ParsedFillEvent = Modify<
 >;
 
 export default class PerpMarket {
+  metaData!: MetaData;
   publicKey: PublicKey;
   baseDecimals: number;
   quoteDecimals: number;
@@ -186,6 +188,7 @@ export default class PerpMarket {
       `\n----- ${perpMarketConfig.name} Liquidity Mining Info -----`,
       `rate: ${lmi.rate.toString()}`,
       `maxDepthBps: ${lmi.maxDepthBps.toString()}`,
+      `exp: ${this.metaData.extraInfo || 2}`,
       `periodStart: ${new Date(
         lmi.periodStart.toNumber() * 1000,
       ).toUTCString()}`,

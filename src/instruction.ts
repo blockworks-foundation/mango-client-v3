@@ -9,7 +9,7 @@ import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
 import { I80F48, ZERO_I80F48 } from './fixednum';
-import { PerpOrder } from '.';
+import { PerpOrder, ZERO_BN } from '.';
 
 export function makeInitMangoGroupInstruction(
   programId: PublicKey,
@@ -757,6 +757,7 @@ export function makeAddPerpMarketInstruction(
   maxDepthBps: I80F48,
   targetPeriodLength: BN,
   mngoPerPeriod: BN,
+  exp: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -781,6 +782,7 @@ export function makeAddPerpMarketInstruction(
       maxDepthBps,
       targetPeriodLength,
       mngoPerPeriod,
+      exp,
     },
   });
 
@@ -1461,6 +1463,7 @@ export function makeChangePerpMarketParamsInstruction(
   maxDepthBps: I80F48 | undefined,
   targetPeriodLength: BN | undefined,
   mngoPerPeriod: BN | undefined,
+  exp: BN | undefined,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -1486,9 +1489,11 @@ export function makeChangePerpMarketParamsInstruction(
       maxDepthBps: maxDepthBps !== undefined ? maxDepthBps : ZERO_I80F48,
       targetPeriodLengthOption: targetPeriodLength !== undefined,
       targetPeriodLength:
-        targetPeriodLength !== undefined ? targetPeriodLength : new BN(0),
+        targetPeriodLength !== undefined ? targetPeriodLength : ZERO_BN,
       mngoPerPeriodOption: mngoPerPeriod !== undefined,
-      mngoPerPeriod: mngoPerPeriod !== undefined ? mngoPerPeriod : new BN(0),
+      mngoPerPeriod: mngoPerPeriod !== undefined ? mngoPerPeriod : ZERO_BN,
+      expOption: exp !== undefined,
+      exp: exp !== undefined ? exp : ZERO_BN,
     },
   });
 

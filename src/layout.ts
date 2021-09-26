@@ -260,6 +260,7 @@ MangoInstructionLayout.addVariant(
     I80F48Layout('maxDepthBps'),
     u64('targetPeriodLength'),
     u64('mngoPerPeriod'),
+    u8('exp'),
   ]),
   'AddPerpMarket',
 );
@@ -386,6 +387,8 @@ MangoInstructionLayout.addVariant(
     u64('targetPeriodLength'),
     bool('mngoPerPeriodOption'),
     u64('mngoPerPeriod'),
+    bool('expOption'),
+    u8('exp'),
   ]),
   'ChangePerpMarketParams',
 );
@@ -491,6 +494,7 @@ export class MetaData {
   dataType!: number;
   version!: number;
   isInitialized!: boolean;
+  extraInfo!: number;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -504,7 +508,8 @@ export class MetaDataLayout extends Structure {
         u8('dataType'),
         u8('version'),
         u8('isInitialized'),
-        seq(u8(), 5, 'padding'),
+        u8('extraInfo'),
+        seq(u8(), 4, 'padding'),
       ],
       property,
     );

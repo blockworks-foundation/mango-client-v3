@@ -2070,6 +2070,7 @@ export class MangoClient {
     maxDepthBps: number,
     targetPeriodLength: number,
     mngoPerPeriod: number,
+    exp: number,
   ) {
     const makePerpMarketAccountInstruction = await createAccountInstruction(
       this.connection,
@@ -2129,6 +2130,7 @@ export class MangoClient {
       I80F48.fromNumber(maxDepthBps),
       new BN(targetPeriodLength),
       new BN(mngoPerPeriod),
+      new BN(exp),
     );
 
     const createMngoVaultTransaction = new Transaction();
@@ -2672,6 +2674,7 @@ export class MangoClient {
     maxDepthBps: number | undefined,
     targetPeriodLength: number | undefined,
     mngoPerPeriod: number | undefined,
+    exp: number | undefined,
   ): Promise<TransactionSignature> {
     const instruction = makeChangePerpMarketParamsInstruction(
       this.programId,
@@ -2687,6 +2690,7 @@ export class MangoClient {
       I80F48.fromNumberOrUndef(maxDepthBps),
       targetPeriodLength !== undefined ? new BN(targetPeriodLength) : undefined,
       mngoPerPeriod !== undefined ? new BN(mngoPerPeriod) : undefined,
+      exp !== undefined ? new BN(exp) : undefined,
     );
 
     const transaction = new Transaction();
