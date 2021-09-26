@@ -42,7 +42,7 @@ if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);
 }
 
-const TARGETS = [0, 0, 0, 0, 0, 0, 0];
+const TARGETS = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
@@ -720,12 +720,31 @@ async function liquidatePerps(
   }
 }
 
+function getDiffsAndNet(mangoGroup: MangoGroup, mangoAccount: MangoAccount, cache: MangoCache) {
+  const diffs: I80F48[] = [];
+  const netValues: [number, I80F48][] = [];
+  // Go to each base currency and see if it's above or below target
+
+  for (let i = 0; i < groupIds!.spotMarkets.length; i++) {
+    const target = TARGETS[i] !== undefined ? TARGETS[i] : 0;
+    const diff = mangoAccount
+      .getUiDeposit(cache.rootBankCache[i], mangoGroup, i)
+      .sub(mangoAccount.getUiBorrow(cache.rootBankCache[i], mangoGroup, i))
+      .sub(I80F48.fromNumber(target));
+    diffs.push(diff);
+    netValues.push([i, diff.mul(cache.priceCache[i].price)]);
+  }
+
+  return { diffs, netValues };
+}
+
 async function balanceTokens(
   mangoGroup: MangoGroup,
   mangoAccount: MangoAccount,
   markets: Market[],
 ) {
   console.log('balanceTokens');
+  await mangoAccount.reload(connection, mangoGroup.dexProgramId);
   const cache = await mangoGroup.loadCache(connection);
   const cancelOrdersPromises: Promise<string>[] = [];
   const bidsInfo = await getMultipleAccounts(
@@ -783,15 +802,15 @@ async function balanceTokens(
   console.log('settling on ' + settlePromises.length + ' markets');
   await Promise.all(settlePromises);
 
-  const diffs: I80F48[] = [];
-  const netValues: [number, I80F48][] = [];
+  const { diffs, netValues } = getDiffsAndNet(mangoGroup, mangoAccount, cache);
   // Go to each base currency and see if it's above or below target
 
   for (let i = 0; i < groupIds!.spotMarkets.length; i++) {
+    const target = TARGETS[i] !== undefined ? TARGETS[i] : 0;
     const diff = mangoAccount
       .getUiDeposit(cache.rootBankCache[i], mangoGroup, i)
       .sub(mangoAccount.getUiBorrow(cache.rootBankCache[i], mangoGroup, i))
-      .sub(I80F48.fromNumber(TARGETS[i]));
+      .sub(I80F48.fromNumber(target));
     diffs.push(diff);
     netValues.push([i, diff.mul(cache.priceCache[i].price)]);
   }
@@ -820,7 +839,7 @@ async function balanceTokens(
           'sell',
           price.toNumber(),
           Math.abs(diffs[marketIndex].toNumber()),
-          'ioc',
+          'limit',
         );
         await client.settleFunds(
           mangoGroup,
@@ -848,7 +867,7 @@ async function balanceTokens(
           'buy',
           price.toNumber(),
           Math.abs(diffs[marketIndex].toNumber()),
-          'ioc',
+          'limit',
         );
         await client.settleFunds(
           mangoGroup,
@@ -859,6 +878,17 @@ async function balanceTokens(
       }
     }
   }
+  await sleep(2000);
+  await mangoAccount.reload(connection, mangoGroup.dexProgramId);
+
+  const { diffs: postDiffs, netValues: postNetValues } = getDiffsAndNet(mangoGroup, mangoAccount, cache);
+  const isUnbalanced = postNetValues.some((nv) => 
+    Math.abs(postDiffs[nv[0]].toNumber()) > markets[nv[0]].minOrderSize
+  )
+
+  if (isUnbalanced) {
+    await balanceTokens(mangoGroup, mangoAccount, markets);
+  }
 }
 
 async function closePositions(
@@ -867,6 +897,7 @@ async function closePositions(
   perpMarkets: PerpMarket[],
 ) {
   console.log('closePositions');
+  await mangoAccount.reload(connection, mangoGroup.dexProgramId);
   const cache = await mangoGroup.loadCache(connection);
 
   for (let i = 0; i < perpMarkets.length; i++) {
@@ -875,6 +906,15 @@ async function closePositions(
     const perpAccount = mangoAccount.perpAccounts[index];
 
     if (perpMarket && perpAccount) {
+      const openOrders = await perpMarket.loadOrdersForAccount(
+        connection,
+        mangoAccount,
+      );
+  
+      for(const oo of openOrders) {
+        await client.cancelPerpOrder(mangoGroup, mangoAccount, payer, perpMarket, oo);
+      };
+
       const basePositionSize = Math.abs(
         perpMarket.baseLotsToNumber(perpAccount.basePosition),
       );
@@ -906,7 +946,7 @@ async function closePositions(
           side,
           orderPrice,
           basePositionSize,
-          'ioc',
+          'limit',
         );
       }
 
@@ -927,6 +967,24 @@ async function closePositions(
         }
       }
     }
+  }
+
+  await sleep(2000);
+  await mangoAccount.reload(connection, mangoGroup.dexProgramId);
+
+   // Check if we need to balance again
+  const isUnbalanced = perpMarkets.some((pm, i) => {
+    const index = mangoGroup.getPerpMarketIndex(pm.publicKey);
+    const perpAccount = mangoAccount.perpAccounts[index];
+    const basePositionSize = Math.abs(
+      pm.baseLotsToNumber(perpAccount.basePosition),
+    );
+
+    return basePositionSize != 0;
+  })
+  
+  if (isUnbalanced) {
+    await closePositions(mangoGroup, mangoAccount, perpMarkets);
   }
 }
 

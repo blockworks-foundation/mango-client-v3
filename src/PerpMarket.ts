@@ -8,10 +8,12 @@ import {
   MangoAccount,
   PerpEventQueue,
   PerpEventQueueLayout,
+  PerpMarketConfig,
 } from '.';
 import { I80F48 } from './fixednum';
 import { Modify } from './types';
 import { ZERO_BN } from './utils';
+import { EOL } from 'os';
 
 export type ParsedFillEvent = Modify<
   FillEvent,
@@ -151,8 +153,49 @@ export default class PerpMarket {
       this.loadAsks(connection),
     ]);
     // @ts-ignore
-    return [...bids, ...asks].filter(
-      (order) => (order.owner).equals(account.publicKey),
+    return [...bids, ...asks].filter((order) =>
+      order.owner.equals(account.publicKey),
     );
+  }
+
+  toPrettyString(perpMarketConfig: PerpMarketConfig): string {
+    const lmi = this.liquidityMiningInfo;
+    const now = Date.now() / 1000;
+    const start = lmi.periodStart.toNumber();
+    const elapsed = now - start;
+    const progress = 1 - lmi.mngoLeft.toNumber() / lmi.mngoPerPeriod.toNumber();
+    const est = start + elapsed / progress;
+
+    const lines: string[] = [
+      `${perpMarketConfig.name}`,
+      `publicKey: ${perpMarketConfig.publicKey.toBase58()}`,
+      `marketIndex: ${perpMarketConfig.marketIndex}`,
+      `bidsKey: ${this.bids.toBase58()}`,
+      `asksKey: ${this.asks.toBase58()}`,
+      `eventQueue: ${this.eventQueue.toBase58()}`,
+      `quoteLotSize: ${this.quoteLotSize.toString()}`,
+      `baseLotSize: ${this.baseLotSize.toString()}`,
+      `longFunding: ${this.longFunding.toString()}`,
+      `shortFunding: ${this.shortFunding.toString()}`,
+      `openInterest: ${this.openInterest.toString()}`,
+      `lastUpdated: ${new Date(
+        this.lastUpdated.toNumber() * 1000,
+      ).toUTCString()}`,
+      `seqNum: ${this.seqNum.toString()}`,
+      `feesAccrued: ${this.feesAccrued.toString()}`,
+      `\n----- ${perpMarketConfig.name} Liquidity Mining Info -----`,
+      `rate: ${lmi.rate.toString()}`,
+      `maxDepthBps: ${lmi.maxDepthBps.toString()}`,
+      `periodStart: ${new Date(
+        lmi.periodStart.toNumber() * 1000,
+      ).toUTCString()}`,
+      `targetPeriodLength: ${lmi.targetPeriodLength.toString()}`,
+      `mngoLeftInPeriod: ${lmi.mngoLeft.toString()}`,
+      `mngoPerPeriod: ${lmi.mngoPerPeriod.toString()}`,
+      `periodProgress: ${progress * 100}%`,
+      `estPeriodEnd: ${new Date(est * 1000).toUTCString()}`,
+    ];
+
+    return lines.join(EOL);
   }
 }

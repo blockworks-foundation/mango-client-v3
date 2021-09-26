@@ -171,7 +171,7 @@ To run the liquidator you will need:
 
 ### Setup
 Configure the environment variables below to your liking, default values are shown:
-```
+```bash
 CLUSTER="mainnet"
 CLUSTER_URL="https://solana-api.projectserum.com"
 KEYPAIR=~/.config/solana/id.json

@@ -210,9 +210,9 @@
           "baseDecimals": 6,
           "quoteDecimals": 6,
           "marketIndex": 6,
-          "bidsKey": "AvKStCiY8LTp3oDFrMkiHHxxhxk4sQUWnGVcetm4kRpy",
-          "asksKey": "Hj9kckvMX96mQokfMBzNCYEYMLEBYKQ9WwSc1GxasW11",
-          "eventsKey": "58KcficuUqPDcMittSddhT8LzsPJoH46YP4uURoMo5EB"
+          "bidsKey": "Hf84mYadE1VqSvVWAvCWc9wqLXak4RwXiPb4A91EAUn5",
+          "asksKey": "DC1HsWWRCXVg3wk2NndS5LTbce3axwUwUZH1RgnV4oDN",
+          "eventsKey": "H9dZt8kvz1Fe5FyRisb77KcYTaN8LEbuVAfJSnAaEABz"
         },
         {
           "name": "COPE/USDC",
