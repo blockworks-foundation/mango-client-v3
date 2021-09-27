@@ -423,7 +423,7 @@ yargs(hideBin(process.argv)).command(
       : await listMarket(
           connection,
           account,
-          group,
+          group.mangoProgramId,
           new PublicKey(args.mint_pk as string),
           quoteMintPk,
           args.base_lot_size as number,
