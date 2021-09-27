@@ -23,6 +23,10 @@ import {
 } from '.';
 import { Orderbook } from '@project-serum/serum/lib/market';
 import axios from 'axios';
+import * as Env from 'dotenv';
+import envExpand from 'dotenv-expand';
+
+envExpand(Env.config());
 
 const interval = parseInt(process.env.INTERVAL || '3500');
 const refreshAccountsInterval = parseInt(process.env.INTERVAL_ACCOUNTS || '120000');
@@ -36,7 +40,7 @@ if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);
 }
 
-const TARGETS = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+const TARGETS = process.env.TARGETS ? process.env.TARGETS.split(' ').map((s) => parseFloat(s)) : [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;

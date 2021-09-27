@@ -170,12 +170,13 @@ To run the liquidator you will need:
 * A Mango Account with some collateral deposited
 
 ### Setup
-Configure the environment variables below to your liking, default values are shown:
+Configure the environment variables below to your liking, or add them to a `.env` file in the project root to load automatically on liquidator startup. Default values are shown:
 ```bash
 CLUSTER="mainnet"
 CLUSTER_URL="https://solana-api.projectserum.com"
-KEYPAIR=~/.config/solana/id.json
+KEYPAIR=${HOME}/.config/solana/id.json
 GROUP="mainnet.1"
+TARGETS="0 0 0 0 0 0 0 0 0" # Space separated list of the amount of each asset to maintain when rebalancing
 INTERVAL=3500 # Milliseconds to wait before checking for sick accounts
 INTERVAL_ACCOUNTS=120000 # Milliseconds to wait before reloading all Mango accounts
 INTERVAL_WEBSOCKET=300000 # Milliseconds to wait before reconnecting to the websocket
@@ -183,7 +184,7 @@ LIQOR_PK="" # Liqor Mango account PK, by default uses the largest value account 
 WEBHOOK_URL="" # Discord webhook URL to post liquidation events and errors to
 ```
 
-The liquidator will attempt to close all perp positions, and balance the tokens in the liqor account after each liquidation. By default it will sell all token assets into USDC. You can choose to maintain a certain amount of each asset through this process by editing the value in the `TARGETS` array in `liquidator.ts:39` at the position of the asset. The program will attempt to make buy/sell orders during balancing to maintain this level.
+The liquidator will attempt to close all perp positions, and balance the tokens in the liqor account after each liquidation. By default it will sell all token assets into USDC. You can choose to maintain a certain amount of each asset through this process by editing the value in the `TARGETS` environment variable at the position of the asset. The program will attempt to make buy/sell orders during balancing to maintain this level.
 
 ### Run
 ```

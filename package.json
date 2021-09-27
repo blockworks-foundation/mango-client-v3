@@ -75,6 +75,8 @@
     "bigint-buffer": "^1.1.5",
     "bn.js": "^5.1.0",
     "buffer-layout": "^1.2.1",
+    "dotenv": "^10.0.0",
+    "dotenv-expand": "^5.1.0",
     "yargs": "^17.0.1"
   },
   "browserslist": [
