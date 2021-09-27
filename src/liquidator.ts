@@ -704,7 +704,7 @@ async function balanceTokens(
       );
     }
   }
-  console.log('cancelling ' + cancelOrdersPromises.length + ' orders');
+  console.log('Cancelling ' + cancelOrdersPromises.length + ' orders');
   await Promise.all(cancelOrdersPromises);
 
   const openOrders = await mangoAccount.loadOpenOrders(
@@ -724,21 +724,10 @@ async function balanceTokens(
       );
     }
   }
-  console.log('settling on ' + settlePromises.length + ' markets');
+  console.log('Settling on ' + settlePromises.length + ' markets');
   await Promise.all(settlePromises);
 
   const { diffs, netValues } = getDiffsAndNet(mangoGroup, mangoAccount, cache);
-  // Go to each base currency and see if it's above or below target
-
-  for (let i = 0; i < groupIds!.spotMarkets.length; i++) {
-    const target = TARGETS[i] !== undefined ? TARGETS[i] : 0;
-    const diff = mangoAccount
-      .getUiDeposit(cache.rootBankCache[i], mangoGroup, i)
-      .sub(mangoAccount.getUiBorrow(cache.rootBankCache[i], mangoGroup, i))
-      .sub(I80F48.fromNumber(target));
-    diffs.push(diff);
-    netValues.push([i, diff.mul(cache.priceCache[i].price)]);
-  }
 
   netValues.sort((a, b) => b[1].sub(a[1]).toNumber());
   for (let i = 0; i < groupIds!.spotMarkets.length; i++) {
@@ -764,7 +753,7 @@ async function balanceTokens(
           'sell',
           price.toNumber(),
           Math.abs(diffs[marketIndex].toNumber()),
-          'limit',
+          'ioc',
         );
         await client.settleFunds(
           mangoGroup,
@@ -792,7 +781,7 @@ async function balanceTokens(
           'buy',
           price.toNumber(),
           Math.abs(diffs[marketIndex].toNumber()),
-          'limit',
+          'ioc',
         );
         await client.settleFunds(
           mangoGroup,
@@ -871,7 +860,7 @@ async function closePositions(
           side,
           orderPrice,
           basePositionSize,
-          'limit',
+          'ioc',
         );
       }
 
