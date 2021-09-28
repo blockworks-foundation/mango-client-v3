@@ -14,6 +14,8 @@ import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
+  makeUpdateFundingInstruction,
+  makeUpdateRootBankInstruction,
   MangoClient,
   msrmMints,
   PerpEventQueue,
@@ -256,6 +258,63 @@ export default class TestGroup {
   async runKeeper() {
     await this.updateCache();
     await this.consumeEvents();
+    await this.updateBanksAndMarkets();
+  }
+
+  async updateBanksAndMarkets() {
+    console.log('processKeeperTransactions');
+    const promises: Promise<string>[] = [];
+    const mangoGroup = await this.client.getMangoGroup(this.mangoGroupKey);
+    const perpMarkets = await Promise.all(
+      [1, 3].map((marketIndex) => {
+        return mangoGroup.loadPerpMarket(this.connection, marketIndex, 6, 6);
+      }),
+    );
+    const rootBanks = await mangoGroup.loadRootBanks(this.connection);
+
+    const updateRootBankTransaction = new Transaction();
+    this.FIXED_IDS.forEach((token, i) => {
+      if (rootBanks[i]) {
+        updateRootBankTransaction.add(
+          makeUpdateRootBankInstruction(
+            this.mangoProgramId,
+            mangoGroup.publicKey,
+            mangoGroup.mangoCache,
+            rootBanks[i]!.publicKey,
+            rootBanks[i]!.nodeBanks.filter((n) => !n.equals(zeroKey)),
+          ),
+        );
+      }
+    });
+
+    const updateFundingTransaction = new Transaction();
+    perpMarkets.forEach((market) => {
+      if (market) {
+        updateFundingTransaction.add(
+          makeUpdateFundingInstruction(
+            this.mangoProgramId,
+            mangoGroup.publicKey,
+            mangoGroup.mangoCache,
+            market.publicKey,
+            market.bids,
+            market.asks,
+          ),
+        );
+      }
+    });
+
+    if (updateRootBankTransaction.instructions.length > 0) {
+      promises.push(
+        this.client.sendTransaction(updateRootBankTransaction, this.payer, []),
+      );
+    }
+    if (updateFundingTransaction.instructions.length > 0) {
+      promises.push(
+        this.client.sendTransaction(updateFundingTransaction, this.payer, []),
+      );
+    }
+
+    await Promise.all(promises);
   }
 
   async consumeEvents() {
@@ -291,7 +350,7 @@ export default class TestGroup {
 
       const events = eventQueue.getUnconsumedEvents();
       if (events.length === 0) {
-        // console.log('No events to consume');
+        console.log('No events to consume');
         continue;
       }
 
