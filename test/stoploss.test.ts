@@ -84,18 +84,69 @@ async function testStopLoss() {
     1000,
   );
 
+  await testGroup.runKeeper();
+  
+  const makerPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
+  console.log('Created Maker:', accountPk.toBase58());
+  await sleep(sleepTime);
+  const maker = await testGroup.client.getMangoAccount(
+    makerPk,
+    mangoGroup.dexProgramId,
+  );
+
+  await testGroup.runKeeper();
+  await testGroup.client.deposit(
+    mangoGroup,
+    maker,
+    payer,
+    quoteRootBank.publicKey,
+    quoteNodeBanks[0].publicKey,
+    quoteNodeBanks[0].vault,
+    quoteWallet.address,
+    10000,
+  );
+
+  await testGroup.runKeeper();
+
   // Get a position on the perps
+  console.log('placing maker order')
+  await testGroup.client.placePerpOrder(
+    mangoGroup,
+    maker,
+    mangoGroup.mangoCache,
+    perpMarkets[0],
+    payer,
+    'buy',
+    50000,
+    0.01,
+    'limit',
+  );
+
+  await testGroup.runKeeper();
+
+  // Get a position on the perps
+  console.log('placing taker order')
   await testGroup.client.placePerpOrder(
     mangoGroup,
     account,
     mangoGroup.mangoCache,
     perpMarkets[0],
     payer,
-    'buy',
+    'sell',
     50000,
     0.001,
     'market',
   );
+
+  await testGroup.runKeeper();
+  await sleep(2000);
+  await account.reload(testGroup.connection);
+  await maker.reload(testGroup.connection);
+
+  console.log('acct base', account.perpAccounts[1].basePosition.toString())
+  console.log('acct quote', account.perpAccounts[1].quotePosition.toString())
+  console.log('mkr base', maker.perpAccounts[1].basePosition.toString())
+  console.log('mkr quote', maker.perpAccounts[1].quotePosition.toString())
 
   // Add the trigger order, this should be executable immediately
   await sleep(sleepTime);
@@ -138,6 +189,7 @@ async function testStopLoss() {
   await testGroup.runKeeper();
 
   // Now trigger the order
+  console.log('execute order')
   await testGroup.client.executePerpTriggerOrder(
     mangoGroup,
     account,
@@ -148,11 +200,22 @@ async function testStopLoss() {
   );
   await testGroup.runKeeper();
   await account.reload(testGroup.connection, testGroup.serumProgramId);
-  console.log(account.getHealthRatio(mangoGroup, cache, 'Maint').toString());
-  await account.loadAdvancedOrders(testGroup.connection);
-  account.advancedOrders.forEach((ao) => {
-    console.log(ao.perpTrigger && ao.perpTrigger.isActive);
-  })
+  console.log('health', account.getHealthRatio(mangoGroup, cache, 'Maint').toString());
+
+  const openOrders = await perpMarkets[0].loadOrdersForAccount(
+    connection,
+    account,
+  );
+  console.log('open orders')
+  for(const oo of openOrders) {
+    console.log(oo)
+  };
+
+  console.log('bids and asks')
+  const asks = await (await perpMarkets[0].loadAsks(connection));
+  const bids = await (await perpMarkets[0].loadBids(connection));
+  console.log([...asks]);
+  console.log([...bids]);
 }
 
 testStopLoss();
