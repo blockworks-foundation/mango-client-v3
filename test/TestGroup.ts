@@ -129,10 +129,16 @@ export default class TestGroup {
   client: MangoClient;
   payer: Account;
   connection: Connection;
+  log: boolean;
+  logger: any;
 
-  constructor() {
+  constructor(log: boolean = false) {
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
     const config = new Config(configFile);
+    this.log = log;
+    if (!this.log) {
+      this.logger = console.log;
+    }
 
     this.payer = new Account(
       JSON.parse(
@@ -152,6 +158,11 @@ export default class TestGroup {
   }
 
   async init(): Promise<PublicKey> {
+    console.log('Creating Mango Group...');
+    if (!this.log) {
+      console.log = function () { };
+    }
+
     this.mangoGroupKey = await this.client.initMangoGroup(
       this.quoteMint,
       msrmMints['devnet'],
@@ -248,17 +259,28 @@ export default class TestGroup {
       }
       console.log('---');
     }
+    if (!this.log) {
+      console.log = this.logger;
+    }
     console.log(
-      'Succcessfully created new mango group ' + this.mangoGroupKey.toBase58(),
+      'Succcessfully created new Mango Group ' + this.mangoGroupKey.toBase58(),
     );
 
     return this.mangoGroupKey;
   }
 
   async runKeeper() {
+    console.log('runKeeper');
+    if (!this.log) {
+      console.log = function () { };
+    }
     await this.updateCache();
-    await this.consumeEvents();
     await this.updateBanksAndMarkets();
+    if (!this.log) {
+      console.log = this.logger;
+    }
+
+    await this.consumeEvents();
   }
 
   async updateBanksAndMarkets() {

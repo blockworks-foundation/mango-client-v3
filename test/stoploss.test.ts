@@ -17,31 +17,26 @@ import TestGroup from './TestGroup';
 
 async function testStopLoss() {
   const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const sleepTime = 2000;
-    const config = new Config(configFile);
+  const sleepTime = 2000;
+  const config = new Config(configFile);
 
-    const payer = new Account(
-      JSON.parse(
-        process.env.KEYPAIR ||
-          fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
-      ),
-    );
-    const connection = new Connection(
-      config.cluster_urls[cluster],
-      'processed' as Commitment,
-    );
+  const payer = new Account(
+    JSON.parse(
+      process.env.KEYPAIR ||
+        fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+    ),
+  );
+  const connection = new Connection(
+    config.cluster_urls[cluster],
+    'processed' as Commitment,
+  );
 
   const testGroup = new TestGroup();
   const mangoGroupKey = await testGroup.init();
   const mangoGroup = await testGroup.client.getMangoGroup(mangoGroupKey);
   const perpMarkets = await Promise.all(
     [1, 3].map((marketIndex) => {
-      return mangoGroup.loadPerpMarket(
-        connection,
-        marketIndex,
-        6,
-        6,
-      );
+      return mangoGroup.loadPerpMarket(connection, marketIndex, 6, 6);
     }),
   );
 
@@ -85,7 +80,7 @@ async function testStopLoss() {
   );
 
   await testGroup.runKeeper();
-  
+
   const makerPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
   console.log('Created Maker:', accountPk.toBase58());
   await sleep(sleepTime);
@@ -109,7 +104,7 @@ async function testStopLoss() {
   await testGroup.runKeeper();
 
   // Get a position on the perps
-  console.log('placing maker order')
+  console.log('placing maker order');
   await testGroup.client.placePerpOrder(
     mangoGroup,
     maker,
@@ -125,7 +120,7 @@ async function testStopLoss() {
   await testGroup.runKeeper();
 
   // Get a position on the perps
-  console.log('placing taker order')
+  console.log('placing taker order');
   await testGroup.client.placePerpOrder(
     mangoGroup,
     account,
@@ -143,10 +138,10 @@ async function testStopLoss() {
   await account.reload(testGroup.connection);
   await maker.reload(testGroup.connection);
 
-  console.log('acct base', account.perpAccounts[1].basePosition.toString())
-  console.log('acct quote', account.perpAccounts[1].quotePosition.toString())
-  console.log('mkr base', maker.perpAccounts[1].basePosition.toString())
-  console.log('mkr quote', maker.perpAccounts[1].quotePosition.toString())
+  console.log('acct base', account.perpAccounts[1].basePosition.toString());
+  console.log('acct quote', account.perpAccounts[1].quotePosition.toString());
+  console.log('mkr base', maker.perpAccounts[1].basePosition.toString());
+  console.log('mkr quote', maker.perpAccounts[1].quotePosition.toString());
 
   // Add the trigger order, this should be executable immediately
   await sleep(sleepTime);
@@ -189,7 +184,7 @@ async function testStopLoss() {
   await testGroup.runKeeper();
 
   // Now trigger the order
-  console.log('execute order')
+  console.log('execute order');
   await testGroup.client.executePerpTriggerOrder(
     mangoGroup,
     account,
@@ -200,20 +195,23 @@ async function testStopLoss() {
   );
   await testGroup.runKeeper();
   await account.reload(testGroup.connection, testGroup.serumProgramId);
-  console.log('health', account.getHealthRatio(mangoGroup, cache, 'Maint').toString());
+  console.log(
+    'health',
+    account.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
+  );
 
   const openOrders = await perpMarkets[0].loadOrdersForAccount(
     connection,
     account,
   );
-  console.log('open orders')
-  for(const oo of openOrders) {
-    console.log(oo)
-  };
+  console.log('open orders');
+  for (const oo of openOrders) {
+    console.log(oo);
+  }
 
-  console.log('bids and asks')
-  const asks = await (await perpMarkets[0].loadAsks(connection));
-  const bids = await (await perpMarkets[0].loadBids(connection));
+  console.log('bids and asks');
+  const asks = await await perpMarkets[0].loadAsks(connection);
+  const bids = await await perpMarkets[0].loadBids(connection);
   console.log([...asks]);
   console.log([...bids]);
 }
