@@ -242,7 +242,7 @@ export default class MangoAccount {
 
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       let liabWeight = ONE_I80F48;
-      const price = mangoCache.priceCache[i].price;
+      const price = mangoGroup.getPrice(i, mangoCache);
       if (healthType === 'Maint') {
         liabWeight = mangoGroup.spotMarkets[i].maintLiabWeight;
       } else if (healthType === 'Init') {
