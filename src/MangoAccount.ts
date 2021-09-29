@@ -258,7 +258,7 @@ export default class MangoAccount {
       const perpsUiLiabsVal = nativeI80F48ToUi(
         this.perpAccounts[i].getLiabsVal(
           mangoGroup.perpMarkets[i],
-          price,
+          mangoCache.priceCache[i].price,
           mangoCache.perpMarketCache[i].shortFunding,
           mangoCache.perpMarketCache[i].longFunding,
         ),
