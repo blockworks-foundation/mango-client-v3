@@ -73,7 +73,7 @@
     "axios": "^0.21.1",
     "big.js": "^6.1.1",
     "bigint-buffer": "^1.1.5",
-    "bn.js": "^5.1.0",
+    "bn.js": "^5.2.0",
     "buffer-layout": "^1.2.1",
     "dotenv": "^10.0.0",
     "dotenv-expand": "^5.1.0",
