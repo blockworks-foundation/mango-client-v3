@@ -68,6 +68,7 @@
   },
   "dependencies": {
     "@project-serum/serum": "0.13.55",
+    "@project-serum/anchor": "^0.16.2",
     "@project-serum/sol-wallet-adapter": "^0.2.0",
     "@solana/spl-token": "^0.1.6",
     "@solana/web3.js": "1.21.0",

@@ -1,14 +1,27 @@
-import {
-  deserializeBorsh,
-  LOGGABLE_SCHEMA,
-  LoggableFillEvent,
-} from './loggable';
+import { EventParser, Coder } from '@project-serum/anchor';
+import idl from './mango_logs.json';
+import configFile from './ids.json';
+import { Cluster, Config } from './config';
 
-function deserializeEvent(b64string: string) {
-  const data = Buffer.from(b64string, 'base64');
-  const x = deserializeBorsh(LOGGABLE_SCHEMA, LoggableFillEvent, data);
-  console.log(x.quantity.toString());
+async function main() {
+  const config = new Config(configFile);
+  const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
+  const groupName = process.env.GROUP || 'devnet.2';
+  const groupIds = config.getGroup(cluster, groupName);
+  if (!groupIds) {
+    throw new Error(`Group ${groupName} not found`);
+  }
+
+  // @ts-ignore
+  const coder = new Coder(idl);
+
+  const parser = new EventParser(groupIds.mangoProgramId, coder);
+
+  const log =
+    'lhcplJii10AAAAAuxlRhAAAAAAQAAAAAAAAAEaTgBVAsMK+4t/hzfRgNDJwTGO6jdXwtkch0vmE/c4+1xQYAAAAAAC8zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALzMAAAAAAAC7O1NhAAAAAEbiC998Bi6Nn0OBzFIMhTPKq+pyhaRF/1GgtQPJeJDDhR/5//////++NQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC8zAAAAAAAAAQAAAAAAAAA=';
+
+  // Parse a single log.
+  const x = coder.events.decode(log);
+  console.log(x);
 }
-deserializeEvent(
-  'AAAHAAHsUGEAAAAAPBgBAAAAAAC4kVf55PTy0BmUBbr41IxHf1A9JU8WSrCUWGSI8WTJlExiDwAAAAAAd6QGAAAAAADV4BkkfAEAAAAAAAAAAAAAAAAAAAAAAACtpAYAAAAAAADsUGEAAAAARuIL33wGLo2fQ4HMUgyFM8qr6nKFpEX/UaC1A8l4kMOvnfD//////7X5BgAAAAAAAAAAAAAAAAAdWmQ73///////////////iVv5//////8BAAAAAAAAAA==',
-);
+main();

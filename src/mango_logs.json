@@ -1,0 +1,140 @@
+{
+  "version": "0.0.0",
+  "name": "mango_logs",
+  "instructions": [],
+  "events": [
+    {
+      "name": "FillLog",
+      "fields": [
+        {
+          "name": "takerSide",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "makerSlot",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "makerOut",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "timestamp",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "seqNum",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "maker",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "makerOrderId",
+          "type": "i128",
+          "index": false
+        },
+        {
+          "name": "makerClientOrderId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "makerFee",
+          "type": "i128",
+          "index": false
+        },
+        {
+          "name": "bestInitial",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "makerTimestamp",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "taker",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "takerOrderId",
+          "type": "i128",
+          "index": false
+        },
+        {
+          "name": "takerClientOrderId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "takerFee",
+          "type": "i128",
+          "index": false
+        },
+        {
+          "name": "price",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "quantity",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "TokenBalanceLog",
+      "fields": [
+        {
+          "name": "mangoGroup",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "mangoAccount",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "tokenIndex",
+          "type": "u64",
+
+          "index": false
+        },
+        {
+          "name": "deposit",
+          "type": "i128",
+          "index": false
+        },
+        {
+          "name": "borrow",
+          "type": "i128",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "LiquidateTokenAndTokenLog",
+      "fields": []
+    },
+    {
+      "name": "LiquidateTokenAndPerpLog",
+      "fields": []
+    },
+    {
+      "name": "LiquidatePerpMarketLog",
+      "fields": []
+    }
+  ]
+}
