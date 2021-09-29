@@ -7,6 +7,11 @@
       "name": "FillLog",
       "fields": [
         {
+          "name": "mangoGroup",
+          "type": "publicKey",
+          "index": false
+        },
+        {
           "name": "takerSide",
           "type": "u8",
           "index": false
@@ -109,7 +114,6 @@
         {
           "name": "tokenIndex",
           "type": "u64",
-
           "index": false
         },
         {
@@ -125,6 +129,73 @@
       ]
     },
     {
+      "name": "CachePricesLog",
+      "fields": [
+        {
+          "name": "mangoGroup",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "oracleIndexes",
+          "type": {
+            "vec": "u64"
+          },
+          "index": false
+        },
+        {
+          "name": "oraclePrices",
+          "type": {
+            "vec": "i128"
+          },
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CacheRootBanksLog",
+      "fields": [
+        {
+          "name": "mangoGroup",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "tokenIndexes",
+          "type": {
+            "vec": "u64"
+          },
+          "index": false
+        },
+        {
+          "name": "depositIndexes",
+          "type": {
+            "vec": "i128"
+          },
+          "index": false
+        },
+        {
+          "name": "borrowIndexes",
+          "type": {
+            "vec": "i128"
+          },
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CachePerpMarketsLog",
+      "fields": []
+    },
+    {
+      "name": "SettlePnlLog",
+      "fields": []
+    },
+    {
+      "name": "SettleFeesLog",
+      "fields": []
+    },
+    {
       "name": "LiquidateTokenAndTokenLog",
       "fields": []
     },
@@ -134,6 +205,22 @@
     },
     {
       "name": "LiquidatePerpMarketLog",
+      "fields": []
+    },
+    {
+      "name": "PerpBankruptcyLog",
+      "fields": []
+    },
+    {
+      "name": "PerpSocializedLossLog",
+      "fields": []
+    },
+    {
+      "name": "TokenBankruptcyLog",
+      "fields": []
+    },
+    {
+      "name": "UpdateRootBankLog",
       "fields": []
     }
   ]

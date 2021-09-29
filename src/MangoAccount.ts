@@ -61,7 +61,6 @@ export default class MangoAccount {
   info!: number[];
 
   advancedOrdersKey!: PublicKey;
-  advancedOrdersBumpSeed!: number;
   advancedOrders: { perpTrigger?: PerpTriggerOrder }[];
 
   constructor(publicKey: PublicKey, decoded: any) {

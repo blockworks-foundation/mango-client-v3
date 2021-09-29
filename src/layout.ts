@@ -740,8 +740,7 @@ export const MangoAccountLayout = struct([
   bool('isBankrupt'),
   seq(u8(), INFO_LEN, 'info'),
   publicKeyLayout('advancedOrdersKey'),
-  u8('advancedOrdersBumpSeed'),
-  seq(u8(), 37, 'padding'),
+  seq(u8(), 38, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
