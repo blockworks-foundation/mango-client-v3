@@ -177,7 +177,7 @@ To run the liquidator you will need:
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
 | `CLUSTER` | `mainnet` | The Solana cluster to use |
-| `CLUSTER_URL` | `https://solana-api.projectserum.com` | Your RPC node endpoint |
+| `ENDPOINT_URL` | `https://solana-api.projectserum.com` | Your RPC node endpoint |
 | `KEYPAIR` | `${HOME}/.config/solana/id.json` | The location of your wallet keypair |
 | `GROUP` | `mainnet.1` | Name of the group in ids.json to run the Liquidator against |
 | `TARGETS` | `0 0 0 0 0 0 0 0` | Space separated list of the amount of each asset to maintain when rebalancing |
@@ -189,7 +189,7 @@ To run the liquidator you will need:
 
 You can add these varibles to a `.env` file in the project root to load automatically on liquidator startup. For example:
 ```bash
-CLUSTER_URL=https://solana-api.projectserum.com
+ENDPOINT_URL=https://solana-api.projectserum.com
 KEYPAIR=${HOME}/.config/solana/my-keypair.json 
 TARGETS=500 0.1 0.75 0 0 0 0 0
 ```
