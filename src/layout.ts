@@ -18,6 +18,7 @@ import { I80F48 } from './fixednum';
 import BN from 'bn.js';
 import { zeroKey } from './utils';
 import PerpAccount from './PerpAccount';
+import { PerpOrderType } from './types';
 
 export const MAX_TOKENS = 16;
 export const MAX_PAIRS = MAX_TOKENS - 1;
@@ -167,7 +168,7 @@ export function sideLayout(span, property?) {
 
 export function orderTypeLayout(property, span) {
   return new EnumLayout(
-    { limit: 0, ioc: 1, postOnly: 2, market: 3 },
+    { limit: 0, ioc: 1, postOnly: 2, market: 3, postOnlySlide: 4 },
     span,
     property,
   );
@@ -951,7 +952,8 @@ BOOK_NODE_LAYOUT.addVariant(
   2,
   struct([
     u8('ownerSlot'), // Index into OPEN_ORDERS_LAYOUT.orders
-    blob(3),
+    orderTypeLayout('orderType', 1),
+    blob(2),
     u128('key'), // (price, seqNum)
     publicKeyLayout('owner'), // Open orders account
     u64('quantity'), // In units of lot size
@@ -1139,7 +1141,7 @@ export const AdvancedOrdersLayout = struct([
 export interface PerpTriggerOrder {
   isActive: boolean;
   marketIndex: number;
-  orderType: 'limit' | 'ioc' | 'postOnly' | 'market';
+  orderType: PerpOrderType;
   side: 'buy' | 'sell';
   triggerCondition: 'above' | 'below';
   clientOrderId: BN;

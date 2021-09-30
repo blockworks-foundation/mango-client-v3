@@ -9,7 +9,7 @@ import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
 import { I80F48, ZERO_I80F48 } from './fixednum';
-import { PerpOrder, ZERO_BN } from '.';
+import { PerpOrder, PerpOrderType, ZERO_BN } from '.';
 
 export function makeInitMangoGroupInstruction(
   programId: PublicKey,
@@ -897,7 +897,7 @@ export function makePlacePerpOrderInstruction(
   quantity: BN,
   clientOrderId: BN,
   side: 'buy' | 'sell',
-  orderType?: 'limit' | 'ioc' | 'postOnly' | 'market',
+  orderType?: PerpOrderType,
   reduceOnly?: boolean,
 ): TransactionInstruction {
   const keys = [
@@ -1585,7 +1585,7 @@ export function makeAddPerpTriggerOrderInstruction(
   mangoCachePk: PublicKey,
   perpMarketPk: PublicKey,
   openOrders: PublicKey[],
-  orderType: 'limit' | 'ioc' | 'postOnly' | 'market',
+  orderType: PerpOrderType,
   side: 'buy' | 'sell',
   price: BN,
   quantity: BN,

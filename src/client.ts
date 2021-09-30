@@ -95,7 +95,7 @@ import {
 import { I80F48, ZERO_I80F48 } from './fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 
-import { WalletAdapter } from './types';
+import { PerpOrderType, WalletAdapter } from './types';
 import { BookSide, PerpOrder } from './book';
 import {
   closeAccount,
@@ -976,7 +976,7 @@ export class MangoClient {
     side: 'buy' | 'sell',
     price: number,
     quantity: number,
-    orderType?: 'limit' | 'ioc' | 'postOnly' | 'market',
+    orderType?: PerpOrderType,
     clientOrderId = 0,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     reduceOnly?: boolean,
@@ -2954,7 +2954,7 @@ export class MangoClient {
     side: 'buy' | 'sell',
     price: number,
     quantity: number,
-    orderType?: 'limit' | 'ioc' | 'postOnly',
+    orderType?: PerpOrderType,
     clientOrderId?: number,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     invalidIdOk = false, // Don't throw error if order is invalid
@@ -3051,7 +3051,7 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     perpMarket: PerpMarket,
     owner: Account | WalletAdapter,
-    orderType: 'limit' | 'ioc' | 'postOnly' | 'market',
+    orderType: PerpOrderType,
     side: 'buy' | 'sell',
     price: number,
     quantity: number,
@@ -3062,10 +3062,9 @@ export class MangoClient {
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
-    let advancedOrders = mangoAccount.advancedOrdersKey;
-    let bumpSeed = mangoAccount.advancedOrdersBumpSeed;
+    let advancedOrders: PublicKey = mangoAccount.advancedOrdersKey;
     if (mangoAccount.advancedOrdersKey.equals(zeroKey)) {
-      [advancedOrders, bumpSeed] = await PublicKey.findProgramAddress(
+      [advancedOrders] = await PublicKey.findProgramAddress(
         [mangoAccount.publicKey.toBytes()],
         this.programId,
       );
@@ -3127,7 +3126,6 @@ export class MangoClient {
       additionalSigners,
     );
     mangoAccount.advancedOrdersKey = advancedOrders;
-    mangoAccount.advancedOrdersBumpSeed = bumpSeed;
     return txid;
   }
 
