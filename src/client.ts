@@ -1402,7 +1402,6 @@ export class MangoClient {
   async placeSpotOrder2(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
-    mangoCache: PublicKey,
     spotMarket: Market,
     owner: Account | WalletAdapter,
 
@@ -1528,7 +1527,7 @@ export class MangoClient {
       mangoGroup.publicKey,
       mangoAccount.publicKey,
       owner.publicKey,
-      mangoCache,
+      mangoGroup.mangoCache,
       spotMarket.programId,
       spotMarket.publicKey,
       spotMarket['_decoded'].bids,
@@ -1556,14 +1555,6 @@ export class MangoClient {
       clientOrderId ?? new BN(Date.now()),
     );
     transaction.add(placeOrderInstruction);
-
-    if (spotMarketIndex > 0) {
-      console.log(
-        spotMarketIndex - 1,
-        mangoAccount.spotOpenOrders[spotMarketIndex - 1].toBase58(),
-        openOrdersKeys[spotMarketIndex - 1].pubkey.toBase58(),
-      );
-    }
 
     const txid = await this.sendTransaction(
       transaction,
