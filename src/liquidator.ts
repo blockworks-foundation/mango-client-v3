@@ -1,5 +1,5 @@
 /**
-This will probably move to its own repo at some point but easier to keep it here for now
+ This will probably move to its own repo at some point but easier to keep it here for now
  */
 import * as os from 'os';
 import * as fs from 'fs';
@@ -29,8 +29,12 @@ import envExpand from 'dotenv-expand';
 envExpand(Env.config());
 
 const interval = parseInt(process.env.INTERVAL || '3500');
-const refreshAccountsInterval = parseInt(process.env.INTERVAL_ACCOUNTS || '120000');
-const refreshWebsocketInterval = parseInt(process.env.INTERVAL_WEBSOCKET || '300000');
+const refreshAccountsInterval = parseInt(
+  process.env.INTERVAL_ACCOUNTS || '120000',
+);
+const refreshWebsocketInterval = parseInt(
+  process.env.INTERVAL_WEBSOCKET || '300000',
+);
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -40,7 +44,9 @@ if (!groupIds) {
   throw new Error(`Group ${groupName} not found`);
 }
 
-const TARGETS = process.env.TARGETS ? process.env.TARGETS.split(' ').map((s) => parseFloat(s)) : [0, 0, 0, 0, 0, 0, 0, 0, 0];
+const TARGETS = process.env.TARGETS
+  ? process.env.TARGETS.split(' ').map((s) => parseFloat(s))
+  : [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
@@ -143,8 +149,14 @@ async function main() {
         if (health.lt(ZERO_I80F48)) {
           if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
             await mangoAccount.reload(connection, mangoGroup.dexProgramId);
-            if (!mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
-              console.log(`Account ${mangoAccountKeyString} no longer liquidatable`);
+            if (
+              !mangoAccount
+                .getHealthRatio(mangoGroup, cache, 'Maint')
+                .lt(ZERO_I80F48)
+            ) {
+              console.log(
+                `Account ${mangoAccountKeyString} no longer liquidatable`,
+              );
               continue;
             }
 
@@ -448,9 +460,17 @@ async function liquidateSpot(
 
   if (assetRootBank && liabRootBank) {
     const liqorInitHealth = liqor.getHealth(mangoGroup, cache, 'Init');
-    const liabAssetWeight = mangoGroup.spotMarkets[minNetIndex] ? mangoGroup.spotMarkets[minNetIndex].initAssetWeight : ONE_I80F48;
-    const assetAssetWeight = mangoGroup.spotMarkets[maxNetIndex] ? mangoGroup.spotMarkets[maxNetIndex].initAssetWeight : ONE_I80F48;
-    const maxLiabTransfer = liqorInitHealth.div(mangoGroup.getPriceNative(minNetIndex, cache).mul(liabAssetWeight.sub(assetAssetWeight).abs()));
+    const liabAssetWeight = mangoGroup.spotMarkets[minNetIndex]
+      ? mangoGroup.spotMarkets[minNetIndex].initAssetWeight
+      : ONE_I80F48;
+    const assetAssetWeight = mangoGroup.spotMarkets[maxNetIndex]
+      ? mangoGroup.spotMarkets[maxNetIndex].initAssetWeight
+      : ONE_I80F48;
+    const maxLiabTransfer = liqorInitHealth.div(
+      mangoGroup
+        .getPriceNative(minNetIndex, cache)
+        .mul(liabAssetWeight.sub(assetAssetWeight).abs()),
+    );
 
     if (liqee.isBankrupt) {
       console.log('Bankrupt account', liqee.publicKey.toBase58());
@@ -468,7 +488,12 @@ async function liquidateSpot(
         await liqee.reload(connection, mangoGroup.dexProgramId);
       }
     } else {
-      console.log(`Liquidating max ${maxLiabTransfer.toString()}/${liqee.getNativeBorrow(liabRootBank, minNetIndex)} of liab ${minNetIndex}, asset ${maxNetIndex}`)
+      console.log(
+        `Liquidating max ${maxLiabTransfer.toString()}/${liqee.getNativeBorrow(
+          liabRootBank,
+          minNetIndex,
+        )} of liab ${minNetIndex}, asset ${maxNetIndex}`,
+      );
       await client.liquidateTokenAndToken(
         mangoGroup,
         liqee,
@@ -649,7 +674,11 @@ async function liquidatePerps(
   }
 }
 
-function getDiffsAndNet(mangoGroup: MangoGroup, mangoAccount: MangoAccount, cache: MangoCache) {
+function getDiffsAndNet(
+  mangoGroup: MangoGroup,
+  mangoAccount: MangoAccount,
+  cache: MangoCache,
+) {
   const diffs: I80F48[] = [];
   const netValues: [number, I80F48][] = [];
   // Go to each base currency and see if it's above or below target
@@ -740,13 +769,13 @@ async function balanceTokens(
     if (Math.abs(diffs[marketIndex].toNumber()) > market.minOrderSize) {
       if (netValues[i][1].gt(ZERO_I80F48)) {
         // sell to close
-        const price = mangoGroup.getPrice(marketIndex, cache).mul(
-          I80F48.fromNumber(0.95),
-        );
+        const price = mangoGroup
+          .getPrice(marketIndex, cache)
+          .mul(I80F48.fromNumber(0.95));
         console.log(
-          `Sell to close ${marketIndex} ${Math.abs(diffs[
-            marketIndex
-          ].toNumber())} @ ${price.toString()}`,
+          `Sell to close ${marketIndex} ${Math.abs(
+            diffs[marketIndex].toNumber(),
+          )} @ ${price.toString()}`,
         );
         await client.placeSpotOrder(
           mangoGroup,
@@ -767,14 +796,14 @@ async function balanceTokens(
         );
       } else if (netValues[i][1].lt(ZERO_I80F48)) {
         //buy to close
-        const price = mangoGroup.getPrice(marketIndex, cache).mul(
-          I80F48.fromNumber(1.05),
-        );
+        const price = mangoGroup
+          .getPrice(marketIndex, cache)
+          .mul(I80F48.fromNumber(1.05));
 
         console.log(
-          `Buy to close ${marketIndex} ${Math.abs(diffs[
-            marketIndex
-          ].toNumber())} @ ${price.toString()}`,
+          `Buy to close ${marketIndex} ${Math.abs(
+            diffs[marketIndex].toNumber(),
+          )} @ ${price.toString()}`,
         );
         await client.placeSpotOrder(
           mangoGroup,
@@ -799,10 +828,14 @@ async function balanceTokens(
   await sleep(2000);
   await mangoAccount.reload(connection, mangoGroup.dexProgramId);
 
-  const { diffs: postDiffs, netValues: postNetValues } = getDiffsAndNet(mangoGroup, mangoAccount, cache);
-  const isUnbalanced = postNetValues.some((nv) => 
-    Math.abs(postDiffs[nv[0]].toNumber()) > markets[nv[0]].minOrderSize
-  )
+  const { diffs: postDiffs, netValues: postNetValues } = getDiffsAndNet(
+    mangoGroup,
+    mangoAccount,
+    cache,
+  );
+  const isUnbalanced = postNetValues.some(
+    (nv) => Math.abs(postDiffs[nv[0]].toNumber()) > markets[nv[0]].minOrderSize,
+  );
 
   if (isUnbalanced) {
     await balanceTokens(mangoGroup, mangoAccount, markets);
@@ -828,10 +861,16 @@ async function closePositions(
         connection,
         mangoAccount,
       );
-  
-      for(const oo of openOrders) {
-        await client.cancelPerpOrder(mangoGroup, mangoAccount, payer, perpMarket, oo);
-      };
+
+      for (const oo of openOrders) {
+        await client.cancelPerpOrder(
+          mangoGroup,
+          mangoAccount,
+          payer,
+          perpMarket,
+          oo,
+        );
+      }
 
       const basePositionSize = Math.abs(
         perpMarket.baseLotsToNumber(perpAccount.basePosition),
@@ -842,18 +881,18 @@ async function closePositions(
         const side = perpAccount.basePosition.gt(ZERO_BN) ? 'sell' : 'buy';
         const liquidationFee =
           mangoGroup.perpMarkets[index].liquidationFee.toNumber();
-        
+
         const orderPrice =
           side == 'sell' ? price.toNumber() * 0.95 : price.toNumber() * 1.05; // TODO: base this on liquidation fee
 
         console.log(
           side +
-          'ing ' +
-          basePositionSize +
-          ' of perp ' +
-          i +
-          ' for $' +
-          orderPrice,
+            'ing ' +
+            basePositionSize +
+            ' of perp ' +
+            i +
+            ' for $' +
+            orderPrice,
         );
         await client.placePerpOrder(
           mangoGroup,
@@ -869,8 +908,8 @@ async function closePositions(
       }
 
       await mangoAccount.reload(connection, mangoGroup.dexProgramId);
-      
-      if(!perpAccount.quotePosition.eq(ZERO_I80F48)) {
+
+      if (!perpAccount.quotePosition.eq(ZERO_I80F48)) {
         const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
         if (quoteRootBank) {
           await client.settlePnl(
@@ -890,7 +929,7 @@ async function closePositions(
   await sleep(2000);
   await mangoAccount.reload(connection, mangoGroup.dexProgramId);
 
-   // Check if we need to balance again
+  // Check if we need to balance again
   const isUnbalanced = perpMarkets.some((pm, i) => {
     const index = mangoGroup.getPerpMarketIndex(pm.publicKey);
     const perpAccount = mangoAccount.perpAccounts[index];
@@ -899,8 +938,8 @@ async function closePositions(
     );
 
     return basePositionSize != 0;
-  })
-  
+  });
+
   if (isUnbalanced) {
     await closePositions(mangoGroup, mangoAccount, perpMarkets);
   }

@@ -14,16 +14,15 @@ import {
 } from '@solana/web3.js';
 import fs from 'fs';
 import os from 'os';
-import { getUnixTs, MangoClient } from './client';
+import { MangoClient } from './client';
 import {
-  getMultipleAccounts,
   makeCancelAllPerpOrdersInstruction,
   makePlacePerpOrderInstruction,
-  MangoAccount,
   MangoCache,
   sleep,
 } from './index';
 import { BN } from 'bn.js';
+import MangoAccount from './MangoAccount';
 
 async function mm() {
   // load mango group and clients
@@ -78,9 +77,15 @@ async function mm() {
     perpMarketConfig.quoteDecimals,
   );
 
+  process.on('SIGINT', function () {
+    console.log('Caught keyboard interrupt. Canceling orders');
+    process.exit();
+  });
+
   const interval = 10000;
-  const size = 0.2;
+  const sizePerc = 0.1;
   const charge = 0.0005;
+  const leanCoeff = 0.0005;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -88,19 +93,32 @@ async function mm() {
       // get fresh data
       // get orderbooks, get perp markets, caches
       // TODO load pyth oracle for most accurate prices
+      const [mangoCache, mangoAccount]: [MangoCache, MangoAccount] =
+        await Promise.all([
+          // perpMarket.loadBids(connection),
+          // perpMarket.loadAsks(connection),
+          mangoGroup.loadCache(connection),
+          client.getMangoAccount(mangoAccountPk, mangoGroup.dexProgramId),
+        ]);
 
-      const [mangoCache, mangoAccount] = await Promise.all([
-        // perpMarket.loadBids(connection),
-        // perpMarket.loadAsks(connection),
-        mangoGroup.loadCache(connection),
-        client.getMangoAccount(mangoAccountPk, mangoGroup.dexProgramId),
-      ]);
+      // TODO store the prices in an array to calculate volatility
 
-      // calculate important vars
+      // Model logic
       const fairValue = mangoGroup.getPrice(marketIndex, mangoCache).toNumber();
-      const bidPrice = fairValue * (1 - charge);
-      const askPrice = fairValue * (1 + charge);
+      const equity = mangoAccount
+        .computeValue(mangoGroup, mangoCache)
+        .toNumber();
+      const perpAccount = mangoAccount.perpAccounts[marketIndex];
+      // TODO look at event queue as well for unprocessed fills
+      const basePos = perpAccount.getBasePositionUi(perpMarket);
 
+      // TODO volatility adjustment
+      const size = (equity * sizePerc) / fairValue;
+      const lean = (-leanCoeff * basePos) / size;
+      const bidPrice = fairValue * (1 - charge + lean);
+      const askPrice = fairValue * (1 + charge + lean);
+
+      // TODO only requote if new prices significantly different from current
       const [nativeBidPrice, nativeBidSize] =
         perpMarket.uiToNativePriceQuantity(bidPrice, size);
       const [nativeAskPrice, nativeAskSize] =
@@ -115,7 +133,7 @@ async function mm() {
         perpMarket.publicKey,
         perpMarket.bids,
         perpMarket.asks,
-        new BN(6),
+        new BN(20),
       );
 
       const placeBidInstr = makePlacePerpOrderInstruction(
@@ -161,6 +179,7 @@ async function mm() {
       const txid = await client.sendTransaction(tx, payer, []);
       console.log(`quoting successful: ${txid.toString()}`);
     } catch (e) {
+      // TODO on keyboard interrupt cancel all and exit
       // sleep for some time and retry
       console.log(e);
     } finally {
