@@ -29,6 +29,7 @@
     "keeper": "ts-node src/keeper.ts",
     "crank": "ts-node src/crank.ts",
     "scratch": "ts-node src/scratch.ts",
+    "mm": "ts-node src/mm.ts",
     "test-compute": "ts-node test/compute.test.ts",
     "test-liquidator": "ts-node test/liquidator.test.ts",
     "test-accounts": "ts-node test/accounts.test.ts",

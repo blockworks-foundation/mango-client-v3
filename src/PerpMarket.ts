@@ -159,6 +159,16 @@ export default class PerpMarket {
       order.owner.equals(account.publicKey),
     );
   }
+  uiToNativePriceQuantity(price: number, quantity: number): [BN, BN] {
+    const baseUnit = Math.pow(10, this.baseDecimals);
+    const quoteUnit = Math.pow(10, this.quoteDecimals);
+
+    const nativePrice = new BN(price * quoteUnit)
+      .mul(this.baseLotSize)
+      .div(this.quoteLotSize.mul(new BN(baseUnit)));
+    const nativeQuantity = new BN(quantity * baseUnit).div(this.baseLotSize);
+    return [nativePrice, nativeQuantity];
+  }
 
   toPrettyString(perpMarketConfig: PerpMarketConfig): string {
     const lmi = this.liquidityMiningInfo;

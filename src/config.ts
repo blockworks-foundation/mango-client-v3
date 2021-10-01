@@ -150,6 +150,13 @@ export function getPerpMarketByBaseSymbol(group: GroupConfig, symbol: string) {
   return group.perpMarkets.find((p) => p.baseSymbol === symbol);
 }
 
+export function getPerpMarketByIndex(
+  group: GroupConfig,
+  marketIndex: number,
+): PerpMarketConfig | undefined {
+  return group.perpMarkets.find((p) => p.marketIndex === marketIndex);
+}
+
 export function getSpotMarketByBaseSymbol(group: GroupConfig, symbol: string) {
   return group.spotMarkets.find((p) => p.baseSymbol === symbol);
 }

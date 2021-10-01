@@ -818,6 +818,15 @@ export default class MangoAccount {
     }
     return lines.join(EOL);
   }
+
+  /**
+   * Return the open orders keys in basket and replace open orders not in basket with zero key
+   */
+  getOpenOrdersKeysInBasket(): PublicKey[] {
+    return this.spotOpenOrders.map((pk, i) =>
+      this.inMarginBasket[i] ? pk : zeroKey,
+    );
+  }
 }
 
 export type HealthType = 'Init' | 'Maint';

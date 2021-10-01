@@ -981,21 +981,10 @@ export class MangoClient {
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     reduceOnly?: boolean,
   ): Promise<TransactionSignature> {
-    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
-
-    // TODO: this will not work for perp markets without spot market
-    const baseTokenInfo = mangoGroup.tokens[marketIndex];
-    const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
-    const baseUnit = Math.pow(10, baseTokenInfo.decimals);
-    const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
-
-    const nativePrice = new BN(price * quoteUnit)
-      .mul(perpMarket.baseLotSize)
-      .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
-    const nativeQuantity = new BN(quantity * baseUnit).div(
-      perpMarket.baseLotSize,
+    const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
+      price,
+      quantity,
     );
-
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
 
@@ -1053,7 +1042,6 @@ export class MangoClient {
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
-
   async cancelPerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -2967,18 +2955,9 @@ export class MangoClient {
 
     transaction.add(cancelInstruction);
 
-    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
-
-    const baseTokenInfo = mangoGroup.tokens[marketIndex];
-    const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
-    const baseUnit = Math.pow(10, baseTokenInfo.decimals);
-    const quoteUnit = Math.pow(10, quoteTokenInfo.decimals);
-
-    const nativePrice = new BN(price * quoteUnit)
-      .mul(perpMarket.baseLotSize)
-      .div(perpMarket.quoteLotSize.mul(new BN(baseUnit)));
-    const nativeQuantity = new BN(quantity * baseUnit).div(
-      perpMarket.baseLotSize,
+    const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
+      price,
+      quantity,
     );
 
     const placeInstruction = makePlacePerpOrderInstruction(

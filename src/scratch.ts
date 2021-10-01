@@ -1,4 +1,4 @@
-import { EventParser, Coder } from '@project-serum/anchor';
+import { Coder } from '@project-serum/anchor';
 import idl from './mango_logs.json';
 import configFile from './ids.json';
 import { Cluster, Config } from './config';
@@ -41,4 +41,5 @@ async function main() {
     console.log(event);
   }
 }
+
 main();

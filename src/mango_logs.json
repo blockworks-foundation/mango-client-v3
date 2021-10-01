@@ -593,6 +593,31 @@
           "index": false
         }
       ]
+    },
+    {
+      "name": "MngoAccrualLog",
+      "fields": [
+        {
+          "name": "mangoGroup",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "mangoAccount",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "marketIndex",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "mngoAccrual",
+          "type": "u64",
+          "index": false
+        }
+      ]
     }
   ]
 }
