@@ -888,7 +888,7 @@ async function closePositions(
           const basePositionSize = Math.abs(
             perpMarket.baseLotsToNumber(perpAccount.basePosition),
           );
-          const price = cache.priceCache[index].price;
+          const price = mangoGroup.getPrice(index, cache);
 
           if (basePositionSize != 0) {
             const side = perpAccount.basePosition.gt(ZERO_BN) ? 'sell' : 'buy';
