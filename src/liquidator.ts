@@ -35,7 +35,9 @@ const refreshAccountsInterval = parseInt(
 const refreshWebsocketInterval = parseInt(
   process.env.INTERVAL_WEBSOCKET || '300000',
 );
-const maxRebalancingRetries = parseInt(process.env.MAX_REBALANCING_RETRIES || '5')
+const maxRebalancingRetries = parseInt(
+  process.env.MAX_REBALANCING_RETRIES || '5',
+);
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -713,14 +715,18 @@ async function balanceTokens(
         markets.map((m) => m.bidsAddress),
       );
       const bids = bidsInfo
-        ? bidsInfo.map((o, i) => Orderbook.decode(markets[i], o.accountInfo.data))
+        ? bidsInfo.map((o, i) =>
+            Orderbook.decode(markets[i], o.accountInfo.data),
+          )
         : [];
       const asksInfo = await getMultipleAccounts(
         connection,
         markets.map((m) => m.asksAddress),
       );
       const asks = asksInfo
-        ? asksInfo.map((o, i) => Orderbook.decode(markets[i], o.accountInfo.data))
+        ? asksInfo.map((o, i) =>
+            Orderbook.decode(markets[i], o.accountInfo.data),
+          )
         : [];
 
       for (let i = 0; i < markets.length; i++) {
@@ -896,16 +902,18 @@ async function closePositions(
               mangoGroup.perpMarkets[index].liquidationFee.toNumber();
 
             const orderPrice =
-              side == 'sell' ? price.toNumber() * 0.95 : price.toNumber() * 1.05; // TODO: base this on liquidation fee
+              side == 'sell'
+                ? price.toNumber() * 0.95
+                : price.toNumber() * 1.05; // TODO: base this on liquidation fee
 
             console.log(
               side +
-              'ing ' +
-              basePositionSize +
-              ' of perp ' +
-              i +
-              ' for $' +
-              orderPrice,
+                'ing ' +
+                basePositionSize +
+                ' of perp ' +
+                i +
+                ' for $' +
+                orderPrice,
             );
             await client.placePerpOrder(
               mangoGroup,
@@ -925,7 +933,9 @@ async function closePositions(
           if (!perpAccount.quotePosition.eq(ZERO_I80F48)) {
             const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
             if (quoteRootBank) {
-              let newQuotePosition = new I80F48(perpAccount.basePosition.neg().mul(perpMarket.baseLotSize)).mul(price);
+              let newQuotePosition = new I80F48(
+                perpAccount.basePosition.neg().mul(perpMarket.baseLotSize),
+              ).mul(price);
               const pnl = perpAccount.quotePosition.min(newQuotePosition);
               if (pnl.lt(ZERO_I80F48)) {
                 await client.settlePnl(
