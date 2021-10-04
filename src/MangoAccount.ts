@@ -737,6 +737,8 @@ export default class MangoAccount {
     lines.push(
       'Maint Health Ratio: ' + this.getHealthRatio(mangoGroup, cache, 'Maint'),
     );
+    lines.push('Maint Health: ' + this.getHealth(mangoGroup, cache, 'Maint'));
+    lines.push('Init Health: ' + this.getHealth(mangoGroup, cache, 'Init'));
     lines.push('isBankrupt: ' + this.isBankrupt);
 
     lines.push('Spot:');
