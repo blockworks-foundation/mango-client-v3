@@ -381,6 +381,7 @@ async function liquidateAccount(
       mangoGroup,
       cache,
       spotMarkets,
+      perpMarkets,
       rootBanks,
       liqee,
       liqor,
@@ -402,6 +403,7 @@ async function liquidateSpot(
   mangoGroup: MangoGroup,
   cache: MangoCache,
   spotMarkets: Market[],
+  perpMarkets: PerpMarket[],
   rootBanks: (RootBank | undefined)[],
   liqee: MangoAccount,
   liqor: MangoAccount,
@@ -433,7 +435,7 @@ async function liquidateSpot(
   let minNet = ZERO_I80F48;
   let minNetIndex = -1;
   let maxNet = ZERO_I80F48;
-  let maxNetIndex = QUOTE_INDEX;
+  let maxNetIndex = -1;
 
   for (let i = 0; i < mangoGroup.tokens.length; i++) {
     const price = cache.priceCache[i] ? cache.priceCache[i].price : ONE_I80F48;
@@ -497,15 +499,53 @@ async function liquidateSpot(
           minNetIndex,
         )} of liab ${minNetIndex}, asset ${maxNetIndex}`,
       );
-      await client.liquidateTokenAndToken(
-        mangoGroup,
-        liqee,
-        liqor,
-        assetRootBank,
-        liabRootBank,
-        payer,
-        maxLiabTransfer,
-      );
+      console.log(maxNet.toString());
+      if (maxNet.lt(ONE_I80F48) || maxNetIndex == -1) {
+        const highestHealthMarket = perpMarkets
+        .map((perpMarket, i) => {
+          const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+          const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
+          const perpAccount = liqee.perpAccounts[marketIndex];
+          const perpMarketCache = cache.perpMarketCache[marketIndex];
+          const price = mangoGroup.getPriceNative(marketIndex, cache);
+          const perpHealth = perpAccount.getHealth(
+            perpMarketInfo,
+            price,
+            perpMarketInfo.maintAssetWeight,
+            perpMarketInfo.maintLiabWeight,
+            perpMarketCache.longFunding,
+            perpMarketCache.shortFunding,
+          );
+          return { perpHealth: perpHealth, marketIndex: marketIndex, i };
+        })
+        .sort((a, b) => {
+          return b.perpHealth.sub(a.perpHealth).toNumber();
+        })[0];
+
+        console.log('liquidateTokenAndPerp ' + highestHealthMarket.marketIndex);
+        await client.liquidateTokenAndPerp(
+          mangoGroup,
+          liqee,
+          liqor,
+          liabRootBank,
+          payer,
+          AssetType.Perp,
+          highestHealthMarket.marketIndex,
+          AssetType.Token,
+          minNetIndex,
+          liqee.perpAccounts[highestHealthMarket.marketIndex].quotePosition,
+        );
+      } else {
+        await client.liquidateTokenAndToken(
+          mangoGroup,
+          liqee,
+          liqor,
+          assetRootBank,
+          liabRootBank,
+          payer,
+          maxLiabTransfer,
+        );
+      }
 
       await liqee.reload(connection, mangoGroup.dexProgramId);
       if (liqee.isBankrupt) {
