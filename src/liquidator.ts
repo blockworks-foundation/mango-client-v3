@@ -398,6 +398,17 @@ async function liquidateAccount(
       liqor,
     );
   }
+
+  if (!shouldLiquidateSpot && !healths.perp.isNeg() && liqee.beingLiquidated) {
+    // Send a ForceCancelPerp to reset the being_liquidated flag
+    await client.forceCancelAllPerpOrdersInMarket(
+      mangoGroup,
+      liqee,
+      perpMarkets[0],
+      payer,
+      10,
+    );
+  }
 }
 
 async function liquidateSpot(
