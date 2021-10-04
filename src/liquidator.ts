@@ -149,14 +149,16 @@ async function main() {
       for (let mangoAccount of mangoAccounts) {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
-        if (health.lt(ZERO_I80F48)) {
+        if (health.lt(ZERO_I80F48) || mangoAccount.beingLiquidated) {
           if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
             await mangoAccount.reload(connection, mangoGroup.dexProgramId);
-            if (
-              !mangoAccount
-                .getHealthRatio(mangoGroup, cache, 'Maint')
-                .lt(ZERO_I80F48)
-            ) {
+            const maintHealth = mangoAccount.getHealth(
+              mangoGroup,
+              cache,
+              'Maint',
+            );
+
+            if (!(maintHealth.isNeg() || mangoAccount.beingLiquidated)) {
               console.log(
                 `Account ${mangoAccountKeyString} no longer liquidatable`,
               );
@@ -348,7 +350,7 @@ async function liquidateAccount(
     await sleep(interval * 2);
   }
   await liqee.reload(connection, mangoGroup.dexProgramId);
-  if (!liqee.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
+  if (!liqee.isLiquidatable(mangoGroup, cache)) {
     throw new Error('Account no longer liquidatable');
   }
 
@@ -395,6 +397,17 @@ async function liquidateAccount(
       rootBanks,
       liqee,
       liqor,
+    );
+  }
+
+  if (!shouldLiquidateSpot && !healths.perp.isNeg() && liqee.beingLiquidated) {
+    // Send a ForceCancelPerp to reset the being_liquidated flag
+    await client.forceCancelAllPerpOrdersInMarket(
+      mangoGroup,
+      liqee,
+      perpMarkets[0],
+      payer,
+      10,
     );
   }
 }
