@@ -6,7 +6,7 @@ import { i64, MangoAccountLayout } from '../src/layout';
 
 describe('layout parsing', async () => {
   it('all accounts have the correct size', () => {
-    expect(MangoAccountLayout.span).to.eq(28912);
+    expect(MangoAccountLayout.span).to.eq(4296);
   });
 
   /*
