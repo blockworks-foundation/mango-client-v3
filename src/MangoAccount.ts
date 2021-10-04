@@ -726,6 +726,13 @@ export default class MangoAccount {
     return newInitHealth.div(healthDecimals).div(price.mul(liabWeight));
   }
 
+  isLiquidatable(mangoGroup: MangoGroup, mangoCache: MangoCache): boolean {
+    return (
+      this.beingLiquidated ||
+      this.getHealth(mangoGroup, mangoCache, 'Maint').isNeg()
+    );
+  }
+
   toPrettyString(
     groupConfig: GroupConfig,
     mangoGroup: MangoGroup,

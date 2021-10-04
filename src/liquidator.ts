@@ -350,7 +350,7 @@ async function liquidateAccount(
     await sleep(interval * 2);
   }
   await liqee.reload(connection, mangoGroup.dexProgramId);
-  if (!liqee.getHealthRatio(mangoGroup, cache, 'Maint').lt(ZERO_I80F48)) {
+  if (!liqee.isLiquidatable(mangoGroup, cache)) {
     throw new Error('Account no longer liquidatable');
   }
 
