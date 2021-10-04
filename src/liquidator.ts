@@ -149,14 +149,16 @@ async function main() {
       for (let mangoAccount of mangoAccounts) {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
-        if (health.lt(ZERO_I80F48)) {
+        if (health.lt(ZERO_I80F48) || mangoAccount.beingLiquidated) {
           if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
             await mangoAccount.reload(connection, mangoGroup.dexProgramId);
-            if (
-              !mangoAccount
-                .getHealthRatio(mangoGroup, cache, 'Maint')
-                .lt(ZERO_I80F48)
-            ) {
+            const maintHealth = mangoAccount.getHealth(
+              mangoGroup,
+              cache,
+              'Maint',
+            );
+
+            if (!(maintHealth.isNeg() || mangoAccount.beingLiquidated)) {
               console.log(
                 `Account ${mangoAccountKeyString} no longer liquidatable`,
               );
