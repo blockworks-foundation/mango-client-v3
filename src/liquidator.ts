@@ -478,16 +478,17 @@ async function liquidateSpot(
 
   if (assetRootBank && liabRootBank) {
     const liqorInitHealth = liqor.getHealth(mangoGroup, cache, 'Init');
-    const liabAssetWeight = mangoGroup.spotMarkets[minNetIndex]
-      ? mangoGroup.spotMarkets[minNetIndex].initAssetWeight
+    const liabInitLiabWeight = mangoGroup.spotMarkets[minNetIndex]
+      ? mangoGroup.spotMarkets[minNetIndex].initLiabWeight
       : ONE_I80F48;
-    const assetAssetWeight = mangoGroup.spotMarkets[maxNetIndex]
+    const assetInitAssetWeight = mangoGroup.spotMarkets[maxNetIndex]
       ? mangoGroup.spotMarkets[maxNetIndex].initAssetWeight
       : ONE_I80F48;
+
     const maxLiabTransfer = liqorInitHealth.div(
       mangoGroup
         .getPriceNative(minNetIndex, cache)
-        .mul(liabAssetWeight.sub(assetAssetWeight).abs()),
+        .mul(liabInitLiabWeight.sub(assetInitAssetWeight).abs()),
     );
 
     if (liqee.isBankrupt) {
