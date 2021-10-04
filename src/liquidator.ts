@@ -149,7 +149,7 @@ async function main() {
       for (let mangoAccount of mangoAccounts) {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
-        if (health.lt(ZERO_I80F48) || mangoAccount.beingLiquidated) {
+        if (mangoAccount.isLiquidatable(mangoGroup, cache)) {
           if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
             await mangoAccount.reload(connection, mangoGroup.dexProgramId);
             const maintHealth = mangoAccount.getHealth(
@@ -470,7 +470,7 @@ async function liquidateSpot(
   }
 
   if (minNetIndex == maxNetIndex) {
-    maxNetIndex = 0;
+    maxNetIndex = QUOTE_INDEX;
   }
 
   const liabRootBank = rootBanks[minNetIndex];
