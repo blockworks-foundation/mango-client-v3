@@ -726,6 +726,13 @@ export default class MangoAccount {
     return newInitHealth.div(healthDecimals).div(price.mul(liabWeight));
   }
 
+  isLiquidatable(mangoGroup: MangoGroup, mangoCache: MangoCache): boolean {
+    return (
+      (this.beingLiquidated && this.getHealth(mangoGroup, mangoCache, 'Init').isNeg()) ||
+      this.getHealth(mangoGroup, mangoCache, 'Maint').isNeg() 
+    );
+  }
+
   toPrettyString(
     groupConfig: GroupConfig,
     mangoGroup: MangoGroup,
@@ -737,7 +744,10 @@ export default class MangoAccount {
     lines.push(
       'Maint Health Ratio: ' + this.getHealthRatio(mangoGroup, cache, 'Maint'),
     );
+    lines.push('Maint Health: ' + this.getHealth(mangoGroup, cache, 'Maint'));
+    lines.push('Init Health: ' + this.getHealth(mangoGroup, cache, 'Init'));
     lines.push('isBankrupt: ' + this.isBankrupt);
+    lines.push('beingLiquidated: ' + this.beingLiquidated);
 
     lines.push('Spot:');
 
