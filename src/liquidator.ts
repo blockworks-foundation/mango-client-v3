@@ -19,6 +19,7 @@ import {
   MangoGroup,
   PerpMarket,
   RootBank,
+  zeroKey,
   ZERO_BN,
 } from '.';
 import { Orderbook } from '@project-serum/serum/lib/market';
@@ -92,7 +93,7 @@ async function main() {
       throw new Error('Account not owned by Keypair');
     }
   } else {
-    let accounts = await client.getMangoAccountsForOwner(
+    const accounts = await client.getMangoAccountsForOwner(
       mangoGroup,
       payer.publicKey,
       true,
@@ -143,9 +144,59 @@ async function main() {
       cache = await mangoGroup.loadCache(connection);
       await liqorMangoAccount.reload(connection);
 
-      for (let mangoAccount of mangoAccounts) {
+      for (const mangoAccount of mangoAccounts) {
         const health = mangoAccount.getHealthRatio(mangoGroup, cache, 'Maint');
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
+        if (process.env.CHECK_TRIGGERS) {
+          try {
+            if (
+              mangoAccount.advancedOrdersKey &&
+              !mangoAccount.advancedOrdersKey.equals(zeroKey)
+            ) {
+              await mangoAccount.loadAdvancedOrders(connection);
+              if (mangoAccount.advancedOrders) {
+                for (let i = 0; i < mangoAccount.advancedOrders.length; i++) {
+                  const order = mangoAccount.advancedOrders[i];
+                  if (
+                    order.perpTrigger &&
+                    order.perpTrigger.isActive &&
+                    order.perpTrigger['reduceOnly'] == true
+                  ) {
+                    const trigger = order.perpTrigger;
+                    const currentPrice =
+                      cache.priceCache[trigger.marketIndex].price;
+                    const marketIndex = groupIds.perpMarkets.findIndex(
+                      (pm) => pm.marketIndex == trigger.marketIndex,
+                    );
+                    if (
+                      (trigger.triggerCondition == 'above' &&
+                        currentPrice.gt(trigger.triggerPrice)) ||
+                      (trigger.triggerCondition == 'below' &&
+                        currentPrice.lt(trigger.triggerPrice))
+                    ) {
+                      console.log(
+                        `Executing order for account ${mangoAccount.publicKey.toBase58()}`,
+                      );
+                      await client.executePerpTriggerOrder(
+                        mangoGroup,
+                        mangoAccount,
+                        cache,
+                        perpMarkets[marketIndex],
+                        payer,
+                        i,
+                      );
+                    }
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.error(
+              `Failed to execute trigger order for ${mangoAccountKeyString}`,
+              err,
+            );
+          }
+        }
         if (health.lt(ZERO_I80F48)) {
           if (!liquidating[mangoAccountKeyString] && numLiquidating < 1) {
             await mangoAccount.reload(connection, mangoGroup.dexProgramId);
@@ -725,7 +776,7 @@ async function balanceTokens(
       o.openOrdersAddress.equals(mangoAccount.spotOpenOrders[i]),
     );
 
-    for (let order of orders) {
+    for (const order of orders) {
       cancelOrdersPromises.push(
         client.cancelSpotOrder(
           mangoGroup,
@@ -930,7 +981,7 @@ async function closePositions(
   await mangoAccount.reload(connection, mangoGroup.dexProgramId);
 
   // Check if we need to balance again
-  const isUnbalanced = perpMarkets.some((pm, i) => {
+  const isUnbalanced = perpMarkets.some((pm) => {
     const index = mangoGroup.getPerpMarketIndex(pm.publicKey);
     const perpAccount = mangoAccount.perpAccounts[index];
     const basePositionSize = Math.abs(
