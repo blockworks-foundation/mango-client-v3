@@ -353,6 +353,31 @@ async function liquidateAccount(
   if (!liqee.isLiquidatable(mangoGroup, cache)) {
     throw new Error('Account no longer liquidatable');
   }
+  for (let i = 0; i < mangoGroup.spotMarkets.length; i++) {
+    const spotMarket = spotMarkets[i];
+    const baseRootBank = rootBanks[i];
+    const quoteRootBank = rootBanks[QUOTE_INDEX];
+
+    if (baseRootBank && quoteRootBank) {
+      if (liqee.inMarginBasket[i]) {
+        console.log('forceCancelOrders ', i);
+        await client.forceCancelSpotOrders(
+          mangoGroup,
+          liqee,
+          spotMarket,
+          baseRootBank,
+          quoteRootBank,
+          payer,
+          new BN(5),
+        );
+        await sleep(interval);
+      }
+    }
+  }
+  await liqee.reload(connection, mangoGroup.dexProgramId);
+  if (!liqee.isLiquidatable(mangoGroup, cache)) {
+    throw new Error('Account no longer liquidatable');
+  }
 
   const healthComponents = liqee.getHealthComponents(mangoGroup, cache);
   const healths = liqee.getHealthsFromComponents(
@@ -422,28 +447,6 @@ async function liquidateSpot(
   liqor: MangoAccount,
 ) {
   console.log('liquidateSpot');
-
-  for (let i = 0; i < mangoGroup.spotMarkets.length; i++) {
-    const spotMarket = spotMarkets[i];
-    const baseRootBank = rootBanks[i];
-    const quoteRootBank = rootBanks[QUOTE_INDEX];
-
-    if (baseRootBank && quoteRootBank) {
-      if (liqee.inMarginBasket[i]) {
-        console.log('forceCancelOrders ', i);
-        await client.forceCancelSpotOrders(
-          mangoGroup,
-          liqee,
-          spotMarket,
-          baseRootBank,
-          quoteRootBank,
-          payer,
-          new BN(5),
-        );
-        await sleep(interval);
-      }
-    }
-  }
 
   let minNet = ZERO_I80F48;
   let minNetIndex = -1;
