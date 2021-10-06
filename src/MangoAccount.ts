@@ -73,6 +73,9 @@ export default class MangoAccount {
       : '';
   }
 
+  hasAnySpotOrders(): boolean {
+    return this.inMarginBasket.some((b) => b);
+  }
   async reload(
     connection: Connection,
     dexProgramId: PublicKey | undefined = undefined,
@@ -728,8 +731,9 @@ export default class MangoAccount {
 
   isLiquidatable(mangoGroup: MangoGroup, mangoCache: MangoCache): boolean {
     return (
-      (this.beingLiquidated && this.getHealth(mangoGroup, mangoCache, 'Init').isNeg()) ||
-      this.getHealth(mangoGroup, mangoCache, 'Maint').isNeg() 
+      (this.beingLiquidated &&
+        this.getHealth(mangoGroup, mangoCache, 'Init').isNeg()) ||
+      this.getHealth(mangoGroup, mangoCache, 'Maint').isNeg()
     );
   }
 

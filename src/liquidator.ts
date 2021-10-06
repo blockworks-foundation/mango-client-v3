@@ -353,30 +353,35 @@ async function liquidateAccount(
   if (!liqee.isLiquidatable(mangoGroup, cache)) {
     throw new Error('Account no longer liquidatable');
   }
-  for (let i = 0; i < mangoGroup.spotMarkets.length; i++) {
-    const spotMarket = spotMarkets[i];
-    const baseRootBank = rootBanks[i];
-    const quoteRootBank = rootBanks[QUOTE_INDEX];
 
-    if (baseRootBank && quoteRootBank) {
-      if (liqee.inMarginBasket[i]) {
-        console.log('forceCancelOrders ', i);
-        await client.forceCancelSpotOrders(
-          mangoGroup,
-          liqee,
-          spotMarket,
-          baseRootBank,
-          quoteRootBank,
-          payer,
-          new BN(5),
-        );
-        await sleep(interval);
+  while (liqee.hasAnySpotOrders()) {
+    for (let i = 0; i < mangoGroup.spotMarkets.length; i++) {
+      const spotMarket = spotMarkets[i];
+      const baseRootBank = rootBanks[i];
+      const quoteRootBank = rootBanks[QUOTE_INDEX];
+
+      if (baseRootBank && quoteRootBank) {
+        if (liqee.inMarginBasket[i]) {
+          console.log('forceCancelOrders ', i);
+          await client.forceCancelSpotOrders(
+            mangoGroup,
+            liqee,
+            spotMarket,
+            baseRootBank,
+            quoteRootBank,
+            payer,
+            new BN(5),
+          );
+        }
       }
+      // TODO - is this sleep necessary?
+      // await sleep(interval);
     }
-  }
-  await liqee.reload(connection, mangoGroup.dexProgramId);
-  if (!liqee.isLiquidatable(mangoGroup, cache)) {
-    throw new Error('Account no longer liquidatable');
+    await sleep(interval);
+    await liqee.reload(connection, mangoGroup.dexProgramId);
+    if (!liqee.isLiquidatable(mangoGroup, cache)) {
+      throw new Error('Account no longer liquidatable');
+    }
   }
 
   const healthComponents = liqee.getHealthComponents(mangoGroup, cache);
@@ -391,16 +396,7 @@ async function liquidateAccount(
 
   let shouldLiquidateSpot = false;
   for (let i = 0; i < mangoGroup.tokens.length; i++) {
-    const price = cache.priceCache[i] ? cache.priceCache[i].price : ONE_I80F48;
-    if (
-      liqee
-        .getNativeDeposit(cache.rootBankCache[i], i)
-        .sub(liqee.getNativeBorrow(cache.rootBankCache[i], i))
-        .mul(price)
-        .lt(ZERO_I80F48)
-    ) {
-      shouldLiquidateSpot = true;
-    }
+    shouldLiquidateSpot = liqee.getNet(cache.rootBankCache[i], i).isNeg();
   }
 
   if (shouldLiquidateSpot) {
@@ -414,6 +410,9 @@ async function liquidateAccount(
       liqor,
     );
   }
+
+  // TODO - why only liquidate perp if it's less than zero?
+
   if (healths.perp.lt(ZERO_I80F48)) {
     await liquidatePerps(
       mangoGroup,
@@ -519,25 +518,34 @@ async function liquidateSpot(
       console.log(maxNet.toString());
       if (maxNet.lt(ONE_I80F48) || maxNetIndex == -1) {
         const highestHealthMarket = perpMarkets
-        .map((perpMarket, i) => {
-          const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
-          const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
-          const perpAccount = liqee.perpAccounts[marketIndex];
-          const perpMarketCache = cache.perpMarketCache[marketIndex];
-          const price = mangoGroup.getPriceNative(marketIndex, cache);
-          const perpHealth = perpAccount.getHealth(
-            perpMarketInfo,
-            price,
-            perpMarketInfo.maintAssetWeight,
-            perpMarketInfo.maintLiabWeight,
-            perpMarketCache.longFunding,
-            perpMarketCache.shortFunding,
+          .map((perpMarket, i) => {
+            const marketIndex = mangoGroup.getPerpMarketIndex(
+              perpMarket.publicKey,
+            );
+            const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
+            const perpAccount = liqee.perpAccounts[marketIndex];
+            const perpMarketCache = cache.perpMarketCache[marketIndex];
+            const price = mangoGroup.getPriceNative(marketIndex, cache);
+            const perpHealth = perpAccount.getHealth(
+              perpMarketInfo,
+              price,
+              perpMarketInfo.maintAssetWeight,
+              perpMarketInfo.maintLiabWeight,
+              perpMarketCache.longFunding,
+              perpMarketCache.shortFunding,
+            );
+            return { perpHealth: perpHealth, marketIndex: marketIndex, i };
+          })
+          .sort((a, b) => {
+            return b.perpHealth.sub(a.perpHealth).toNumber();
+          })[0];
+
+        let maxLiabTransfer = liqorInitHealth;
+        if (maxNetIndex !== QUOTE_INDEX) {
+          maxLiabTransfer = liqorInitHealth.div(
+            ONE_I80F48.sub(assetInitAssetWeight),
           );
-          return { perpHealth: perpHealth, marketIndex: marketIndex, i };
-        })
-        .sort((a, b) => {
-          return b.perpHealth.sub(a.perpHealth).toNumber();
-        })[0];
+        }
 
         console.log('liquidateTokenAndPerp ' + highestHealthMarket.marketIndex);
         await client.liquidateTokenAndPerp(
@@ -634,29 +642,24 @@ async function liquidatePerps(
   }
 
   if (liqee.isBankrupt) {
-    const maxLiabTransfer = I80F48.fromNumber(
-      Math.max(Math.abs(perpAccount.quotePosition.toNumber()), 1),
-    );
-
+    const maxLiabTransfer = perpAccount.quotePosition.abs();
     const quoteRootBank = rootBanks[QUOTE_INDEX];
     if (quoteRootBank) {
+      // don't do anything it if quote position is zero
       console.log('resolvePerpBankruptcy', maxLiabTransfer.toString());
       await client.resolvePerpBankruptcy(
         mangoGroup,
         liqee,
         liqor,
         perpMarket,
-        quoteRootBank!,
+        quoteRootBank,
         payer,
         marketIndex,
         maxLiabTransfer,
       );
       await liqee.reload(connection, mangoGroup.dexProgramId);
-      return;
     }
-  }
-
-  if (lowestHealthMarket.perpHealth.lte(ZERO_I80F48)) {
+  } else {
     let maxNet = ZERO_I80F48;
     let maxNetIndex = mangoGroup.tokens.length - 1;
 
@@ -665,22 +668,27 @@ async function liquidatePerps(
         ? cache.priceCache[i].price
         : ONE_I80F48;
 
-      const netDeposit = liqee
-        .getNativeDeposit(cache.rootBankCache[i], i)
-        .sub(liqee.getNativeBorrow(cache.rootBankCache[i], i))
-        .mul(price);
-
+      const netDeposit = liqee.getNet(cache.rootBankCache[i], i).mul(price);
       if (netDeposit.gt(maxNet)) {
         maxNet = netDeposit;
         maxNetIndex = i;
       }
     }
+    // TODO what if maxNetIndex == -1? Is that possible?
 
     const assetRootBank = rootBanks[maxNetIndex];
-
-    if (perpAccount.basePosition.eq(new BN(0))) {
+    const liqorInitHealth = liqor.getHealth(mangoGroup, cache, 'Init');
+    if (perpAccount.basePosition.isZero()) {
       if (assetRootBank) {
+        // we know that since sum of perp healths is negative, lowest perp market must be negative
         console.log('liquidateTokenAndPerp ' + marketIndex);
+        // maxLiabTransfer
+        let maxLiabTransfer = liqorInitHealth;
+        if (maxNetIndex !== QUOTE_INDEX) {
+          maxLiabTransfer = liqorInitHealth.div(
+            ONE_I80F48.sub(mangoGroup.spotMarkets[maxNetIndex].initAssetWeight),
+          );
+        }
         await client.liquidateTokenAndPerp(
           mangoGroup,
           liqee,
@@ -691,12 +699,39 @@ async function liquidatePerps(
           maxNetIndex,
           AssetType.Perp,
           marketIndex,
-          maxNet.sub(ONE_I80F48).max(ONE_I80F48),
+          maxLiabTransfer,
         );
       }
     } else {
       console.log('liquidatePerpMarket ' + marketIndex);
-      const baseTransferRequest = perpAccount.basePosition;
+
+      // technically can be higher because of liquidation fee, but
+      // let's just give ourselves extra room
+      const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
+      const initAssetWeight = perpMarketInfo.initAssetWeight;
+      const initLiabWeight = perpMarketInfo.initLiabWeight;
+      let baseTransferRequest;
+      if (perpAccount.basePosition.gte(ZERO_BN)) {
+        // TODO adjust for existing base position on liqor
+        baseTransferRequest = new BN(
+          liqorInitHealth
+            .div(ONE_I80F48.sub(initAssetWeight))
+            .div(mangoGroup.getPriceNative(marketIndex, cache))
+            .div(I80F48.fromI64(perpMarketInfo.baseLotSize))
+            .floor()
+            .toNumber(),
+        );
+      } else {
+        baseTransferRequest = new BN(
+          liqorInitHealth
+            .div(initLiabWeight.sub(ONE_I80F48))
+            .div(mangoGroup.getPriceNative(marketIndex, cache))
+            .div(I80F48.fromI64(perpMarketInfo.baseLotSize))
+            .floor()
+            .toNumber(),
+        ).neg();
+      }
+
       await client.liquidatePerpMarket(
         mangoGroup,
         liqee,
@@ -706,13 +741,11 @@ async function liquidatePerps(
         baseTransferRequest,
       );
     }
+
     await sleep(interval);
     await liqee.reload(connection, mangoGroup.dexProgramId);
     if (liqee.isBankrupt) {
-      const maxLiabTransfer = I80F48.fromNumber(
-        Math.abs(liqee.perpAccounts[marketIndex].quotePosition.toNumber()),
-      );
-
+      const maxLiabTransfer = perpAccount.quotePosition.abs();
       const quoteRootBank = rootBanks[QUOTE_INDEX];
       if (quoteRootBank) {
         console.log('resolvePerpBankruptcy', maxLiabTransfer.toString());

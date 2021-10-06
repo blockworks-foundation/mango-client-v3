@@ -1,5 +1,6 @@
 import BN from 'bn.js';
 import Big from 'big.js';
+import { ZERO_BN } from './utils';
 
 // TODO - this whole class is inefficient; consider optimizing
 export class I80F48 {
@@ -167,6 +168,9 @@ export class I80F48 {
   }
   isNeg(): boolean {
     return this.data.isNeg();
+  }
+  isZero(): boolean {
+    return this.eq(ZERO_I80F48);
   }
   min(x: I80F48): I80F48 {
     return this.lte(x) ? this : x;
