@@ -618,6 +618,91 @@
           "index": false
         }
       ]
+    },
+    {
+      "name": "WithdrawLog",
+      "fields": [
+        {
+          "name": "mangoGroup",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "mangoAccount",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "owner",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "tokenIndex",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "quantity",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "DepositLog",
+      "fields": [
+        {
+          "name": "mangoGroup",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "mangoAccount",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "owner",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "tokenIndex",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "quantity",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "RedeemMngoLog",
+      "fields": [
+        {
+          "name": "mangoGroup",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "mangoAccount",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "marketIndex",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "redeemedMngo",
+          "type": "u64",
+          "index": false
+        }
+      ]
     }
   ]
 }

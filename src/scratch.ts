@@ -31,13 +31,13 @@ async function main() {
 
   for (const log of logs) {
     const event = coder.events.decode(log);
-    if (event && event.data.oraclePrices) {
-      // @ts-ignore
-      for (const priceBn of event.data.oraclePrices) {
-        const price = new I80F48(priceBn).toNumber();
-        console.log(price);
-      }
-    }
+    // if (event && event.data.oraclePrices) {
+    //   // @ts-ignore
+    //   for (const priceBn of event.data.oraclePrices) {
+    //     const price = new I80F48(priceBn).toNumber();
+    //     console.log(price);
+    //   }
+    // }
     console.log(event);
   }
 }

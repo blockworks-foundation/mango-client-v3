@@ -943,7 +943,7 @@ export function makeUpdateFundingInstruction(
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
-    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: mangoCachePk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: false, pubkey: bidsPk },
     { isSigner: false, isWritable: false, pubkey: asksPk },
