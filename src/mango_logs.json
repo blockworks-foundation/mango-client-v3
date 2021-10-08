@@ -550,6 +550,31 @@
       ]
     },
     {
+      "name": "UpdateFundingLog",
+      "fields": [
+        {
+          "name": "mangoGroup",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "marketIndex",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "longFunding",
+          "type": "i128",
+          "index": false
+        },
+        {
+          "name": "shortFunding",
+          "type": "i128",
+          "index": false
+        }
+      ]
+    },
+    {
       "name": "OpenOrdersBalanceLog",
       "fields": [
         {
