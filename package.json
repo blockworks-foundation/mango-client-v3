@@ -16,6 +16,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
+    "build-docs": "yarn typedoc src/index.ts",
     "cli": "ts-node src/cli.ts",
     "liquidator": "ts-node src/liquidator.ts",
     "launch-group": "ts-node test/initDevnetGroup.ts",

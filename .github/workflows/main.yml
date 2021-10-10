@@ -3,7 +3,7 @@ name: Docs
 on:
   push:
     branches: [ main ]
-    
+
   workflow_dispatch:
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Build
-        run: yarn typedoc src/index.ts
+        run: yarn build-docs
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@4.1.5
