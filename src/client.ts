@@ -108,6 +108,9 @@ export const getUnixTs = () => {
   return new Date().getTime() / 1000;
 };
 
+/**
+ * A class for interacting with a particular Mango V3 Program
+ */
 export class MangoClient {
   connection: Connection;
   programId: PublicKey;
@@ -355,6 +358,9 @@ export class MangoClient {
     return txid;
   }
 
+  /**
+  * Create a new Mango group
+  */
   async initMangoGroup(
     quoteMint: PublicKey,
     msrmMint: PublicKey,
@@ -482,6 +488,9 @@ export class MangoClient {
     return accountInstruction.account.publicKey;
   }
 
+  /**
+  * Retrieve information about a Mango Group
+  */
   async getMangoGroup(mangoGroup: PublicKey): Promise<MangoGroup> {
     const accountInfo = await this.connection.getAccountInfo(mangoGroup);
     const decoded = MangoGroupLayout.decode(
@@ -491,6 +500,9 @@ export class MangoClient {
     return new MangoGroup(mangoGroup, decoded);
   }
 
+  /**
+  * Create a new Mango Account on a given group
+  */
   async initMangoAccount(
     mangoGroup: MangoGroup,
     owner: Account | WalletAdapter,
@@ -520,6 +532,9 @@ export class MangoClient {
     return accountInstruction.account.publicKey;
   }
 
+  /**
+  * Retrieve information about a Mango Account
+  */
   async getMangoAccount(
     mangoAccountPk: PublicKey,
     dexProgramId: PublicKey,
@@ -536,6 +551,15 @@ export class MangoClient {
     return mangoAccount;
   }
 
+  /**
+  * Create a new Mango Account and deposit some tokens in a single transaction
+  * 
+  * @param rootBank The RootBank for the deposit currency
+  * @param nodeBank The NodeBank asociated with the RootBank
+  * @param vault The token account asociated with the NodeBank
+  * @param tokenAcc The token account to transfer from
+  * @param info An optional UI name for the account
+  */
   async initMangoAccountAndDeposit(
     mangoGroup: MangoGroup,
     owner: Account | WalletAdapter,
@@ -643,6 +667,14 @@ export class MangoClient {
     return accountInstruction.account.publicKey.toString();
   }
 
+  /**
+  * Deposit tokens in a Mango Account
+  * 
+  * @param rootBank The RootBank for the deposit currency
+  * @param nodeBank The NodeBank asociated with the RootBank
+  * @param vault The token account asociated with the NodeBank
+  * @param tokenAcc The token account to transfer from
+  */
   async deposit(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
