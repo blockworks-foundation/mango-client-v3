@@ -384,7 +384,7 @@ MangoInstructionLayout.addVariant(
   'CancelAllPerpOrders',
 );
 MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
-/** @internal */
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
@@ -754,7 +754,7 @@ export const PerpMarketLayout = struct([
   liquidityMiningInfoLayout('liquidityMiningInfo'),
   publicKeyLayout('mngoVault'),
 ]);
-/** @internal */
+
 const EVENT_SIZE = 200;
 /** @internal */
 export const PerpEventLayout = union(
@@ -875,9 +875,7 @@ export const PerpEventQueueLayout = struct([
   seq(PerpEventLayout, greedy(PerpEventLayout.span), 'events'),
 ]);
 
-/** @internal */
 const BOOK_NODE_SIZE = 88;
-/** @internal */
 const BOOK_NODE_LAYOUT = union(u32('tag'), blob(BOOK_NODE_SIZE - 4), 'node');
 BOOK_NODE_LAYOUT.addVariant(0, struct([]), 'uninitialized');
 BOOK_NODE_LAYOUT.addVariant(
