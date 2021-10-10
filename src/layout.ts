@@ -413,7 +413,7 @@ export class PublicKeyLayout extends Blob {
 export function publicKeyLayout(property = '') {
   return new PublicKeyLayout(property);
 }
-
+/** @internal */
 export const DataType = {
   MangoGroup: 0,
   MangoAccount: 1,
@@ -462,9 +462,11 @@ export class MetaDataLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function metaDataLayout(property = '') {
   return new MetaDataLayout(property);
 }
+
 /** @internal */
 export class TokenInfo {
   mint!: PublicKey;

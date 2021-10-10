@@ -183,6 +183,9 @@ export class I80F48 {
   }
 }
 
+/** @internal */
 export const ONE_I80F48 = I80F48.fromString('1');
+/** @internal */
 export const ZERO_I80F48 = I80F48.fromString('0');
+/** @internal */
 export const NEG_ONE_I80F48 = I80F48.fromString('-1');
