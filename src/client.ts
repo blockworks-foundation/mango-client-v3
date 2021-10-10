@@ -1443,6 +1443,7 @@ export class MangoClient {
 
     // Only pass in open orders if in margin basket or current market index, and
     // the only writable account should be OpenOrders for current market index
+    let marketOpenOrdersKey = zeroKey;
     for (let i = 0; i < mangoAccount.spotOpenOrders.length; i++) {
       let pubkey = zeroKey;
       let isWritable = false;
@@ -1487,11 +1488,11 @@ export class MangoClient {
           initTx.add(initOpenOrders);
 
           await this.sendTransaction(initTx, owner, [accInstr.account]);
-
           pubkey = accInstr.account.publicKey;
         } else {
           pubkey = mangoAccount.spotOpenOrders[i];
         }
+        marketOpenOrdersKey = pubkey;
       } else if (mangoAccount.inMarginBasket[i]) {
         pubkey = mangoAccount.spotOpenOrders[i];
       }
@@ -1551,8 +1552,10 @@ export class MangoClient {
     );
 
     // update MangoAccount to have new OpenOrders pubkey
-    mangoAccount.spotOpenOrders[spotMarketIndex] =
-      openOrdersKeys[spotMarketIndex].pubkey;
+    // We know this new key is in margin basket because if it was a full taker trade
+    // there is some leftover from fee rebate. If maker trade there's the order.
+    // and if it failed then we already exited before this line
+    mangoAccount.spotOpenOrders[spotMarketIndex] = marketOpenOrdersKey;
     mangoAccount.inMarginBasket[spotMarketIndex] = true;
     console.log(
       spotMarketIndex,
