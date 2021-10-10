@@ -1560,7 +1560,7 @@ export class MangoClient {
     console.log(
       spotMarketIndex,
       mangoAccount.spotOpenOrders[spotMarketIndex].toBase58(),
-      openOrdersKeys[spotMarketIndex].pubkey.toBase58(),
+      marketOpenOrdersKey.toBase58(),
     );
 
     return txid;
