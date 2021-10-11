@@ -193,10 +193,8 @@ async function main() {
 
   // eslint-disable-next-line
   while (true) {
-    const loopStartTs = getUnixTs();
     try {
-      // cache = await mangoGroup.loadCache(connection);
-      // await liqorMangoAccount.reload(connection);
+      const loopStartTs = getUnixTs();
 
       // load all the advancedOrders accounts
       const mangoAccountsWithAOs = mangoAccounts.filter(
@@ -249,13 +247,23 @@ async function main() {
           continue;
         }
 
+        console.log(
+          `Liquidatable: ${mangoAccount.toPrettyString(
+            groupIds,
+            mangoGroup,
+            cache,
+          )}`,
+        );
+
         // Reload mango account to make sure still liquidatable
         await mangoAccount.reload(connection, mangoGroup.dexProgramId);
-        const maintHealth = mangoAccount.getHealth(mangoGroup, cache, 'Maint');
-
-        if (!(maintHealth.isNeg() || mangoAccount.beingLiquidated)) {
+        if (!mangoAccount.isLiquidatable(mangoGroup, cache)) {
           console.log(
-            `Account ${mangoAccountKeyString} no longer liquidatable`,
+            `No longer liquidatable: ${mangoAccount.toPrettyString(
+              groupIds,
+              mangoGroup,
+              cache,
+            )}`,
           );
           continue;
         }
@@ -298,12 +306,11 @@ async function main() {
             numLiquidating--;
           });
       }
+      console.log(`Loop time: ${getUnixTs() - loopStartTs}s`);
       await sleep(interval);
     } catch (err) {
       console.error('Error checking accounts:', err);
     }
-
-    console.log(`Loop time: ${(getUnixTs() - loopStartTs) / 1000}s`);
   }
 }
 
