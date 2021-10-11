@@ -12,6 +12,11 @@
           "index": false
         },
         {
+          "name": "marketIndex",
+          "type": "u64",
+          "index": false
+        },
+        {
           "name": "takerSide",
           "type": "u8",
           "index": false
