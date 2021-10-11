@@ -162,8 +162,7 @@ async function main() {
                   const order = mangoAccount.advancedOrders[i];
                   if (
                     order.perpTrigger &&
-                    order.perpTrigger.isActive &&
-                    order.perpTrigger['reduceOnly'] == true
+                    order.perpTrigger.isActive
                   ) {
                     const trigger = order.perpTrigger;
                     const currentPrice =
