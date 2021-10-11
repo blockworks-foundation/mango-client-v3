@@ -18,14 +18,14 @@ import { ZERO_BN } from '../utils';
 export default async function listMarket(
   connection: Connection,
   payer: Account,
-  groupConfig: GroupConfig,
+  mangoProgramId: PublicKey,
   baseMint: PublicKey,
   quoteMint: PublicKey,
   baseLotSize: number,
   quoteLotSize: number,
   dexProgramId: PublicKey,
 ): Promise<PublicKey> {
-  const client = new MangoClient(connection, groupConfig.mangoProgramId);
+  const client = new MangoClient(connection, mangoProgramId);
 
   const market = new Account();
   const requestQueue = new Account();

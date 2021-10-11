@@ -9,31 +9,20 @@ import {
   throwUndefined,
   MAX_NUM_IN_MARGIN_BASKET,
   QUOTE_INDEX,
+  AssetType,
+  I80F48,
 } from '../src';
 import configFile from '../src/ids.json';
 import { Account, Commitment, Connection } from '@solana/web3.js';
 import { Market } from '@project-serum/serum';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import TestGroup from './TestGroup';
 
-async function testMaxCompute() {
-  // Load all the details for mango group
-  const groupName = process.env.GROUP || 'mango_test_v3.nightly';
+async function testPerpLiquidationAndBankruptcy() {
   const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-  const sleepTime = 500;
+  const sleepTime = 2000;
   const config = new Config(configFile);
-  const groupIds = config.getGroup(cluster, groupName);
-  const setupLiqor = true;
-  const setupLiqee = true;
-  const liqorSpotOrders = MAX_NUM_IN_MARGIN_BASKET;
-  const liqeeSpotOrders = MAX_NUM_IN_MARGIN_BASKET;
-  const liqorPerpOrders = MAX_PAIRS;
-  const liqeePerpOrders = MAX_PAIRS;
 
-  if (!groupIds) {
-    throw new Error(`Group ${groupName} not found`);
-  }
-  const mangoProgramId = groupIds.mangoProgramId;
-  const mangoGroupKey = groupIds.publicKey;
   const payer = new Account(
     JSON.parse(
       process.env.KEYPAIR ||
@@ -45,286 +34,210 @@ async function testMaxCompute() {
     'processed' as Commitment,
   );
 
-  const client = new MangoClient(connection, mangoProgramId);
-  const mangoGroup = await client.getMangoGroup(mangoGroupKey);
+  const testGroup = new TestGroup();
+  const mangoGroupKey = await testGroup.init();
+  const mangoGroup = await testGroup.client.getMangoGroup(mangoGroupKey);
+  const perpMarkets = await Promise.all(
+    [1, 3].map((marketIndex) => {
+      return mangoGroup.loadPerpMarket(connection, marketIndex, 6, 6);
+    }),
+  );
+
+  let cache = await mangoGroup.loadCache(connection);
   const rootBanks = await mangoGroup.loadRootBanks(connection);
   const quoteRootBank = rootBanks[QUOTE_INDEX];
   if (!quoteRootBank) {
-    throw new Error();
+    throw new Error('Quote Rootbank Not Found');
   }
   const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
+  const quoteTokenInfo = mangoGroup.tokens[QUOTE_INDEX];
+  const quoteToken = new Token(
+    connection,
+    quoteTokenInfo.mint,
+    TOKEN_PROGRAM_ID,
+    payer,
+  );
+  const quoteWallet = await quoteToken.getOrCreateAssociatedAccountInfo(
+    payer.publicKey,
+  );
 
-  // Deposit some usdc to borrow
-  if (setupLiqor) {
-    const whale = await client.initMangoAccount(mangoGroup, payer);
-    console.log('Created Liqor:', whale.toBase58());
-    await sleep(sleepTime);
-    const whaleAccount = await client.getMangoAccount(
-      whale,
-      mangoGroup.dexProgramId,
-    );
-    const tokenConfig = groupIds.tokens[QUOTE_INDEX];
-    const tokenInfo = mangoGroup.tokens[QUOTE_INDEX];
-    const token = new Token(
-      connection,
-      tokenInfo.mint,
-      TOKEN_PROGRAM_ID,
-      payer,
-    );
-    const wallet = await token.getOrCreateAssociatedAccountInfo(
-      payer.publicKey,
-    );
+  const liqorPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
+  const liqorAccount = await testGroup.client.getMangoAccount(
+    liqorPk,
+    mangoGroup.dexProgramId,
+  );
+  console.log('Created Liqor:', liqorPk.toBase58());
 
-    for (let i = 0; i < groupIds.tokens.length; i++) {
-      if (groupIds.tokens[i].symbol === 'SOL') {
-        continue;
-      }
-      const tokenConfig = groupIds.tokens[i];
-      const tokenIndex = mangoGroup.getTokenIndex(tokenConfig.mintKey);
-      const rootBank = throwUndefined(rootBanks[tokenIndex]);
-      const tokenInfo = mangoGroup.tokens[tokenIndex];
-      const token = new Token(
-        connection,
-        tokenInfo.mint,
-        TOKEN_PROGRAM_ID,
-        payer,
-      );
-      const wallet = await token.getOrCreateAssociatedAccountInfo(
-        payer.publicKey,
-      );
+  const liqeePk = await testGroup.client.initMangoAccount(mangoGroup, payer);
+  const liqeeAccount = await testGroup.client.getMangoAccount(
+    liqeePk,
+    mangoGroup.dexProgramId,
+  );
+  console.log('Created Liqee:', liqeePk.toBase58());
 
-      await sleep(sleepTime / 2);
-      const banks = await rootBank.loadNodeBanks(connection);
+  await testGroup.runKeeper();
+  await testGroup.client.deposit(
+    mangoGroup,
+    liqorAccount,
+    payer,
+    quoteRootBank.publicKey,
+    quoteNodeBanks[0].publicKey,
+    quoteNodeBanks[0].vault,
+    quoteWallet.address,
+    1000,
+  );
+  await testGroup.client.deposit(
+    mangoGroup,
+    liqeeAccount,
+    payer,
+    quoteRootBank.publicKey,
+    quoteNodeBanks[0].publicKey,
+    quoteNodeBanks[0].vault,
+    quoteWallet.address,
+    10,
+  );
+  await testGroup.runKeeper();
 
-      await sleep(sleepTime);
-      console.log('depositing');
+  console.log('Placing maker order');
+  await testGroup.client.placePerpOrder(
+    mangoGroup,
+    liqorAccount,
+    mangoGroup.mangoCache,
+    perpMarkets[0],
+    payer,
+    'sell',
+    45000,
+    0.0111,
+    'limit',
+  );
+  await testGroup.runKeeper();
 
-      if (i != QUOTE_INDEX) {
-        await client.deposit(
-          mangoGroup,
-          whaleAccount,
-          payer,
-          rootBank.publicKey,
-          banks[0].publicKey,
-          banks[0].vault,
-          wallet.address,
-          1000,
-        );
-      }
-    }
-    await client.deposit(
+  console.log('Placing taker order');
+  await testGroup.client.placePerpOrder(
+    mangoGroup,
+    liqeeAccount,
+    mangoGroup.mangoCache,
+    perpMarkets[0],
+    payer,
+    'buy',
+    45000,
+    0.001,
+    'market',
+  );
+
+  await testGroup.runKeeper();
+  await liqeeAccount.reload(testGroup.connection);
+  await liqorAccount.reload(testGroup.connection);
+
+  console.log(
+    'Liqor base',
+    liqorAccount.perpAccounts[1].basePosition.toString(),
+  );
+  console.log(
+    'Liqor quote',
+    liqorAccount.perpAccounts[1].quotePosition.toString(),
+  );
+  console.log(
+    'Liqee base',
+    liqeeAccount.perpAccounts[1].basePosition.toString(),
+  );
+  console.log(
+    'Liqee quote',
+    liqeeAccount.perpAccounts[1].quotePosition.toString(),
+  );
+
+  await testGroup.setOracle(1, 15000);
+
+  await testGroup.runKeeper();
+  cache = await mangoGroup.loadCache(connection);
+  await liqeeAccount.reload(testGroup.connection);
+  await liqorAccount.reload(testGroup.connection);
+
+  console.log(
+    'Liqee Maint Health',
+    liqeeAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
+  );
+  console.log(
+    'Liqor Maint Health',
+    liqorAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
+  );
+
+  console.log('liquidatePerpMarket');
+  await testGroup.client.liquidatePerpMarket(
+    mangoGroup,
+    liqeeAccount,
+    liqorAccount,
+    perpMarkets[0],
+    payer,
+    liqeeAccount.perpAccounts[1].basePosition,
+  );
+  await testGroup.runKeeper();
+  await liqeeAccount.reload(testGroup.connection);
+  await liqorAccount.reload(testGroup.connection);
+
+  console.log(
+    'Liqee Maint Health',
+    liqeeAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
+  );
+  console.log('Liqee Bankrupt', liqeeAccount.isBankrupt);
+  console.log(
+    'Liqor Maint Health',
+    liqorAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
+  );
+
+  console.log('liquidateTokenAndPerp');
+  await testGroup.client.liquidateTokenAndPerp(
+    mangoGroup,
+    liqeeAccount,
+    liqorAccount,
+    quoteRootBank,
+    payer,
+    AssetType.Token,
+    QUOTE_INDEX,
+    AssetType.Perp,
+    1,
+    liqeeAccount.perpAccounts[1].quotePosition.abs(),
+  );
+  await testGroup.runKeeper();
+  await liqeeAccount.reload(testGroup.connection);
+  await liqorAccount.reload(testGroup.connection);
+
+  console.log(
+    'Liqee Maint Health',
+    liqeeAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
+  );
+  console.log('Liqee Bankrupt', liqeeAccount.isBankrupt);
+  console.log(
+    'Liqor Maint Health',
+    liqorAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
+  );
+  if (liqeeAccount.isBankrupt) {
+    console.log('resolvePerpBankruptcy');
+    await testGroup.client.resolvePerpBankruptcy(
       mangoGroup,
-      whaleAccount,
+      liqeeAccount,
+      liqorAccount,
+      perpMarkets[0],
+      quoteRootBank,
       payer,
-      quoteRootBank.publicKey,
-      quoteNodeBanks[0].publicKey,
-      quoteNodeBanks[0].vault,
-      wallet.address,
-      1_000_000,
+      1,
+      I80F48.fromNumber(
+        Math.max(Math.abs(liqeeAccount.perpAccounts[1].quotePosition.toNumber()), 1),
+      ),
     );
-
-    // place orders on spot markets
-    for (let i = 0; i < liqorSpotOrders; i++) {
-      const market = await Market.load(
-        connection,
-        mangoGroup.spotMarkets[i].spotMarket,
-        {},
-        mangoGroup.dexProgramId,
-      );
-      await sleep(sleepTime);
-      console.log('placing spot order', i);
-      while (1) {
-        try {
-          await client.placeSpotOrder(
-            mangoGroup,
-            whaleAccount,
-            mangoGroup.mangoCache,
-            market,
-            payer,
-            'buy',
-            10000,
-            1,
-            'limit',
-          );
-          await sleep(sleepTime);
-          await whaleAccount.reload(connection);
-          break;
-        } catch (e) {
-          console.log(e);
-          continue;
-        }
-      }
-    }
-    // place orders in perp markets
-    for (let i = 0; i < liqorPerpOrders; i++) {
-      await sleep(sleepTime);
-      const perpMarket = await client.getPerpMarket(
-        mangoGroup.perpMarkets[i].perpMarket,
-        groupIds.perpMarkets[i].baseDecimals,
-        groupIds.perpMarkets[i].quoteDecimals,
-      );
-
-      console.log('liqor placing perp order', i);
-      await sleep(sleepTime);
-      await client.placePerpOrder(
-        mangoGroup,
-        whaleAccount,
-        mangoGroup.mangoCache,
-        perpMarket,
-        payer,
-        'buy',
-        10000,
-        1,
-        'limit',
-      );
-    }
-    await whaleAccount.reload(connection);
-    console.log('LIQOR', whaleAccount.publicKey.toBase58());
   }
-  if (setupLiqee) {
-    const mangoAccountPk = await client.initMangoAccount(mangoGroup, payer);
-    await sleep(sleepTime);
-    let mangoAccount = await client.getMangoAccount(
-      mangoAccountPk,
-      mangoGroup.dexProgramId,
-    );
-    console.log('Created Liqee:', mangoAccountPk.toBase58());
+  await liqeeAccount.reload(testGroup.connection);
+  await liqorAccount.reload(testGroup.connection);
 
-    const cache = await mangoGroup.loadCache(connection);
-    // deposit
-    await sleep(sleepTime / 2);
-
-    for (let i = 0; i < groupIds.tokens.length; i++) {
-      if (groupIds.tokens[i].symbol === 'SOL') {
-        continue;
-      }
-      const tokenConfig = groupIds.tokens[i];
-      const tokenIndex = mangoGroup.getTokenIndex(tokenConfig.mintKey);
-      const rootBank = throwUndefined(rootBanks[tokenIndex]);
-      const tokenInfo = mangoGroup.tokens[tokenIndex];
-      const token = new Token(
-        connection,
-        tokenInfo.mint,
-        TOKEN_PROGRAM_ID,
-        payer,
-      );
-      const wallet = await token.getOrCreateAssociatedAccountInfo(
-        payer.publicKey,
-      );
-
-      await sleep(sleepTime / 2);
-      const banks = await rootBank.loadNodeBanks(connection);
-
-      await sleep(sleepTime);
-      console.log('depositing');
-
-      if (i != QUOTE_INDEX) {
-        await client.deposit(
-          mangoGroup,
-          mangoAccount,
-          payer,
-          rootBank.publicKey,
-          banks[0].publicKey,
-          banks[0].vault,
-          wallet.address,
-          1000,
-        );
-        console.log('Resetting oracle');
-        await client.setStubOracle(
-          mangoGroupKey,
-          mangoGroup.oracles[i],
-          payer,
-          10000,
-        );
-      }
-    }
-
-    // place orders on spot markets
-    for (let i = 0; i < liqeeSpotOrders; i++) {
-      const market = await Market.load(
-        connection,
-        mangoGroup.spotMarkets[i].spotMarket,
-        {},
-        mangoGroup.dexProgramId,
-      );
-      while (1) {
-        await sleep(sleepTime);
-        console.log('liqee placing spot order', i);
-        try {
-          await client.placeSpotOrder(
-            mangoGroup,
-            mangoAccount,
-            mangoGroup.mangoCache,
-            market,
-            payer,
-            'buy',
-            10000,
-            1,
-            'limit',
-          );
-          await sleep(sleepTime);
-          mangoAccount = await client.getMangoAccount(
-            mangoAccountPk,
-            mangoGroup.dexProgramId,
-          );
-          break;
-        } catch (e) {
-          console.log(e);
-          continue;
-        }
-      }
-    }
-    // place orders on perp markets
-    for (let i = 0; i < liqeePerpOrders; i++) {
-      await sleep(sleepTime);
-      const perpMarket = await client.getPerpMarket(
-        mangoGroup.perpMarkets[i].perpMarket,
-        groupIds.perpMarkets[i].baseDecimals,
-        groupIds.perpMarkets[i].quoteDecimals,
-      );
-
-      console.log('liqee placing perp order', i);
-      await sleep(sleepTime);
-      await client.placePerpOrder(
-        mangoGroup,
-        mangoAccount,
-        mangoGroup.mangoCache,
-        perpMarket,
-        payer,
-        'buy',
-        10000,
-        1,
-        'limit',
-      );
-    }
-    console.log('withdrawing');
-    await client.withdraw(
-      mangoGroup,
-      mangoAccount,
-      payer,
-      quoteRootBank.publicKey,
-      quoteRootBank.nodeBanks[0],
-      quoteNodeBanks[0].vault,
-      750000,
-      true,
-    );
-
-    await mangoAccount.reload(connection);
-    console.log(mangoAccount.getHealth(mangoGroup, cache, 'Maint').toString());
-    console.log('LIQEE', mangoAccount.publicKey.toBase58());
-  }
-
-  for (let i = 0; i < groupIds.tokens.length; i++) {
-    if (i != QUOTE_INDEX) {
-      console.log('Setting oracle');
-      await client.setStubOracle(
-        mangoGroupKey,
-        mangoGroup.oracles[i],
-        payer,
-        20,
-      );
-    }
-  }
+  console.log(
+    'Liqee Maint Health',
+    liqeeAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
+  );
+  console.log('Liqee Bankrupt', liqeeAccount.isBankrupt);
+  console.log(
+    'Liqor Maint Health',
+    liqorAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
+  );
 }
 
-testMaxCompute();
+testPerpLiquidationAndBankruptcy();

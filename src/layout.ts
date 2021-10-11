@@ -18,13 +18,14 @@ import { I80F48 } from './fixednum';
 import BN from 'bn.js';
 import { zeroKey } from './utils';
 import PerpAccount from './PerpAccount';
+import { PerpOrderType } from './types';
 
 export const MAX_TOKENS = 16;
 export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
 export const INFO_LEN = 32;
 export const QUOTE_INDEX = MAX_TOKENS - 1;
-export const MAX_NUM_IN_MARGIN_BASKET = 10;
+export const MAX_NUM_IN_MARGIN_BASKET = 9;
 export const MAX_PERP_OPEN_ORDERS = 64;
 export const FREE_ORDER_SLOT = 255; // u8::MAX
 
@@ -166,15 +167,27 @@ export function sideLayout(span, property?) {
 }
 
 export function orderTypeLayout(property, span) {
-  return new EnumLayout({ limit: 0, ioc: 1, postOnly: 2 }, span, property);
-}
-
-export function selfTradeBehaviorLayout(property) {
   return new EnumLayout(
-    { decrementTake: 0, cancelProvide: 1, abortTransaction: 2 },
-    4,
+    { limit: 0, ioc: 1, postOnly: 2, market: 3, postOnlySlide: 4 },
+    span,
     property,
   );
+}
+
+export function selfTradeBehaviorLayout(property, span) {
+  return new EnumLayout(
+    { decrementTake: 0, cancelProvide: 1, abortTransaction: 2 },
+    span,
+    property,
+  );
+}
+
+export function triggerConditionLayout(property, span) {
+  return new EnumLayout({ above: 0, below: 1 }, span, property);
+}
+
+export function advancedOrderTypeLayout(property, span) {
+  return new EnumLayout({ perpTrigger: 0, spotTrigger: 1 }, span, property);
 }
 
 /**
@@ -226,7 +239,7 @@ MangoInstructionLayout.addVariant(
     u64('limitPrice'),
     u64('maxBaseQuantity'),
     u64('maxQuoteQuantity'),
-    selfTradeBehaviorLayout('selfTradeBehavior'),
+    selfTradeBehaviorLayout('selfTradeBehavior', 4),
     orderTypeLayout('orderType', 4),
     u64('clientId'),
     u16('limit'),
@@ -248,6 +261,7 @@ MangoInstructionLayout.addVariant(
     I80F48Layout('maxDepthBps'),
     u64('targetPeriodLength'),
     u64('mngoPerPeriod'),
+    u8('exp'),
   ]),
   'AddPerpMarket',
 );
@@ -259,6 +273,7 @@ MangoInstructionLayout.addVariant(
     u64('clientOrderId'),
     sideLayout(1, 'side'),
     orderTypeLayout('orderType', 1),
+    bool('reduceOnly'),
   ]),
   'PlacePerpOrder',
 );
@@ -373,6 +388,8 @@ MangoInstructionLayout.addVariant(
     u64('targetPeriodLength'),
     bool('mngoPerPeriodOption'),
     u64('mngoPerPeriod'),
+    bool('expOption'),
+    u8('exp'),
   ]),
   'ChangePerpMarketParams',
 );
@@ -382,7 +399,47 @@ MangoInstructionLayout.addVariant(
   struct([u8('limit')]),
   'CancelAllPerpOrders',
 );
-MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
+
+MangoInstructionLayout.addVariant(
+  41,
+  struct([
+    sideLayout(4, 'side'),
+    u64('limitPrice'),
+    u64('maxBaseQuantity'),
+    u64('maxQuoteQuantity'),
+    selfTradeBehaviorLayout('selfTradeBehavior', 4),
+    orderTypeLayout('orderType', 4),
+    u64('clientOrderId'),
+    u16('limit'),
+  ]),
+  'PlaceSpotOrder2',
+);
+
+MangoInstructionLayout.addVariant(42, struct([]), 'InitAdvancedOrders');
+MangoInstructionLayout.addVariant(
+  43,
+  struct([
+    orderTypeLayout('orderType', 1),
+    sideLayout(1, 'side'),
+    triggerConditionLayout('triggerCondition', 1),
+    bool('reduceOnly'),
+    u64('clientOrderId'),
+    i64('price'),
+    i64('quantity'),
+    I80F48Layout('triggerPrice'),
+  ]),
+  'AddPerpTriggerOrder',
+);
+MangoInstructionLayout.addVariant(
+  44,
+  struct([u8('orderIndex')]),
+  'RemoveAdvancedOrder',
+);
+MangoInstructionLayout.addVariant(
+  45,
+  struct([u8('orderIndex')]),
+  'ExecutePerpTriggerOrder',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -421,6 +478,7 @@ export const DataType = {
   Asks: 6,
   MangoCache: 7,
   EventQueue: 8,
+  AdvancedOrders: 9,
 };
 
 export const enum AssetType {
@@ -428,10 +486,16 @@ export const enum AssetType {
   Perp = 1,
 }
 
+export const enum AdvancedOrderType {
+  PerpTrigger = 0,
+  SpotTrigger = 1,
+}
+
 export class MetaData {
   dataType!: number;
   version!: number;
   isInitialized!: boolean;
+  extraInfo!: number;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -445,7 +509,8 @@ export class MetaDataLayout extends Structure {
         u8('dataType'),
         u8('version'),
         u8('isInitialized'),
-        seq(u8(), 5, 'padding'),
+        u8('extraInfo'),
+        seq(u8(), 4, 'padding'),
       ],
       property,
     );
@@ -675,7 +740,8 @@ export const MangoAccountLayout = struct([
   bool('beingLiquidated'),
   bool('isBankrupt'),
   seq(u8(), INFO_LEN, 'info'),
-  seq(u8(), 70, 'padding'),
+  publicKeyLayout('advancedOrdersKey'),
+  seq(u8(), 38, 'padding'),
 ]);
 
 export const RootBankLayout = struct([
@@ -886,7 +952,8 @@ BOOK_NODE_LAYOUT.addVariant(
   2,
   struct([
     u8('ownerSlot'), // Index into OPEN_ORDERS_LAYOUT.orders
-    blob(3),
+    orderTypeLayout('orderType', 1),
+    blob(2),
     u128('key'), // (price, seqNum)
     publicKeyLayout('owner'), // Open orders account
     u64('quantity'), // In units of lot size
@@ -1039,3 +1106,46 @@ export const TokenAccountLayout = struct([
   nu64('amount'),
   blob(93),
 ]);
+
+const ADVANCED_ORDER_SIZE = 80;
+const ADVANCED_ORDER_LAYOUT = union(
+  u8('advancedOrderType'),
+  blob(ADVANCED_ORDER_SIZE - 1),
+  'advancedOrder',
+);
+
+ADVANCED_ORDER_LAYOUT.addVariant(
+  0,
+  struct([
+    bool('isActive'),
+    u8('marketIndex'),
+    orderTypeLayout('orderType', 1),
+    sideLayout(1, 'side'),
+    triggerConditionLayout('triggerCondition', 1),
+    bool('reduceOnly'),
+    seq(u8(), 1, 'padding0'),
+    u64('clientOrderId'),
+    i64('price'),
+    i64('quantity'),
+    I80F48Layout('triggerPrice'),
+    seq(u8(), 32, 'padding1'),
+  ]),
+  'perpTrigger',
+);
+const MAX_ADVANCED_ORDERS = 32;
+export const AdvancedOrdersLayout = struct([
+  metaDataLayout('metaData'),
+  seq(ADVANCED_ORDER_LAYOUT, MAX_ADVANCED_ORDERS, 'orders'),
+]);
+
+export interface PerpTriggerOrder {
+  isActive: boolean;
+  marketIndex: number;
+  orderType: PerpOrderType;
+  side: 'buy' | 'sell';
+  triggerCondition: 'above' | 'below';
+  clientOrderId: BN;
+  price: BN;
+  quantity: BN;
+  triggerPrice: I80F48;
+}

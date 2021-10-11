@@ -344,4 +344,8 @@ export default class PerpAccount {
     }
     return assetsVal;
   }
+
+  getBasePositionUi(perpMarket: PerpMarket): number {
+    return perpMarket.baseLotsToNumber(this.basePosition);
+  }
 }

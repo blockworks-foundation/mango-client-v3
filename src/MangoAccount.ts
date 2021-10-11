@@ -22,11 +22,13 @@ import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
 import { EOL } from 'os';
 import {
+  AdvancedOrdersLayout,
   getMarketByPublicKey,
   getMultipleAccounts,
   getTokenByMint,
   GroupConfig,
   PerpMarketConfig,
+  PerpTriggerOrder,
   TokenConfig,
   ZERO_BN,
 } from '.';
@@ -58,9 +60,13 @@ export default class MangoAccount {
   isBankrupt!: boolean;
   info!: number[];
 
+  advancedOrdersKey!: PublicKey;
+  advancedOrders: { perpTrigger?: PerpTriggerOrder }[];
+
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);
+    this.advancedOrders = [];
     Object.assign(this, decoded);
   }
 
@@ -108,6 +114,17 @@ export default class MangoAccount {
         : undefined;
     });
     return this.spotOpenOrdersAccounts;
+  }
+
+  async loadAdvancedOrders(
+    connection: Connection,
+  ): Promise<{ perpTrigger?: PerpTriggerOrder }[]> {
+    if (this.advancedOrdersKey.equals(zeroKey)) return [];
+
+    const acc = await connection.getAccountInfo(this.advancedOrdersKey);
+    const decoded = AdvancedOrdersLayout.decode(acc?.data);
+    this.advancedOrders = decoded.orders;
+    return decoded.orders;
   }
 
   getNativeDeposit(
@@ -746,6 +763,7 @@ export default class MangoAccount {
     );
     lines.push('Maint Health: ' + this.getHealth(mangoGroup, cache, 'Maint'));
     lines.push('Init Health: ' + this.getHealth(mangoGroup, cache, 'Init'));
+    lines.push('Equity: ' + this.computeValue(mangoGroup, cache));
     lines.push('isBankrupt: ' + this.isBankrupt);
     lines.push('beingLiquidated: ' + this.beingLiquidated);
 
@@ -810,6 +828,15 @@ export default class MangoAccount {
       );
     }
     return lines.join(EOL);
+  }
+
+  /**
+   * Return the open orders keys in basket and replace open orders not in basket with zero key
+   */
+  getOpenOrdersKeysInBasket(): PublicKey[] {
+    return this.spotOpenOrders.map((pk, i) =>
+      this.inMarginBasket[i] ? pk : zeroKey,
+    );
   }
 }
 

@@ -11,3 +11,10 @@ export interface WalletAdapter {
   disconnect: () => any;
   on(event: string, fn: () => void): this;
 }
+
+export type PerpOrderType =
+  | 'limit'
+  | 'ioc'
+  | 'postOnly'
+  | 'market'
+  | 'postOnlySlide';
