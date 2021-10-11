@@ -104,7 +104,6 @@ export async function awaitTransactionSignatureConfirmation(
   const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] = [
     'finalized',
   ];
-  console.log('confirmLevel = ', confirmLevel);
 
   if (confirmLevel === 'confirmed') {
     confirmLevels.push('confirmed');
