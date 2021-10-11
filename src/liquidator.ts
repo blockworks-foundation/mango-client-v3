@@ -194,8 +194,6 @@ async function main() {
   // eslint-disable-next-line
   while (true) {
     try {
-      const loopStartTs = getUnixTs();
-
       // load all the advancedOrders accounts
       const mangoAccountsWithAOs = mangoAccounts.filter(
         (ma) => ma.advancedOrdersKey && !ma.advancedOrdersKey.equals(zeroKey),
@@ -247,23 +245,11 @@ async function main() {
           continue;
         }
 
-        console.log(
-          `Liquidatable: ${mangoAccount.toPrettyString(
-            groupIds,
-            mangoGroup,
-            cache,
-          )}`,
-        );
-
         // Reload mango account to make sure still liquidatable
         await mangoAccount.reload(connection, mangoGroup.dexProgramId);
         if (!mangoAccount.isLiquidatable(mangoGroup, cache)) {
           console.log(
-            `No longer liquidatable: ${mangoAccount.toPrettyString(
-              groupIds,
-              mangoGroup,
-              cache,
-            )}`,
+            `Account ${mangoAccountKeyString} no longer liquidatable`,
           );
           continue;
         }
@@ -306,7 +292,6 @@ async function main() {
             numLiquidating--;
           });
       }
-      console.log(`Loop time: ${getUnixTs() - loopStartTs}s`);
       await sleep(interval);
     } catch (err) {
       console.error('Error checking accounts:', err);
