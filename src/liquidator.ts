@@ -3,7 +3,7 @@
  */
 import * as os from 'os';
 import * as fs from 'fs';
-import { MangoClient } from './client';
+import { getUnixTs, MangoClient } from './client';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { sleep } from './utils';
 import configFile from './ids.json';
@@ -193,6 +193,7 @@ async function main() {
 
   // eslint-disable-next-line
   while (true) {
+    const loopStartTs = getUnixTs();
     try {
       // cache = await mangoGroup.loadCache(connection);
       // await liqorMangoAccount.reload(connection);
@@ -301,6 +302,8 @@ async function main() {
     } catch (err) {
       console.error('Error checking accounts:', err);
     }
+
+    console.log(`Loop time: ${(getUnixTs() - loopStartTs) / 1000}s`);
   }
 }
 
