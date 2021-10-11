@@ -44,6 +44,9 @@ const refreshWebsocketInterval = parseInt(
 const maxRebalancingRetries = parseInt(
   process.env.MAX_REBALANCING_RETRIES || '5',
 );
+const checkTriggers = process.env.CHECK_TRIGGERS
+  ? process.env.CHECK_TRIGGERS === 'true'
+  : true;
 const config = new Config(configFile);
 
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -194,31 +197,38 @@ async function main() {
   // eslint-disable-next-line
   while (true) {
     try {
-      // load all the advancedOrders accounts
-      const mangoAccountsWithAOs = mangoAccounts.filter(
-        (ma) => ma.advancedOrdersKey && !ma.advancedOrdersKey.equals(zeroKey),
-      );
-      const allAOs = mangoAccountsWithAOs.map((ma) => ma.advancedOrdersKey);
-
-      let advancedOrders;
-      [cache, liqorMangoAccount, advancedOrders] = await Promise.all([
-        mangoGroup.loadCache(connection),
-        liqorMangoAccount.reload(connection),
-        getMultipleAccounts(connection, allAOs),
-      ]);
-
-      mangoAccountsWithAOs.forEach((ma, i) => {
-        const decoded = AdvancedOrdersLayout.decode(
-          advancedOrders[i].accountInfo.data,
+      if (checkTriggers) {
+        // load all the advancedOrders accounts
+        const mangoAccountsWithAOs = mangoAccounts.filter(
+          (ma) => ma.advancedOrdersKey && !ma.advancedOrdersKey.equals(zeroKey),
         );
-        ma.advancedOrders = decoded.orders;
-      });
+        const allAOs = mangoAccountsWithAOs.map((ma) => ma.advancedOrdersKey);
+
+        let advancedOrders;
+        [cache, liqorMangoAccount, advancedOrders] = await Promise.all([
+          mangoGroup.loadCache(connection),
+          liqorMangoAccount.reload(connection),
+          getMultipleAccounts(connection, allAOs),
+        ]);
+
+        mangoAccountsWithAOs.forEach((ma, i) => {
+          const decoded = AdvancedOrdersLayout.decode(
+            advancedOrders[i].accountInfo.data,
+          );
+          ma.advancedOrders = decoded.orders;
+        });
+      } else {
+        [cache, liqorMangoAccount] = await Promise.all([
+          mangoGroup.loadCache(connection),
+          liqorMangoAccount.reload(connection),
+        ]);
+      }
 
       for (const mangoAccount of mangoAccounts) {
         const mangoAccountKeyString = mangoAccount.publicKey.toBase58();
 
         // Handle trigger orders for this mango account
-        if (process.env.CHECK_TRIGGERS && mangoAccount.advancedOrders) {
+        if (checkTriggers && mangoAccount.advancedOrders) {
           try {
             await processTriggerOrders(
               mangoGroup,
