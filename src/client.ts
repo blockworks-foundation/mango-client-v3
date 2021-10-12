@@ -3070,6 +3070,10 @@ export class MangoClient {
       perpMarket.baseLotSize,
     );
 
+    const nativeTriggerPrice = I80F48.fromNumber(
+      triggerPrice *
+        Math.pow(10, perpMarket.quoteDecimals - perpMarket.baseDecimals),
+    );
     const openOrders = mangoAccount.spotOpenOrders.filter(
       (pk, i) => mangoAccount.inMarginBasket[i],
     );
@@ -3089,7 +3093,7 @@ export class MangoClient {
         nativePrice,
         nativeQuantity,
         triggerCondition,
-        I80F48.fromNumber(triggerPrice),
+        nativeTriggerPrice,
         reduceOnly,
         new BN(clientOrderId ?? Date.now()),
       ),
