@@ -327,6 +327,9 @@ export async function getMultipleAccounts(
   }[]
 > {
   const len = publicKeys.length;
+  if (len === 0) {
+    return [];
+  }
   if (len > 100) {
     const mid = Math.floor(publicKeys.length / 2);
     return Promise.all([
