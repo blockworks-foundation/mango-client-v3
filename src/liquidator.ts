@@ -65,10 +65,11 @@ const mangoGroupKey = groupIds.publicKey;
 
 const payer = new Account(
   JSON.parse(
-    fs.readFileSync(
-      process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
-      'utf-8',
-    ),
+    process.env.PRIVATE_KEY ||
+      fs.readFileSync(
+        process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
+        'utf-8',
+      ),
   ),
 );
 console.log(`Payer: ${payer.publicKey.toBase58()}`);
