@@ -745,8 +745,9 @@ export default class MangoAccount {
 
   isLiquidatable(mangoGroup: MangoGroup, mangoCache: MangoCache): boolean {
     return (
-      (this.beingLiquidated && this.getHealth(mangoGroup, mangoCache, 'Init').isNeg()) ||
-      this.getHealth(mangoGroup, mangoCache, 'Maint').isNeg() 
+      (this.beingLiquidated &&
+        this.getHealth(mangoGroup, mangoCache, 'Init').isNeg()) ||
+      this.getHealth(mangoGroup, mangoCache, 'Maint').isNeg()
     );
   }
 
@@ -836,6 +837,36 @@ export default class MangoAccount {
   getOpenOrdersKeysInBasket(): PublicKey[] {
     return this.spotOpenOrders.map((pk, i) =>
       this.inMarginBasket[i] ? pk : zeroKey,
+    );
+  }
+
+  /**
+   *  Return the current position for the market at `marketIndex` in UI units
+   *  e.g. if you buy 1 BTC in the UI, you're buying 1,000,000 native BTC,
+   *  10,000 BTC-PERP contracts and exactly 1 BTC in UI
+   *  Find the marketIndex in the ids.json list of perp markets
+   */
+  getPerpPositionUi(marketIndex: number, perpMarket: PerpMarket): number {
+    return this.perpAccounts[marketIndex].getBasePositionUi(perpMarket);
+  }
+
+  /**
+   * Return the equity in standard UI numbers. E.g. if equity is $100, this returns 100
+   */
+  getEquityUi(mangoGroup: MangoGroup, mangoCache: MangoCache): number {
+    return (
+      this.computeValue(mangoGroup, mangoCache).toNumber() /
+      Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals)
+    );
+  }
+
+  /**
+   * This is the init health divided by quote decimals
+   */
+  getCollateralValueUi(mangoGroup: MangoGroup, mangoCache: MangoCache): number {
+    return (
+      this.getHealth(mangoGroup, mangoCache, 'Init').toNumber() /
+      Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals)
     );
   }
 }
