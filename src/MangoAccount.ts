@@ -2,12 +2,12 @@ import { Market, OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import {
-  MAX_PAIRS,
   MangoAccountLayout,
   MangoCache,
+  MAX_PAIRS,
   MetaData,
-  RootBankCache,
   QUOTE_INDEX,
+  RootBankCache,
 } from './layout';
 import {
   getWeights,
@@ -760,44 +760,71 @@ export default class MangoAccount {
     lines.push('MangoAccount ' + this.publicKey.toBase58());
     lines.push('Owner: ' + this.owner.toBase58());
     lines.push(
-      'Maint Health Ratio: ' + this.getHealthRatio(mangoGroup, cache, 'Maint'),
+      'Maint Health Ratio: ' +
+        this.getHealthRatio(mangoGroup, cache, 'Maint').toFixed(4),
     );
-    lines.push('Maint Health: ' + this.getHealth(mangoGroup, cache, 'Maint'));
-    lines.push('Init Health: ' + this.getHealth(mangoGroup, cache, 'Init'));
-    lines.push('Equity: ' + this.computeValue(mangoGroup, cache));
+    lines.push(
+      'Maint Health: ' + this.getHealth(mangoGroup, cache, 'Maint').toFixed(4),
+    );
+    lines.push(
+      'Init Health: ' + this.getHealth(mangoGroup, cache, 'Init').toFixed(4),
+    );
+    lines.push('Equity: ' + this.computeValue(mangoGroup, cache).toFixed(4));
     lines.push('isBankrupt: ' + this.isBankrupt);
     lines.push('beingLiquidated: ' + this.beingLiquidated);
 
     lines.push('Spot:');
+    lines.push('Token: Net Balance / Base In Orders / Quote In Orders');
+
+    const quoteAdj = new BN(10).pow(
+      new BN(mangoGroup.tokens[QUOTE_INDEX].decimals),
+    );
 
     for (let i = 0; i < mangoGroup.tokens.length; i++) {
-      if (
-        mangoGroup.tokens[i].mint.equals(zeroKey) ||
-        (this.deposits[i].eq(ZERO_I80F48) && this.borrows[i].eq(ZERO_I80F48))
-      ) {
+      if (mangoGroup.tokens[i].mint.equals(zeroKey)) {
         continue;
       }
-
       const token = getTokenByMint(
         groupConfig,
         mangoGroup.tokens[i].mint,
       ) as TokenConfig;
 
+      let baseInOrders = ZERO_BN;
+      let quoteInOrders = ZERO_BN;
+      const openOrders =
+        i !== QUOTE_INDEX ? this.spotOpenOrdersAccounts[i] : undefined;
+
+      if (openOrders) {
+        const baseAdj = new BN(10).pow(new BN(mangoGroup.tokens[i].decimals));
+
+        baseInOrders = openOrders.baseTokenTotal.div(baseAdj);
+        quoteInOrders = openOrders.quoteTokenTotal
+          .add(openOrders['referrerRebatesAccrued'])
+          .div(quoteAdj);
+      }
+      const net = nativeI80F48ToUi(
+        this.getNet(cache.rootBankCache[i], i),
+        mangoGroup.tokens[i].decimals,
+      );
+
+      if (
+        net.eq(ZERO_I80F48) &&
+        baseInOrders.isZero() &&
+        quoteInOrders.isZero()
+      ) {
+        continue;
+      }
+
       lines.push(
-        token.symbol +
-          ': ' +
-          nativeI80F48ToUi(
-            this.deposits[i].mul(cache.rootBankCache[i].depositIndex),
-            mangoGroup.tokens[i].decimals,
-          ).toFixed(4) +
-          ' / ' +
-          nativeI80F48ToUi(
-            this.borrows[i].mul(cache.rootBankCache[i].borrowIndex),
-            mangoGroup.tokens[i].decimals,
-          ).toFixed(4),
+        `${token.symbol}: ${net.toFixed(4)} / ${baseInOrders
+          .toNumber()
+          .toFixed(4)} / ${quoteInOrders.toNumber().toFixed(4)}`,
       );
     }
+
     lines.push('Perps:');
+    lines.push('Market: Base Pos / Quote Pos / Unsettled Funding / Health');
+
     for (let i = 0; i < this.perpAccounts.length; i++) {
       if (mangoGroup.perpMarkets[i].perpMarket.equals(zeroKey)) {
         continue;
@@ -810,22 +837,25 @@ export default class MangoAccount {
       const perpAccount = this.perpAccounts[i];
       const perpMarketInfo = mangoGroup.perpMarkets[i];
       lines.push(
-        market.name +
-          ': ' +
-          perpAccount.basePosition.toString() +
-          ' / ' +
-          perpAccount.quotePosition.toString() +
-          ' / ' +
-          perpAccount.getUnsettledFunding(cache.perpMarketCache[i]).toString() +
-          ' / ' +
-          perpAccount.getHealth(
+        `${market.name}: ${this.getBasePositionUiWithGroup(
+          i,
+          mangoGroup,
+        ).toFixed(4)} / ${(
+          perpAccount.getQuotePosition(cache.perpMarketCache[i]).toNumber() /
+          quoteAdj.toNumber()
+        ).toFixed(4)} / ${(
+          perpAccount.getUnsettledFunding(cache.perpMarketCache[i]).toNumber() /
+          quoteAdj.toNumber()
+        ).toFixed(4)} / ${perpAccount
+          .getHealth(
             perpMarketInfo,
             cache.priceCache[i].price,
             perpMarketInfo.maintAssetWeight,
             perpMarketInfo.maintLiabWeight,
             cache.perpMarketCache[i].longFunding,
             cache.perpMarketCache[i].shortFunding,
-          ),
+          )
+          .toFixed(4)}`,
       );
     }
     return lines.join(EOL);
@@ -848,6 +878,19 @@ export default class MangoAccount {
    */
   getPerpPositionUi(marketIndex: number, perpMarket: PerpMarket): number {
     return this.perpAccounts[marketIndex].getBasePositionUi(perpMarket);
+  }
+  /**
+   *  Return the current position for the market at `marketIndex` in UI units
+   *  e.g. if you buy 1 BTC in the UI, you're buying 1,000,000 native BTC,
+   *  10,000 BTC-PERP contracts and exactly 1 BTC in UI
+   *  Find the marketIndex in the ids.json list of perp markets
+   */
+  getBasePositionUiWithGroup(marketIndex: number, group: MangoGroup): number {
+    return (
+      this.perpAccounts[marketIndex].basePosition
+        .mul(group.perpMarkets[marketIndex].baseLotSize)
+        .toNumber() / Math.pow(10, group.tokens[marketIndex].decimals)
+    );
   }
 
   /**
