@@ -209,7 +209,6 @@ class MangoInstructionsUnion extends Union {
       (discr === 11 && b.length === 144) ||
       (discr === 12 && b.length === 30)
     ) {
-      console.log('here lol');
       b = Buffer.concat([b, Buffer.from([0])]);
     } else if (discr === 37 && b.length === 141) {
       b = Buffer.concat([b, Buffer.from([0, 0])]);
