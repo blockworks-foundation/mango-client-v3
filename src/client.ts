@@ -1398,6 +1398,7 @@ export class MangoClient {
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId?: BN,
+    useMsrmVault?: boolean | undefined,
   ): Promise<TransactionSignature> {
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
@@ -1426,6 +1427,20 @@ export class MangoClient {
 
     if (!mangoGroup.rootBankAccounts.filter((a) => !!a).length) {
       await mangoGroup.loadRootBanks(this.connection);
+    }
+    let feeVault: PublicKey = zeroKey;
+    if (useMsrmVault) {
+      feeVault = mangoGroup.msrmVault;
+    } else if (useMsrmVault === false) {
+      feeVault = mangoGroup.srmVault;
+    } else {
+      const totalMsrm = await this.connection.getTokenAccountBalance(
+        mangoGroup.msrmVault,
+      );
+      feeVault =
+        totalMsrm?.value?.uiAmount && totalMsrm.value.uiAmount > 0
+          ? mangoGroup.msrmVault
+          : mangoGroup.srmVault;
     }
 
     const baseRootBank = mangoGroup.rootBankAccounts[spotMarketIndex];
@@ -1533,7 +1548,7 @@ export class MangoClient {
       quoteNodeBank.vault,
       mangoGroup.signerKey,
       dexSigner,
-      mangoGroup.srmVault, // TODO: choose msrm vault if it has any deposits
+      feeVault,
       openOrdersKeys,
       side,
       limitPrice,
