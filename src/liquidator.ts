@@ -330,14 +330,16 @@ function watchAccounts(mangoProgramId: PublicKey, mangoGroup: MangoGroup) {
     mangoSubscriptionId = connection.onProgramAccountChange(
       mangoProgramId,
       ({ accountId, accountInfo }) => {
+        const index = mangoAccounts.findIndex((account) =>
+          account.publicKey.equals(accountId),
+        );
+        const spotOpenOrdersAccounts =
+          mangoAccounts[index].spotOpenOrdersAccounts;
         const mangoAccount = new MangoAccount(
           accountId,
           MangoAccountLayout.decode(accountInfo.data),
         );
-        const index = mangoAccounts.findIndex((account) =>
-          account.publicKey.equals(mangoAccount.publicKey),
-        );
-
+        mangoAccount.spotOpenOrdersAccounts = spotOpenOrdersAccounts;
         if (index == -1) {
           //console.log('New Account');
           mangoAccounts.push(mangoAccount);
