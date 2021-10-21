@@ -333,17 +333,18 @@ function watchAccounts(mangoProgramId: PublicKey, mangoGroup: MangoGroup) {
         const index = mangoAccounts.findIndex((account) =>
           account.publicKey.equals(accountId),
         );
-        const spotOpenOrdersAccounts =
-          mangoAccounts[index].spotOpenOrdersAccounts;
+
         const mangoAccount = new MangoAccount(
           accountId,
           MangoAccountLayout.decode(accountInfo.data),
         );
-        mangoAccount.spotOpenOrdersAccounts = spotOpenOrdersAccounts;
         if (index == -1) {
           //console.log('New Account');
           mangoAccounts.push(mangoAccount);
         } else {
+          const spotOpenOrdersAccounts =
+            mangoAccounts[index].spotOpenOrdersAccounts;
+          mangoAccount.spotOpenOrdersAccounts = spotOpenOrdersAccounts;
           mangoAccounts[index] = mangoAccount;
           //console.log('Updated account ' + accountId.toBase58());
         }
@@ -410,7 +411,11 @@ async function refreshAccounts(mangoGroup: MangoGroup) {
   try {
     console.log('Refreshing accounts...');
     console.time('getAllMangoAccounts');
-    mangoAccounts = await client.getAllMangoAccounts(mangoGroup);
+    mangoAccounts = await client.getAllMangoAccounts(
+      mangoGroup,
+      undefined,
+      true,
+    );
     console.timeEnd('getAllMangoAccounts');
     console.log(`Fetched ${mangoAccounts.length} accounts`);
   } catch (err) {
