@@ -470,22 +470,26 @@ MangoInstructionLayout.addVariant(
   'ExecutePerpTriggerOrder',
 );
 
-// const origDecode = MangoInstructionLayout.decode;
-// function customDecode(b, offset) {
-//   if (undefined === offset) {
-//     offset = 0;
-//   }
-//   const dlo = MangoInstructionLayout.discriminator;
-//   const discr = dlo.decode(b, offset);
-//
-//   if (discr === 12) {
-//     if (b.length === 30) {
-//       b = b.concat([0]);
-//     }
-//   }
-//   return origDecode(b, offset);
-// }
-// MangoInstructionLayout.decode = customDecode;
+MangoInstructionLayout.addVariant(
+  46,
+  struct([
+    I80F48Layout('maintLeverage'),
+    I80F48Layout('initLeverage'),
+    I80F48Layout('liquidationFee'),
+    I80F48Layout('makerFee'),
+    I80F48Layout('takerFee'),
+    i64('baseLotSize'),
+    i64('quoteLotSize'),
+    i64('numEvents'),
+    I80F48Layout('rate'),
+    I80F48Layout('maxDepthBps'),
+    u64('targetPeriodLength'),
+    u64('mngoPerPeriod'),
+    u8('exp'),
+    u8('version'),
+  ]),
+  'CreatePerpMarket',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
