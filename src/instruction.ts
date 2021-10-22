@@ -792,6 +792,75 @@ export function makeAddPerpMarketInstruction(
   });
 }
 
+export function makeCreatePerpMarketInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  oraclePk: PublicKey,
+  perpMarketPk: PublicKey,
+  eventQueuePk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  mngoMintPk: PublicKey,
+  mngoVaultPk: PublicKey,
+  adminPk: PublicKey,
+  signerPk: PublicKey,
+  maintLeverage: I80F48,
+  initLeverage: I80F48,
+  liquidationFee: I80F48,
+  makerFee: I80F48,
+  takerFee: I80F48,
+  baseLotSize: BN,
+  quoteLotSize: BN,
+  numEvents: BN,
+  rate: I80F48,
+  maxDepthBps: I80F48,
+  targetPeriodLength: BN,
+  mngoPerPeriod: BN,
+  exp: BN,
+  version: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: oraclePk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: false, pubkey: mngoMintPk },
+    { isSigner: false, isWritable: true, pubkey: mngoVaultPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+    { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
+  ];
+
+  const data = encodeMangoInstruction({
+    CreatePerpMarket: {
+      maintLeverage,
+      initLeverage,
+      liquidationFee,
+      makerFee,
+      takerFee,
+      baseLotSize,
+      quoteLotSize,
+      numEvents,
+      rate,
+      maxDepthBps,
+      targetPeriodLength,
+      mngoPerPeriod,
+      exp,
+      version,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
 export function makeCachePerpMarketsInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,

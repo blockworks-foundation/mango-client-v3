@@ -2,6 +2,7 @@ import {
   Account,
   AccountInfo,
   Connection,
+  Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
   SimulatedTransactionResponse,
@@ -85,6 +86,7 @@ import {
   makeInitAdvancedOrdersInstruction,
   makePlaceSpotOrder2Instruction,
   makeRemoveAdvancedOrderInstruction,
+  makeCreatePerpMarketInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -196,7 +198,7 @@ export class MangoClient {
   // TODO - switch Account to Keypair and switch off setSigners due to deprecated
   async sendTransaction(
     transaction: Transaction,
-    payer: Account | WalletAdapter,
+    payer: Account | WalletAdapter | Keypair,
     additionalSigners: Account[],
     timeout = 30000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
@@ -2150,6 +2152,89 @@ export class MangoClient {
       makeAskAccountInstruction.account,
     ];
 
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async createPerpMarket(
+    mangoGroup: MangoGroup,
+    oraclePk: PublicKey,
+    mngoMintPk: PublicKey,
+    admin: Account | Keypair,
+    maintLeverage: number,
+    initLeverage: number,
+    liquidationFee: number,
+    makerFee: number,
+    takerFee: number,
+    baseLotSize: number,
+    quoteLotSize: number,
+    maxNumEvents: number,
+    rate: number, // liquidity mining params; set rate == 0 if no liq mining
+    maxDepthBps: number,
+    targetPeriodLength: number,
+    mngoPerPeriod: number,
+    exp: number,
+    version: number,
+  ) {
+    const [perpMarketPk] = await PublicKey.findProgramAddress(
+      [
+        mangoGroup.publicKey.toBytes(),
+        new Buffer('PerpMarket', 'utf-8'),
+        oraclePk.toBytes(),
+      ],
+      this.programId,
+    );
+
+    const [bidsPk] = await PublicKey.findProgramAddress(
+      [perpMarketPk.toBytes(), new Buffer('Bids', 'utf-8')],
+      this.programId,
+    );
+    const [asksPk] = await PublicKey.findProgramAddress(
+      [perpMarketPk.toBytes(), new Buffer('Asks', 'utf-8')],
+      this.programId,
+    );
+    const [eventQueuePk] = await PublicKey.findProgramAddress(
+      [perpMarketPk.toBytes(), new Buffer('EventQueue', 'utf-8')],
+      this.programId,
+    );
+    const [mngoVaultPk] = await PublicKey.findProgramAddress(
+      [
+        perpMarketPk.toBytes(),
+        TOKEN_PROGRAM_ID.toBytes(),
+        mngoMintPk.toBytes(),
+      ],
+      this.programId,
+    );
+    const transaction = new Transaction();
+    const instruction = await makeCreatePerpMarketInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      oraclePk,
+      perpMarketPk,
+      eventQueuePk,
+      bidsPk,
+      asksPk,
+      mngoMintPk,
+      mngoVaultPk,
+      admin.publicKey,
+      mangoGroup.signerKey,
+      I80F48.fromNumber(maintLeverage),
+      I80F48.fromNumber(initLeverage),
+      I80F48.fromNumber(liquidationFee),
+      I80F48.fromNumber(makerFee),
+      I80F48.fromNumber(takerFee),
+      new BN(baseLotSize),
+      new BN(quoteLotSize),
+      new BN(maxNumEvents),
+      I80F48.fromNumber(rate),
+      I80F48.fromNumber(maxDepthBps),
+      new BN(targetPeriodLength),
+      new BN(mngoPerPeriod),
+      new BN(exp),
+      new BN(version),
+    );
+
+    const additionalSigners = [];
+    transaction.add(instruction);
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 
