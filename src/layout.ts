@@ -487,8 +487,40 @@ MangoInstructionLayout.addVariant(
     u64('mngoPerPeriod'),
     u8('exp'),
     u8('version'),
+    u8('lmSizeShift'),
   ]),
   'CreatePerpMarket',
+);
+
+MangoInstructionLayout.addVariant(
+  47,
+  struct([
+    bool('maintLeverageOption'),
+    I80F48Layout('maintLeverage'),
+    bool('initLeverageOption'),
+    I80F48Layout('initLeverage'),
+    bool('liquidationFeeOption'),
+    I80F48Layout('liquidationFee'),
+    bool('makerFeeOption'),
+    I80F48Layout('makerFee'),
+    bool('takerFeeOption'),
+    I80F48Layout('takerFee'),
+    bool('rateOption'),
+    I80F48Layout('rate'),
+    bool('maxDepthBpsOption'),
+    I80F48Layout('maxDepthBps'),
+    bool('targetPeriodLengthOption'),
+    u64('targetPeriodLength'),
+    bool('mngoPerPeriodOption'),
+    u64('mngoPerPeriod'),
+    bool('expOption'),
+    u8('exp'),
+    bool('versionOption'),
+    u8('version'),
+    bool('lmSizeShiftOption'),
+    u8('lmSizeShift'),
+  ]),
+  'ChangePerpMarketParams2',
 );
 
 const instructionMaxSpan = Math.max(

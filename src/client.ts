@@ -87,6 +87,7 @@ import {
   makePlaceSpotOrder2Instruction,
   makeRemoveAdvancedOrderInstruction,
   makeCreatePerpMarketInstruction,
+  makeChangePerpMarketParams2Instruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -2174,6 +2175,7 @@ export class MangoClient {
     mngoPerPeriod: number,
     exp: number,
     version: number,
+    lmSizeShift: number,
   ) {
     const [perpMarketPk] = await PublicKey.findProgramAddress(
       [
@@ -2231,6 +2233,7 @@ export class MangoClient {
       new BN(mngoPerPeriod),
       new BN(exp),
       new BN(version),
+      new BN(lmSizeShift),
     );
 
     const additionalSigners = [];
@@ -2773,6 +2776,50 @@ export class MangoClient {
       targetPeriodLength !== undefined ? new BN(targetPeriodLength) : undefined,
       mngoPerPeriod !== undefined ? new BN(mngoPerPeriod) : undefined,
       exp !== undefined ? new BN(exp) : undefined,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async changePerpMarketParams2(
+    mangoGroup: MangoGroup,
+    perpMarket: PerpMarket,
+    admin: Account | WalletAdapter,
+
+    maintLeverage: number | undefined,
+    initLeverage: number | undefined,
+    liquidationFee: number | undefined,
+    makerFee: number | undefined,
+    takerFee: number | undefined,
+    rate: number | undefined,
+    maxDepthBps: number | undefined,
+    targetPeriodLength: number | undefined,
+    mngoPerPeriod: number | undefined,
+    exp: number | undefined,
+    version: number | undefined,
+    lmSizeShift: number | undefined,
+  ): Promise<TransactionSignature> {
+    const instruction = makeChangePerpMarketParams2Instruction(
+      this.programId,
+      mangoGroup.publicKey,
+      perpMarket.publicKey,
+      admin.publicKey,
+      I80F48.fromNumberOrUndef(maintLeverage),
+      I80F48.fromNumberOrUndef(initLeverage),
+      I80F48.fromNumberOrUndef(liquidationFee),
+      I80F48.fromNumberOrUndef(makerFee),
+      I80F48.fromNumberOrUndef(takerFee),
+      I80F48.fromNumberOrUndef(rate),
+      I80F48.fromNumberOrUndef(maxDepthBps),
+      targetPeriodLength !== undefined ? new BN(targetPeriodLength) : undefined,
+      mngoPerPeriod !== undefined ? new BN(mngoPerPeriod) : undefined,
+      exp !== undefined ? new BN(exp) : undefined,
+      version !== undefined ? new BN(version) : undefined,
+      lmSizeShift !== undefined ? new BN(lmSizeShift) : undefined,
     );
 
     const transaction = new Transaction();
