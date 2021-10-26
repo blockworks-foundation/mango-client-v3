@@ -151,7 +151,16 @@ async function testCloseAccount() {
   await account.reload(connection);
   console.log(account.spotOpenOrders[0].toBase58());
 
-  await testGroup.client.withdraw(mangoGroup, account, payer, quoteRootBank.publicKey, quoteNodeBanks[0].publicKey, quoteNodeBanks[0].vault, 10000, false)
+  await testGroup.client.withdraw(
+    mangoGroup,
+    account,
+    payer,
+    quoteRootBank.publicKey,
+    quoteNodeBanks[0].publicKey,
+    quoteNodeBanks[0].vault,
+    10000,
+    false,
+  );
 
   const closeMangoAccountTxid = await testGroup.client.closeMangoAccount(
     mangoGroup,
@@ -159,17 +168,6 @@ async function testCloseAccount() {
     payer,
   );
   console.log('CloseMangoAccount', closeMangoAccountTxid);
-  await account.reload(connection);
-  await testGroup.client.deposit(
-    mangoGroup,
-    account,
-    payer,
-    quoteRootBank.publicKey,
-    quoteNodeBanks[0].publicKey,
-    quoteNodeBanks[0].vault,
-    quoteWallet.address,
-    10000,
-  );
 }
 
 testCloseAccount();
