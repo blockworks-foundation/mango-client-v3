@@ -818,6 +818,7 @@ export function makeCreatePerpMarketInstruction(
   mngoPerPeriod: BN,
   exp: BN,
   version: BN,
+  lmSizeShift: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -851,6 +852,7 @@ export function makeCreatePerpMarketInstruction(
       mngoPerPeriod,
       exp,
       version,
+      lmSizeShift,
     },
   });
 
@@ -1562,6 +1564,66 @@ export function makeChangePerpMarketParamsInstruction(
       mngoPerPeriod: mngoPerPeriod !== undefined ? mngoPerPeriod : ZERO_BN,
       expOption: exp !== undefined,
       exp: exp !== undefined ? exp : ZERO_BN,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+export function makeChangePerpMarketParams2Instruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  perpMarketPk: PublicKey,
+  adminPk: PublicKey,
+  maintLeverage: I80F48 | undefined,
+  initLeverage: I80F48 | undefined,
+  liquidationFee: I80F48 | undefined,
+  makerFee: I80F48 | undefined,
+  takerFee: I80F48 | undefined,
+  rate: I80F48 | undefined,
+  maxDepthBps: I80F48 | undefined,
+  targetPeriodLength: BN | undefined,
+  mngoPerPeriod: BN | undefined,
+  exp: BN | undefined,
+  version: BN | undefined,
+  lmSizeShift: BN | undefined,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMangoInstruction({
+    ChangePerpMarketParams2: {
+      maintLeverageOption: maintLeverage !== undefined,
+      maintLeverage: maintLeverage !== undefined ? maintLeverage : ZERO_I80F48,
+      initLeverageOption: initLeverage !== undefined,
+      initLeverage: initLeverage !== undefined ? initLeverage : ZERO_I80F48,
+      liquidationFeeOption: liquidationFee !== undefined,
+      liquidationFee:
+        liquidationFee !== undefined ? liquidationFee : ZERO_I80F48,
+      makerFeeOption: makerFee !== undefined,
+      makerFee: makerFee !== undefined ? makerFee : ZERO_I80F48,
+      takerFeeOption: takerFee !== undefined,
+      takerFee: takerFee !== undefined ? takerFee : ZERO_I80F48,
+      rateOption: rate !== undefined,
+      rate: rate !== undefined ? rate : ZERO_I80F48,
+      maxDepthBpsOption: maxDepthBps !== undefined,
+      maxDepthBps: maxDepthBps !== undefined ? maxDepthBps : ZERO_I80F48,
+      targetPeriodLengthOption: targetPeriodLength !== undefined,
+      targetPeriodLength:
+        targetPeriodLength !== undefined ? targetPeriodLength : ZERO_BN,
+      mngoPerPeriodOption: mngoPerPeriod !== undefined,
+      mngoPerPeriod: mngoPerPeriod !== undefined ? mngoPerPeriod : ZERO_BN,
+      expOption: exp !== undefined,
+      exp: exp !== undefined ? exp : ZERO_BN,
+      versionOption: version !== undefined,
+      version: exp !== undefined ? version : ZERO_BN,
+      lmSizeShiftOption: lmSizeShift !== undefined,
+      lmSizeShift: lmSizeShift !== undefined ? lmSizeShift : ZERO_BN,
     },
   });
 
