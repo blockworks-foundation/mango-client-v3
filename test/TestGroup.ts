@@ -25,6 +25,12 @@ import {
 import listMarket from '../src/commands/listMarket';
 import configFile from '../src/ids.json';
 import BN from 'bn.js';
+import {
+  decodeEventQueue,
+  DexInstructions,
+  Market,
+} from '@project-serum/serum';
+import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 export default class TestGroup {
   FIXED_IDS: any[] = [
@@ -103,7 +109,7 @@ export default class TestGroup {
     this.FIXED_IDS.find((id) => id.symbol === 'USDC')?.mint,
   );
   mangoProgramId = new PublicKey(
-    '4skJ85cdxQAFVKbcGgfun8iZPL7BadVYXG3kGEGkufqA',
+    '71mvUdhymv4ki4kkXVjvbRQytqN7WG8kbASh8PAxaMC9',
   );
   serumProgramId = new PublicKey(
     'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',
@@ -131,6 +137,7 @@ export default class TestGroup {
   connection: Connection;
   log: boolean;
   logger: any;
+  spotMarkets: Market[] = [];
 
   constructor(log: boolean = false) {
     const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
@@ -160,7 +167,7 @@ export default class TestGroup {
   async init(): Promise<PublicKey> {
     console.log('Creating Mango Group...');
     if (!this.log) {
-      console.log = function () { };
+      console.log = function () {};
     }
 
     this.mangoGroupKey = await this.client.initMangoGroup(
@@ -219,6 +226,14 @@ export default class TestGroup {
         fids.quoteLot,
         group.dexProgramId,
       );
+      this.spotMarkets.push(
+        await Market.load(
+          this.connection,
+          marketPk,
+          undefined,
+          this.serumProgramId,
+        ),
+      );
       console.log(this.oraclePks[i].toBase58());
       console.log(marketPk.toBase58());
       await this.client.addSpotMarket(
@@ -269,18 +284,106 @@ export default class TestGroup {
     return this.mangoGroupKey;
   }
 
-  async runKeeper() {
-    console.log('runKeeper');
+  async runCrank() {
+    console.log('runCrank');
     if (!this.log) {
-      console.log = function () { };
+      console.log = function () {};
     }
-    await this.updateCache();
-    await this.updateBanksAndMarkets();
+
+    const quoteToken = new Token(
+      this.connection,
+      this.spotMarkets[0].quoteMintAddress,
+      TOKEN_PROGRAM_ID,
+      this.payer,
+    );
+    const quoteWallet = await quoteToken
+      .getOrCreateAssociatedAccountInfo(this.payer.publicKey)
+      .then((a) => a.address);
+
+    const baseWallets = await Promise.all(
+      this.spotMarkets.map((m) => {
+        const token = new Token(
+          this.connection,
+          m.baseMintAddress,
+          TOKEN_PROGRAM_ID,
+          this.payer,
+        );
+
+        return token
+          .getOrCreateAssociatedAccountInfo(this.payer.publicKey)
+          .then((a) => a.address);
+      }),
+    );
+
+    const eventQueuePks = this.spotMarkets.map(
+      (market) => market['_decoded'].eventQueue,
+    );
+
+    const eventQueueAccts = await getMultipleAccounts(
+      this.connection,
+      eventQueuePks,
+    );
+    for (let i = 0; i < eventQueueAccts.length; i++) {
+      const accountInfo = eventQueueAccts[i].accountInfo;
+      const events = decodeEventQueue(accountInfo.data);
+
+      if (events.length === 0) {
+        continue;
+      }
+
+      const accounts: Set<string> = new Set();
+      for (const event of events) {
+        accounts.add(event.openOrders.toBase58());
+
+        // Limit unique accounts to first 10
+        if (accounts.size >= 10) {
+          break;
+        }
+      }
+
+      const openOrdersAccounts = [...accounts]
+        .map((s) => new PublicKey(s))
+        .sort((a, b) => a.toBuffer().swap64().compare(b.toBuffer().swap64()));
+
+      const instr = DexInstructions.consumeEvents({
+        market: this.spotMarkets[i].publicKey,
+        eventQueue: this.spotMarkets[i]['_decoded'].eventQueue,
+        coinFee: baseWallets[i],
+        pcFee: quoteWallet,
+        openOrdersAccounts,
+        limit: 5,
+        programId: this.serumProgramId,
+      });
+
+      const transaction = new Transaction();
+      transaction.add(instr);
+
+      console.log(
+        'market',
+        i,
+        'sending consume events for',
+        events.length,
+        'events',
+      );
+      await this.client.sendTransaction(transaction, this.payer, []);
+    }
+
     if (!this.log) {
       console.log = this.logger;
     }
+  }
 
+  async runKeeper() {
+    console.log('runKeeper');
+    if (!this.log) {
+      console.log = function () {};
+    }
+    await this.updateCache();
+    await this.updateBanksAndMarkets();
     await this.consumeEvents();
+    if (!this.log) {
+      console.log = this.logger;
+    }
   }
 
   async updateBanksAndMarkets() {

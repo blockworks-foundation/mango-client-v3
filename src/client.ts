@@ -110,6 +110,11 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
+import {
+  makeCloseAdvancedOrdersInstruction,
+  makeCloseMangoAccountInstruction,
+  makeCloseSpotOpenOrdersInstruction,
+} from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -3252,6 +3257,63 @@ export class MangoClient {
       perpMarket.eventQueue,
       openOrders,
       new BN(orderIndex),
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async closeAdvancedOrders(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter,
+  ): Promise<TransactionSignature> {
+    const instruction = makeCloseAdvancedOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      mangoAccount.advancedOrdersKey,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async closeSpotOpenOrders(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter,
+    marketIndex: number,
+  ): Promise<TransactionSignature> {
+    const instruction = makeCloseSpotOpenOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      mangoGroup.dexProgramId,
+      mangoAccount.spotOpenOrders[marketIndex],
+      mangoGroup.spotMarkets[marketIndex].spotMarket,
+      mangoGroup.signerKey,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async closeMangoAccount(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter,
+  ): Promise<TransactionSignature> {
+    const instruction = makeCloseMangoAccountInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
     );
     const transaction = new Transaction();
     transaction.add(instruction);

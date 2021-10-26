@@ -1738,3 +1738,79 @@ export function makeExecutePerpTriggerOrderInstruction(
     programId,
   });
 }
+
+export function makeCloseMangoAccountInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    CloseMangoAccount: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeCloseSpotOpenOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  dexProgramPk: PublicKey,
+  openOrdersPk: PublicKey,
+  spotMarketPk: PublicKey,
+  signerPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramPk },
+    { isSigner: false, isWritable: true, pubkey: openOrdersPk },
+    { isSigner: false, isWritable: false, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    CloseSpotOpenOrders: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeCloseAdvancedOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  advancedOrdersPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    CloseAdvancedOrders: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

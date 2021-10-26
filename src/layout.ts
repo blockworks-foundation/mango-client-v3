@@ -490,6 +490,9 @@ MangoInstructionLayout.addVariant(
   ]),
   'CreatePerpMarket',
 );
+MangoInstructionLayout.addVariant(46, struct([]), 'CloseMangoAccount');
+MangoInstructionLayout.addVariant(47, struct([]), 'CloseSpotOpenOrders');
+MangoInstructionLayout.addVariant(48, struct([]), 'CloseAdvancedOrders');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore

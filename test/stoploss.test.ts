@@ -156,6 +156,7 @@ async function testStopLoss() {
     0.2276,
     'above',
     51000,
+    true,
   );
   console.log('add perp trigger order successful', txid.toString());
   const advanced = await account.loadAdvancedOrders(connection);
