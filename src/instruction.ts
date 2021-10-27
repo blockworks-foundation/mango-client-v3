@@ -829,7 +829,7 @@ export function makeCreatePerpMarketInstruction(
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: false, pubkey: mngoMintPk },
     { isSigner: false, isWritable: true, pubkey: mngoVaultPk },
-    { isSigner: false, isWritable: true, pubkey: adminPk },
+    { isSigner: true, isWritable: true, pubkey: adminPk },
     { isSigner: false, isWritable: true, pubkey: signerPk },
     { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
