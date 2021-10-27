@@ -480,7 +480,6 @@ MangoInstructionLayout.addVariant(
     I80F48Layout('takerFee'),
     i64('baseLotSize'),
     i64('quoteLotSize'),
-    i64('numEvents'),
     I80F48Layout('rate'),
     I80F48Layout('maxDepthBps'),
     u64('targetPeriodLength'),

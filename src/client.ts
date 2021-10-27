@@ -2185,19 +2185,27 @@ export class MangoClient {
       ],
       this.programId,
     );
+    const makeEventQueueAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      PerpEventQueueHeaderLayout.span + maxNumEvents * PerpEventLayout.span,
+      this.programId,
+    );
 
-    const [bidsPk] = await PublicKey.findProgramAddress(
-      [perpMarketPk.toBytes(), new Buffer('Bids', 'utf-8')],
+    const makeBidAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      BookSideLayout.span,
       this.programId,
     );
-    const [asksPk] = await PublicKey.findProgramAddress(
-      [perpMarketPk.toBytes(), new Buffer('Asks', 'utf-8')],
+
+    const makeAskAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      BookSideLayout.span,
       this.programId,
     );
-    const [eventQueuePk] = await PublicKey.findProgramAddress(
-      [perpMarketPk.toBytes(), new Buffer('EventQueue', 'utf-8')],
-      this.programId,
-    );
+
     const [mngoVaultPk] = await PublicKey.findProgramAddress(
       [
         perpMarketPk.toBytes(),
@@ -2206,15 +2214,14 @@ export class MangoClient {
       ],
       this.programId,
     );
-    const transaction = new Transaction();
     const instruction = await makeCreatePerpMarketInstruction(
       this.programId,
       mangoGroup.publicKey,
       oraclePk,
       perpMarketPk,
-      eventQueuePk,
-      bidsPk,
-      asksPk,
+      makeEventQueueAccountInstruction.account.publicKey,
+      makeBidAccountInstruction.account.publicKey,
+      makeAskAccountInstruction.account.publicKey,
       mngoMintPk,
       mngoVaultPk,
       admin.publicKey,
@@ -2226,7 +2233,6 @@ export class MangoClient {
       I80F48.fromNumber(takerFee),
       new BN(baseLotSize),
       new BN(quoteLotSize),
-      new BN(maxNumEvents),
       I80F48.fromNumber(rate),
       I80F48.fromNumber(maxDepthBps),
       new BN(targetPeriodLength),
@@ -2236,8 +2242,18 @@ export class MangoClient {
       new BN(lmSizeShift),
     );
 
-    const additionalSigners = [];
+    const transaction = new Transaction();
+    transaction.add(makeEventQueueAccountInstruction.instruction);
+    transaction.add(makeBidAccountInstruction.instruction);
+    transaction.add(makeAskAccountInstruction.instruction);
     transaction.add(instruction);
+
+    const additionalSigners = [
+      makeEventQueueAccountInstruction.account,
+      makeBidAccountInstruction.account,
+      makeAskAccountInstruction.account,
+    ];
+
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 
