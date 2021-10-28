@@ -116,6 +116,9 @@ export const getUnixTs = () => {
   return new Date().getTime() / 1000;
 };
 
+/**
+ * A class for interacting with a particular Mango V3 Program
+ */
 export class MangoClient {
   connection: Connection;
   programId: PublicKey;
@@ -363,6 +366,9 @@ export class MangoClient {
     return txid;
   }
 
+  /**
+   * Create a new Mango group
+   */
   async initMangoGroup(
     quoteMint: PublicKey,
     msrmMint: PublicKey,
@@ -490,6 +496,9 @@ export class MangoClient {
     return accountInstruction.account.publicKey;
   }
 
+  /**
+   * Retrieve information about a Mango Group
+   */
   async getMangoGroup(mangoGroup: PublicKey): Promise<MangoGroup> {
     const accountInfo = await this.connection.getAccountInfo(mangoGroup);
     const decoded = MangoGroupLayout.decode(
@@ -499,6 +508,9 @@ export class MangoClient {
     return new MangoGroup(mangoGroup, decoded);
   }
 
+  /**
+   * Create a new Mango Account on a given group
+   */
   async initMangoAccount(
     mangoGroup: MangoGroup,
     owner: Account | WalletAdapter,
@@ -528,6 +540,9 @@ export class MangoClient {
     return accountInstruction.account.publicKey;
   }
 
+  /**
+   * Retrieve information about a Mango Account
+   */
   async getMangoAccount(
     mangoAccountPk: PublicKey,
     dexProgramId: PublicKey,
@@ -544,6 +559,15 @@ export class MangoClient {
     return mangoAccount;
   }
 
+  /**
+   * Create a new Mango Account and deposit some tokens in a single transaction
+   *
+   * @param rootBank The RootBank for the deposit currency
+   * @param nodeBank The NodeBank asociated with the RootBank
+   * @param vault The token account asociated with the NodeBank
+   * @param tokenAcc The token account to transfer from
+   * @param info An optional UI name for the account
+   */
   async initMangoAccountAndDeposit(
     mangoGroup: MangoGroup,
     owner: Account | WalletAdapter,
@@ -651,6 +675,14 @@ export class MangoClient {
     return accountInstruction.account.publicKey.toString();
   }
 
+  /**
+   * Deposit tokens in a Mango Account
+   *
+   * @param rootBank The RootBank for the deposit currency
+   * @param nodeBank The NodeBank asociated with the RootBank
+   * @param vault The token account asociated with the NodeBank
+   * @param tokenAcc The token account to transfer from
+   */
   async deposit(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -728,6 +760,14 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
+  /**
+   * Deposit tokens in a Mango Account
+   *
+   * @param rootBank The RootBank for the withdrawn currency
+   * @param nodeBank The NodeBank asociated with the RootBank
+   * @param vault The token account asociated with the NodeBank
+   * @param allowBorrow Whether to borrow tokens if there are not enough deposits for the withdrawal
+   */
   async withdraw(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -831,7 +871,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
-  // Keeper functions
+  /**
+   * Called by the Keeper to cache interest rates from the RootBanks
+   */
   async cacheRootBanks(
     mangoGroup: PublicKey,
     mangoCache: PublicKey,
@@ -851,6 +893,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to cache prices from the Oracles
+   */
   async cachePrices(
     mangoGroup: PublicKey,
     mangoCache: PublicKey,
@@ -870,6 +915,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to cache perp market funding
+   */
   async cachePerpMarkets(
     mangoGroup: PublicKey,
     mangoCache: PublicKey,
@@ -889,6 +937,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to update interest rates on the RootBanks
+   */
   async updateRootBank(
     mangoGroup: MangoGroup,
     rootBank: PublicKey,
@@ -909,6 +960,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to process events on the Perp order book
+   */
   async consumeEvents(
     mangoGroup: MangoGroup,
     perpMarket: PerpMarket,
@@ -932,6 +986,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to update funding on the perp markets
+   */
   async updateFunding(
     mangoGroup: PublicKey,
     mangoCache: PublicKey,
@@ -955,6 +1012,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Retrieve information about a perp market
+   */
   async getPerpMarket(
     perpMarketPk: PublicKey,
     baseDecimal: number,
@@ -969,6 +1029,13 @@ export class MangoClient {
     );
     return perpMarket;
   }
+
+  /**
+   * Place an order on a perp market
+   *
+   * @param clientOrderId An optional id that can be used to correlate events related to your order
+   * @param bookSideInfo Account info for asks if side === bid, bids if side === ask. If this is given, crank instruction is added
+   */
   async placePerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -981,7 +1048,7 @@ export class MangoClient {
     quantity: number,
     orderType?: PerpOrderType,
     clientOrderId = 0,
-    bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
+    bookSideInfo?: AccountInfo<Buffer>,
     reduceOnly?: boolean,
   ): Promise<TransactionSignature> {
     const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
@@ -1045,13 +1112,19 @@ export class MangoClient {
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
+
+  /**
+   * Cancel an order on a perp market
+   *
+   * @param invalidIdOk Don't throw error if order is invalid
+   */
   async cancelPerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     owner: Account | WalletAdapter,
     perpMarket: PerpMarket,
     order: PerpOrder,
-    invalidIdOk = false, // Don't throw error if order is invalid
+    invalidIdOk = false,
   ): Promise<TransactionSignature> {
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
@@ -1092,6 +1165,9 @@ export class MangoClient {
   }
   */
 
+  /**
+   * Add a new oracle to a group
+   */
   async addOracle(
     mangoGroup: MangoGroup,
     oracle: PublicKey,
@@ -1111,6 +1187,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 
+  /**
+   * Set the price of a 'stub' type oracle
+   */
   async setOracle(
     mangoGroup: MangoGroup,
     oracle: PublicKey,

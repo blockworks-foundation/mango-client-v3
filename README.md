@@ -2,6 +2,8 @@
 
 JavaScript client library for interacting with Mango Markets DEX v3.
 
+[API Documentation](https://blockworks-foundation.github.io/mango-client-v3/)
+
 ## Installation
 
 Using npm:
