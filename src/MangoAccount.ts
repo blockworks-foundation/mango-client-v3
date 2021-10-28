@@ -833,7 +833,9 @@ export default class MangoAccount {
         groupConfig,
         mangoGroup.perpMarkets[i].perpMarket,
       ) as PerpMarketConfig;
-
+      if (market === undefined) {
+        continue;
+      }
       const perpAccount = this.perpAccounts[i];
       const perpMarketInfo = mangoGroup.perpMarkets[i];
       lines.push(

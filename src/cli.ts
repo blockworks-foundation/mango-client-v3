@@ -537,6 +537,7 @@ yargs(hideBin(process.argv)).command(
       perpMarketConfig.quoteDecimals,
     );
     console.log(perpMarket.toPrettyString(perpMarketConfig));
+
     process.exit(0);
   },
 ).argv;

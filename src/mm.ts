@@ -56,8 +56,16 @@ async function mm() {
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
 
   // TODO make it fetch all mango accounts for owner and select highest value one
-  const mangoAccountPk = new PublicKey(
-    'FG99s25HS1UKcP1jMx72Gezg6KZCC7DuKXhNW51XC1qi',
+  const mangoAccountPk = new PublicKey( // 'FG99s25HS1UKcP1jMx72Gezg6KZCC7DuKXhNW51XC1qi',
+    // 'HrBxDrXQJmoz3GrN9BTb5fdQuMDQznCL6gfuXCxmLnkK',
+    // 'HksXxVU7rczrKCce4RCPuhTVFp5CQWq2sPzu7Pbu9rpn',
+    // 'H834axS45Yixoj4dwmKXgvXDg8VSB1aa4UV9b5UfFScy',
+    // '8ejPPTu4BqDQdMr2qbkVVpxpF1bqiJr5BQsZqoJn4SFH',
+    // 'ov3DM7gPp3TzY7H2xGA8zRt2rf8LtdoQUuw7MhqHbPD',
+    // '3x3r1fhx6MsbJoxCt6G591ziMNcy7w1d5n8eUuUMS7ze',
+    // '3PDvbfJzAtAtThsRAoto6dvhNaJzv4zc3SkQuNPRxAok',
+    // '7jUGo474GASEY25FsXPS13p1xHhsuYGBrGmhyRQW3FSd',
+    'A5FK3qET4FZd9jJxVepp8Hatf3d192uVxKUsXH95s7Xi',
   );
 
   // while true loop with try catch inside
@@ -113,7 +121,7 @@ async function mm() {
       const basePos = perpAccount.getBasePositionUi(perpMarket);
 
       // TODO volatility adjustment
-      const size = (equity * sizePerc) / fairValue;
+      const size = Math.min((equity * sizePerc) / fairValue, 200000);
       const lean = (-leanCoeff * basePos) / size;
       const bidPrice = fairValue * (1 - charge + lean);
       const askPrice = fairValue * (1 + charge + lean);
