@@ -1,6 +1,6 @@
 {
   "name": "@blockworks-foundation/mango-client",
-  "version": "3.0.24",
+  "version": "3.2.1",
   "description": "Client to interact with the Mango program on Solana",
   "main": "lib/src/index.js",
   "types": "lib/src/index.d.ts",
@@ -30,9 +30,11 @@
     "keeper": "ts-node src/keeper.ts",
     "crank": "ts-node src/crank.ts",
     "scratch": "ts-node src/scratch.ts",
+    "mm": "ts-node src/mm.ts",
     "test-compute": "ts-node test/compute.test.ts",
     "test-liquidator": "ts-node test/liquidator.test.ts",
     "test-accounts": "ts-node test/accounts.test.ts",
+    "test-stoploss": "ts-node test/stoploss.test.ts",
     "mint-devnet": "ts-node src/mintDevnet.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
     "test:build": "yarn build && yarn",
@@ -68,6 +70,7 @@
     "trailingComma": "all"
   },
   "dependencies": {
+    "@project-serum/anchor": "^0.16.2",
     "@project-serum/serum": "0.13.55",
     "@project-serum/sol-wallet-adapter": "^0.2.0",
     "@solana/spl-token": "^0.1.6",

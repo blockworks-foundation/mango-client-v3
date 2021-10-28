@@ -6,6 +6,7 @@ import {
   BookSideLayout,
   FillEvent,
   MangoAccount,
+  MetaData,
   PerpEventQueue,
   PerpEventQueueLayout,
   PerpMarketConfig,
@@ -24,6 +25,7 @@ export type ParsedFillEvent = Modify<
 >;
 
 export default class PerpMarket {
+  metaData!: MetaData;
   publicKey: PublicKey;
   baseDecimals: number;
   quoteDecimals: number;
@@ -157,6 +159,16 @@ export default class PerpMarket {
       order.owner.equals(account.publicKey),
     );
   }
+  uiToNativePriceQuantity(price: number, quantity: number): [BN, BN] {
+    const baseUnit = Math.pow(10, this.baseDecimals);
+    const quoteUnit = Math.pow(10, this.quoteDecimals);
+
+    const nativePrice = new BN(price * quoteUnit)
+      .mul(this.baseLotSize)
+      .div(this.quoteLotSize.mul(new BN(baseUnit)));
+    const nativeQuantity = new BN(quantity * baseUnit).div(this.baseLotSize);
+    return [nativePrice, nativeQuantity];
+  }
 
   toPrettyString(perpMarketConfig: PerpMarketConfig): string {
     const lmi = this.liquidityMiningInfo;
@@ -186,6 +198,7 @@ export default class PerpMarket {
       `\n----- ${perpMarketConfig.name} Liquidity Mining Info -----`,
       `rate: ${lmi.rate.toString()}`,
       `maxDepthBps: ${lmi.maxDepthBps.toString()}`,
+      `exp: ${this.metaData.extraInfo || 2}`,
       `periodStart: ${new Date(
         lmi.periodStart.toNumber() * 1000,
       ).toUTCString()}`,
