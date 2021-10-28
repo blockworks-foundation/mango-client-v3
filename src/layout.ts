@@ -481,7 +481,6 @@ MangoInstructionLayout.addVariant(
     I80F48Layout('takerFee'),
     i64('baseLotSize'),
     i64('quoteLotSize'),
-    i64('numEvents'),
     I80F48Layout('rate'),
     I80F48Layout('maxDepthBps'),
     u64('targetPeriodLength'),
@@ -581,7 +580,7 @@ export class MetaData {
   dataType!: number;
   version!: number;
   isInitialized!: boolean;
-  extraInfo!: number;
+  extraInfo!: number[];
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -595,8 +594,7 @@ export class MetaDataLayout extends Structure {
         u8('dataType'),
         u8('version'),
         u8('isInitialized'),
-        u8('extraInfo'),
-        seq(u8(), 4, 'padding'),
+        seq(u8(), 5, 'extraInfo'),
       ],
       property,
     );
@@ -919,7 +917,8 @@ PerpEventLayout.addVariant(
     sideLayout(1, 'takerSide'),
     u8('makerSlot'),
     bool('makerOut'),
-    seq(u8(), 4),
+    u8('version'),
+    seq(u8(), 3),
     u64('timestamp'),
     u64('seqNum'),
     publicKeyLayout('maker'),
@@ -1044,7 +1043,8 @@ BOOK_NODE_LAYOUT.addVariant(
   struct([
     u8('ownerSlot'), // Index into OPEN_ORDERS_LAYOUT.orders
     orderTypeLayout('orderType', 1),
-    blob(2),
+    u8('version'),
+    blob(1),
     u128('key'), // (price, seqNum)
     publicKeyLayout('owner'), // Open orders account
     u64('quantity'), // In units of lot size
