@@ -1619,7 +1619,7 @@ export function makeChangePerpMarketParams2Instruction(
       expOption: exp !== undefined,
       exp: exp !== undefined ? exp : ZERO_BN,
       versionOption: version !== undefined,
-      version: exp !== undefined ? version : ZERO_BN,
+      version: version !== undefined ? version : ZERO_BN,
       lmSizeShiftOption: lmSizeShift !== undefined,
       lmSizeShift: lmSizeShift !== undefined ? lmSizeShift : ZERO_BN,
     },

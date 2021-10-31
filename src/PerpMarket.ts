@@ -16,6 +16,7 @@ import { I80F48 } from './fixednum';
 import { Modify } from './types';
 import { ZERO_BN } from './utils';
 import { EOL } from 'os';
+import MangoGroup from './MangoGroup';
 
 export type ParsedFillEvent = Modify<
   FillEvent,
@@ -171,7 +172,10 @@ export default class PerpMarket {
     return [nativePrice, nativeQuantity];
   }
 
-  toPrettyString(perpMarketConfig: PerpMarketConfig): string {
+  toPrettyString(
+    group: MangoGroup,
+    perpMarketConfig: PerpMarketConfig,
+  ): string {
     const lmi = this.liquidityMiningInfo;
     const now = Date.now() / 1000;
     const start = lmi.periodStart.toNumber();
@@ -183,6 +187,12 @@ export default class PerpMarket {
       `${perpMarketConfig.name}`,
       `version: ${this.metaData.version}`,
       `publicKey: ${perpMarketConfig.publicKey.toBase58()}`,
+      `initAssetWeight: ${group.perpMarkets[
+        perpMarketConfig.marketIndex
+      ].initAssetWeight.toString()}`,
+      `maintAssetWeight: ${group.perpMarkets[
+        perpMarketConfig.marketIndex
+      ].maintAssetWeight.toString()}`,
       `marketIndex: ${perpMarketConfig.marketIndex}`,
       `bidsKey: ${this.bids.toBase58()}`,
       `asksKey: ${this.asks.toBase58()}`,

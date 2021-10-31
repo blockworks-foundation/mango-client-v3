@@ -74,7 +74,7 @@ async function mm() {
   // periodically
 
   // TODO make it be able to quote all markets
-  const marketIndex = 1;
+  const marketIndex = 7;
   const perpMarketConfig = getPerpMarketByIndex(
     groupIds,
     marketIndex,
@@ -84,14 +84,13 @@ async function mm() {
     perpMarketConfig.baseDecimals,
     perpMarketConfig.quoteDecimals,
   );
-
   process.on('SIGINT', function () {
     console.log('Caught keyboard interrupt. Canceling orders');
     process.exit();
   });
 
   const interval = 10000;
-  const sizePerc = 0.1;
+  const sizePerc = 0.0001;
   const charge = 0.0005;
   const leanCoeff = 0.0005;
 
@@ -113,6 +112,7 @@ async function mm() {
 
       // Model logic
       const fairValue = mangoGroup.getPrice(marketIndex, mangoCache).toNumber();
+      console.log(fairValue);
       const equity = mangoAccount
         .computeValue(mangoGroup, mangoCache)
         .toNumber();
