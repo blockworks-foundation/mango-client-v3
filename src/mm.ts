@@ -109,6 +109,7 @@ async function mm() {
   const interval = parseInt(process.env.INTERVAL || '10000');
   const charge = parseFloat(process.env.CHARGE || '0.0010');
   const leanCoeff = parseFloat(process.env.LEAN_COEFF || '0.0005');
+  const bias = parseFloat(process.env.BIAS || '0.0');
 
   const control = { isRunning: true, interval: interval };
   process.on('SIGINT', function () {
@@ -151,8 +152,8 @@ async function mm() {
       // TODO volatility adjustment
       const size = (equity * sizePerc) / fairValue;
       const lean = (-leanCoeff * basePos) / size;
-      const bidPrice = fairValue * (1 - charge + lean);
-      const askPrice = fairValue * (1 + charge + lean);
+      const bidPrice = fairValue * (1 - charge + lean + bias);
+      const askPrice = fairValue * (1 + charge + lean + bias);
 
       // TODO only requote if new prices significantly different from current
       const [nativeBidPrice, nativeBidSize] =
@@ -213,7 +214,7 @@ async function mm() {
       tx.add(placeAskInstruction);
 
       const txid = await client.sendTransaction(tx, payer, []);
-      console.log(`quoting successful: ${txid.toString()}`);
+      console.log(`quoting ${marketName}-PERP successful: ${txid.toString()}`);
     } catch (e) {
       // TODO on keyboard interrupt cancel all and exit
       // sleep for some time and retry
