@@ -76,6 +76,13 @@
           "decimals": 6,
           "rootKey": "6cMrtzhWNEEDkcSMx19orcred8h9HyRb31MtbCkKDdf6",
           "nodeKeys": ["2CpaAtjDt4s9Fps7dyJUaUMeUGBDPAUUui5rxYbVzPfA"]
+        },
+        {
+          "symbol": "FTT",
+          "mintKey": "AGFEad2et2ZJif9jaGpdMixQqvW5i81aBdvKe7PHNfz3",
+          "decimals": 6,
+          "rootKey": "9i35wTe5W9vVLUJnzuhnFZbLThYJr2NF38MhEGVHJY5T",
+          "nodeKeys": ["8Q9JVDynPbyqXfnDXT31mncD7LAnoHAoSv2ywxZHjPFJ"]
         }
       ],
       "oracles": [
@@ -110,6 +117,10 @@
         {
           "symbol": "COPE",
           "publicKey": "9xYBiDWYsh2fHzpsz3aaCnNHCKWBNtfEDLtU6kS4aFD9"
+        },
+        {
+          "symbol": "FTT",
+          "publicKey": "8JPJJkmDScpcNmBRKGZuPuG2GYAveQgP3t5gFuMymwvF"
         }
       ],
       "perpMarkets": [
@@ -134,6 +145,17 @@
           "bidsKey": "Fu8q5EiFunGwSRrjFKjRUoMABj5yCoMEPccMbUiAT6PD",
           "asksKey": "9qUxMSWBGAeNmXusQHuLfgSuYJqADyYoNLwZ63JJSi6V",
           "eventsKey": "31cKs646dt1YkA3zPyxZ7rUAkxTBz279w4XEobFXcAKP"
+        },
+        {
+          "name": "FTT-PERP",
+          "publicKey": "AhgEayEGNw46ALHuC5ASsKyfsJzAm5JY8DWqpGMQhcGC",
+          "baseSymbol": "FTT",
+          "baseDecimals": 6,
+          "quoteDecimals": 6,
+          "marketIndex": 3,
+          "bidsKey": "5xihpD8yz9vt95WSHVpW8pVykffW7h5VHb2LkhGBMUck",
+          "asksKey": "G9HtAEwHRYBrz9ZpdDJH8Qs1hEZqNJ1BPm3veBsmEXbX",
+          "eventsKey": "5pHAhyEphQRVvLqvYF7dziofR52yZWuq8DThQFJvJ7r5"
         }
       ],
       "spotMarkets": [
@@ -224,6 +246,17 @@
           "bidsKey": "FLjCjU5wLUsqF6FeYJaH5JtTTFSTZzTCingxN1uyr9zn",
           "asksKey": "7TcstD7AdWqjuFoRVK24zFv66v1qyMYDNDT1V5RNWKRz",
           "eventsKey": "2dQ1Spgc7rGSuE1t3Fb9RL7zvGc7F7pH9XwJ46u3QiJr"
+        },
+        {
+          "name": "FTT/USDC",
+          "publicKey": "2Pbh1CvRVku1TgewMfycemghf6sU9EyuFDcNXqvRmSxc",
+          "baseSymbol": "FTT",
+          "baseDecimals": 6,
+          "quoteDecimals": 6,
+          "marketIndex": 8,
+          "bidsKey": "9HTDV2r7cQBUKL3fgcJZCUfmJsKA9qCP7nZAXyoyaQou",
+          "asksKey": "EpnUJCMCQNZi45nCBoNs6Bugy67Kj3bCSTLYPfz6jkYH",
+          "eventsKey": "2XHxua6ZaPKpCGUNvSvTwc9teJBmexp8iMWCLu4mtzGb"
         }
       ]
     },
