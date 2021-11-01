@@ -339,6 +339,17 @@
       ],
       "perpMarkets": [
         {
+          "name": "MNGO-PERP",
+          "publicKey": "98wPi7vBkiJ1sXLPipQEjrgHYcMBcNUsg9avTyWUi26j",
+          "baseSymbol": "MNGO",
+          "baseDecimals": 6,
+          "quoteDecimals": 6,
+          "marketIndex": 0,
+          "bidsKey": "5Zpfa8VbFKBJQFueomXz82EjbbtP6nFFQmBkHPCxfKpb",
+          "asksKey": "4Z9xHcCUMY9QLevHu3JpzxnwiHzzaQACMJERZ1XVJcSa",
+          "eventsKey": "uaUCSQejWYrDeYSuvn4As4kaCwJ2rLnRQSsSjY3ogZk"
+        },
+        {
           "name": "BTC-PERP",
           "publicKey": "FHQtNjRHA9U5ahrH7mWky3gamouhesyQ5QvpeGKrTh2z",
           "baseSymbol": "BTC",
@@ -350,6 +361,18 @@
           "eventsKey": "Bu17U2YdBM9gRrqQ1zD6MpngQBb71RRAAn8dbxoFDSkU"
         },
         {
+          "name": "ETH-PERP",
+          "publicKey": "8jKPf3KJKWvvSbbYnunwZYv62UoRPpyGb93NWLaswzcS",
+          "baseSymbol": "ETH",
+          "baseDecimals": 6,
+          "quoteDecimals": 6,
+          "marketIndex": 2,
+          "bidsKey": "6jGBscmZgRXk6oVLWbnQDpRftmzrDVu82TARci9VHKuW",
+          "asksKey": "FXSvghvoaWFHRXzWUHi5tjK9YhgcPgMPpypFXBd4Aq3r",
+          "eventsKey": "8WLv5fKLYkyZpFG74kRmp2RALHQFcNKmH7eJn8ebHC13"
+        },
+
+        {
           "name": "SOL-PERP",
           "publicKey": "58vac8i9QXStG1hpaa4ouwE1X7ngeDjY9oY7R15hcbKJ",
           "baseSymbol": "SOL",
@@ -359,17 +382,6 @@
           "bidsKey": "7HRgm8iXEDx2TmSETo3Lq9SXkF954HMVKNiq8t5sKvQS",
           "asksKey": "4oNxXQv1Rx3h7aNWjhTs3PWBoXdoPZjCaikSThV4yGb8",
           "eventsKey": "CZ5MCRvkN38d5pnZDDEEyMiED3drgDUVpEUjkuJq31Kf"
-        },
-        {
-          "name": "MNGO-PERP",
-          "publicKey": "98wPi7vBkiJ1sXLPipQEjrgHYcMBcNUsg9avTyWUi26j",
-          "baseSymbol": "MNGO",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 0,
-          "bidsKey": "5Zpfa8VbFKBJQFueomXz82EjbbtP6nFFQmBkHPCxfKpb",
-          "asksKey": "4Z9xHcCUMY9QLevHu3JpzxnwiHzzaQACMJERZ1XVJcSa",
-          "eventsKey": "uaUCSQejWYrDeYSuvn4As4kaCwJ2rLnRQSsSjY3ogZk"
         },
         {
           "name": "ADA-PERP",
