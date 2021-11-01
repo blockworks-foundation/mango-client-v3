@@ -478,7 +478,7 @@
           "baseSymbol": "USDT",
           "baseDecimals": 6,
           "quoteDecimals": 6,
-          "marketIndex": 6,
+          "marketIndex": 8,
           "bidsKey": "JCkuoUPnVAvXKySpcJVm8PDR1KUm45njKPuPg8w1ePo1",
           "asksKey": "GoUZsqQRMvkkNTJ4EgjzjUamWc9ayd3ztkjv5GeWoG4Q",
           "eventsKey": "Fh4JNfLpNRDDYnNBPUUHjQLYih6hFcP4wwMQNQz3tBiD"
