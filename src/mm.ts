@@ -105,6 +105,12 @@ async function mm() {
     perpMarketConfig.quoteDecimals,
   );
 
+  const sizePerc = parseFloat(process.env.SIZE_PERC || '0.1');
+  const interval = parseInt(process.env.INTERVAL || '10000');
+  const charge = parseFloat(process.env.CHARGE || '0.0010');
+  const leanCoeff = parseFloat(process.env.LEAN_COEFF || '0.0005');
+
+  const control = { isRunning: true, interval: interval };
   process.on('SIGINT', function () {
     console.log('Caught keyboard interrupt. Canceling orders');
     onExit(
@@ -114,16 +120,11 @@ async function mm() {
       mangoGroup,
       perpMarket,
       mangoAccountPk,
+      control,
     );
   });
 
-  const sizePerc = parseFloat(process.env.SIZE_PERC || '0.001');
-  const interval = parseInt(process.env.INTERVAL || '10000');
-  const charge = parseFloat(process.env.CHARGE || '0.0010');
-  const leanCoeff = parseFloat(process.env.LEAN_COEFF || '0.0005');
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+  while (control.isRunning) {
     try {
       // get fresh data
       // get orderbooks, get perp markets, caches
@@ -231,7 +232,10 @@ async function onExit(
   mangoGroup: MangoGroup,
   perpMarket: PerpMarket,
   mangoAccountPk: PublicKey,
+  control: { isRunning: boolean; interval: number },
 ) {
+  await sleep(control.interval);
+  control.isRunning = false;
   const mangoAccount = await client.getMangoAccount(
     mangoAccountPk,
     mangoGroup.dexProgramId,
