@@ -203,3 +203,36 @@ The liquidator will attempt to close all perp positions, and balance the tokens 
 ```
 yarn liquidator
 ```
+
+## Run the Market Maker
+### Setup
+To run the market maker you will need:
+* A Solana account with some SOL deposited to cover transaction fees
+* A Mango Account with some collateral deposited and a name (tip: use the UI)
+* Your wallet keypair saved as a JSON file
+* `node` and `yarn`
+* A clone of this repository
+* Dependencies installed with `yarn install`
+
+### Environment Variables
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `ENDPOINT_URL` | `https://mango.rpcpool.com` | Your RPC node endpoint |
+| `KEYPAIR` | `${HOME}/.config/solana/id.json` | The location of your wallet keypair |
+| `GROUP` | `mainnet.1` | Name of the group in ids.json |
+| `INTERVAL` | `10000` | Milliseconds to wait before checking for sick accounts |
+| `MANGO_ACCOUNT_NAME` | N/A | The MangoAccount name you input when initializing the MangoAccount via UI |
+| `MANGO_ACCOUNT_PUBKEY` | N/A | If no MangoAccount name, just pass in the pubkey |
+| `MARKET` | N/A | Market base symbol e.g. BTC |
+| `SIZE_PERC` | `0.1` | The size of each order as a percentage of equity |
+| `CHARGE` | `0.0010` | Half the quote width |
+| `LEAN_COEFF` | `0.0005` | How much to move the quotes per unit size of inventory |
+| `BIAS` | `0` | Fixed amount to bias. Negative values bias downward. e.g. -0.0005 biases down 5bps |
+
+### Example
+```shell
+git clone https://github.com/blockworks-foundation/mango-client-v3.git
+cd mango-client-v3
+yarn install
+KEYPAIR=~/.config/solana/id.json GROUP=mainnet.1 MANGO_ACCOUNT_NAME=mm MARKET=ADA INTERVAL=5000 SIZE_PERC=0.05 CHARGE=0.0015 LEAN_COEFF=0.00075 yarn mm
+```
