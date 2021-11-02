@@ -1,5 +1,6 @@
 import { PublicKey, Transaction } from '@solana/web3.js';
 
+/** @internal */
 export type Modify<T, R> = Omit<T, keyof R> & R;
 export interface WalletAdapter {
   publicKey: PublicKey;
@@ -11,3 +12,10 @@ export interface WalletAdapter {
   disconnect: () => any;
   on(event: string, fn: () => void): this;
 }
+
+export type PerpOrderType =
+  | 'limit'
+  | 'ioc'
+  | 'postOnly'
+  | 'market'
+  | 'postOnlySlide';

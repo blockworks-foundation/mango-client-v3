@@ -6,6 +6,8 @@ import {
   BookSideLayout,
   FillEvent,
   MangoAccount,
+  MetaData,
+  nativeToUi,
   PerpEventQueue,
   PerpEventQueueLayout,
   PerpMarketConfig,
@@ -14,6 +16,7 @@ import { I80F48 } from './fixednum';
 import { Modify } from './types';
 import { ZERO_BN } from './utils';
 import { EOL } from 'os';
+import MangoGroup from './MangoGroup';
 
 export type ParsedFillEvent = Modify<
   FillEvent,
@@ -24,6 +27,7 @@ export type ParsedFillEvent = Modify<
 >;
 
 export default class PerpMarket {
+  metaData!: MetaData;
   publicKey: PublicKey;
   baseDecimals: number;
   quoteDecimals: number;
@@ -157,8 +161,21 @@ export default class PerpMarket {
       order.owner.equals(account.publicKey),
     );
   }
+  uiToNativePriceQuantity(price: number, quantity: number): [BN, BN] {
+    const baseUnit = Math.pow(10, this.baseDecimals);
+    const quoteUnit = Math.pow(10, this.quoteDecimals);
 
-  toPrettyString(perpMarketConfig: PerpMarketConfig): string {
+    const nativePrice = new BN(price * quoteUnit)
+      .mul(this.baseLotSize)
+      .div(this.quoteLotSize.mul(new BN(baseUnit)));
+    const nativeQuantity = new BN(quantity * baseUnit).div(this.baseLotSize);
+    return [nativePrice, nativeQuantity];
+  }
+
+  toPrettyString(
+    group: MangoGroup,
+    perpMarketConfig: PerpMarketConfig,
+  ): string {
     const lmi = this.liquidityMiningInfo;
     const now = Date.now() / 1000;
     const start = lmi.periodStart.toNumber();
@@ -168,7 +185,14 @@ export default class PerpMarket {
 
     const lines: string[] = [
       `${perpMarketConfig.name}`,
+      `version: ${this.metaData.version}`,
       `publicKey: ${perpMarketConfig.publicKey.toBase58()}`,
+      `initAssetWeight: ${group.perpMarkets[
+        perpMarketConfig.marketIndex
+      ].initAssetWeight.toString()}`,
+      `maintAssetWeight: ${group.perpMarkets[
+        perpMarketConfig.marketIndex
+      ].maintAssetWeight.toString()}`,
       `marketIndex: ${perpMarketConfig.marketIndex}`,
       `bidsKey: ${this.bids.toBase58()}`,
       `asksKey: ${this.asks.toBase58()}`,
@@ -182,18 +206,29 @@ export default class PerpMarket {
         this.lastUpdated.toNumber() * 1000,
       ).toUTCString()}`,
       `seqNum: ${this.seqNum.toString()}`,
-      `feesAccrued: ${this.feesAccrued.toString()}`,
+      `feesAccrued: ${nativeToUi(this.feesAccrued.toNumber(), 6).toFixed(6)}`,
       `\n----- ${perpMarketConfig.name} Liquidity Mining Info -----`,
       `rate: ${lmi.rate.toString()}`,
-      `maxDepthBps: ${lmi.maxDepthBps.toString()}`,
+      `maxDepth: ${
+        this.metaData.version === 0
+          ? lmi.maxDepthBps.toString() + ' bps'
+          : lmi.maxDepthBps.toString() + ' contracts'
+      }`,
+      `exp: ${this.metaData.extraInfo[0] || 2}`,
+      `lmSizeShift: ${this.metaData.extraInfo[1]}`,
       `periodStart: ${new Date(
         lmi.periodStart.toNumber() * 1000,
       ).toUTCString()}`,
       `targetPeriodLength: ${lmi.targetPeriodLength.toString()}`,
-      `mngoLeftInPeriod: ${lmi.mngoLeft.toString()}`,
-      `mngoPerPeriod: ${lmi.mngoPerPeriod.toString()}`,
+      `mngoLeftInPeriod: ${(lmi.mngoLeft.toNumber() / Math.pow(10, 6)).toFixed(
+        2,
+      )}`,
+      `mngoPerPeriod: ${(
+        lmi.mngoPerPeriod.toNumber() / Math.pow(10, 6)
+      ).toFixed(2)}`,
       `periodProgress: ${progress * 100}%`,
       `estPeriodEnd: ${new Date(est * 1000).toUTCString()}`,
+      `mngoVault: ${this.mngoVault.toString()}`,
     ];
 
     return lines.join(EOL);

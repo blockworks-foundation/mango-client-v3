@@ -12,19 +12,21 @@ import {
   u8,
   UInt,
   union,
+  Union,
 } from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
 import { I80F48 } from './fixednum';
 import BN from 'bn.js';
 import { zeroKey } from './utils';
 import PerpAccount from './PerpAccount';
+import { PerpOrderType } from './types';
 
 export const MAX_TOKENS = 16;
 export const MAX_PAIRS = MAX_TOKENS - 1;
 export const MAX_NODE_BANKS = 8;
 export const INFO_LEN = 32;
 export const QUOTE_INDEX = MAX_TOKENS - 1;
-export const MAX_NUM_IN_MARGIN_BASKET = 10;
+export const MAX_NUM_IN_MARGIN_BASKET = 9;
 export const MAX_PERP_OPEN_ORDERS = 64;
 export const FREE_ORDER_SLOT = 255; // u8::MAX
 
@@ -45,7 +47,7 @@ class _I80F48Layout extends Blob {
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
-
+/** @internal */
 export function I80F48Layout(property = '') {
   return new _I80F48Layout(property);
 }
@@ -72,19 +74,19 @@ class BNLayout extends Blob {
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
-
+/** @internal */
 export function u64(property = '') {
   return new BNLayout(8, property);
 }
-
+/** @internal */
 export function i64(property = '') {
   return new BNLayout(8, property, true);
 }
-
+/** @internal */
 export function u128(property?: string) {
   return new BNLayout(16, property);
 }
-
+/** @internal */
 export function i128(property?: string) {
   return new BNLayout(16, property, true);
 }
@@ -118,7 +120,7 @@ class WrappedLayout<T, U> extends Layout<U> {
     return this.layout.getSpan(b, offset);
   }
 }
-
+/** @internal */
 export function bool(property?: string) {
   return new WrappedLayout(u8(), decodeBool, encodeBool, property);
 }
@@ -160,27 +162,68 @@ class EnumLayout extends UInt {
     throw new Error('Invalid ' + this['property']);
   }
 }
-
+/** @internal */
 export function sideLayout(span, property?) {
   return new EnumLayout({ buy: 0, sell: 1 }, span, property);
 }
-
+/** @internal */
 export function orderTypeLayout(property, span) {
-  return new EnumLayout({ limit: 0, ioc: 1, postOnly: 2 }, span, property);
+  return new EnumLayout(
+    { limit: 0, ioc: 1, postOnly: 2, market: 3, postOnlySlide: 4 },
+    span,
+    property,
+  );
 }
-
-export function selfTradeBehaviorLayout(property) {
+/** @internal */
+export function selfTradeBehaviorLayout(property, span) {
   return new EnumLayout(
     { decrementTake: 0, cancelProvide: 1, abortTransaction: 2 },
-    4,
+    span,
     property,
   );
 }
 
+export function triggerConditionLayout(property, span) {
+  return new EnumLayout({ above: 0, below: 1 }, span, property);
+}
+
+export function advancedOrderTypeLayout(property, span) {
+  return new EnumLayout({ perpTrigger: 0, spotTrigger: 1 }, span, property);
+}
+
 /**
- * Need to implement layouts for each of the structs found in state.rs
+ * Makes custom modifications to the instruction layouts because valid instructions can be many sizes
  */
-export const MangoInstructionLayout = union(u32('instruction'));
+/** @internal */
+class MangoInstructionsUnion extends Union {
+  constructor(discr?, defaultLayout?, property?) {
+    super(discr, defaultLayout, property);
+  }
+  decode(b: Buffer, offset) {
+    if (undefined === offset) {
+      offset = 0;
+    }
+    const discr = this['discriminator'].decode(b, offset);
+
+    // Adjust for old instructions that don't have optional bytes added to end
+    if (
+      (discr === 11 && b.length === 144) ||
+      (discr === 12 && b.length === 30)
+    ) {
+      b = Buffer.concat([b, Buffer.from([0])]);
+    } else if (discr === 37 && b.length === 141) {
+      b = Buffer.concat([b, Buffer.from([0, 0])]);
+    }
+    return super.decode(b, offset);
+  }
+  addVariant(variant, layout, property) {
+    return super.addVariant(variant, layout, property);
+  }
+}
+
+export const MangoInstructionLayout = new MangoInstructionsUnion(
+  u32('instruction'),
+);
 MangoInstructionLayout.addVariant(
   0,
   struct([
@@ -226,7 +269,7 @@ MangoInstructionLayout.addVariant(
     u64('limitPrice'),
     u64('maxBaseQuantity'),
     u64('maxQuoteQuantity'),
-    selfTradeBehaviorLayout('selfTradeBehavior'),
+    selfTradeBehaviorLayout('selfTradeBehavior', 4),
     orderTypeLayout('orderType', 4),
     u64('clientId'),
     u16('limit'),
@@ -248,6 +291,7 @@ MangoInstructionLayout.addVariant(
     I80F48Layout('maxDepthBps'),
     u64('targetPeriodLength'),
     u64('mngoPerPeriod'),
+    u8('exp'),
   ]),
   'AddPerpMarket',
 );
@@ -259,6 +303,7 @@ MangoInstructionLayout.addVariant(
     u64('clientOrderId'),
     sideLayout(1, 'side'),
     orderTypeLayout('orderType', 1),
+    bool('reduceOnly'),
   ]),
   'PlacePerpOrder',
 );
@@ -373,6 +418,8 @@ MangoInstructionLayout.addVariant(
     u64('targetPeriodLength'),
     bool('mngoPerPeriodOption'),
     u64('mngoPerPeriod'),
+    bool('expOption'),
+    u8('exp'),
   ]),
   'ChangePerpMarketParams',
 );
@@ -382,18 +429,112 @@ MangoInstructionLayout.addVariant(
   struct([u8('limit')]),
   'CancelAllPerpOrders',
 );
-MangoInstructionLayout.addVariant(40, struct([]), 'ForceSettleQuotePositions');
+
+MangoInstructionLayout.addVariant(
+  41,
+  struct([
+    sideLayout(4, 'side'),
+    u64('limitPrice'),
+    u64('maxBaseQuantity'),
+    u64('maxQuoteQuantity'),
+    selfTradeBehaviorLayout('selfTradeBehavior', 4),
+    orderTypeLayout('orderType', 4),
+    u64('clientOrderId'),
+    u16('limit'),
+  ]),
+  'PlaceSpotOrder2',
+);
+
+MangoInstructionLayout.addVariant(42, struct([]), 'InitAdvancedOrders');
+MangoInstructionLayout.addVariant(
+  43,
+  struct([
+    orderTypeLayout('orderType', 1),
+    sideLayout(1, 'side'),
+    triggerConditionLayout('triggerCondition', 1),
+    bool('reduceOnly'),
+    u64('clientOrderId'),
+    i64('price'),
+    i64('quantity'),
+    I80F48Layout('triggerPrice'),
+  ]),
+  'AddPerpTriggerOrder',
+);
+MangoInstructionLayout.addVariant(
+  44,
+  struct([u8('orderIndex')]),
+  'RemoveAdvancedOrder',
+);
+MangoInstructionLayout.addVariant(
+  45,
+  struct([u8('orderIndex')]),
+  'ExecutePerpTriggerOrder',
+);
+
+MangoInstructionLayout.addVariant(
+  46,
+  struct([
+    I80F48Layout('maintLeverage'),
+    I80F48Layout('initLeverage'),
+    I80F48Layout('liquidationFee'),
+    I80F48Layout('makerFee'),
+    I80F48Layout('takerFee'),
+    i64('baseLotSize'),
+    i64('quoteLotSize'),
+    I80F48Layout('rate'),
+    I80F48Layout('maxDepthBps'),
+    u64('targetPeriodLength'),
+    u64('mngoPerPeriod'),
+    u8('exp'),
+    u8('version'),
+    u8('lmSizeShift'),
+  ]),
+  'CreatePerpMarket',
+);
+
+MangoInstructionLayout.addVariant(
+  47,
+  struct([
+    bool('maintLeverageOption'),
+    I80F48Layout('maintLeverage'),
+    bool('initLeverageOption'),
+    I80F48Layout('initLeverage'),
+    bool('liquidationFeeOption'),
+    I80F48Layout('liquidationFee'),
+    bool('makerFeeOption'),
+    I80F48Layout('makerFee'),
+    bool('takerFeeOption'),
+    I80F48Layout('takerFee'),
+    bool('rateOption'),
+    I80F48Layout('rate'),
+    bool('maxDepthBpsOption'),
+    I80F48Layout('maxDepthBps'),
+    bool('targetPeriodLengthOption'),
+    u64('targetPeriodLength'),
+    bool('mngoPerPeriodOption'),
+    u64('mngoPerPeriod'),
+    bool('expOption'),
+    u8('exp'),
+    bool('versionOption'),
+    u8('version'),
+    bool('lmSizeShiftOption'),
+    u8('lmSizeShift'),
+  ]),
+  'ChangePerpMarketParams2',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
 );
+/** @internal */
 export function encodeMangoInstruction(data) {
   const b = Buffer.alloc(instructionMaxSpan);
+  // @ts-ignore
   const span = MangoInstructionLayout.encode(data, b);
   return b.slice(0, span);
 }
-
+/** @internal */
 export class PublicKeyLayout extends Blob {
   constructor(property) {
     super(32, property);
@@ -407,10 +548,11 @@ export class PublicKeyLayout extends Blob {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function publicKeyLayout(property = '') {
   return new PublicKeyLayout(property);
 }
-
+/** @internal */
 export const DataType = {
   MangoGroup: 0,
   MangoAccount: 1,
@@ -421,6 +563,7 @@ export const DataType = {
   Asks: 6,
   MangoCache: 7,
   EventQueue: 8,
+  AdvancedOrders: 9,
 };
 
 export const enum AssetType {
@@ -428,16 +571,22 @@ export const enum AssetType {
   Perp = 1,
 }
 
+export const enum AdvancedOrderType {
+  PerpTrigger = 0,
+  SpotTrigger = 1,
+}
+
 export class MetaData {
   dataType!: number;
   version!: number;
   isInitialized!: boolean;
+  extraInfo!: number[];
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
 }
-
+/** @internal */
 export class MetaDataLayout extends Structure {
   constructor(property) {
     super(
@@ -445,7 +594,7 @@ export class MetaDataLayout extends Structure {
         u8('dataType'),
         u8('version'),
         u8('isInitialized'),
-        seq(u8(), 5, 'padding'),
+        seq(u8(), 5, 'extraInfo'),
       ],
       property,
     );
@@ -459,10 +608,12 @@ export class MetaDataLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function metaDataLayout(property = '') {
   return new MetaDataLayout(property);
 }
 
+/** @internal */
 export class TokenInfo {
   mint!: PublicKey;
   rootBank!: PublicKey;
@@ -476,7 +627,7 @@ export class TokenInfo {
     return this.mint.equals(zeroKey);
   }
 }
-
+/** @internal */
 export class TokenInfoLayout extends Structure {
   constructor(property) {
     super(
@@ -498,7 +649,7 @@ export class TokenInfoLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
-
+/** @internal */
 export function tokenInfoLayout(property = '') {
   return new TokenInfoLayout(property);
 }
@@ -519,7 +670,7 @@ export class SpotMarketInfo {
     return this.spotMarket.equals(zeroKey);
   }
 }
-
+/** @internal */
 export class SpotMarketInfoLayout extends Structure {
   constructor(property) {
     super(
@@ -543,7 +694,7 @@ export class SpotMarketInfoLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
-
+/** @internal */
 export function spotMarketInfoLayout(property = '') {
   return new SpotMarketInfoLayout(property);
 }
@@ -567,7 +718,7 @@ export class PerpMarketInfo {
     return this.perpMarket.equals(zeroKey);
   }
 }
-
+/** @internal */
 export class PerpMarketInfoLayout extends Structure {
   constructor(property) {
     super(
@@ -595,11 +746,11 @@ export class PerpMarketInfoLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
-
+/** @internal */
 export function perpMarketInfoLayout(property = '') {
   return new PerpMarketInfoLayout(property);
 }
-
+/** @internal */
 export class PerpAccountLayout extends Structure {
   constructor(property) {
     super(
@@ -626,11 +777,11 @@ export class PerpAccountLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
-
+/** @internal */
 export function perpAccountLayout(property = '') {
   return new PerpAccountLayout(property);
 }
-
+/** @internal */
 export const MangoGroupLayout = struct([
   metaDataLayout('metaData'),
   u64('numOracles'), //usize?
@@ -653,7 +804,7 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('feesVault'),
   seq(u8(), 32, 'padding'),
 ]);
-
+/** @internal */
 export const MangoAccountLayout = struct([
   metaDataLayout('metaData'),
   publicKeyLayout('mangoGroup'),
@@ -675,9 +826,10 @@ export const MangoAccountLayout = struct([
   bool('beingLiquidated'),
   bool('isBankrupt'),
   seq(u8(), INFO_LEN, 'info'),
-  seq(u8(), 70, 'padding'),
+  publicKeyLayout('advancedOrdersKey'),
+  seq(u8(), 38, 'padding'),
 ]);
-
+/** @internal */
 export const RootBankLayout = struct([
   metaDataLayout('metaData'),
   I80F48Layout('optimalUtil'),
@@ -690,20 +842,20 @@ export const RootBankLayout = struct([
   u64('lastUpdated'),
   seq(u8(), 64, 'padding'),
 ]);
-
+/** @internal */
 export const NodeBankLayout = struct([
   metaDataLayout('metaData'),
   I80F48Layout('deposits'),
   I80F48Layout('borrows'),
   publicKeyLayout('vault'),
 ]);
-
+/** @internal */
 export const StubOracleLayout = struct([
   seq(u8(), 8),
   I80F48Layout('price'),
   u64('lastUpdate'),
 ]);
-
+/** @internal */
 export class LiquidityMiningInfoLayout extends Structure {
   constructor(property) {
     super(
@@ -728,10 +880,11 @@ export class LiquidityMiningInfoLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function liquidityMiningInfoLayout(property = '') {
   return new LiquidityMiningInfoLayout(property);
 }
-
+/** @internal */
 export const PerpMarketLayout = struct([
   metaDataLayout('metaData'),
   publicKeyLayout('mangoGroup'),
@@ -750,7 +903,9 @@ export const PerpMarketLayout = struct([
   liquidityMiningInfoLayout('liquidityMiningInfo'),
   publicKeyLayout('mngoVault'),
 ]);
+
 const EVENT_SIZE = 200;
+/** @internal */
 export const PerpEventLayout = union(
   u8('eventType'),
   blob(EVENT_SIZE - 1),
@@ -762,7 +917,8 @@ PerpEventLayout.addVariant(
     sideLayout(1, 'takerSide'),
     u8('makerSlot'),
     bool('makerOut'),
-    seq(u8(), 4),
+    u8('version'),
+    seq(u8(), 3),
     u64('timestamp'),
     u64('seqNum'),
     publicKeyLayout('maker'),
@@ -853,14 +1009,14 @@ export interface LiquidateEvent {
   quantity: BN; // i64
   liquidationFee: I80F48; // same as what's in the PerpMarketInfo
 }
-
+/** @internal */
 export const PerpEventQueueHeaderLayout = struct([
   metaDataLayout('metaData'),
   u64('head'),
   u64('count'),
   u64('seqNum'),
 ]);
-
+/** @internal */
 export const PerpEventQueueLayout = struct([
   metaDataLayout('metaData'),
   u64('head'),
@@ -886,7 +1042,9 @@ BOOK_NODE_LAYOUT.addVariant(
   2,
   struct([
     u8('ownerSlot'), // Index into OPEN_ORDERS_LAYOUT.orders
-    blob(3),
+    orderTypeLayout('orderType', 1),
+    u8('version'),
+    blob(1),
     u128('key'), // (price, seqNum)
     publicKeyLayout('owner'), // Open orders account
     u64('quantity'), // In units of lot size
@@ -898,7 +1056,7 @@ BOOK_NODE_LAYOUT.addVariant(
 );
 BOOK_NODE_LAYOUT.addVariant(3, struct([u32('next')]), 'freeNode');
 BOOK_NODE_LAYOUT.addVariant(4, struct([]), 'lastFreeNode');
-
+/** @internal */
 export const BookSideLayout = struct([
   metaDataLayout('metaData'),
   nu64('bumpIndex'),
@@ -917,6 +1075,7 @@ export class PriceCache {
     Object.assign(this, decoded);
   }
 }
+/** @internal */
 export class PriceCacheLayout extends Structure {
   constructor(property) {
     super([I80F48Layout('price'), u64('lastUpdate')], property);
@@ -930,6 +1089,7 @@ export class PriceCacheLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function priceCacheLayout(property = '') {
   return new PriceCacheLayout(property);
 }
@@ -943,6 +1103,7 @@ export class RootBankCache {
     Object.assign(this, decoded);
   }
 }
+/** @internal */
 export class RootBankCacheLayout extends Structure {
   constructor(property) {
     super(
@@ -963,6 +1124,7 @@ export class RootBankCacheLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function rootBankCacheLayout(property = '') {
   return new RootBankCacheLayout(property);
 }
@@ -976,6 +1138,7 @@ export class PerpMarketCache {
     Object.assign(this, decoded);
   }
 }
+/** @internal */
 export class PerpMarketCacheLayout extends Structure {
   constructor(property) {
     super(
@@ -996,10 +1159,11 @@ export class PerpMarketCacheLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function perpMarketCacheLayout(property = '') {
   return new PerpMarketCacheLayout(property);
 }
-
+/** @internal */
 export const MangoCacheLayout = struct([
   metaDataLayout('metaData'),
   seq(priceCacheLayout(), MAX_PAIRS, 'priceCache'),
@@ -1033,9 +1197,53 @@ export class NodeBank {
   }
 }
 
+/** @internal */
 export const TokenAccountLayout = struct([
   publicKeyLayout('mint'),
   publicKeyLayout('owner'),
   nu64('amount'),
   blob(93),
 ]);
+
+const ADVANCED_ORDER_SIZE = 80;
+const ADVANCED_ORDER_LAYOUT = union(
+  u8('advancedOrderType'),
+  blob(ADVANCED_ORDER_SIZE - 1),
+  'advancedOrder',
+);
+
+ADVANCED_ORDER_LAYOUT.addVariant(
+  0,
+  struct([
+    bool('isActive'),
+    u8('marketIndex'),
+    orderTypeLayout('orderType', 1),
+    sideLayout(1, 'side'),
+    triggerConditionLayout('triggerCondition', 1),
+    bool('reduceOnly'),
+    seq(u8(), 1, 'padding0'),
+    u64('clientOrderId'),
+    i64('price'),
+    i64('quantity'),
+    I80F48Layout('triggerPrice'),
+    seq(u8(), 32, 'padding1'),
+  ]),
+  'perpTrigger',
+);
+const MAX_ADVANCED_ORDERS = 32;
+export const AdvancedOrdersLayout = struct([
+  metaDataLayout('metaData'),
+  seq(ADVANCED_ORDER_LAYOUT, MAX_ADVANCED_ORDERS, 'orders'),
+]);
+
+export interface PerpTriggerOrder {
+  isActive: boolean;
+  marketIndex: number;
+  orderType: PerpOrderType;
+  side: 'buy' | 'sell';
+  triggerCondition: 'above' | 'below';
+  clientOrderId: BN;
+  price: BN;
+  quantity: BN;
+  triggerPrice: I80F48;
+}

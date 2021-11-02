@@ -310,6 +310,10 @@ yargs(hideBin(process.argv)).command(
         default: 0, // going to be 0 for internal release
         type: 'number',
       })
+      .option('exp', {
+        default: 2,
+        type: 'number',
+      })
 
       .option(...clusterDesc)
       .option(...configDesc)
@@ -339,6 +343,7 @@ yargs(hideBin(process.argv)).command(
       args.max_depth_bps as number,
       args.target_period_length as number,
       args.mngo_per_period as number,
+      args.exp as number,
     );
     config.storeGroup(result);
     writeConfig(args.config as string, config);
@@ -418,7 +423,7 @@ yargs(hideBin(process.argv)).command(
       : await listMarket(
           connection,
           account,
-          group,
+          group.mangoProgramId,
           new PublicKey(args.mint_pk as string),
           quoteMintPk,
           args.base_lot_size as number,
@@ -525,13 +530,15 @@ yargs(hideBin(process.argv)).command(
 
     const connection = openConnection(config, groupConfig.cluster);
     const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
 
     const perpMarket = await client.getPerpMarket(
       perpMarketConfig.publicKey,
       perpMarketConfig.baseDecimals,
       perpMarketConfig.quoteDecimals,
     );
-    console.log(perpMarket.toPrettyString(perpMarketConfig));
+    console.log(perpMarket.toPrettyString(mangoGroup, perpMarketConfig));
+
     process.exit(0);
   },
 ).argv;
@@ -620,6 +627,9 @@ yargs(hideBin(process.argv)).command(
       .option('mngo_per_period', {
         type: 'number',
       })
+      .option('exp', {
+        type: 'number',
+      })
 
       .option(...clusterDesc)
       .option(...configDesc)
@@ -657,6 +667,10 @@ yargs(hideBin(process.argv)).command(
       const token = getTokenBySymbol(groupConfig, 'MNGO');
       mngoPerPeriod = uiToNative(mngoPerPeriod, token.decimals).toNumber();
     }
+    const exp = getNumberOrUndef(args, 'exp');
+    if (exp !== undefined && !Number.isInteger(exp)) {
+      throw new Error('exp must be an integer');
+    }
     await client.changePerpMarketParams(
       mangoGroup,
       perpMarket,
@@ -670,6 +684,7 @@ yargs(hideBin(process.argv)).command(
       getNumberOrUndef(args, 'max_depth_bps'),
       getNumberOrUndef(args, 'target_period_length'),
       mngoPerPeriod,
+      exp,
     );
     // await sleep(2000);
     // perpMarket = await client.getPerpMarket(
