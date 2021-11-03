@@ -79,6 +79,9 @@ export default class MangoAccount {
       : '';
   }
 
+  hasAnySpotOrders(): boolean {
+    return this.inMarginBasket.some((b) => b);
+  }
   async reload(
     connection: Connection,
     dexProgramId: PublicKey | undefined = undefined,
