@@ -2,9 +2,11 @@ import { Market, OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import {
+  FREE_ORDER_SLOT,
   MangoAccountLayout,
   MangoCache,
   MAX_PAIRS,
+  MAX_PERP_OPEN_ORDERS,
   MetaData,
   QUOTE_INDEX,
   RootBankCache,
@@ -25,6 +27,7 @@ import {
   AdvancedOrdersLayout,
   getMarketByPublicKey,
   getMultipleAccounts,
+  getPriceFromKey,
   getTokenByMint,
   GroupConfig,
   PerpMarketConfig,
@@ -146,7 +149,7 @@ export default class MangoAccount {
   ): I80F48 {
     return nativeI80F48ToUi(
       this.getNativeDeposit(rootBank, tokenIndex).floor(),
-      mangoGroup.tokens[tokenIndex].decimals,
+      mangoGroup.getTokenDecimals(tokenIndex),
     );
   }
   getUiBorrow(
@@ -156,7 +159,7 @@ export default class MangoAccount {
   ): I80F48 {
     return nativeI80F48ToUi(
       this.getNativeBorrow(rootBank, tokenIndex).ceil(),
-      mangoGroup.tokens[tokenIndex].decimals,
+      mangoGroup.getTokenDecimals(tokenIndex),
     );
   }
 
@@ -833,7 +836,9 @@ export default class MangoAccount {
         groupConfig,
         mangoGroup.perpMarkets[i].perpMarket,
       ) as PerpMarketConfig;
-
+      if (market === undefined) {
+        continue;
+      }
       const perpAccount = this.perpAccounts[i];
       const perpMarketInfo = mangoGroup.perpMarkets[i];
       lines.push(
@@ -859,6 +864,27 @@ export default class MangoAccount {
       );
     }
     return lines.join(EOL);
+  }
+
+  /**
+   * Get all the open orders using only info in MangoAccount; Does not contain
+   * information about the size of the order.
+   */
+  getPerpOpenOrders(): { marketIndex: number; price: BN; side: string }[] {
+    const perpOpenOrders: { marketIndex: number; price: BN; side: string }[] =
+      [];
+
+    for (let i = 0; i < this.orders.length; i++) {
+      if (this.orderMarket[i] === FREE_ORDER_SLOT) {
+        continue;
+      }
+      perpOpenOrders.push({
+        marketIndex: this.orderMarket[i],
+        price: getPriceFromKey(this.orders[i]),
+        side: this.orderSide[i],
+      });
+    }
+    return perpOpenOrders;
   }
 
   /**

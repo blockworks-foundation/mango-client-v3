@@ -811,13 +811,13 @@ export function makeCreatePerpMarketInstruction(
   takerFee: I80F48,
   baseLotSize: BN,
   quoteLotSize: BN,
-  numEvents: BN,
   rate: I80F48,
   maxDepthBps: I80F48,
   targetPeriodLength: BN,
   mngoPerPeriod: BN,
   exp: BN,
   version: BN,
+  lmSizeShift: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -828,8 +828,8 @@ export function makeCreatePerpMarketInstruction(
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: false, pubkey: mngoMintPk },
     { isSigner: false, isWritable: true, pubkey: mngoVaultPk },
-    { isSigner: true, isWritable: false, pubkey: adminPk },
-    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: true, isWritable: true, pubkey: adminPk },
+    { isSigner: false, isWritable: true, pubkey: signerPk }, // TODO: does this need to be signer?
     { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
     { isSigner: false, isWritable: false, pubkey: SYSVAR_RENT_PUBKEY },
@@ -844,13 +844,13 @@ export function makeCreatePerpMarketInstruction(
       takerFee,
       baseLotSize,
       quoteLotSize,
-      numEvents,
       rate,
       maxDepthBps,
       targetPeriodLength,
       mngoPerPeriod,
       exp,
       version,
+      lmSizeShift,
     },
   });
 
@@ -1562,6 +1562,66 @@ export function makeChangePerpMarketParamsInstruction(
       mngoPerPeriod: mngoPerPeriod !== undefined ? mngoPerPeriod : ZERO_BN,
       expOption: exp !== undefined,
       exp: exp !== undefined ? exp : ZERO_BN,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+export function makeChangePerpMarketParams2Instruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  perpMarketPk: PublicKey,
+  adminPk: PublicKey,
+  maintLeverage: I80F48 | undefined,
+  initLeverage: I80F48 | undefined,
+  liquidationFee: I80F48 | undefined,
+  makerFee: I80F48 | undefined,
+  takerFee: I80F48 | undefined,
+  rate: I80F48 | undefined,
+  maxDepthBps: I80F48 | undefined,
+  targetPeriodLength: BN | undefined,
+  mngoPerPeriod: BN | undefined,
+  exp: BN | undefined,
+  version: BN | undefined,
+  lmSizeShift: BN | undefined,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMangoInstruction({
+    ChangePerpMarketParams2: {
+      maintLeverageOption: maintLeverage !== undefined,
+      maintLeverage: maintLeverage !== undefined ? maintLeverage : ZERO_I80F48,
+      initLeverageOption: initLeverage !== undefined,
+      initLeverage: initLeverage !== undefined ? initLeverage : ZERO_I80F48,
+      liquidationFeeOption: liquidationFee !== undefined,
+      liquidationFee:
+        liquidationFee !== undefined ? liquidationFee : ZERO_I80F48,
+      makerFeeOption: makerFee !== undefined,
+      makerFee: makerFee !== undefined ? makerFee : ZERO_I80F48,
+      takerFeeOption: takerFee !== undefined,
+      takerFee: takerFee !== undefined ? takerFee : ZERO_I80F48,
+      rateOption: rate !== undefined,
+      rate: rate !== undefined ? rate : ZERO_I80F48,
+      maxDepthBpsOption: maxDepthBps !== undefined,
+      maxDepthBps: maxDepthBps !== undefined ? maxDepthBps : ZERO_I80F48,
+      targetPeriodLengthOption: targetPeriodLength !== undefined,
+      targetPeriodLength:
+        targetPeriodLength !== undefined ? targetPeriodLength : ZERO_BN,
+      mngoPerPeriodOption: mngoPerPeriod !== undefined,
+      mngoPerPeriod: mngoPerPeriod !== undefined ? mngoPerPeriod : ZERO_BN,
+      expOption: exp !== undefined,
+      exp: exp !== undefined ? exp : ZERO_BN,
+      versionOption: version !== undefined,
+      version: version !== undefined ? version : ZERO_BN,
+      lmSizeShiftOption: lmSizeShift !== undefined,
+      lmSizeShift: lmSizeShift !== undefined ? lmSizeShift : ZERO_BN,
     },
   });
 

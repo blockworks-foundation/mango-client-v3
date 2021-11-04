@@ -18,9 +18,13 @@ import { I80F48, ONE_I80F48 } from './fixednum';
 import MangoGroup from './MangoGroup';
 import { HealthType } from './MangoAccount';
 
+/** @internal */
 export const ZERO_BN = new BN(0);
+
+/** @internal */
 export const zeroKey = new PublicKey(new Uint8Array(32));
 
+/** @internal */
 export async function promiseUndef(): Promise<undefined> {
   return undefined;
 }
@@ -363,6 +367,7 @@ export async function getMultipleAccounts(
 
 /**
  * Throw if undefined; return value otherwise
+ * @internal
  */
 export function throwUndefined<T>(x: T | undefined): T {
   if (x === undefined) {
