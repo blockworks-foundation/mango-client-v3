@@ -2,9 +2,11 @@ import { Market, OpenOrders } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import {
+  FREE_ORDER_SLOT,
   MangoAccountLayout,
   MangoCache,
   MAX_PAIRS,
+  MAX_PERP_OPEN_ORDERS,
   MetaData,
   QUOTE_INDEX,
   RootBankCache,
@@ -25,6 +27,7 @@ import {
   AdvancedOrdersLayout,
   getMarketByPublicKey,
   getMultipleAccounts,
+  getPriceFromKey,
   getTokenByMint,
   GroupConfig,
   PerpMarketConfig,
@@ -861,6 +864,27 @@ export default class MangoAccount {
       );
     }
     return lines.join(EOL);
+  }
+
+  /**
+   * Get all the open orders using only info in MangoAccount; Does not contain
+   * information about the size of the order.
+   */
+  getPerpOpenOrders(): { marketIndex: number; price: BN; side: string }[] {
+    const perpOpenOrders: { marketIndex: number; price: BN; side: string }[] =
+      [];
+    for (const marketIndex of this.orderMarket) {
+      if (marketIndex === FREE_ORDER_SLOT) {
+        continue;
+      }
+
+      perpOpenOrders.push({
+        marketIndex,
+        price: getPriceFromKey(this.orders[marketIndex]),
+        side: this.orderSide[marketIndex],
+      });
+    }
+    return perpOpenOrders;
   }
 
   /**
