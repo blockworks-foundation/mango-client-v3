@@ -873,15 +873,15 @@ export default class MangoAccount {
   getPerpOpenOrders(): { marketIndex: number; price: BN; side: string }[] {
     const perpOpenOrders: { marketIndex: number; price: BN; side: string }[] =
       [];
-    for (const marketIndex of this.orderMarket) {
-      if (marketIndex === FREE_ORDER_SLOT) {
+
+    for (let i = 0; i < this.orders.length; i++) {
+      if (this.orderMarket[i] === FREE_ORDER_SLOT) {
         continue;
       }
-
       perpOpenOrders.push({
-        marketIndex,
-        price: getPriceFromKey(this.orders[marketIndex]),
-        side: this.orderSide[marketIndex],
+        marketIndex: this.orderMarket[i],
+        price: getPriceFromKey(this.orders[i]),
+        side: this.orderSide[i],
       });
     }
     return perpOpenOrders;

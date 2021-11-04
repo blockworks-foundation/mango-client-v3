@@ -109,7 +109,7 @@ async function mm() {
   const charge = parseFloat(process.env.CHARGE || '0.0010');
   const leanCoeff = parseFloat(process.env.LEAN_COEFF || '0.0005');
   const bias = parseFloat(process.env.BIAS || '0.0');
-
+  const requoteThresh = parseFloat(process.env.REQUOTE_THRESH || '0.0');
   const control = { isRunning: true, interval: interval };
   process.on('SIGINT', function () {
     console.log('Caught keyboard interrupt. Canceling orders');
@@ -165,21 +165,27 @@ async function mm() {
         .filter((o) => o.marketIndex === marketIndex);
       let moveOrders = openOrders.length === 0 || openOrders.length > 2;
       for (const o of openOrders) {
-        if (o.side === 'buy' || o.side === 'bid') {
+        console.log(
+          `${o.side} ${o.price.toString()} -> ${
+            o.side === 'buy'
+              ? nativeBidPrice.toString()
+              : nativeAskPrice.toString()
+          }`,
+        );
+
+        if (o.side === 'buy') {
           if (
             Math.abs(o.price.toNumber() / nativeBidPrice.toNumber() - 1) >
-            0.0005
+            requoteThresh
           ) {
             moveOrders = true;
-            break;
           }
         } else {
           if (
             Math.abs(o.price.toNumber() / nativeAskPrice.toNumber() - 1) >
-            0.0005
+            requoteThresh
           ) {
             moveOrders = true;
-            break;
           }
         }
       }
