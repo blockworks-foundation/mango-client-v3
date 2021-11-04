@@ -166,12 +166,18 @@ async function mm() {
       let moveOrders = openOrders.length === 0 || openOrders.length > 2;
       for (const o of openOrders) {
         if (o.side === 'buy' || o.side === 'bid') {
-          if (!o.price.eq(nativeBidPrice)) {
+          if (
+            Math.abs(o.price.toNumber() / nativeBidPrice.toNumber() - 1) >
+            0.0005
+          ) {
             moveOrders = true;
             break;
           }
         } else {
-          if (!o.price.eq(nativeAskPrice)) {
+          if (
+            Math.abs(o.price.toNumber() / nativeAskPrice.toNumber() - 1) >
+            0.0005
+          ) {
             moveOrders = true;
             break;
           }
