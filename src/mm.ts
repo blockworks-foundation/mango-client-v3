@@ -165,6 +165,8 @@ async function mm() {
         .filter((o) => o.marketIndex === marketIndex);
       let moveOrders = openOrders.length === 0 || openOrders.length > 2;
       for (const o of openOrders) {
+        console.log(o.side, o.price.toNumber(), nativeBidPrice.toNumber());
+
         if (o.side === 'buy' || o.side === 'bid') {
           if (
             Math.abs(o.price.toNumber() / nativeBidPrice.toNumber() - 1) >
