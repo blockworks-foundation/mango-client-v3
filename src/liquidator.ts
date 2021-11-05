@@ -287,7 +287,7 @@ async function main() {
         } finally {
           await balanceAccount(
             mangoGroup,
-            mangoAccount,
+            liqorMangoAccount,
             cache,
             spotMarkets,
             perpMarkets,
@@ -695,7 +695,6 @@ async function liquidateSpot(
         }
       }
     }
-    await balanceTokens(mangoGroup, liqor, spotMarkets);
   }
 }
 
@@ -866,8 +865,6 @@ async function liquidatePerps(
       }
       await liqee.reload(connection, mangoGroup.dexProgramId);
     }
-
-    await closePositions(mangoGroup, liqor, perpMarkets);
   }
 }
 
@@ -1134,25 +1131,19 @@ async function closePositions(
 
         await mangoAccount.reload(connection, mangoGroup.dexProgramId);
 
-        if (!perpAccount.quotePosition.eq(ZERO_I80F48)) {
+        if (perpAccount.quotePosition.gt(ZERO_I80F48)) {
           const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
           if (quoteRootBank) {
-            const newQuotePosition = new I80F48(
-              perpAccount.basePosition.neg().mul(perpMarket.baseLotSize),
-            ).mul(price);
-            const pnl = perpAccount.quotePosition.min(newQuotePosition);
-            if (pnl.lt(ZERO_I80F48)) {
-              console.log('settlePnl');
-              await client.settlePnl(
-                mangoGroup,
-                cache,
-                mangoAccount,
-                perpMarket,
-                quoteRootBank,
-                cache.priceCache[index].price,
-                payer,
-              );
-            }
+            console.log('settlePnl');
+            await client.settlePnl(
+              mangoGroup,
+              cache,
+              mangoAccount,
+              perpMarket,
+              quoteRootBank,
+              cache.priceCache[index].price,
+              payer,
+            );
           }
         }
       }
