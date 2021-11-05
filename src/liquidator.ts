@@ -1051,7 +1051,7 @@ async function balanceAccount(
       pm.baseLotsToNumber(perpAccount.basePosition),
     );
 
-    return basePositionSize != 0 || !perpAccount.quotePosition.isZero();
+    return basePositionSize != 0 || perpAccount.quotePosition.gt(ZERO_I80F48);
   });
 
   if (tokensUnbalanced) {
