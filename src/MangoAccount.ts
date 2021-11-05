@@ -842,7 +842,7 @@ export default class MangoAccount {
       const perpAccount = this.perpAccounts[i];
       const perpMarketInfo = mangoGroup.perpMarkets[i];
       lines.push(
-        `${market.name}: ${this.getBasePositionUiWithGroup(
+        `${market.name || 'N/A'}: ${this.getBasePositionUiWithGroup(
           i,
           mangoGroup,
         ).toFixed(4)} / ${(

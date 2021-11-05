@@ -115,7 +115,9 @@ import {
   makeCloseAdvancedOrdersInstruction,
   makeCloseMangoAccountInstruction,
   makeCloseSpotOpenOrdersInstruction,
+  makeCreateDustAccountInstruction,
 } from '.';
+import { token } from '@project-serum/anchor/dist/cjs/utils';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -260,7 +262,7 @@ export class MangoClient {
         this.connection,
         confirmLevel,
       );
-    } catch (err) {
+    } catch (err: any) {
       if (err.timeout) {
         throw new Error('Timed out awaiting confirmation on transaction');
       }
@@ -333,7 +335,7 @@ export class MangoClient {
         this.connection,
         confirmLevel,
       );
-    } catch (err) {
+    } catch (err: any) {
       if (err.timeout) {
         throw new Error('Timed out awaiting confirmation on transaction');
       }
@@ -355,7 +357,7 @@ export class MangoClient {
             const line = simulateResult.logs[i];
             if (line.startsWith('Program log: ')) {
               throw new Error(
-                'Transaction failed: ' + line.slice('Program log: '.length),
+                txid + ': Transaction failed: ' + line.slice('Program log: '.length),
               );
             }
           }
@@ -876,6 +878,133 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
+  async withdrawAll(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+  ) {
+    const transactionsAndSigners: {
+      transaction: Transaction;
+      signers: Account[];
+    }[] = [];
+    for (const rootBank of mangoGroup.rootBankAccounts) {
+      const transactionAndSigners: {
+        transaction: Transaction;
+        signers: Account[];
+      } = {
+        transaction: new Transaction(),
+        signers: [],
+      };
+      if (rootBank) {
+        const tokenIndex = mangoGroup.getRootBankIndex(rootBank?.publicKey);
+        const tokenMint = mangoGroup.tokens[tokenIndex].mint;
+        const decimals = mangoGroup.tokens[tokenIndex].decimals;
+        if (mangoAccount.deposits[tokenIndex].isPos()) {
+          let tokenAcc = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            tokenMint,
+            owner.publicKey,
+          );
+
+          let wrappedSolAccount: Account | null = null;
+          if (tokenMint.equals(WRAPPED_SOL_MINT)) {
+            wrappedSolAccount = new Account();
+            tokenAcc = wrappedSolAccount.publicKey;
+            const space = 165;
+            const lamports =
+              await this.connection.getMinimumBalanceForRentExemption(
+                space,
+                'processed',
+              );
+            transactionAndSigners.transaction.add(
+              SystemProgram.createAccount({
+                fromPubkey: owner.publicKey,
+                newAccountPubkey: tokenAcc,
+                lamports,
+                space,
+                programId: TOKEN_PROGRAM_ID,
+              }),
+            );
+            transactionAndSigners.transaction.add(
+              initializeAccount({
+                account: tokenAcc,
+                mint: WRAPPED_SOL_MINT,
+                owner: owner.publicKey,
+              }),
+            );
+            transactionAndSigners.signers.push(wrappedSolAccount);
+          } else {
+            const tokenAccExists = await this.connection.getAccountInfo(
+              tokenAcc,
+              'recent',
+            );
+            if (!tokenAccExists) {
+              transactionAndSigners.transaction.add(
+                Token.createAssociatedTokenAccountInstruction(
+                  ASSOCIATED_TOKEN_PROGRAM_ID,
+                  TOKEN_PROGRAM_ID,
+                  tokenMint,
+                  tokenAcc,
+                  owner.publicKey,
+                  owner.publicKey,
+                ),
+              );
+            }
+          }
+
+          const instruction = makeWithdrawInstruction(
+            this.programId,
+            mangoGroup.publicKey,
+            mangoAccount.publicKey,
+            owner.publicKey,
+            mangoGroup.mangoCache,
+            rootBank.publicKey,
+            rootBank.nodeBanks[0],
+            rootBank.nodeBankAccounts[0].vault,
+            tokenAcc,
+            mangoGroup.signerKey,
+            mangoAccount.spotOpenOrders,
+            new BN("18446744073709551615"), // u64::MAX to withdraw errything
+            false,
+          );
+          transactionAndSigners.transaction.add(instruction);
+
+          if (wrappedSolAccount) {
+            transactionAndSigners.transaction.add(
+              closeAccount({
+                source: wrappedSolAccount.publicKey,
+                destination: owner.publicKey,
+                owner: owner.publicKey,
+              }),
+            );
+          }
+        }
+      }
+      transactionsAndSigners.push(transactionAndSigners);
+    }
+
+    const signedTransactions = await this.signTransactions({
+      transactionsAndSigners,
+      payer: owner,
+    });
+
+    if (signedTransactions) {
+      for (const signedTransaction of signedTransactions) {
+        if (signedTransaction.instructions.length == 0) {
+          continue;
+        }
+        const txid = await this.sendSignedTransaction({
+          signedTransaction,
+        });
+        console.log(txid)
+      }
+    } else {
+      throw new Error('Unable to sign Settle All transaction');
+    }
+  }
+
+  // Keeper functions
   /**
    * Called by the Keeper to cache interest rates from the RootBanks
    */
@@ -3455,6 +3584,29 @@ export class MangoClient {
       this.programId,
       mangoGroup.publicKey,
       mangoAccount.publicKey,
+      payer.publicKey,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async createDustAccount(
+    mangoGroup: MangoGroup,
+    payer: Account | WalletAdapter,
+  ): Promise<TransactionSignature> {
+    const [mangoAccountPk] = await PublicKey.findProgramAddress(
+      [
+        mangoGroup.publicKey.toBytes(),
+        new Buffer('DustAccount', 'utf-8'),
+      ],
+      this.programId,
+    );
+    const instruction = makeCreateDustAccountInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccountPk,
       payer.publicKey,
     );
     const transaction = new Transaction();

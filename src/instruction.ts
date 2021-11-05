@@ -1874,3 +1874,26 @@ export function makeCloseAdvancedOrdersInstruction(
     programId,
   });
 }
+
+export function makeCreateDustAccountInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  payerPK: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: payerPK },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+  ];
+
+  const data = encodeMangoInstruction({
+    CreateDustAccount: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
