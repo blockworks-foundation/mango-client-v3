@@ -530,13 +530,15 @@ yargs(hideBin(process.argv)).command(
 
     const connection = openConnection(config, groupConfig.cluster);
     const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
 
     const perpMarket = await client.getPerpMarket(
       perpMarketConfig.publicKey,
       perpMarketConfig.baseDecimals,
       perpMarketConfig.quoteDecimals,
     );
-    console.log(perpMarket.toPrettyString(perpMarketConfig));
+    console.log(perpMarket.toPrettyString(mangoGroup, perpMarketConfig));
+
     process.exit(0);
   },
 ).argv;

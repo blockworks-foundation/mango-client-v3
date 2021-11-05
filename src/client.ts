@@ -87,6 +87,7 @@ import {
   makePlaceSpotOrder2Instruction,
   makeRemoveAdvancedOrderInstruction,
   makeCreatePerpMarketInstruction,
+  makeChangePerpMarketParams2Instruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -115,6 +116,9 @@ export const getUnixTs = () => {
   return new Date().getTime() / 1000;
 };
 
+/**
+ * A class for interacting with a particular Mango V3 Program
+ */
 export class MangoClient {
   connection: Connection;
   programId: PublicKey;
@@ -362,6 +366,9 @@ export class MangoClient {
     return txid;
   }
 
+  /**
+   * Create a new Mango group
+   */
   async initMangoGroup(
     quoteMint: PublicKey,
     msrmMint: PublicKey,
@@ -489,6 +496,9 @@ export class MangoClient {
     return accountInstruction.account.publicKey;
   }
 
+  /**
+   * Retrieve information about a Mango Group
+   */
   async getMangoGroup(mangoGroup: PublicKey): Promise<MangoGroup> {
     const accountInfo = await this.connection.getAccountInfo(mangoGroup);
     const decoded = MangoGroupLayout.decode(
@@ -498,6 +508,9 @@ export class MangoClient {
     return new MangoGroup(mangoGroup, decoded);
   }
 
+  /**
+   * Create a new Mango Account on a given group
+   */
   async initMangoAccount(
     mangoGroup: MangoGroup,
     owner: Account | WalletAdapter,
@@ -527,6 +540,9 @@ export class MangoClient {
     return accountInstruction.account.publicKey;
   }
 
+  /**
+   * Retrieve information about a Mango Account
+   */
   async getMangoAccount(
     mangoAccountPk: PublicKey,
     dexProgramId: PublicKey,
@@ -543,6 +559,15 @@ export class MangoClient {
     return mangoAccount;
   }
 
+  /**
+   * Create a new Mango Account and deposit some tokens in a single transaction
+   *
+   * @param rootBank The RootBank for the deposit currency
+   * @param nodeBank The NodeBank asociated with the RootBank
+   * @param vault The token account asociated with the NodeBank
+   * @param tokenAcc The token account to transfer from
+   * @param info An optional UI name for the account
+   */
   async initMangoAccountAndDeposit(
     mangoGroup: MangoGroup,
     owner: Account | WalletAdapter,
@@ -650,6 +675,14 @@ export class MangoClient {
     return accountInstruction.account.publicKey.toString();
   }
 
+  /**
+   * Deposit tokens in a Mango Account
+   *
+   * @param rootBank The RootBank for the deposit currency
+   * @param nodeBank The NodeBank asociated with the RootBank
+   * @param vault The token account asociated with the NodeBank
+   * @param tokenAcc The token account to transfer from
+   */
   async deposit(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -727,6 +760,14 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
+  /**
+   * Deposit tokens in a Mango Account
+   *
+   * @param rootBank The RootBank for the withdrawn currency
+   * @param nodeBank The NodeBank asociated with the RootBank
+   * @param vault The token account asociated with the NodeBank
+   * @param allowBorrow Whether to borrow tokens if there are not enough deposits for the withdrawal
+   */
   async withdraw(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -830,7 +871,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
-  // Keeper functions
+  /**
+   * Called by the Keeper to cache interest rates from the RootBanks
+   */
   async cacheRootBanks(
     mangoGroup: PublicKey,
     mangoCache: PublicKey,
@@ -850,6 +893,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to cache prices from the Oracles
+   */
   async cachePrices(
     mangoGroup: PublicKey,
     mangoCache: PublicKey,
@@ -869,6 +915,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to cache perp market funding
+   */
   async cachePerpMarkets(
     mangoGroup: PublicKey,
     mangoCache: PublicKey,
@@ -888,6 +937,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to update interest rates on the RootBanks
+   */
   async updateRootBank(
     mangoGroup: MangoGroup,
     rootBank: PublicKey,
@@ -908,6 +960,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to process events on the Perp order book
+   */
   async consumeEvents(
     mangoGroup: MangoGroup,
     perpMarket: PerpMarket,
@@ -931,6 +986,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Called by the Keeper to update funding on the perp markets
+   */
   async updateFunding(
     mangoGroup: PublicKey,
     mangoCache: PublicKey,
@@ -954,6 +1012,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, []);
   }
 
+  /**
+   * Retrieve information about a perp market
+   */
   async getPerpMarket(
     perpMarketPk: PublicKey,
     baseDecimal: number,
@@ -968,6 +1029,13 @@ export class MangoClient {
     );
     return perpMarket;
   }
+
+  /**
+   * Place an order on a perp market
+   *
+   * @param clientOrderId An optional id that can be used to correlate events related to your order
+   * @param bookSideInfo Account info for asks if side === bid, bids if side === ask. If this is given, crank instruction is added
+   */
   async placePerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -980,7 +1048,7 @@ export class MangoClient {
     quantity: number,
     orderType?: PerpOrderType,
     clientOrderId = 0,
-    bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
+    bookSideInfo?: AccountInfo<Buffer>,
     reduceOnly?: boolean,
   ): Promise<TransactionSignature> {
     const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
@@ -1044,13 +1112,19 @@ export class MangoClient {
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
+
+  /**
+   * Cancel an order on a perp market
+   *
+   * @param invalidIdOk Don't throw error if order is invalid
+   */
   async cancelPerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     owner: Account | WalletAdapter,
     perpMarket: PerpMarket,
     order: PerpOrder,
-    invalidIdOk = false, // Don't throw error if order is invalid
+    invalidIdOk = false,
   ): Promise<TransactionSignature> {
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
@@ -1091,6 +1165,9 @@ export class MangoClient {
   }
   */
 
+  /**
+   * Add a new oracle to a group
+   */
   async addOracle(
     mangoGroup: MangoGroup,
     oracle: PublicKey,
@@ -1110,6 +1187,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 
+  /**
+   * Set the price of a 'stub' type oracle
+   */
   async setOracle(
     mangoGroup: MangoGroup,
     oracle: PublicKey,
@@ -2174,6 +2254,7 @@ export class MangoClient {
     mngoPerPeriod: number,
     exp: number,
     version: number,
+    lmSizeShift: number,
   ) {
     const [perpMarketPk] = await PublicKey.findProgramAddress(
       [
@@ -2183,19 +2264,27 @@ export class MangoClient {
       ],
       this.programId,
     );
+    const makeEventQueueAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      PerpEventQueueHeaderLayout.span + maxNumEvents * PerpEventLayout.span,
+      this.programId,
+    );
 
-    const [bidsPk] = await PublicKey.findProgramAddress(
-      [perpMarketPk.toBytes(), new Buffer('Bids', 'utf-8')],
+    const makeBidAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      BookSideLayout.span,
       this.programId,
     );
-    const [asksPk] = await PublicKey.findProgramAddress(
-      [perpMarketPk.toBytes(), new Buffer('Asks', 'utf-8')],
+
+    const makeAskAccountInstruction = await createAccountInstruction(
+      this.connection,
+      admin.publicKey,
+      BookSideLayout.span,
       this.programId,
     );
-    const [eventQueuePk] = await PublicKey.findProgramAddress(
-      [perpMarketPk.toBytes(), new Buffer('EventQueue', 'utf-8')],
-      this.programId,
-    );
+
     const [mngoVaultPk] = await PublicKey.findProgramAddress(
       [
         perpMarketPk.toBytes(),
@@ -2204,15 +2293,14 @@ export class MangoClient {
       ],
       this.programId,
     );
-    const transaction = new Transaction();
     const instruction = await makeCreatePerpMarketInstruction(
       this.programId,
       mangoGroup.publicKey,
       oraclePk,
       perpMarketPk,
-      eventQueuePk,
-      bidsPk,
-      asksPk,
+      makeEventQueueAccountInstruction.account.publicKey,
+      makeBidAccountInstruction.account.publicKey,
+      makeAskAccountInstruction.account.publicKey,
       mngoMintPk,
       mngoVaultPk,
       admin.publicKey,
@@ -2224,17 +2312,27 @@ export class MangoClient {
       I80F48.fromNumber(takerFee),
       new BN(baseLotSize),
       new BN(quoteLotSize),
-      new BN(maxNumEvents),
       I80F48.fromNumber(rate),
       I80F48.fromNumber(maxDepthBps),
       new BN(targetPeriodLength),
       new BN(mngoPerPeriod),
       new BN(exp),
       new BN(version),
+      new BN(lmSizeShift),
     );
 
-    const additionalSigners = [];
+    const transaction = new Transaction();
+    transaction.add(makeEventQueueAccountInstruction.instruction);
+    transaction.add(makeBidAccountInstruction.instruction);
+    transaction.add(makeAskAccountInstruction.instruction);
     transaction.add(instruction);
+
+    const additionalSigners = [
+      makeEventQueueAccountInstruction.account,
+      makeBidAccountInstruction.account,
+      makeAskAccountInstruction.account,
+    ];
+
     return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 
@@ -2773,6 +2871,50 @@ export class MangoClient {
       targetPeriodLength !== undefined ? new BN(targetPeriodLength) : undefined,
       mngoPerPeriod !== undefined ? new BN(mngoPerPeriod) : undefined,
       exp !== undefined ? new BN(exp) : undefined,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async changePerpMarketParams2(
+    mangoGroup: MangoGroup,
+    perpMarket: PerpMarket,
+    admin: Account | WalletAdapter,
+
+    maintLeverage: number | undefined,
+    initLeverage: number | undefined,
+    liquidationFee: number | undefined,
+    makerFee: number | undefined,
+    takerFee: number | undefined,
+    rate: number | undefined,
+    maxDepthBps: number | undefined,
+    targetPeriodLength: number | undefined,
+    mngoPerPeriod: number | undefined,
+    exp: number | undefined,
+    version: number | undefined,
+    lmSizeShift: number | undefined,
+  ): Promise<TransactionSignature> {
+    const instruction = makeChangePerpMarketParams2Instruction(
+      this.programId,
+      mangoGroup.publicKey,
+      perpMarket.publicKey,
+      admin.publicKey,
+      I80F48.fromNumberOrUndef(maintLeverage),
+      I80F48.fromNumberOrUndef(initLeverage),
+      I80F48.fromNumberOrUndef(liquidationFee),
+      I80F48.fromNumberOrUndef(makerFee),
+      I80F48.fromNumberOrUndef(takerFee),
+      I80F48.fromNumberOrUndef(rate),
+      I80F48.fromNumberOrUndef(maxDepthBps),
+      targetPeriodLength !== undefined ? new BN(targetPeriodLength) : undefined,
+      mngoPerPeriod !== undefined ? new BN(mngoPerPeriod) : undefined,
+      exp !== undefined ? new BN(exp) : undefined,
+      version !== undefined ? new BN(version) : undefined,
+      lmSizeShift !== undefined ? new BN(lmSizeShift) : undefined,
     );
 
     const transaction = new Transaction();

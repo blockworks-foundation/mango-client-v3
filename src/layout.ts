@@ -47,7 +47,7 @@ class _I80F48Layout extends Blob {
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
-
+/** @internal */
 export function I80F48Layout(property = '') {
   return new _I80F48Layout(property);
 }
@@ -74,19 +74,19 @@ class BNLayout extends Blob {
     return super.encode(src.toArrayLike(Buffer, 'le', this['span']), b, offset);
   }
 }
-
+/** @internal */
 export function u64(property = '') {
   return new BNLayout(8, property);
 }
-
+/** @internal */
 export function i64(property = '') {
   return new BNLayout(8, property, true);
 }
-
+/** @internal */
 export function u128(property?: string) {
   return new BNLayout(16, property);
 }
-
+/** @internal */
 export function i128(property?: string) {
   return new BNLayout(16, property, true);
 }
@@ -120,7 +120,7 @@ class WrappedLayout<T, U> extends Layout<U> {
     return this.layout.getSpan(b, offset);
   }
 }
-
+/** @internal */
 export function bool(property?: string) {
   return new WrappedLayout(u8(), decodeBool, encodeBool, property);
 }
@@ -162,11 +162,11 @@ class EnumLayout extends UInt {
     throw new Error('Invalid ' + this['property']);
   }
 }
-
+/** @internal */
 export function sideLayout(span, property?) {
   return new EnumLayout({ buy: 0, sell: 1 }, span, property);
 }
-
+/** @internal */
 export function orderTypeLayout(property, span) {
   return new EnumLayout(
     { limit: 0, ioc: 1, postOnly: 2, market: 3, postOnlySlide: 4 },
@@ -174,7 +174,7 @@ export function orderTypeLayout(property, span) {
     property,
   );
 }
-
+/** @internal */
 export function selfTradeBehaviorLayout(property, span) {
   return new EnumLayout(
     { decrementTake: 0, cancelProvide: 1, abortTransaction: 2 },
@@ -194,6 +194,7 @@ export function advancedOrderTypeLayout(property, span) {
 /**
  * Makes custom modifications to the instruction layouts because valid instructions can be many sizes
  */
+/** @internal */
 class MangoInstructionsUnion extends Union {
   constructor(discr?, defaultLayout?, property?) {
     super(discr, defaultLayout, property);
@@ -480,28 +481,60 @@ MangoInstructionLayout.addVariant(
     I80F48Layout('takerFee'),
     i64('baseLotSize'),
     i64('quoteLotSize'),
-    i64('numEvents'),
     I80F48Layout('rate'),
     I80F48Layout('maxDepthBps'),
     u64('targetPeriodLength'),
     u64('mngoPerPeriod'),
     u8('exp'),
     u8('version'),
+    u8('lmSizeShift'),
   ]),
   'CreatePerpMarket',
+);
+
+MangoInstructionLayout.addVariant(
+  47,
+  struct([
+    bool('maintLeverageOption'),
+    I80F48Layout('maintLeverage'),
+    bool('initLeverageOption'),
+    I80F48Layout('initLeverage'),
+    bool('liquidationFeeOption'),
+    I80F48Layout('liquidationFee'),
+    bool('makerFeeOption'),
+    I80F48Layout('makerFee'),
+    bool('takerFeeOption'),
+    I80F48Layout('takerFee'),
+    bool('rateOption'),
+    I80F48Layout('rate'),
+    bool('maxDepthBpsOption'),
+    I80F48Layout('maxDepthBps'),
+    bool('targetPeriodLengthOption'),
+    u64('targetPeriodLength'),
+    bool('mngoPerPeriodOption'),
+    u64('mngoPerPeriod'),
+    bool('expOption'),
+    u8('exp'),
+    bool('versionOption'),
+    u8('version'),
+    bool('lmSizeShiftOption'),
+    u8('lmSizeShift'),
+  ]),
+  'ChangePerpMarketParams2',
 );
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
 );
+/** @internal */
 export function encodeMangoInstruction(data) {
   const b = Buffer.alloc(instructionMaxSpan);
   // @ts-ignore
   const span = MangoInstructionLayout.encode(data, b);
   return b.slice(0, span);
 }
-
+/** @internal */
 export class PublicKeyLayout extends Blob {
   constructor(property) {
     super(32, property);
@@ -515,10 +548,11 @@ export class PublicKeyLayout extends Blob {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function publicKeyLayout(property = '') {
   return new PublicKeyLayout(property);
 }
-
+/** @internal */
 export const DataType = {
   MangoGroup: 0,
   MangoAccount: 1,
@@ -546,13 +580,13 @@ export class MetaData {
   dataType!: number;
   version!: number;
   isInitialized!: boolean;
-  extraInfo!: number;
+  extraInfo!: number[];
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }
 }
-
+/** @internal */
 export class MetaDataLayout extends Structure {
   constructor(property) {
     super(
@@ -560,8 +594,7 @@ export class MetaDataLayout extends Structure {
         u8('dataType'),
         u8('version'),
         u8('isInitialized'),
-        u8('extraInfo'),
-        seq(u8(), 4, 'padding'),
+        seq(u8(), 5, 'extraInfo'),
       ],
       property,
     );
@@ -575,10 +608,12 @@ export class MetaDataLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function metaDataLayout(property = '') {
   return new MetaDataLayout(property);
 }
 
+/** @internal */
 export class TokenInfo {
   mint!: PublicKey;
   rootBank!: PublicKey;
@@ -592,7 +627,7 @@ export class TokenInfo {
     return this.mint.equals(zeroKey);
   }
 }
-
+/** @internal */
 export class TokenInfoLayout extends Structure {
   constructor(property) {
     super(
@@ -614,7 +649,7 @@ export class TokenInfoLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
-
+/** @internal */
 export function tokenInfoLayout(property = '') {
   return new TokenInfoLayout(property);
 }
@@ -635,7 +670,7 @@ export class SpotMarketInfo {
     return this.spotMarket.equals(zeroKey);
   }
 }
-
+/** @internal */
 export class SpotMarketInfoLayout extends Structure {
   constructor(property) {
     super(
@@ -659,7 +694,7 @@ export class SpotMarketInfoLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
-
+/** @internal */
 export function spotMarketInfoLayout(property = '') {
   return new SpotMarketInfoLayout(property);
 }
@@ -683,7 +718,7 @@ export class PerpMarketInfo {
     return this.perpMarket.equals(zeroKey);
   }
 }
-
+/** @internal */
 export class PerpMarketInfoLayout extends Structure {
   constructor(property) {
     super(
@@ -711,11 +746,11 @@ export class PerpMarketInfoLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
-
+/** @internal */
 export function perpMarketInfoLayout(property = '') {
   return new PerpMarketInfoLayout(property);
 }
-
+/** @internal */
 export class PerpAccountLayout extends Structure {
   constructor(property) {
     super(
@@ -742,11 +777,11 @@ export class PerpAccountLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
-
+/** @internal */
 export function perpAccountLayout(property = '') {
   return new PerpAccountLayout(property);
 }
-
+/** @internal */
 export const MangoGroupLayout = struct([
   metaDataLayout('metaData'),
   u64('numOracles'), //usize?
@@ -769,7 +804,7 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('feesVault'),
   seq(u8(), 32, 'padding'),
 ]);
-
+/** @internal */
 export const MangoAccountLayout = struct([
   metaDataLayout('metaData'),
   publicKeyLayout('mangoGroup'),
@@ -794,7 +829,7 @@ export const MangoAccountLayout = struct([
   publicKeyLayout('advancedOrdersKey'),
   seq(u8(), 38, 'padding'),
 ]);
-
+/** @internal */
 export const RootBankLayout = struct([
   metaDataLayout('metaData'),
   I80F48Layout('optimalUtil'),
@@ -807,20 +842,20 @@ export const RootBankLayout = struct([
   u64('lastUpdated'),
   seq(u8(), 64, 'padding'),
 ]);
-
+/** @internal */
 export const NodeBankLayout = struct([
   metaDataLayout('metaData'),
   I80F48Layout('deposits'),
   I80F48Layout('borrows'),
   publicKeyLayout('vault'),
 ]);
-
+/** @internal */
 export const StubOracleLayout = struct([
   seq(u8(), 8),
   I80F48Layout('price'),
   u64('lastUpdate'),
 ]);
-
+/** @internal */
 export class LiquidityMiningInfoLayout extends Structure {
   constructor(property) {
     super(
@@ -845,10 +880,11 @@ export class LiquidityMiningInfoLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function liquidityMiningInfoLayout(property = '') {
   return new LiquidityMiningInfoLayout(property);
 }
-
+/** @internal */
 export const PerpMarketLayout = struct([
   metaDataLayout('metaData'),
   publicKeyLayout('mangoGroup'),
@@ -867,7 +903,9 @@ export const PerpMarketLayout = struct([
   liquidityMiningInfoLayout('liquidityMiningInfo'),
   publicKeyLayout('mngoVault'),
 ]);
+
 const EVENT_SIZE = 200;
+/** @internal */
 export const PerpEventLayout = union(
   u8('eventType'),
   blob(EVENT_SIZE - 1),
@@ -879,7 +917,8 @@ PerpEventLayout.addVariant(
     sideLayout(1, 'takerSide'),
     u8('makerSlot'),
     bool('makerOut'),
-    seq(u8(), 4),
+    u8('version'),
+    seq(u8(), 3),
     u64('timestamp'),
     u64('seqNum'),
     publicKeyLayout('maker'),
@@ -970,14 +1009,14 @@ export interface LiquidateEvent {
   quantity: BN; // i64
   liquidationFee: I80F48; // same as what's in the PerpMarketInfo
 }
-
+/** @internal */
 export const PerpEventQueueHeaderLayout = struct([
   metaDataLayout('metaData'),
   u64('head'),
   u64('count'),
   u64('seqNum'),
 ]);
-
+/** @internal */
 export const PerpEventQueueLayout = struct([
   metaDataLayout('metaData'),
   u64('head'),
@@ -1004,7 +1043,8 @@ BOOK_NODE_LAYOUT.addVariant(
   struct([
     u8('ownerSlot'), // Index into OPEN_ORDERS_LAYOUT.orders
     orderTypeLayout('orderType', 1),
-    blob(2),
+    u8('version'),
+    blob(1),
     u128('key'), // (price, seqNum)
     publicKeyLayout('owner'), // Open orders account
     u64('quantity'), // In units of lot size
@@ -1016,7 +1056,7 @@ BOOK_NODE_LAYOUT.addVariant(
 );
 BOOK_NODE_LAYOUT.addVariant(3, struct([u32('next')]), 'freeNode');
 BOOK_NODE_LAYOUT.addVariant(4, struct([]), 'lastFreeNode');
-
+/** @internal */
 export const BookSideLayout = struct([
   metaDataLayout('metaData'),
   nu64('bumpIndex'),
@@ -1035,6 +1075,7 @@ export class PriceCache {
     Object.assign(this, decoded);
   }
 }
+/** @internal */
 export class PriceCacheLayout extends Structure {
   constructor(property) {
     super([I80F48Layout('price'), u64('lastUpdate')], property);
@@ -1048,6 +1089,7 @@ export class PriceCacheLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function priceCacheLayout(property = '') {
   return new PriceCacheLayout(property);
 }
@@ -1061,6 +1103,7 @@ export class RootBankCache {
     Object.assign(this, decoded);
   }
 }
+/** @internal */
 export class RootBankCacheLayout extends Structure {
   constructor(property) {
     super(
@@ -1081,6 +1124,7 @@ export class RootBankCacheLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function rootBankCacheLayout(property = '') {
   return new RootBankCacheLayout(property);
 }
@@ -1094,6 +1138,7 @@ export class PerpMarketCache {
     Object.assign(this, decoded);
   }
 }
+/** @internal */
 export class PerpMarketCacheLayout extends Structure {
   constructor(property) {
     super(
@@ -1114,10 +1159,11 @@ export class PerpMarketCacheLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
 export function perpMarketCacheLayout(property = '') {
   return new PerpMarketCacheLayout(property);
 }
-
+/** @internal */
 export const MangoCacheLayout = struct([
   metaDataLayout('metaData'),
   seq(priceCacheLayout(), MAX_PAIRS, 'priceCache'),
@@ -1151,6 +1197,7 @@ export class NodeBank {
   }
 }
 
+/** @internal */
 export const TokenAccountLayout = struct([
   publicKeyLayout('mint'),
   publicKeyLayout('owner'),

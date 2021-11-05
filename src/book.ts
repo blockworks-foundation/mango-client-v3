@@ -100,6 +100,6 @@ export class BookSide {
   }
 }
 
-function getPriceFromKey(key: BN) {
+export function getPriceFromKey(key: BN) {
   return key.ushrn(64); // TODO - maybe use shrn instead
 }

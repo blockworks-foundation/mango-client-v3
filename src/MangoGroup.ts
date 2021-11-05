@@ -109,9 +109,26 @@ export default class MangoGroup {
     return rootBank.getDepositRate(this);
   }
 
+  /**
+   * Return the decimals in TokenInfo;
+   * If it's not QUOTE_INDEX and there is an oracle for this index but no SPL-Token, this will default to 6
+   * Otherwise throw error
+   */
+  getTokenDecimals(tokenIndex: number): number {
+    const tokenInfo = this.tokens[tokenIndex];
+    if (tokenInfo.isEmpty()) {
+      if (this.oracles[tokenIndex].equals(zeroKey)) {
+        throw new Error('No oracle for this tokenIndex');
+      } else {
+        return 6;
+      }
+    } else {
+      return tokenInfo.decimals;
+    }
+  }
   cachePriceToUi(price: I80F48, tokenIndex: number): number {
     const decimalAdj = new Big(10).pow(
-      this.tokens[tokenIndex].decimals - this.tokens[QUOTE_INDEX].decimals,
+      this.getTokenDecimals(tokenIndex) - this.getTokenDecimals(QUOTE_INDEX),
     );
     return price.toBig().mul(decimalAdj).toNumber();
   }
@@ -119,7 +136,7 @@ export default class MangoGroup {
   getPrice(tokenIndex: number, mangoCache: MangoCache): I80F48 {
     if (tokenIndex === QUOTE_INDEX) return ONE_I80F48;
     const decimalAdj = new Big(10).pow(
-      this.tokens[tokenIndex].decimals - this.tokens[QUOTE_INDEX].decimals,
+      this.getTokenDecimals(tokenIndex) - this.getTokenDecimals(QUOTE_INDEX),
     );
 
     return I80F48.fromBig(
