@@ -11,16 +11,33 @@ import {
   QUOTE_INDEX,
   AssetType,
   I80F48,
+  zeroKey,
+  makeCacheRootBankInstruction,
+  makeCachePricesInstruction,
+  makeCachePerpMarketsInstruction,
+  makeUpdateRootBankInstruction,
+  makeUpdateFundingInstruction,
+  getMultipleAccounts,
+  PerpEventQueueLayout,
+  PerpEventQueue,
 } from '../src';
 import configFile from '../src/ids.json';
-import { Account, Commitment, Connection } from '@solana/web3.js';
+import {
+  Account,
+  Commitment,
+  Connection,
+  PublicKey,
+  Transaction,
+} from '@solana/web3.js';
 import { Market } from '@project-serum/serum';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import TestGroup from './TestGroup';
+import { spawn } from 'child_process';
+import BN from 'bn.js';
+import { PROGRAM_LAYOUT_VERSIONS } from '@project-serum/serum/lib/tokens_and_markets';
 
 async function testPerpLiquidationAndBankruptcy() {
   const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-  const sleepTime = 2000;
   const config = new Config(configFile);
 
   const payer = new Account(
@@ -34,14 +51,72 @@ async function testPerpLiquidationAndBankruptcy() {
     'processed' as Commitment,
   );
 
-  const testGroup = new TestGroup();
-  const mangoGroupKey = await testGroup.init();
-  const mangoGroup = await testGroup.client.getMangoGroup(mangoGroupKey);
+  //const testGroup = new TestGroup();
+  //const mangoGroupKey = await testGroup.init();
+  const groupIds = config.getGroup(cluster, 'devnet.3');
+  if (!groupIds) {
+    throw new Error(`Group not found`);
+  }
+
+  const client = new MangoClient(connection, groupIds.mangoProgramId);
+  const mangoGroup = await client.getMangoGroup(groupIds.publicKey);
+  console.log(mangoGroup.admin.toBase58());
   const perpMarkets = await Promise.all(
-    [1, 3].map((marketIndex) => {
-      return mangoGroup.loadPerpMarket(connection, marketIndex, 6, 6);
+    groupIds.perpMarkets.map((perpMarket) => {
+      return mangoGroup.loadPerpMarket(
+        connection,
+        perpMarket.marketIndex,
+        perpMarket.baseDecimals,
+        perpMarket.quoteDecimals,
+      );
     }),
   );
+  const spotMarkets = await Promise.all(
+    groupIds.spotMarkets.map((spotMarket) => {
+      return Market.load(
+        connection,
+        spotMarket.publicKey,
+        undefined,
+        groupIds.serumProgramId,
+      );
+    }),
+  );
+
+  // Run keeper
+  const keeper = spawn('yarn', ['keeper'], {
+    env: {
+      CLUSTER: 'devnet',
+      GROUP: 'devnet.3',
+      PATH: process.env.PATH
+    },
+  });
+  // keeper.stdout.on('data', (data) => {
+  //   console.log(`keeper stdout: ${data}`);
+  // });
+  keeper.stderr.on('data', (data) => {
+    console.error(`keeper stderr: ${data}`);
+  });
+
+  keeper.on('close', (code) => {
+    console.log(`keeper exited with code ${code}`);
+  });
+
+  // Run crank
+  const crank = spawn('yarn', ['crank'], {
+    env: {
+      CLUSTER: 'devnet',
+      GROUP: 'devnet.3',
+      PATH: process.env.PATH
+    },
+  });
+
+  crank.stderr.on('data', (data) => {
+    console.error(`crank stderr: ${data}`);
+  });
+
+  crank.on('close', (code) => {
+    console.log(`crank exited with code ${code}`);
+  });
 
   let cache = await mangoGroup.loadCache(connection);
   const rootBanks = await mangoGroup.loadRootBanks(connection);
@@ -61,22 +136,47 @@ async function testPerpLiquidationAndBankruptcy() {
     payer.publicKey,
   );
 
-  const liqorPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
-  const liqorAccount = await testGroup.client.getMangoAccount(
+  const btcToken = new Token(
+    connection,
+    mangoGroup.tokens[1].mint,
+    TOKEN_PROGRAM_ID,
+    payer,
+  );
+  const btcWallet = await btcToken.getOrCreateAssociatedAccountInfo(
+    payer.publicKey,
+  );
+
+  const liqorPk = await client.initMangoAccount(mangoGroup, payer);
+  const liqorAccount = await client.getMangoAccount(
     liqorPk,
     mangoGroup.dexProgramId,
   );
   console.log('Created Liqor:', liqorPk.toBase58());
 
-  const liqeePk = await testGroup.client.initMangoAccount(mangoGroup, payer);
-  const liqeeAccount = await testGroup.client.getMangoAccount(
+  const liqeePk = await client.initMangoAccount(mangoGroup, payer);
+  const liqeeAccount = await client.getMangoAccount(
     liqeePk,
     mangoGroup.dexProgramId,
   );
   console.log('Created Liqee:', liqeePk.toBase58());
 
-  await testGroup.runKeeper();
-  await testGroup.client.deposit(
+  const makerPk = await client.initMangoAccount(mangoGroup, payer);
+  const makerAccount = await client.getMangoAccount(
+    makerPk,
+    mangoGroup.dexProgramId,
+  );
+  console.log('Created Maker:', liqorPk.toBase58());
+
+  await client.setStubOracle(
+    mangoGroup.publicKey,
+    mangoGroup.oracles[1],
+    payer,
+    60000,
+  );
+
+  // await runKeeper();
+  console.log('Depositing for liqor');
+  await client.deposit(
     mangoGroup,
     liqorAccount,
     payer,
@@ -84,50 +184,85 @@ async function testPerpLiquidationAndBankruptcy() {
     quoteNodeBanks[0].publicKey,
     quoteNodeBanks[0].vault,
     quoteWallet.address,
-    1000,
+    100000,
   );
-  await testGroup.client.deposit(
+  console.log('Depositing for liqee');
+  await client.deposit(
     mangoGroup,
     liqeeAccount,
     payer,
+    rootBanks[1]!.publicKey,
+    rootBanks[1]!.nodeBanks[0],
+    rootBanks[1]!.nodeBankAccounts[0].vault,
+    btcWallet.address,
+    1,
+  );
+  console.log('Depositing for maker');
+  await client.deposit(
+    mangoGroup,
+    makerAccount,
+    payer,
     quoteRootBank.publicKey,
     quoteNodeBanks[0].publicKey,
     quoteNodeBanks[0].vault,
     quoteWallet.address,
-    10,
+    100000,
   );
-  await testGroup.runKeeper();
 
-  console.log('Placing maker order');
-  await testGroup.client.placePerpOrder(
+  // await runKeeper();
+
+  console.log('Placing maker orders');
+  await client.placePerpOrder(
     mangoGroup,
-    liqorAccount,
+    makerAccount,
     mangoGroup.mangoCache,
     perpMarkets[0],
     payer,
     'sell',
-    45000,
+    60000,
     0.0111,
     'limit',
   );
-  await testGroup.runKeeper();
+
+  await client.placePerpOrder(
+    mangoGroup,
+    makerAccount,
+    mangoGroup.mangoCache,
+    perpMarkets[0],
+    payer,
+    'buy',
+    1000,
+    10,
+    'limit',
+  );
+
+  await client.placeSpotOrder2(
+    mangoGroup,
+    makerAccount,
+    spotMarkets[1],
+    payer,
+    'buy',
+    100,
+    3,
+    'postOnly',
+  );
 
   console.log('Placing taker order');
-  await testGroup.client.placePerpOrder(
+  await client.placePerpOrder(
     mangoGroup,
     liqeeAccount,
     mangoGroup.mangoCache,
     perpMarkets[0],
     payer,
     'buy',
-    45000,
-    0.001,
+    60000,
+    1,
     'market',
   );
 
-  await testGroup.runKeeper();
-  await liqeeAccount.reload(testGroup.connection);
-  await liqorAccount.reload(testGroup.connection);
+  // await runKeeper();
+  await liqeeAccount.reload(connection);
+  await liqorAccount.reload(connection);
 
   console.log(
     'Liqor base',
@@ -146,12 +281,16 @@ async function testPerpLiquidationAndBankruptcy() {
     liqeeAccount.perpAccounts[1].quotePosition.toString(),
   );
 
-  await testGroup.setOracle(1, 15000);
+  await client.setStubOracle(
+    mangoGroup.publicKey,
+    mangoGroup.oracles[1],
+    payer,
+    100,
+  );
 
-  await testGroup.runKeeper();
   cache = await mangoGroup.loadCache(connection);
-  await liqeeAccount.reload(testGroup.connection);
-  await liqorAccount.reload(testGroup.connection);
+  await liqeeAccount.reload(connection);
+  await liqorAccount.reload(connection);
 
   console.log(
     'Liqee Maint Health',
@@ -162,72 +301,34 @@ async function testPerpLiquidationAndBankruptcy() {
     liqorAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
   );
 
-  console.log('liquidatePerpMarket');
-  await testGroup.client.liquidatePerpMarket(
-    mangoGroup,
-    liqeeAccount,
-    liqorAccount,
-    perpMarkets[0],
-    payer,
-    liqeeAccount.perpAccounts[1].basePosition,
-  );
-  await testGroup.runKeeper();
-  await liqeeAccount.reload(testGroup.connection);
-  await liqorAccount.reload(testGroup.connection);
+  // Run the liquidator process for 60s
+  const liquidator = spawn('yarn', ['liquidator'], {
+    env: {
+      CLUSTER: 'devnet',
+      GROUP: 'devnet.3',
+      KEYPAIR: '/Users/riordan/.config/solana/devnet.json',
+      LIQOR_PK: liqorAccount.publicKey.toBase58(),
+      PATH: process.env.PATH
+    },
+  });
 
-  console.log(
-    'Liqee Maint Health',
-    liqeeAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
-  );
-  console.log('Liqee Bankrupt', liqeeAccount.isBankrupt);
-  console.log(
-    'Liqor Maint Health',
-    liqorAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
-  );
+  liquidator.stdout.on('data', (data) => {
+    console.log(`Liquidator stdout: ${data}`);
+  });
 
-  console.log('liquidateTokenAndPerp');
-  await testGroup.client.liquidateTokenAndPerp(
-    mangoGroup,
-    liqeeAccount,
-    liqorAccount,
-    quoteRootBank,
-    payer,
-    AssetType.Token,
-    QUOTE_INDEX,
-    AssetType.Perp,
-    1,
-    liqeeAccount.perpAccounts[1].quotePosition.abs(),
-  );
-  await testGroup.runKeeper();
-  await liqeeAccount.reload(testGroup.connection);
-  await liqorAccount.reload(testGroup.connection);
+  liquidator.stderr.on('data', (data) => {
+    console.error(`Liquidator stderr: ${data}`);
+  });
 
-  console.log(
-    'Liqee Maint Health',
-    liqeeAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
-  );
-  console.log('Liqee Bankrupt', liqeeAccount.isBankrupt);
-  console.log(
-    'Liqor Maint Health',
-    liqorAccount.getHealthRatio(mangoGroup, cache, 'Maint').toString(),
-  );
-  if (liqeeAccount.isBankrupt) {
-    console.log('resolvePerpBankruptcy');
-    await testGroup.client.resolvePerpBankruptcy(
-      mangoGroup,
-      liqeeAccount,
-      liqorAccount,
-      perpMarkets[0],
-      quoteRootBank,
-      payer,
-      1,
-      I80F48.fromNumber(
-        Math.max(Math.abs(liqeeAccount.perpAccounts[1].quotePosition.toNumber()), 1),
-      ),
-    );
-  }
-  await liqeeAccount.reload(testGroup.connection);
-  await liqorAccount.reload(testGroup.connection);
+  liquidator.on('close', (code) => {
+    console.log(`Liquidator exited with code ${code}`);
+  });
+
+  await sleep(60000);
+  liquidator.kill();
+
+  await liqeeAccount.reload(connection);
+  await liqorAccount.reload(connection);
 
   console.log(
     'Liqee Maint Health',
