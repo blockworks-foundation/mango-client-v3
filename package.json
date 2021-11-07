@@ -31,6 +31,7 @@
     "crank": "ts-node src/crank.ts",
     "scratch": "ts-node src/scratch.ts",
     "mm": "ts-node src/mm.ts",
+    "dust": "ts-node src/dust.ts",
     "test-compute": "ts-node test/compute.test.ts",
     "test-fillbook": "ts-node test/fillbook.test.ts",
     "test-liquidator": "ts-node test/liquidator.test.ts",

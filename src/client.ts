@@ -116,6 +116,7 @@ import {
   makeCloseMangoAccountInstruction,
   makeCloseSpotOpenOrdersInstruction,
   makeCreateDustAccountInstruction,
+  makeResolveDustInstruction,
 } from '.';
 import { token } from '@project-serum/anchor/dist/cjs/utils';
 
@@ -3608,6 +3609,36 @@ export class MangoClient {
       mangoGroup.publicKey,
       mangoAccountPk,
       payer.publicKey,
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async resolveDust(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    rootBank: RootBank,
+    mangoCache: MangoCache,
+    payer: Account | WalletAdapter,
+  ): Promise<TransactionSignature> {
+    const [dustAccountPk] = await PublicKey.findProgramAddress(
+      [
+        mangoGroup.publicKey.toBytes(),
+        new Buffer('DustAccount', 'utf-8'),
+      ],
+      this.programId,
+    );
+    const instruction = makeResolveDustInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      dustAccountPk,
+      rootBank.publicKey,
+      rootBank.nodeBanks[0],
+      mangoCache.publicKey,
     );
     const transaction = new Transaction();
     transaction.add(instruction);

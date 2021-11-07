@@ -527,6 +527,7 @@ MangoInstructionLayout.addVariant(48, struct([]), 'CloseMangoAccount');
 MangoInstructionLayout.addVariant(49, struct([]), 'CloseSpotOpenOrders');
 MangoInstructionLayout.addVariant(50, struct([]), 'CloseAdvancedOrders');
 MangoInstructionLayout.addVariant(51, struct([]), 'CreateDustAccount');
+MangoInstructionLayout.addVariant(52, struct([]), 'ResolveDust');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore

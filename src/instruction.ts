@@ -1897,3 +1897,34 @@ export function makeCreateDustAccountInstruction(
     programId,
   });
 }
+
+export function makeResolveDustInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  dustAccountPk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBankPk: PublicKey,
+  mangoCachePk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: dustAccountPk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+
+  ];
+
+  const data = encodeMangoInstruction({
+    ResolveDust: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
