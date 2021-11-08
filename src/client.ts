@@ -118,7 +118,6 @@ import {
   makeCreateDustAccountInstruction,
   makeResolveDustInstruction,
 } from '.';
-import { token } from '@project-serum/anchor/dist/cjs/utils';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -358,7 +357,7 @@ export class MangoClient {
             const line = simulateResult.logs[i];
             if (line.startsWith('Program log: ')) {
               throw new Error(
-                txid + ': Transaction failed: ' + line.slice('Program log: '.length),
+                'Transaction failed: ' + line.slice('Program log: '.length),
               );
             }
           }
