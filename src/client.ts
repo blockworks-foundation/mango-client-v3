@@ -117,6 +117,7 @@ import {
   makeCloseSpotOpenOrdersInstruction,
   makeCreateDustAccountInstruction,
   makeResolveDustInstruction,
+  ONE_I80F48,
 } from '.';
 
 export const getUnixTs = () => {
@@ -965,7 +966,7 @@ export class MangoClient {
             tokenAcc,
             mangoGroup.signerKey,
             mangoAccount.spotOpenOrders,
-            new BN("18446744073709551615"), // u64::MAX to withdraw errything
+            new BN('18446744073709551615'), // u64::MAX to withdraw errything
             false,
           );
           transactionAndSigners.transaction.add(instruction);
@@ -997,7 +998,7 @@ export class MangoClient {
         const txid = await this.sendSignedTransaction({
           signedTransaction,
         });
-        console.log(txid)
+        console.log(txid);
       }
     } else {
       throw new Error('Unable to sign Settle All transaction');
@@ -3597,10 +3598,7 @@ export class MangoClient {
     payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
-      [
-        mangoGroup.publicKey.toBytes(),
-        new Buffer('DustAccount', 'utf-8'),
-      ],
+      [mangoGroup.publicKey.toBytes(), new Buffer('DustAccount', 'utf-8')],
       this.programId,
     );
     const instruction = makeCreateDustAccountInstruction(
@@ -3623,10 +3621,7 @@ export class MangoClient {
     payer: Account | WalletAdapter,
   ): Promise<TransactionSignature> {
     const [dustAccountPk] = await PublicKey.findProgramAddress(
-      [
-        mangoGroup.publicKey.toBytes(),
-        new Buffer('DustAccount', 'utf-8'),
-      ],
+      [mangoGroup.publicKey.toBytes(), new Buffer('DustAccount', 'utf-8')],
       this.programId,
     );
     const instruction = makeResolveDustInstruction(
@@ -3643,5 +3638,78 @@ export class MangoClient {
     transaction.add(instruction);
     const additionalSigners = [];
     return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async resolveAllDust(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    mangoCache: MangoCache,
+    payer: Account | WalletAdapter,
+  ) {
+    const transactionsAndSigners: {
+      transaction: Transaction;
+      signers: Account[];
+    }[] = [];
+    const [dustAccountPk] = await PublicKey.findProgramAddress(
+      [mangoGroup.publicKey.toBytes(), new Buffer('DustAccount', 'utf-8')],
+      this.programId,
+    );
+    for (const rootBank of mangoGroup.rootBankAccounts) {
+      const transactionAndSigners: {
+        transaction: Transaction;
+        signers: Account[];
+      } = {
+        transaction: new Transaction(),
+        signers: [],
+      };
+      if (rootBank) {
+        const tokenIndex = mangoGroup.getRootBankIndex(rootBank?.publicKey);
+        const nativeDeposit = mangoAccount.getNativeDeposit(
+          rootBank,
+          tokenIndex,
+        );
+        const nativeBorrow = mangoAccount.getNativeDeposit(
+          rootBank,
+          tokenIndex,
+        );
+
+        if (
+          (nativeDeposit.gt(ZERO_I80F48) && nativeDeposit.lt(ONE_I80F48)) ||
+          (nativeBorrow.gt(ZERO_I80F48) && nativeBorrow.lt(ONE_I80F48))
+        ) {
+          const instruction = makeResolveDustInstruction(
+            this.programId,
+            mangoGroup.publicKey,
+            mangoAccount.publicKey,
+            payer.publicKey,
+            dustAccountPk,
+            rootBank.publicKey,
+            rootBank.nodeBanks[0],
+            mangoCache.publicKey,
+          );
+          transactionAndSigners.transaction.add(instruction);
+        }
+      }
+      transactionsAndSigners.push(transactionAndSigners);
+    }
+
+    const signedTransactions = await this.signTransactions({
+      transactionsAndSigners,
+      payer: payer,
+    });
+
+    if (signedTransactions) {
+      for (const signedTransaction of signedTransactions) {
+        if (signedTransaction.instructions.length == 0) {
+          continue;
+        }
+        const txid = await this.sendSignedTransaction({
+          signedTransaction,
+        });
+        console.log(txid);
+      }
+    } else {
+      throw new Error('Unable to sign ResolveDust transactions');
+    }
   }
 }
