@@ -111,8 +111,8 @@ async function mm() {
   const leanCoeff = parseFloat(process.env.LEAN_COEFF || '0.0005');
   const bias = parseFloat(process.env.BIAS || '0.0');
   const requoteThresh = parseFloat(process.env.REQUOTE_THRESH || '0.0');
-  const takeSpammers = process.env.TAKER_SPAMMERS === 'true';
-  console.log('taker spammers', takeSpammers);
+  const takeSpammers = process.env.TAKE_SPAMMERS === 'true';
+
   const spammerCharge = parseFloat(process.env.SPAMMER_CHARGE || '2'); // multiplier on charge
 
   const control = { isRunning: true, interval: interval };
