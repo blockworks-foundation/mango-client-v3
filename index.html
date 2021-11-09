@@ -73,110 +73,11 @@
 <pre><code><span class="hl-0">yarn</span><span class="hl-1"> </span><span class="hl-0">keeper</span>
 </code></pre>
 
-<a href="#run-the-liquidator" id="run-the-liquidator" style="color: inherit; text-decoration: none;">
-  <h2>Run the Liquidator</h2>
-</a>
-
-<a href="#setup" id="setup" style="color: inherit; text-decoration: none;">
-  <h3>Setup</h3>
-</a>
-<p>To run the liquidator you will need:</p>
-<ul>
-<li>A Solana account with some SOL deposited to cover transaction fees</li>
-<li>A Mango Account with some collateral deposited</li>
-<li>Your wallet keypair saved as a JSON file</li>
-<li><code>node</code> and <code>yarn</code></li>
-<li>A clone of this repository</li>
-<li>Dependencies installed with <code>yarn install</code></li>
-</ul>
-
-<a href="#environment-variables" id="environment-variables" style="color: inherit; text-decoration: none;">
-  <h3>Environment Variables</h3>
-</a>
-<table>
-<thead>
-<tr>
-<th>Variable</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>CLUSTER</code></td>
-<td><code>mainnet</code></td>
-<td>The Solana cluster to use</td>
-</tr>
-<tr>
-<td><code>ENDPOINT_URL</code></td>
-<td><code>https://solana-api.projectserum.com</code></td>
-<td>Your RPC node endpoint</td>
-</tr>
-<tr>
-<td><code>KEYPAIR</code></td>
-<td><code>${HOME}/.config/solana/id.json</code></td>
-<td>The location of your wallet keypair</td>
-</tr>
-<tr>
-<td><code>GROUP</code></td>
-<td><code>mainnet.1</code></td>
-<td>Name of the group in ids.json to run the Liquidator against</td>
-</tr>
-<tr>
-<td><code>TARGETS</code></td>
-<td><code>0 0 0 0 0 0 0 0</code></td>
-<td>Space separated list of the amount of each asset to maintain when rebalancing</td>
-</tr>
-<tr>
-<td><code>INTERVAL</code></td>
-<td><code>3500</code></td>
-<td>Milliseconds to wait before checking for sick accounts</td>
-</tr>
-<tr>
-<td><code>INTERVAL_ACCOUNTS</code></td>
-<td><code>120000</code></td>
-<td>Milliseconds to wait before reloading all Mango accounts</td>
-</tr>
-<tr>
-<td><code>INTERVAL_WEBSOCKET</code></td>
-<td><code>300000</code></td>
-<td>Milliseconds to wait before reconnecting to the websocket</td>
-</tr>
-<tr>
-<td><code>MAX_REBALANCING_RETRIES</code></td>
-<td><code>5</code></td>
-<td>Amount of times to retry rebalancing after every liquidation</td>
-</tr>
-<tr>
-<td><code>LIQOR_PK</code></td>
-<td>N/A</td>
-<td>Liqor Mango account Public Key, by default uses the largest value account owned by the keypair</td>
-</tr>
-<tr>
-<td><code>WEBHOOK_URL</code></td>
-<td>N/A</td>
-<td>Discord webhook URL to post liquidation events and errors to</td>
-</tr>
-</tbody></table>
-<p>You can add these varibles to a <code>.env</code> file in the project root to load automatically on liquidator startup. For example:</p>
-<pre><code class="language-bash"><span class="hl-1">ENDPOINT_URL=https://solana-api.projectserum.com</span><br/><span class="hl-1">KEYPAIR=</span><span class="hl-0">${HOME}</span><span class="hl-1">/.config/solana/my-keypair.json </span><br/><span class="hl-1">TARGETS=500 0.1 0.75 0 0 0 0 0</span>
-</code></pre>
-
-<a href="#rebalancing" id="rebalancing" style="color: inherit; text-decoration: none;">
-  <h3>Rebalancing</h3>
-</a>
-<p>The liquidator will attempt to close all perp positions, and balance the tokens in the liqor account after each liquidation. By default it will sell all token assets into USDC. You can choose to maintain a certain amount of each asset through this process by editing the value in the <code>TARGETS</code> environment variable at the position of the asset. You can find the order of the assets in the &#39;oracles&#39; property of the group in <a href="https://github.com/blockworks-foundation/mango-client-v3/blob/main/src/ids.json#L81">ids.json</a> The program will attempt to make buy/sell orders during balancing to maintain this level.</p>
-
-<a href="#run" id="run" style="color: inherit; text-decoration: none;">
-  <h3>Run</h3>
-</a>
-<pre><code><span class="hl-0">yarn</span><span class="hl-1"> </span><span class="hl-0">liquidator</span>
-</code></pre>
-
 <a href="#run-the-market-maker" id="run-the-market-maker" style="color: inherit; text-decoration: none;">
   <h2>Run the Market Maker</h2>
 </a>
 
-<a href="#setup-1" id="setup-1" style="color: inherit; text-decoration: none;">
+<a href="#setup" id="setup" style="color: inherit; text-decoration: none;">
   <h3>Setup</h3>
 </a>
 <p>To run the market maker you will need:</p>
@@ -189,7 +90,7 @@
 <li>Dependencies installed with <code>yarn install</code></li>
 </ul>
 
-<a href="#environment-variables-1" id="environment-variables-1" style="color: inherit; text-decoration: none;">
+<a href="#environment-variables" id="environment-variables" style="color: inherit; text-decoration: none;">
   <h3>Environment Variables</h3>
 </a>
 <table>
