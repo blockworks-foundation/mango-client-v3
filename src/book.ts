@@ -75,6 +75,38 @@ export class BookSide {
     }
   }
 
+  getBest(): PerpOrder | undefined {
+    if (this.leafCount === 0) {
+      return;
+    }
+    let currNodeIndex = this.rootNode;
+    const left = this.isBids ? 1 : 0;
+    const side = this.isBids ? 'buy' : ('sell' as 'buy' | 'sell');
+    while (currNodeIndex !== undefined) {
+      const { leafNode, innerNode } = this.nodes[currNodeIndex]; // we know index is not undefined
+
+      if (leafNode) {
+        const price = getPriceFromKey(leafNode.key);
+
+        return {
+          orderId: leafNode.key,
+          clientId: leafNode.clientOrderId,
+          owner: leafNode.owner,
+          openOrdersSlot: leafNode.ownerSlot,
+          feeTier: 0,
+          price: this.perpMarket.priceLotsToNumber(price),
+          priceLots: price,
+          size: this.perpMarket.baseLotsToNumber(leafNode.quantity),
+          sizeLots: leafNode.quantity,
+          side,
+          bestInitial: leafNode.bestInitial,
+          timestamp: leafNode.timestamp,
+        };
+      } else if (innerNode) {
+        currNodeIndex = innerNode.children[left];
+      }
+    }
+  }
   [Symbol.iterator]() {
     return this.items();
   }

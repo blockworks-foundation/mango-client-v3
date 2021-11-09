@@ -22,6 +22,9 @@ import { HealthType } from './MangoAccount';
 export const ZERO_BN = new BN(0);
 
 /** @internal */
+export const ONE_BN = new BN(1);
+
+/** @internal */
 export const zeroKey = new PublicKey(new Uint8Array(32));
 
 /** @internal */

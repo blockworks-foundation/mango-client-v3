@@ -2,7 +2,6 @@ import {
   Cluster,
   Config,
   getPerpMarketByBaseSymbol,
-  getPerpMarketByIndex,
   PerpMarketConfig,
 } from './config';
 import configFile from './ids.json';
@@ -17,9 +16,11 @@ import fs from 'fs';
 import os from 'os';
 import { MangoClient } from './client';
 import {
+  BookSide,
   makeCancelAllPerpOrdersInstruction,
   makePlacePerpOrderInstruction,
   MangoCache,
+  ONE_BN,
   sleep,
 } from './index';
 import { BN } from 'bn.js';
@@ -110,6 +111,10 @@ async function mm() {
   const leanCoeff = parseFloat(process.env.LEAN_COEFF || '0.0005');
   const bias = parseFloat(process.env.BIAS || '0.0');
   const requoteThresh = parseFloat(process.env.REQUOTE_THRESH || '0.0');
+  const takeSpammers = process.env.TAKER_SPAMMERS === 'true';
+  console.log('taker spammers', takeSpammers);
+  const spammerCharge = parseFloat(process.env.SPAMMER_CHARGE || '2'); // multiplier on charge
+
   const control = { isRunning: true, interval: interval };
   process.on('SIGINT', function () {
     console.log('Caught keyboard interrupt. Canceling orders');
@@ -129,13 +134,17 @@ async function mm() {
       // get fresh data
       // get orderbooks, get perp markets, caches
       // TODO load pyth oracle itself for most accurate prices
-      const [mangoCache, mangoAccount]: [MangoCache, MangoAccount] =
-        await Promise.all([
-          // perpMarket.loadBids(connection),
-          // perpMarket.loadAsks(connection),
-          mangoGroup.loadCache(connection),
-          client.getMangoAccount(mangoAccountPk, mangoGroup.dexProgramId),
-        ]);
+      const [bids, asks, mangoCache, mangoAccount]: [
+        BookSide,
+        BookSide,
+        MangoCache,
+        MangoAccount,
+      ] = await Promise.all([
+        perpMarket.loadBids(connection),
+        perpMarket.loadAsks(connection),
+        mangoGroup.loadCache(connection),
+        client.getMangoAccount(mangoAccountPk, mangoGroup.dexProgramId),
+      ]);
 
       // TODO store the prices in an array to calculate volatility
 
@@ -154,12 +163,28 @@ async function mm() {
       const bidPrice = fairValue * (1 - charge + lean + bias);
       const askPrice = fairValue * (1 + charge + lean + bias);
 
-      const [nativeBidPrice, nativeBidSize] =
-        perpMarket.uiToNativePriceQuantity(bidPrice, size);
-      const [nativeAskPrice, nativeAskSize] =
-        perpMarket.uiToNativePriceQuantity(askPrice, size);
+      const [modelBidPrice, nativeBidSize] = perpMarket.uiToNativePriceQuantity(
+        bidPrice,
+        size,
+      );
+      const [modelAskPrice, nativeAskSize] = perpMarket.uiToNativePriceQuantity(
+        askPrice,
+        size,
+      );
 
-      // TODO use order book to requote even if
+      const bestBid = bids.getBest();
+      const bestAsk = asks.getBest();
+
+      const bookAdjBid =
+        bestAsk !== undefined
+          ? BN.min(bestAsk.priceLots.sub(ONE_BN), modelBidPrice)
+          : modelBidPrice;
+      const bookAdjAsk =
+        bestBid !== undefined
+          ? BN.max(bestBid.priceLots.add(ONE_BN), modelAskPrice)
+          : modelAskPrice;
+
+      // TODO use order book to requote if size has changed
       const openOrders = mangoAccount
         .getPerpOpenOrders()
         .filter((o) => o.marketIndex === marketIndex);
@@ -167,22 +192,20 @@ async function mm() {
       for (const o of openOrders) {
         console.log(
           `${o.side} ${o.price.toString()} -> ${
-            o.side === 'buy'
-              ? nativeBidPrice.toString()
-              : nativeAskPrice.toString()
+            o.side === 'buy' ? bookAdjBid.toString() : bookAdjAsk.toString()
           }`,
         );
 
         if (o.side === 'buy') {
           if (
-            Math.abs(o.price.toNumber() / nativeBidPrice.toNumber() - 1) >
+            Math.abs(o.price.toNumber() / bookAdjBid.toNumber() - 1) >
             requoteThresh
           ) {
             moveOrders = true;
           }
         } else {
           if (
-            Math.abs(o.price.toNumber() / nativeAskPrice.toNumber() - 1) >
+            Math.abs(o.price.toNumber() / bookAdjAsk.toNumber() - 1) >
             requoteThresh
           ) {
             moveOrders = true;
@@ -190,6 +213,65 @@ async function mm() {
         }
       }
 
+      // Start building the transaction
+      const tx = new Transaction();
+
+      /*
+      Clear 1 lot size orders at the top of book that bad people use to manipulate the price
+       */
+      if (
+        takeSpammers &&
+        bestBid !== undefined &&
+        bestBid.sizeLots.eq(ONE_BN) &&
+        bestBid.priceLots.toNumber() / modelAskPrice.toNumber() - 1 >
+          spammerCharge * charge + 0.0005
+      ) {
+        console.log(`${marketName}-PERP taking best bid spammer`);
+        const takerSell = makePlacePerpOrderInstruction(
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
+          payer.publicKey,
+          mangoCache.publicKey,
+          perpMarket.publicKey,
+          perpMarket.bids,
+          perpMarket.asks,
+          perpMarket.eventQueue,
+          mangoAccount.getOpenOrdersKeysInBasket(),
+          bestBid.priceLots,
+          ONE_BN,
+          new BN(Date.now()),
+          'sell',
+          'ioc',
+        );
+        tx.add(takerSell);
+      } else if (
+        takeSpammers &&
+        bestAsk !== undefined &&
+        bestAsk.sizeLots.eq(ONE_BN) &&
+        modelBidPrice.toNumber() / bestAsk.priceLots.toNumber() - 1 >
+          spammerCharge * charge + 0.0005
+      ) {
+        console.log(`${marketName}-PERP taking best ask spammer`);
+        const takerBuy = makePlacePerpOrderInstruction(
+          mangoProgramId,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
+          payer.publicKey,
+          mangoCache.publicKey,
+          perpMarket.publicKey,
+          perpMarket.bids,
+          perpMarket.asks,
+          perpMarket.eventQueue,
+          mangoAccount.getOpenOrdersKeysInBasket(),
+          bestAsk.priceLots,
+          ONE_BN,
+          new BN(Date.now()),
+          'buy',
+          'ioc',
+        );
+        tx.add(takerBuy);
+      }
       if (moveOrders) {
         // cancel all, requote
         const cancelAllInstr = makeCancelAllPerpOrdersInstruction(
@@ -214,7 +296,7 @@ async function mm() {
           perpMarket.asks,
           perpMarket.eventQueue,
           mangoAccount.getOpenOrdersKeysInBasket(),
-          nativeBidPrice,
+          bookAdjBid,
           nativeBidSize,
           new BN(Date.now()),
           'buy',
@@ -232,24 +314,22 @@ async function mm() {
           perpMarket.asks,
           perpMarket.eventQueue,
           mangoAccount.getOpenOrdersKeysInBasket(),
-          nativeAskPrice,
+          bookAdjAsk,
           nativeAskSize,
           new BN(Date.now()),
           'sell',
           'postOnlySlide',
         );
-        const tx = new Transaction();
         tx.add(cancelAllInstr);
         tx.add(placeBidInstr);
         tx.add(placeAskInstr);
-
+      } else {
+        console.log(`${marketName}-PERP Not requoting. No need to move orders`);
+      }
+      if (tx.instructions.length > 0) {
         const txid = await client.sendTransaction(tx, payer, []);
         console.log(
-          `quoting ${marketName}-PERP successful: ${txid.toString()}`,
-        );
-      } else {
-        console.log(
-          `Not re-quoting ${marketName}-PERP. No need to move orders`,
+          `${marketName}-PERP adjustment success: ${txid.toString()}`,
         );
       }
     } catch (e) {
