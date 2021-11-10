@@ -3717,12 +3717,50 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     mangoCache: MangoCache,
+    mngoIndex: number,
     payer: Account | WalletAdapter,
   ) {
     const transactionsAndSigners: {
       transaction: Transaction;
       signers: Account[];
     }[] = [];
+
+    const redeemMngoTransaction = {
+      transaction: new Transaction(),
+      signers: [],
+    };
+    const mngoRootBank = mangoGroup.rootBankAccounts[mngoIndex] as RootBank;
+    let redeemedMngo = false;
+    for (let i = 0; i < mangoAccount.perpAccounts.length; i++) {
+      const perpAccount = mangoAccount.perpAccounts[i];
+      if (perpAccount.mngoAccrued.eq(ZERO_BN)) {
+        continue;
+      }
+      redeemedMngo = true;
+      const perpMarketInfo = mangoGroup.perpMarkets[i];
+      const perpMarket = await this.getPerpMarket(
+        perpMarketInfo.perpMarket,
+        mangoGroup.tokens[i].decimals,
+        mangoGroup.tokens[QUOTE_INDEX].decimals,
+      );
+
+      const instruction = makeRedeemMngoInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoGroup.mangoCache,
+        mangoAccount.publicKey,
+        payer.publicKey,
+        perpMarket.publicKey,
+        perpMarket.mngoVault,
+        mngoRootBank.publicKey,
+        mngoRootBank.nodeBanks[0],
+        mngoRootBank.nodeBankAccounts[0].vault,
+        mangoGroup.signerKey,
+      );
+      redeemMngoTransaction.transaction.add(instruction);
+    }
+    transactionsAndSigners.push(redeemMngoTransaction);
+
     const resolveAllDustTransaction = {
       transaction: new Transaction(),
       signers: [],
@@ -3736,7 +3774,9 @@ export class MangoClient {
       if (rootBank) {
         const tokenIndex = mangoGroup.getRootBankIndex(rootBank?.publicKey);
         const tokenMint = mangoGroup.tokens[tokenIndex].mint;
-        if (mangoAccount.deposits[tokenIndex].isPos()) {
+        let shouldWithdrawMngo = redeemedMngo && tokenIndex == mngoIndex;
+
+        if (mangoAccount.deposits[tokenIndex].isPos() || shouldWithdrawMngo) {
           const withdrawTransaction: {
             transaction: Transaction;
             signers: Account[];
