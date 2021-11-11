@@ -59,7 +59,7 @@ async function fillBook() {
 
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
 
-  const marketIndex = 3;
+  const marketIndex = 1;
   const perpMarketConfig = getPerpMarketByIndex(
     groupIds,
     marketIndex,
@@ -81,51 +81,79 @@ async function fillBook() {
   ] as RootBank;
   const nodeBank = rootBank.nodeBankAccounts[0] as NodeBank;
   const cache = await mangoGroup.loadCache(connection);
-  for (let i = 0; i < 9; i++) {
-    const mangoAccountStr = await client.initMangoAccountAndDeposit(
-      mangoGroup,
-      payer,
-      quoteTokenInfo.rootBank,
-      nodeBank.publicKey,
-      nodeBank.vault,
-      quoteTokenAccount.publicKey,
-      1000,
-      `fillbook${i}`,
-    );
-    const mangoAccountPk = new PublicKey(mangoAccountStr);
-    const mangoAccount = await client.getMangoAccount(
-      mangoAccountPk,
-      mangoGroup.dexProgramId,
-    );
-    for (let j = 0; j < 8; j++) {
-      const tx = new Transaction();
-
-      for (let k = 0; k < 8; k++) {
-        const [nativeBidPrice, nativeBidSize] =
-          perpMarket.uiToNativePriceQuantity(1, 1);
-
-        const placeAskInstruction = makePlacePerpOrderInstruction(
-          mangoProgramId,
-          mangoGroup.publicKey,
-          mangoAccount.publicKey,
-          payer.publicKey,
-          mangoGroup.mangoCache,
-          perpMarket.publicKey,
-          perpMarket.bids,
-          perpMarket.asks,
-          perpMarket.eventQueue,
-          mangoAccount.getOpenOrdersKeysInBasket(),
-          nativeBidPrice,
-          nativeBidSize,
-          new BN(Date.now()),
-          'buy',
-          'postOnlySlide',
-        );
-        tx.add(placeAskInstruction);
-      }
-
-      const txid = await client.sendTransaction(tx, payer, []);
-    }
-  }
+  // for (let i = 0; i < 3; i++) {
+  //   const mangoAccountStr = await client.initMangoAccountAndDeposit(
+  //     mangoGroup,
+  //     payer,
+  //     quoteTokenInfo.rootBank,
+  //     nodeBank.publicKey,
+  //     nodeBank.vault,
+  //     quoteTokenAccount.publicKey,
+  //     1000,
+  //     `testfunding${i}`,
+  //   );
+  //   const mangoAccountPk = new PublicKey(mangoAccountStr);
+  //   const mangoAccount = await client.getMangoAccount(
+  //     mangoAccountPk,
+  //     mangoGroup.dexProgramId,
+  //   );
+  //   for (let j = 0; j < 1; j++) {
+  //     for (let k = 0; k < 32; k++) {
+  //       const tx = new Transaction();
+  //
+  //       const [nativeBidPrice, nativeBidSize] =
+  //         perpMarket.uiToNativePriceQuantity(100000, 0.0001);
+  //       const [nativeAskPrice, nativeAskSize] =
+  //         perpMarket.uiToNativePriceQuantity(1, 0.0001);
+  //
+  //       const placeBidInstruction = makePlacePerpOrderInstruction(
+  //         mangoProgramId,
+  //         mangoGroup.publicKey,
+  //         mangoAccount.publicKey,
+  //         payer.publicKey,
+  //         mangoGroup.mangoCache,
+  //         perpMarket.publicKey,
+  //         perpMarket.bids,
+  //         perpMarket.asks,
+  //         perpMarket.eventQueue,
+  //         mangoAccount.getOpenOrdersKeysInBasket(),
+  //         nativeBidPrice,
+  //         nativeBidSize,
+  //         new BN(Date.now()),
+  //         'buy',
+  //         'postOnlySlide',
+  //       );
+  //       tx.add(placeBidInstruction);
+  //       const placeAskInstruction = makePlacePerpOrderInstruction(
+  //         mangoProgramId,
+  //         mangoGroup.publicKey,
+  //         mangoAccount.publicKey,
+  //         payer.publicKey,
+  //         mangoGroup.mangoCache,
+  //         perpMarket.publicKey,
+  //         perpMarket.bids,
+  //         perpMarket.asks,
+  //         perpMarket.eventQueue,
+  //         mangoAccount.getOpenOrdersKeysInBasket(),
+  //         nativeAskPrice,
+  //         nativeAskSize,
+  //         new BN(Date.now()),
+  //         'sell',
+  //         'postOnlySlide',
+  //       );
+  //       tx.add(placeAskInstruction);
+  //       // const txid = await client.sendTransaction(tx, payer, []);
+  //     }
+  //   }
+  // }
+  const fundingTxid = await client.updateFunding(
+    mangoGroup.publicKey,
+    mangoGroup.mangoCache,
+    perpMarket.publicKey,
+    perpMarket.bids,
+    perpMarket.asks,
+    payer,
+  );
+  console.log(`fundingTxid: ${fundingTxid.toString()}`);
 }
 fillBook();
