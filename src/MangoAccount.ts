@@ -6,7 +6,6 @@ import {
   MangoAccountLayout,
   MangoCache,
   MAX_PAIRS,
-  MAX_PERP_OPEN_ORDERS,
   MetaData,
   QUOTE_INDEX,
   RootBankCache,
@@ -82,6 +81,46 @@ export default class MangoAccount {
       : '';
   }
 
+  getLiquidationPrice(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    oracleIndex: number,
+  ): I80F48 | undefined {
+    const { spot, perps, quote } = this.getHealthComponents(
+      mangoGroup,
+      mangoCache,
+    );
+
+    let partialHealth = quote;
+    let weightedAsset = ZERO_I80F48;
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      const w = getWeights(mangoGroup, i, 'Maint');
+      if (i === oracleIndex) {
+        const weightedSpot = spot[i].mul(
+          spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight,
+        );
+        const weightedPerps = perps[i].mul(
+          perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight,
+        );
+        weightedAsset = weightedSpot.add(weightedPerps).neg();
+      } else {
+        const price = mangoCache.priceCache[i].price;
+        const spotHealth = spot[i]
+          .mul(price)
+          .mul(spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight);
+        const perpHealth = perps[i]
+          .mul(price)
+          .mul(perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight);
+        partialHealth = partialHealth.add(spotHealth).add(perpHealth);
+      }
+    }
+
+    if (weightedAsset.isZero()) {
+      return undefined;
+    } else {
+      return partialHealth.div(weightedAsset);
+    }
+  }
   hasAnySpotOrders(): boolean {
     return this.inMarginBasket.some((b) => b);
   }

@@ -118,6 +118,7 @@ async function mm() {
   const control = { isRunning: true, interval: interval };
   process.on('SIGINT', function () {
     console.log('Caught keyboard interrupt. Canceling orders');
+    control.isRunning = false;
     onExit(
       client,
       payer,
@@ -351,7 +352,6 @@ async function onExit(
   mangoAccountPk: PublicKey,
   control: { isRunning: boolean; interval: number },
 ) {
-  control.isRunning = false;
   await sleep(control.interval);
   const mangoAccount = await client.getMangoAccount(
     mangoAccountPk,
@@ -372,7 +372,7 @@ async function onExit(
   tx.add(cancelAllInstr);
 
   const txid = await client.sendTransaction(tx, payer, []);
-  console.log(`quoting successful: ${txid.toString()}`);
+  console.log(`cancel successful: ${txid.toString()}`);
 
   process.exit();
 }
