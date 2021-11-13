@@ -117,10 +117,23 @@ export default class MangoAccount {
 
     if (weightedAsset.isZero()) {
       return undefined;
-    } else {
-      return partialHealth.div(weightedAsset);
     }
+    const liqPrice = partialHealth.div(weightedAsset);
+    if (liqPrice.isNeg()) {
+      return undefined;
+    }
+    return liqPrice.mul(
+      // adjust for decimals in the price
+      I80F48.fromNumber(
+        Math.pow(
+          10,
+          mangoGroup.tokens[oracleIndex].decimals -
+            mangoGroup.tokens[QUOTE_INDEX].decimals,
+        ),
+      ),
+    );
   }
+
   hasAnySpotOrders(): boolean {
     return this.inMarginBasket.some((b) => b);
   }

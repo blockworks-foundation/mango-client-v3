@@ -497,9 +497,7 @@ yargs(hideBin(process.argv)).command(
       new PublicKey(args.mango_account_pk as string),
       groupConfig.serumProgramId,
     );
-
     const cache = await mangoGroup.loadCache(connection);
-
     console.log(mangoAccount.toPrettyString(groupConfig, mangoGroup, cache));
     process.exit(0);
   },
