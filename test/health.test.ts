@@ -2,8 +2,8 @@
 import { expect } from 'chai';
 import MangoGroup from '../src/MangoGroup';
 import MangoAccount from '../src/MangoAccount';
-import { loadTestMangoAccount, loadTestMangoCache, loadTestMangoGroup, loadTestMangoRootBank } from './testdata';
-import { MangoCache, RootBank } from '../src';
+import { loadTestMangoAccount, loadTestMangoCache, loadTestMangoGroup, loadTestMangoNodeBank, loadTestMangoRootBank } from './testdata';
+import { MangoCache, NodeBank, RootBank } from '../src';
 
 describe('Health', async () => {
   before(async () => {
@@ -200,6 +200,44 @@ describe('Health', async () => {
         result
           .toString()
       ).to.equal("7516159604.84918334545095675026");
+    });
+  });
+
+  describe('interest rates', async () => {
+    it('BTC root bank should return correct interest rate', async () => {
+      const prefix = "./testdata/tokenbank"
+      const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
+      const rootBank: RootBank = loadTestMangoRootBank(`${prefix}/btc_root_bank.json`)
+      const nodeBank: NodeBank = loadTestMangoNodeBank(`${prefix}/btc_node_bank.json`)
+      rootBank.nodeBankAccounts = [nodeBank]
+
+      expect(
+        rootBank.getBorrowRate(mangoGroup)
+          .toString()
+      ).to.equal("0.0060962691428017024");
+
+      expect(
+        rootBank.getDepositRate(mangoGroup)
+          .toString()
+      ).to.equal("0.00074328994922723268");
+    });
+
+    it('USDC root bank should return correct interest rate', async () => {
+      const prefix = "./testdata/tokenbank"
+      const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
+      const rootBank: RootBank = loadTestMangoRootBank(`${prefix}/usdc_root_bank.json`)
+      const nodeBank: NodeBank = loadTestMangoNodeBank(`${prefix}/usdc_node_bank.json`)
+      rootBank.nodeBankAccounts = [nodeBank]
+
+      expect(
+        rootBank.getBorrowRate(mangoGroup)
+          .toString()
+      ).to.equal("0.23058349895659091544");
+
+      expect(
+        rootBank.getDepositRate(mangoGroup)
+          .toString()
+      ).to.equal("0.16874409787690680673");
     });
   });
 });

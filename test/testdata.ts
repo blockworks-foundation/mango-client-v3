@@ -1,6 +1,6 @@
 import { PublicKey } from '@solana/web3.js';
 import { MangoGroup, RootBank } from '../src';
-import { MangoAccountLayout, MangoCache, MangoCacheLayout, MangoGroupLayout, RootBankLayout } from '../src/layout';
+import { MangoAccountLayout, MangoCache, MangoCacheLayout, MangoGroupLayout, NodeBank, NodeBankLayout, RootBankLayout } from '../src/layout';
 import MangoAccount from '../src/MangoAccount';
 
 export function loadTestMangoGroup(filename: string): MangoGroup {
@@ -29,4 +29,12 @@ export function loadTestMangoRootBank(filename: string): RootBank {
   const data = Buffer.from(accountJson.data[0], 'base64');
   const layout = RootBankLayout.decode(data)
   return new RootBank(new PublicKey(accountJson.address), layout)
+}
+
+
+export function loadTestMangoNodeBank(filename: string): NodeBank {
+  const accountJson: { [key: string]: any } = require(filename);
+  const data = Buffer.from(accountJson.data[0], 'base64');
+  const layout = NodeBankLayout.decode(data)
+  return new NodeBank(new PublicKey(accountJson.address), layout)
 }
