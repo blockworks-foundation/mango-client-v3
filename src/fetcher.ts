@@ -11,6 +11,7 @@ import {
   getPerpMarketByBaseSymbol,
   PerpMarketConfig
 } from './config';
+import { ONE_BN, ZERO_BN } from '.';
 
 export class Fetcher {
   /**
@@ -62,11 +63,14 @@ export class Fetcher {
       mk.quoteDecimals,
     );
 
+    let lastSeqNum = ZERO_BN;
     // eslint-disable-next-line
     while (true) {
       await sleep(interval);
       const queue = await perpMarket.loadEventQueue(connection);
-      console.log(queue.getUnconsumedEvents());
+      console.log(queue.eventsSince(lastSeqNum));
+      // -1 here since queue.seqNum is the seqNum for the next (future) event
+      lastSeqNum = queue.seqNum.sub(ONE_BN);
     }
   }
 }
