@@ -523,6 +523,8 @@ MangoInstructionLayout.addVariant(
   'ChangePerpMarketParams2',
 );
 
+MangoInstructionLayout.addVariant(48, struct([]), 'UpdateMarginBasket');
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),

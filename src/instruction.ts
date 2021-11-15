@@ -1798,3 +1798,28 @@ export function makeExecutePerpTriggerOrderInstruction(
     programId,
   });
 }
+
+export function makeUpdateMarginBasketInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  openOrdersPks: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    ...openOrdersPks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
+  const data = encodeMangoInstruction({
+    UpdateMarginBasket: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}

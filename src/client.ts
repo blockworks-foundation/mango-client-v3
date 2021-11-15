@@ -88,6 +88,7 @@ import {
   makeRemoveAdvancedOrderInstruction,
   makeCreatePerpMarketInstruction,
   makeChangePerpMarketParams2Instruction,
+  makeUpdateMarginBasketInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -3394,6 +3395,19 @@ export class MangoClient {
       perpMarket.eventQueue,
       openOrders,
       new BN(orderIndex),
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async updateMarginBasket(mangoGroup: MangoGroup, mangoAccount: MangoAccount, payer: Account | WalletAdapter) {
+    const instruction = makeUpdateMarginBasketInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      mangoAccount.spotOpenOrders
     );
     const transaction = new Transaction();
     transaction.add(instruction);
