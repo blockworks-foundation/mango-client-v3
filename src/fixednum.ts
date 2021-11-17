@@ -27,7 +27,6 @@ export class I80F48 {
     .neg();
 
   data: BN; // This is i128 => array of 16 bytes
-  binaryLayout: string;
 
   constructor(data: BN) {
     if (data.lt(I80F48.MIN_BN) || data.gt(I80F48.MAX_BN)) {
@@ -35,10 +34,6 @@ export class I80F48 {
     }
 
     this.data = data;
-    this.binaryLayout = data
-      .toTwos(I80F48.MAX_SIZE)
-      .toString(2, I80F48.MAX_SIZE)
-      .replace(/-/g, '');
   }
   static fromNumber(x: number): I80F48 {
     return this.fromString(x.toString());
@@ -101,7 +96,10 @@ export class I80F48 {
     return this.data;
   }
   getBinaryLayout(): string {
-    return this.binaryLayout;
+    return this.data
+      .toTwos(I80F48.MAX_SIZE)
+      .toString(2, I80F48.MAX_SIZE)
+      .replace(/-/g, '');
   }
   add(x: I80F48): I80F48 {
     return new I80F48(this.data.add(x.getData()));
