@@ -83,6 +83,13 @@
           "decimals": 6,
           "rootKey": "9i35wTe5W9vVLUJnzuhnFZbLThYJr2NF38MhEGVHJY5T",
           "nodeKeys": ["8Q9JVDynPbyqXfnDXT31mncD7LAnoHAoSv2ywxZHjPFJ"]
+        },
+        {
+          "symbol": "MSOL",
+          "mintKey": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+          "decimals": 9,
+          "rootKey": "5AWnWCNKSzdpgyJSD3NWdarMazCGX2t8D4NU5xwSEVjC",
+          "nodeKeys": ["H9jHd5YsHN4fg17aqng2WzJGTyinMDyQ2jin3iuiXPVD"]
         }
       ],
       "oracles": [
@@ -125,6 +132,10 @@
         {
           "symbol": "ADA",
           "publicKey": "3pyn4svBbxJ9Wnn3RVeafyLWfzie6yC5eTig2S62v9SC"
+        },
+        {
+          "symbol": "MSOL",
+          "publicKey": "E4v1BBgoso9s64TQvmyownAVJbhbEPGyzA3qn4n46qj9"
         }
       ],
       "perpMarkets": [
@@ -316,6 +327,17 @@
           "bidsKey": "9HTDV2r7cQBUKL3fgcJZCUfmJsKA9qCP7nZAXyoyaQou",
           "asksKey": "EpnUJCMCQNZi45nCBoNs6Bugy67Kj3bCSTLYPfz6jkYH",
           "eventsKey": "2XHxua6ZaPKpCGUNvSvTwc9teJBmexp8iMWCLu4mtzGb"
+        },
+        {
+          "name": "MSOL/USDC",
+          "publicKey": "6oGsL2puUgySccKzn9XA9afqF217LfxP5ocq4B3LWsjy",
+          "baseSymbol": "MSOL",
+          "baseDecimals": 9,
+          "quoteDecimals": 6,
+          "marketIndex": 10,
+          "bidsKey": "8qyWhEcpuvEsdCmY1kvEnkTfgGeWHmi73Mta5jgWDTuT",
+          "asksKey": "PPnJy6No31U45SVSjWTr45R8Q73X6bNHfxdFqr2vMq3",
+          "eventsKey": "BC8Tdzz7rwvuYkJWKnPnyguva27PQP5DTxosHVQrEzg9"
         }
       ]
     },
@@ -332,72 +354,56 @@
           "mintKey": "8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN",
           "decimals": 6,
           "rootKey": "JBwwKNaqwyWVd5W22m5umAGUrqG4Lf7N6oWrtQEmBg6c",
-          "nodeKeys": [
-            "2XNwQscYHLeRaHY3ZUPfhG8pAy47f3eXazZMZK19EKPn"
-          ]
+          "nodeKeys": ["2XNwQscYHLeRaHY3ZUPfhG8pAy47f3eXazZMZK19EKPn"]
         },
         {
           "symbol": "MNGO",
           "mintKey": "Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC",
           "decimals": 6,
           "rootKey": "HfV52Z5rjY4PYxTEHiks8m6jTwxyLM24RxW3A1AFtWpn",
-          "nodeKeys": [
-            "EEUVfNXkLNCzsEmq4pS5aXpePA8i5yGfgFNaU5SbrQA8"
-          ]
+          "nodeKeys": ["EEUVfNXkLNCzsEmq4pS5aXpePA8i5yGfgFNaU5SbrQA8"]
         },
         {
           "symbol": "BTC",
           "mintKey": "3UNBZ6o52WTWwjac2kPUb4FyodhU1vFkRJheu1Sh2TvU",
           "decimals": 6,
           "rootKey": "9oZ7YDfbY3KfuVnspCvTBmKYDWbanyZH3DrM8chgk5UY",
-          "nodeKeys": [
-            "6biZhkxGKBxm2gvUXEgYS75abyS8Ayy59yeLe3h3WWS6"
-          ]
+          "nodeKeys": ["6biZhkxGKBxm2gvUXEgYS75abyS8Ayy59yeLe3h3WWS6"]
         },
         {
           "symbol": "ETH",
           "mintKey": "Cu84KB3tDL6SbFgToHMLYVDJJXdJjenNzSKikeAvzmkA",
           "decimals": 6,
           "rootKey": "CbD1bumpdddi21TZJNsGaxkEpV1pjPVdvKYyDGcNpJzz",
-          "nodeKeys": [
-            "GYVB1Ft1vWBqiDGUooyBgBdo1NiKhqbgJ9dPdRDGWq3a"
-          ]
+          "nodeKeys": ["GYVB1Ft1vWBqiDGUooyBgBdo1NiKhqbgJ9dPdRDGWq3a"]
         },
         {
           "symbol": "SOL",
           "mintKey": "So11111111111111111111111111111111111111112",
           "decimals": 9,
           "rootKey": "HCwTWCLZDeveaW7V41i5aJ2Fuq7D51iS6WDUS4occA5a",
-          "nodeKeys": [
-            "2trzMWmfbhMFu1bCKZ1axDybMPPa7SXAR1Q4JYzybuPb"
-          ]
+          "nodeKeys": ["2trzMWmfbhMFu1bCKZ1axDybMPPa7SXAR1Q4JYzybuPb"]
         },
         {
           "symbol": "SRM",
           "mintKey": "AvtB6w9xboLwA145E221vhof5TddhqsChYcx7Fy3xVMH",
           "decimals": 6,
           "rootKey": "36YZQGCXTthrAwkpEZgh1PQLh61As4gv2V6VzH2pjoeQ",
-          "nodeKeys": [
-            "aRv6uLBdSwKpeisEsXYwr5VjgopaXbFSnJkfemdspXi"
-          ]
+          "nodeKeys": ["aRv6uLBdSwKpeisEsXYwr5VjgopaXbFSnJkfemdspXi"]
         },
         {
           "symbol": "RAY",
           "mintKey": "3YFQ7UYJ7sNGpXTKBxM3bYLVxKpzVudXAe4gLExh5b3n",
           "decimals": 6,
           "rootKey": "8cogBuTCmkVDduaS9Hb92DYSEj9rpXa6TuPrCyb8ao9U",
-          "nodeKeys": [
-            "B4Vk7UbJo5sySP3zDsv5rP5kx7sUQsXqx5BxQjQdeJQ5"
-          ]
+          "nodeKeys": ["B4Vk7UbJo5sySP3zDsv5rP5kx7sUQsXqx5BxQjQdeJQ5"]
         },
         {
           "symbol": "USDT",
           "mintKey": "DAwBSXe6w9g37wdE2tCrFbho3QHKZi4PjuBytQCULap2",
           "decimals": 6,
           "rootKey": "DE9Wn6mUeTxaYo3qWdthHo4amrxSApNtmaAxcP8kyCs7",
-          "nodeKeys": [
-            "FxJN7rzcSSoUhPBD2J3e1YzJC6PWpvrZK6MFNSKJ4NqG"
-          ]
+          "nodeKeys": ["FxJN7rzcSSoUhPBD2J3e1YzJC6PWpvrZK6MFNSKJ4NqG"]
         }
       ],
       "oracles": [
