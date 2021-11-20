@@ -1790,6 +1790,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
+  /**
+   * Assumes spotMarkets contains all Markets in MangoGroup in order
+   */
   async settleAll(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -1798,12 +1801,17 @@ export class MangoClient {
   ) {
     const transactions: Transaction[] = [];
 
-    for (let i = 0; i < spotMarkets.length; i++) {
+    let j = 0;
+    for (let i = 0; i < mangoGroup.spotMarkets.length; i++) {
+      if (mangoGroup.spotMarkets[i].isEmpty()) continue;
+      const spotMarket = spotMarkets[j];
+      j++;
+
       const transaction = new Transaction();
       const openOrdersAccount = mangoAccount.spotOpenOrdersAccounts[i];
-      if (openOrdersAccount === undefined) {
-        continue;
-      } else if (
+      if (openOrdersAccount === undefined) continue;
+
+      if (
         openOrdersAccount.quoteTokenFree.toNumber() +
           openOrdersAccount['referrerRebatesAccrued'].toNumber() ===
           0 &&
@@ -1812,7 +1820,6 @@ export class MangoClient {
         continue;
       }
 
-      const spotMarket = spotMarkets[i];
       const dexSigner = await PublicKey.createProgramAddress(
         [
           spotMarket.publicKey.toBuffer(),
@@ -3402,12 +3409,16 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, additionalSigners);
   }
 
-  async updateMarginBasket(mangoGroup: MangoGroup, mangoAccount: MangoAccount, payer: Account | WalletAdapter) {
+  async updateMarginBasket(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter,
+  ) {
     const instruction = makeUpdateMarginBasketInstruction(
       this.programId,
       mangoGroup.publicKey,
       mangoAccount.publicKey,
-      mangoAccount.spotOpenOrders
+      mangoAccount.spotOpenOrders,
     );
     const transaction = new Transaction();
     transaction.add(instruction);
