@@ -111,6 +111,14 @@ export class I80F48 {
   sub(x: I80F48): I80F48 {
     return new I80F48(this.data.sub(x.getData()));
   }
+  iadd(x: I80F48): I80F48 {
+    this.data.iadd(x.getData());
+    return this;
+  }
+  isub(x: I80F48): I80F48 {
+    this.data.isub(x.getData());
+    return this;
+  }
   floor(): I80F48 {
     // Low IQ method
     return I80F48.fromBig(this.toBig().round(undefined, 0));
@@ -137,9 +145,17 @@ export class I80F48 {
   mul(x: I80F48): I80F48 {
     return new I80F48(this.data.mul(x.data).iushrn(I80F48.FRACTIONS));
   }
+  imul(x: I80F48): I80F48 {
+    this.data.imul(x.getData()).iushrn(I80F48.FRACTIONS);
+    return this;
+  }
 
   div(x: I80F48): I80F48 {
     return new I80F48(this.data.ushln(I80F48.FRACTIONS).div(x.data));
+  }
+  idiv(x: I80F48): I80F48 {
+    this.data = this.data.iushln(I80F48.FRACTIONS).div(x.data);
+    return this;
   }
 
   gt(x: I80F48): boolean {
