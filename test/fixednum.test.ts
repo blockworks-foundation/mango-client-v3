@@ -39,6 +39,51 @@ describe('fixednumTests', async () => {
         Number.MIN_SAFE_INTEGER,
       );
     });
+    it('fractions', async () => {
+      expect(I80F48.fromNumber(2.75).toNumber()).to.eq(
+        2.75,
+      );
+      expect(I80F48.fromNumber(-2.75).toNumber()).to.eq(
+        -2.75,
+      );
+      // lowest bit
+      expect(I80F48.fromNumber(Math.pow(2, -48)).getData().toNumber()).to.eq(
+        1
+      );
+      expect(I80F48.fromNumber(-Math.pow(2, -48)).getData().toNumber()).to.eq(
+        -1
+      );
+      // two lowest bits
+      expect(I80F48.fromNumber(Math.pow(2, -48) + Math.pow(2, -47)).getData().toNumber()).to.eq(
+        3
+      );
+      // rounded down
+      expect(I80F48.fromNumber(0.99 * (Math.pow(2, -48) + Math.pow(2, -47))).getData().toNumber()).to.eq(
+        2
+      );
+      expect(I80F48.fromNumber(-0.99 * (Math.pow(2, -48) + Math.pow(2, -47))).getData().toNumber()).to.eq(
+        -2
+      );
+      expect(I80F48.fromNumber(1.01 * (Math.pow(2, -48) + Math.pow(2, -47))).getData().toNumber()).to.eq(
+        3
+      );
+      expect(I80F48.fromNumber(0.99 * Math.pow(2, -48)).getData().toNumber()).to.eq(
+        0
+      );
+    });
+  });
+
+  describe('fromI64', async () => {
+    it('should create the max value', async () => {
+      expect(I80F48.fromI64(new BN(Number.MAX_SAFE_INTEGER)).toNumber()).to.eq(
+        Number.MAX_SAFE_INTEGER,
+      );
+    });
+    it('should create the min value', async () => {
+      expect(I80F48.fromI64(new BN(Number.MIN_SAFE_INTEGER)).toNumber()).to.eq(
+        Number.MIN_SAFE_INTEGER,
+      );
+    });
   });
 
   describe('fromString', async () => {
