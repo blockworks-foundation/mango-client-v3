@@ -1,4 +1,4 @@
-import { Market, OpenOrders } from '@project-serum/serum';
+import { Market, OpenOrders, Orderbook } from '@project-serum/serum';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import {
@@ -35,6 +35,7 @@ import {
   ZERO_BN,
 } from '.';
 import PerpMarket from './PerpMarket';
+import { Order } from '@project-serum/serum/lib/market';
 
 export default class MangoAccount {
   publicKey: PublicKey;
@@ -149,6 +150,23 @@ export default class MangoAccount {
     return this;
   }
 
+  async loadSpotOrdersForMarket(
+    connection: Connection,
+    market: Market,
+    marketIndex: number,
+  ): Promise<Order[]> {
+    const [bidsInfo, asksInfo] = await getMultipleAccounts(connection, [
+      market.bidsAddress,
+      market.asksAddress,
+    ]);
+
+    const bids = Orderbook.decode(market, bidsInfo.accountInfo.data);
+    const asks = Orderbook.decode(market, asksInfo.accountInfo.data);
+
+    return [...bids, ...asks].filter((o) =>
+      o.openOrdersAddress.equals(this.spotOpenOrders[marketIndex]),
+    );
+  }
   async loadOpenOrders(
     connection: Connection,
     serumDexPk: PublicKey,
