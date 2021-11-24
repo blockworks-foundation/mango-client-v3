@@ -1,11 +1,17 @@
-import * as os from 'os';
-import * as fs from 'fs';
 import { MangoClient } from './client';
-import { Account, Commitment, Connection } from '@solana/web3.js';
-import { sleep, ZERO_BN } from './utils';
+import {
+  Commitment,
+  Connection
+} from '@solana/web3.js';
+import { sleep } from './utils';
 import configFile from './ids.json';
-import { Cluster, Config } from './config';
-import BN from 'bn.js';
+import {
+  Cluster,
+  Config,
+  getPerpMarketByBaseSymbol,
+  PerpMarketConfig
+} from './config';
+import { ONE_BN, ZERO_BN } from '.';
 
 export class Fetcher {
   /**
@@ -15,8 +21,9 @@ export class Fetcher {
     const interval = process.env.INTERVAL || 5000;
     const config = new Config(configFile);
 
-    const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const groupName = process.env.GROUP || 'mango_test_v2.2';
+    // defaults to mainnet since there's more going on there
+    const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
+    const groupName = process.env.GROUP || 'mainnet.1';
     const groupIds = config.getGroup(cluster, groupName);
 
     if (!groupIds) {
@@ -25,22 +32,30 @@ export class Fetcher {
 
     const mangoProgramId = groupIds.mangoProgramId;
     const mangoGroupKey = groupIds.publicKey;
-    const payer = new Account(
-      JSON.parse(
-        process.env.KEYPAIR ||
-          fs.readFileSync(
-            os.homedir() + '/.config/solana/devnet.json',
-            'utf-8',
-          ),
-      ),
-    );
+
+    // we don't need to load a solana Account; we're not gonna be signing anything
+
     const connection = new Connection(
-      config.cluster_urls[cluster],
+      process.env.ENDPOINT_URL || config.cluster_urls[cluster],
       'processed' as Commitment,
     );
     const client = new MangoClient(connection, mangoProgramId);
     const mangoGroup = await client.getMangoGroup(mangoGroupKey);
-    const mk = groupIds.perpMarkets[0];
+
+    const marketName = process.env.MARKET || 'MNGO';
+
+    const perpMarketConfig = getPerpMarketByBaseSymbol(
+      groupIds,
+      marketName.toUpperCase(),
+    ) as PerpMarketConfig;
+
+    if (!perpMarketConfig) {
+      throw new Error(`Couldn't find market: ${marketName.toUpperCase()}`);
+    }
+
+    const marketIndex = perpMarketConfig.marketIndex;
+    const mk = groupIds.perpMarkets[marketIndex];
+
     const perpMarket = await mangoGroup.loadPerpMarket(
       connection,
       mk.marketIndex,
@@ -54,7 +69,8 @@ export class Fetcher {
       await sleep(interval);
       const queue = await perpMarket.loadEventQueue(connection);
       console.log(queue.eventsSince(lastSeqNum));
-      lastSeqNum = queue.seqNum;
+      // -1 here since queue.seqNum is the seqNum for the next (future) event
+      lastSeqNum = queue.seqNum.sub(ONE_BN);
     }
   }
 }
