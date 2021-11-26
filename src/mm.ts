@@ -377,4 +377,8 @@ async function onExit(
   process.exit();
 }
 
-mm();
+function startMarketMaker() {
+  mm().finally(() => startMarketMaker());
+}
+
+startMarketMaker();
