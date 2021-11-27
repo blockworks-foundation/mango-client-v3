@@ -4,8 +4,10 @@ import BN from 'bn.js';
 import {
   BookSide,
   BookSideLayout,
+  clamp,
   FillEvent,
   MangoAccount,
+  MangoCache,
   MetaData,
   nativeToUi,
   PerpEventQueue,
@@ -102,6 +104,39 @@ export default class PerpMarket {
 
   get tickSize() {
     return this.priceLotsToNumber(new BN(1));
+  }
+
+  /**
+   * Calculate the instantaneous funding rate using the bids and asks
+   * Reported as an hourly number
+   * Make sure `cache`, `bids` and `asks` are up to date
+   */
+  getCurrentFundingRate(
+    group: MangoGroup,
+    cache: MangoCache,
+    marketIndex: number,
+    bids: BookSide,
+    asks: BookSide,
+  ) {
+    const IMPACT_QUANTITY = new BN(100);
+    const MIN_FUNDING = -0.05;
+    const MAX_FUNDING = 0.05;
+    const bid = bids.getImpactPriceUi(IMPACT_QUANTITY);
+    const ask = asks.getImpactPriceUi(IMPACT_QUANTITY);
+    const indexPrice = group.getPriceUi(marketIndex, cache);
+
+    let diff;
+    if (bid !== undefined && ask !== undefined) {
+      const bookPrice = (bid + ask) / 2;
+      diff = clamp(bookPrice / indexPrice - 1, MIN_FUNDING, MAX_FUNDING);
+    } else if (bid !== undefined) {
+      diff = MAX_FUNDING;
+    } else if (ask !== undefined) {
+      diff = MIN_FUNDING;
+    } else {
+      diff = 0;
+    }
+    return diff / 24;
   }
 
   async loadEventQueue(connection: Connection): Promise<PerpEventQueue> {
