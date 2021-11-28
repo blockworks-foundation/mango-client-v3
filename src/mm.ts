@@ -28,6 +28,9 @@ import MangoAccount from './MangoAccount';
 import MangoGroup from './MangoGroup';
 import PerpMarket from './PerpMarket';
 
+const interval = parseInt(process.env.INTERVAL || '10000');
+const control = { isRunning: true, interval: interval };
+
 async function mm() {
   // load mango group and clients
   const config = new Config(configFile);
@@ -106,7 +109,6 @@ async function mm() {
   );
 
   const sizePerc = parseFloat(process.env.SIZE_PERC || '0.1');
-  const interval = parseInt(process.env.INTERVAL || '10000');
   const charge = parseFloat(process.env.CHARGE || '0.0010');
   const leanCoeff = parseFloat(process.env.LEAN_COEFF || '0.0005');
   const bias = parseFloat(process.env.BIAS || '0.0');
@@ -115,7 +117,6 @@ async function mm() {
 
   const spammerCharge = parseFloat(process.env.SPAMMER_CHARGE || '2'); // multiplier on charge
 
-  const control = { isRunning: true, interval: interval };
   process.on('SIGINT', function () {
     console.log('Caught keyboard interrupt. Canceling orders');
     control.isRunning = false;
@@ -126,7 +127,6 @@ async function mm() {
       mangoGroup,
       perpMarket,
       mangoAccountPk,
-      control,
     );
   });
 
@@ -350,7 +350,6 @@ async function onExit(
   mangoGroup: MangoGroup,
   perpMarket: PerpMarket,
   mangoAccountPk: PublicKey,
-  control: { isRunning: boolean; interval: number },
 ) {
   await sleep(control.interval);
   const mangoAccount = await client.getMangoAccount(
@@ -377,4 +376,20 @@ async function onExit(
   process.exit();
 }
 
-mm();
+function startMarketMaker() {
+  if (control.isRunning) {
+    mm().finally(startMarketMaker);
+  }
+}
+
+process.on('unhandledRejection', function (err, promise) {
+  console.error(
+    'Unhandled rejection (promise: ',
+    promise,
+    ', reason: ',
+    err,
+    ').',
+  );
+});
+
+startMarketMaker();

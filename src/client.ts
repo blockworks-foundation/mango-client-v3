@@ -2263,6 +2263,7 @@ export class MangoClient {
     exp: number,
     version: number,
     lmSizeShift: number,
+    baseDecimals: number,
   ) {
     const [perpMarketPk] = await PublicKey.findProgramAddress(
       [
@@ -2327,6 +2328,7 @@ export class MangoClient {
       new BN(exp),
       new BN(version),
       new BN(lmSizeShift),
+      new BN(baseDecimals),
     );
 
     const transaction = new Transaction();

@@ -144,6 +144,18 @@ export default class MangoGroup {
     );
   }
 
+  getPriceUi(tokenIndex: number, mangoCache: MangoCache): number {
+    if (tokenIndex === QUOTE_INDEX) return 1;
+
+    return (
+      mangoCache.priceCache[tokenIndex]?.price.toNumber() *
+      Math.pow(
+        10,
+        this.getTokenDecimals(tokenIndex) - this.getTokenDecimals(QUOTE_INDEX),
+      )
+    );
+  }
+
   getPriceNative(tokenIndex: number, mangoCache: MangoCache): I80F48 {
     if (tokenIndex === QUOTE_INDEX) return ONE_I80F48;
 

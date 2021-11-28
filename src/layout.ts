@@ -488,6 +488,7 @@ MangoInstructionLayout.addVariant(
     u8('exp'),
     u8('version'),
     u8('lmSizeShift'),
+    u8('baseDecimals'),
   ]),
   'CreatePerpMarket',
 );

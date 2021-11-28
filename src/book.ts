@@ -2,6 +2,7 @@ import BN from 'bn.js';
 import { PublicKey } from '@solana/web3.js';
 import { DataType } from './layout';
 import PerpMarket from './PerpMarket';
+import { ZERO_BN } from './utils';
 
 export interface PerpOrder {
   orderId: BN;
@@ -75,6 +76,20 @@ export class BookSide {
     }
   }
 
+  /**
+   * Return the ui price reached at `quantity` lots up the book;
+   * return undefined if `quantity` not on book
+   */
+  getImpactPriceUi(quantity: BN): number | undefined {
+    const s = ZERO_BN;
+    for (const order of this) {
+      s.iadd(order.sizeLots);
+      if (s.gte(quantity)) {
+        return order.price;
+      }
+    }
+    return undefined;
+  }
   getBest(): PerpOrder | undefined {
     if (this.leafCount === 0) {
       return;
