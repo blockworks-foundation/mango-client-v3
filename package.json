@@ -18,6 +18,7 @@
     "build": "tsc",
     "build-docs": "yarn typedoc src/index.ts",
     "cli": "ts-node src/cli.ts",
+    "checkMarginBaskets": "ts-node src/checkMarginBaskets.ts",
     "liquidator": "ts-node src/liquidator.ts",
     "launch-group": "ts-node test/initDevnetGroup.ts",
     "launch-realistic-group": "ts-node test/initRealisticDevnetGroup.ts",
