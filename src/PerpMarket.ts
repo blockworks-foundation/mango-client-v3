@@ -211,6 +211,7 @@ export default class PerpMarket {
     group: MangoGroup,
     perpMarketConfig: PerpMarketConfig,
   ): string {
+    const info = group.perpMarkets[perpMarketConfig.marketIndex];
     const lmi = this.liquidityMiningInfo;
     const now = Date.now() / 1000;
     const start = lmi.periodStart.toNumber();
@@ -241,6 +242,9 @@ export default class PerpMarket {
         this.lastUpdated.toNumber() * 1000,
       ).toUTCString()}`,
       `seqNum: ${this.seqNum.toString()}`,
+      `liquidationFee: ${info.liquidationFee.toString()}`,
+      `takerFee: ${info.takerFee.toString()}`,
+      `makerFee: ${info.makerFee.toString()}`,
       `feesAccrued: ${nativeToUi(this.feesAccrued.toNumber(), 6).toFixed(6)}`,
       `\n----- ${perpMarketConfig.name} Liquidity Mining Info -----`,
       `rate: ${lmi.rate.toString()}`,

@@ -818,6 +818,7 @@ export function makeCreatePerpMarketInstruction(
   exp: BN,
   version: BN,
   lmSizeShift: BN,
+  baseDecimals: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -851,6 +852,7 @@ export function makeCreatePerpMarketInstruction(
       exp,
       version,
       lmSizeShift,
+      baseDecimals,
     },
   });
 
