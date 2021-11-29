@@ -637,6 +637,10 @@
         {
           "symbol": "FTT",
           "publicKey": "6vivTRs5ZPeeXbjo7dfburfaYDWoXjBtdtuYgQRuGfu"
+        },
+        {
+          "symbol": "ADA",
+          "publicKey": "6npJ7pCBQ1YkaF7wEyu5sfDNN1aHXnvhxh1z9GySKCEs"
         }
       ],
       "perpMarkets": [
@@ -706,6 +710,17 @@
           "bidsKey": "78fRmLeyvMQ96GwJuusxN5Zn2QKbYh752GoAGc2qVE6q",
           "asksKey": "9GTHBjPNUBBWuqhYinxwqdesW8amzFBCAVS96waKkE5L",
           "eventsKey": "7rswj7FVZcMYUKxcTLndZhWBmuVNc2GuxqjuXU8KcPWv"
+        },
+        {
+          "name": "AVAX-PERP",
+          "publicKey": "FYCrDJEC1FxEtSqwvqJz1nL4wSBsBWUMuYvRHV8CTJWp",
+          "baseSymbol": "AVAX",
+          "baseDecimals": 9,
+          "quoteDecimals": 6,
+          "marketIndex": 9,
+          "bidsKey": "9J1Etaw9AbUVr3dXT3ZZweUQC5StCkTVSYG7GDdWucFy",
+          "asksKey": "CESZWBf6Yry4PmXZeX3kC5Xdc5s7VRLCt342FmSYf633",
+          "eventsKey": "4b7NqjqWoQoQh9V3dubfjkLPQVNJijwAwr7D9q6vTqqd"
         }
       ],
       "spotMarkets": [
