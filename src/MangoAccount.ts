@@ -456,7 +456,7 @@ export default class MangoAccount {
     quote: I80F48,
     healthType: HealthType,
   ): I80F48 {
-    let health = quote;
+    const health = quote;
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const w = getWeights(mangoGroup, i, healthType);
       const price = mangoCache.priceCache[i].price;
@@ -481,8 +481,8 @@ export default class MangoAccount {
     quote: I80F48,
     healthType: HealthType,
   ): { spot: I80F48; perp: I80F48 } {
-    let spotHealth = quote;
-    let perpHealth = quote;
+    const spotHealth = quote;
+    const perpHealth = quote;
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const w = getWeights(mangoGroup, i, healthType);
       const price = mangoCache.priceCache[i].price;
@@ -563,7 +563,10 @@ export default class MangoAccount {
   ): { spot: I80F48[]; perps: I80F48[]; quote: I80F48 } {
     const spot = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
     const perps = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
-    let quote = this.getNet(mangoCache.rootBankCache[QUOTE_INDEX], QUOTE_INDEX);
+    const quote = this.getNet(
+      mangoCache.rootBankCache[QUOTE_INDEX],
+      QUOTE_INDEX,
+    );
 
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const bankCache = mangoCache.rootBankCache[i];
@@ -591,9 +594,7 @@ export default class MangoAccount {
           quote.iadd(quoteFree);
         } else {
           spot[i] = asksBaseNet;
-          quote.iadd(baseLocked.mul(price))
-            .iadd(quoteFree)
-            .iadd(quoteLocked);
+          quote.iadd(baseLocked.mul(price)).iadd(quoteFree).iadd(quoteLocked);
         }
       } else {
         spot[i] = baseNet;
