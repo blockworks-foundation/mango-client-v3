@@ -318,7 +318,7 @@ export class MangoClient {
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(500);
+        await sleep(1000);
       }
     })();
     try {
@@ -391,26 +391,26 @@ export class MangoClient {
           console.log('Timed out for txid', txid);
           reject({ timeout: true });
         }, timeout);
-        try {
-          this.connection.onSignature(
-            txid,
-            (result, context) => {
-              // console.log('WS confirmed', txid, result);
-              done = true;
-              if (result.err) {
-                reject(result.err);
-              } else {
-                this.lastSlot = context?.slot;
-                resolve(result);
-              }
-            },
-            'processed',
-          );
-          // console.log('Set up WS connection', txid);
-        } catch (e) {
-          done = true;
-          console.log('WS error in setup', txid, e);
-        }
+        // try {
+        //   this.connection.onSignature(
+        //     txid,
+        //     (result, context) => {
+        //       // console.log('WS confirmed', txid, result);
+        //       done = true;
+        //       if (result.err) {
+        //         reject(result.err);
+        //       } else {
+        //         this.lastSlot = context?.slot;
+        //         resolve(result);
+        //       }
+        //     },
+        //     'processed',
+        //   );
+        //   // console.log('Set up WS connection', txid);
+        // } catch (e) {
+        //   done = true;
+        //   console.log('WS error in setup', txid, e);
+        // }
         while (!done) {
           // eslint-disable-next-line no-loop-func
           (async () => {

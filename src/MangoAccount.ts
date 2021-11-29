@@ -1,5 +1,5 @@
 import { Market, OpenOrders, Orderbook } from '@project-serum/serum';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import {
   FREE_ORDER_SLOT,
@@ -144,6 +144,29 @@ export default class MangoAccount {
   ): Promise<MangoAccount> {
     const acc = await connection.getAccountInfo(this.publicKey);
     Object.assign(this, MangoAccountLayout.decode(acc?.data));
+    if (dexProgramId) {
+      await this.loadOpenOrders(connection, dexProgramId);
+    }
+    return this;
+  }
+
+  async reloadFromSlot(
+    connection: Connection,
+    lastSlot = 0,
+    dexProgramId: PublicKey | undefined = undefined,
+  ): Promise<MangoAccount> {
+    let slot = -1;
+    let value: AccountInfo<Buffer> | null = null;
+
+    while (slot <= lastSlot) {
+      const response = await connection.getAccountInfoAndContext(
+        this.publicKey,
+      );
+      slot = response.context?.slot;
+      value = response.value;
+    }
+
+    Object.assign(this, MangoAccountLayout.decode(value?.data));
     if (dexProgramId) {
       await this.loadOpenOrders(connection, dexProgramId);
     }
