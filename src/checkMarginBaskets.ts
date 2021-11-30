@@ -53,11 +53,24 @@ async function check() {
         const notInBasketAndNotEmpty =
           !mangoAccount.inMarginBasket[i] && !isEmpty;
 
+        if (inBasketAndEmpty || notInBasketAndNotEmpty) {
+          console.log(
+            mangoAccount.publicKey.toString(),
+            mangoAccount.name,
+            inBasketAndEmpty,
+            notInBasketAndNotEmpty,
+            oo.quoteTokenTotal.toString(),
+            oo.baseTokenTotal.toString(),
+            oo['referrerRebatesAccrued'].toString(),
+            freeSlotBitsStr,
+          );
+        }
+
         return inBasketAndEmpty || notInBasketAndNotEmpty;
       }
     });
     if (shouldFix) {
-      //await client.updateMarginBasket(group, mangoAccount, payer);
+      // await client.updateMarginBasket(group, mangoAccount, payer);
       total++;
     }
   }
