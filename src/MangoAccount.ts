@@ -1,5 +1,5 @@
 import { Market, OpenOrders, Orderbook } from '@project-serum/serum';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import {
   FREE_ORDER_SLOT,
@@ -144,6 +144,29 @@ export default class MangoAccount {
   ): Promise<MangoAccount> {
     const acc = await connection.getAccountInfo(this.publicKey);
     Object.assign(this, MangoAccountLayout.decode(acc?.data));
+    if (dexProgramId) {
+      await this.loadOpenOrders(connection, dexProgramId);
+    }
+    return this;
+  }
+
+  async reloadFromSlot(
+    connection: Connection,
+    lastSlot = 0,
+    dexProgramId: PublicKey | undefined = undefined,
+  ): Promise<MangoAccount> {
+    let slot = -1;
+    let value: AccountInfo<Buffer> | null = null;
+
+    while (slot <= lastSlot) {
+      const response = await connection.getAccountInfoAndContext(
+        this.publicKey,
+      );
+      slot = response.context?.slot;
+      value = response.value;
+    }
+
+    Object.assign(this, MangoAccountLayout.decode(value?.data));
     if (dexProgramId) {
       await this.loadOpenOrders(connection, dexProgramId);
     }
@@ -456,7 +479,7 @@ export default class MangoAccount {
     quote: I80F48,
     healthType: HealthType,
   ): I80F48 {
-    let health = quote;
+    const health = quote;
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const w = getWeights(mangoGroup, i, healthType);
       const price = mangoCache.priceCache[i].price;
@@ -481,8 +504,8 @@ export default class MangoAccount {
     quote: I80F48,
     healthType: HealthType,
   ): { spot: I80F48; perp: I80F48 } {
-    let spotHealth = quote;
-    let perpHealth = quote;
+    const spotHealth = quote;
+    const perpHealth = quote;
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const w = getWeights(mangoGroup, i, healthType);
       const price = mangoCache.priceCache[i].price;
@@ -563,7 +586,10 @@ export default class MangoAccount {
   ): { spot: I80F48[]; perps: I80F48[]; quote: I80F48 } {
     const spot = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
     const perps = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
-    let quote = this.getNet(mangoCache.rootBankCache[QUOTE_INDEX], QUOTE_INDEX);
+    const quote = this.getNet(
+      mangoCache.rootBankCache[QUOTE_INDEX],
+      QUOTE_INDEX,
+    );
 
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const bankCache = mangoCache.rootBankCache[i];
@@ -591,9 +617,7 @@ export default class MangoAccount {
           quote.iadd(quoteFree);
         } else {
           spot[i] = asksBaseNet;
-          quote.iadd(baseLocked.mul(price))
-            .iadd(quoteFree)
-            .iadd(quoteLocked);
+          quote.iadd(baseLocked.mul(price)).iadd(quoteFree).iadd(quoteLocked);
         }
       } else {
         spot[i] = baseNet;

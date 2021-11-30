@@ -13,7 +13,6 @@ import {
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import {
-  awaitTransactionSignatureConfirmation,
   createAccountInstruction,
   createSignerKeyAndNonce,
   createTokenAccountInstructions,
@@ -33,7 +32,6 @@ import {
   MangoCache,
   MangoCacheLayout,
   MangoGroupLayout,
-  MAX_NUM_IN_MARGIN_BASKET,
   NodeBankLayout,
   PerpEventLayout,
   PerpEventQueueHeaderLayout,
@@ -123,10 +121,12 @@ export const getUnixTs = () => {
 export class MangoClient {
   connection: Connection;
   programId: PublicKey;
+  lastSlot: number;
 
   constructor(connection: Connection, programId: PublicKey) {
     this.connection = connection;
     this.programId = programId;
+    this.lastSlot = 0;
   }
 
   async sendTransactions(
@@ -250,13 +250,12 @@ export class MangoClient {
     })();
 
     try {
-      await awaitTransactionSignatureConfirmation(
+      await this.awaitTransactionSignatureConfirmation(
         txid,
         timeout,
-        this.connection,
         confirmLevel,
       );
-    } catch (err) {
+    } catch (err: any) {
       if (err.timeout) {
         throw new Error('Timed out awaiting confirmation on transaction');
       }
@@ -319,17 +318,16 @@ export class MangoClient {
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(500);
+        await sleep(1000);
       }
     })();
     try {
-      await awaitTransactionSignatureConfirmation(
+      await this.awaitTransactionSignatureConfirmation(
         txid,
         timeout,
-        this.connection,
         confirmLevel,
       );
-    } catch (err) {
+    } catch (err: any) {
       if (err.timeout) {
         throw new Error('Timed out awaiting confirmation on transaction');
       }
@@ -365,6 +363,96 @@ export class MangoClient {
 
     // console.log('Latency', txid, getUnixTs() - startTime);
     return txid;
+  }
+
+  async awaitTransactionSignatureConfirmation(
+    txid: TransactionSignature,
+    timeout: number,
+    confirmLevel: TransactionConfirmationStatus,
+  ) {
+    let done = false;
+
+    const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] =
+      ['finalized'];
+
+    if (confirmLevel === 'confirmed') {
+      confirmLevels.push('confirmed');
+    } else if (confirmLevel === 'processed') {
+      confirmLevels.push('confirmed');
+      confirmLevels.push('processed');
+    }
+    const result = await new Promise((resolve, reject) => {
+      (async () => {
+        setTimeout(() => {
+          if (done) {
+            return;
+          }
+          done = true;
+          console.log('Timed out for txid', txid);
+          reject({ timeout: true });
+        }, timeout);
+        // try {
+        //   this.connection.onSignature(
+        //     txid,
+        //     (result, context) => {
+        //       // console.log('WS confirmed', txid, result);
+        //       done = true;
+        //       if (result.err) {
+        //         reject(result.err);
+        //       } else {
+        //         this.lastSlot = context?.slot;
+        //         resolve(result);
+        //       }
+        //     },
+        //     'processed',
+        //   );
+        //   // console.log('Set up WS connection', txid);
+        // } catch (e) {
+        //   done = true;
+        //   console.log('WS error in setup', txid, e);
+        // }
+        while (!done) {
+          // eslint-disable-next-line no-loop-func
+          (async () => {
+            try {
+              const response = await this.connection.getSignatureStatuses([
+                txid,
+              ]);
+              this.lastSlot = response?.context?.slot;
+              const result = response && response.value[0];
+              if (!done) {
+                if (!result) {
+                  // console.log('REST null result for', txid, result);
+                } else if (result.err) {
+                  console.log('REST error for', txid, result);
+                  done = true;
+                  reject(result.err);
+                } else if (
+                  !(
+                    result.confirmations ||
+                    confirmLevels.includes(result.confirmationStatus)
+                  )
+                ) {
+                  console.log('REST not confirmed', txid, result);
+                } else {
+                  console.log('REST confirmed', txid, result);
+                  done = true;
+                  resolve(result);
+                }
+              }
+            } catch (e) {
+              if (!done) {
+                console.log('REST connection error: txid', txid, e);
+              }
+            }
+          })();
+          await sleep(300);
+        }
+      })();
+    });
+
+    done = true;
+    return result;
   }
 
   /**
