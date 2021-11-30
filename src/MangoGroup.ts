@@ -116,7 +116,7 @@ export default class MangoGroup {
    */
   getTokenDecimals(tokenIndex: number): number {
     const tokenInfo = this.tokens[tokenIndex];
-    if (tokenInfo.isEmpty()) {
+    if (tokenInfo.decimals == 0) {
       if (this.oracles[tokenIndex].equals(zeroKey)) {
         throw new Error('No oracle for this tokenIndex');
       } else {
