@@ -31,6 +31,7 @@ import {
   GroupConfig,
   PerpMarketConfig,
   PerpTriggerOrder,
+  sleep,
   TokenConfig,
   ZERO_BN,
 } from '.';
@@ -164,6 +165,7 @@ export default class MangoAccount {
       );
       slot = response.context?.slot;
       value = response.value;
+      await sleep(250);
     }
 
     Object.assign(this, MangoAccountLayout.decode(value?.data));
