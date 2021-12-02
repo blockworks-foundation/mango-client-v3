@@ -256,7 +256,7 @@ export class MangoClient {
       }
     } catch (err: any) {
       if (err.timeout) {
-        throw new Error('Timed out awaiting confirmation on transaction');
+        throw err;
       }
       let simulateResult: SimulatedTransactionResponse | null = null;
       try {
@@ -328,7 +328,7 @@ export class MangoClient {
       }
     } catch (err: any) {
       if (err.timeout) {
-        throw new Error(err);
+        throw err;
       }
       let simulateResult: SimulatedTransactionResponse | null = null;
       try {
