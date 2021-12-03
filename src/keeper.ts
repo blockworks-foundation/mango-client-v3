@@ -41,7 +41,7 @@ const consumeEventsInterval = parseInt(
   process.env.CONSUME_EVENTS_INTERVAL || '2000',
 );
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '10');
-const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '5');
+const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const consumeEvents = process.env.CONSUME_EVENTS
   ? process.env.CONSUME_EVENTS === 'true'
   : true;
