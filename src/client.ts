@@ -381,7 +381,7 @@ export class MangoClient {
       confirmLevels.push('confirmed');
       confirmLevels.push('processed');
     }
-    let socketId;
+    // let socketId;
 
     const result = await new Promise((resolve, reject) => {
       (async () => {
@@ -393,24 +393,24 @@ export class MangoClient {
           console.log('Timed out for txid', txid);
           reject({ timeout: true });
         }, timeout);
-        try {
-          socketId = this.connection.onSignature(
-            txid,
-            (result, context) => {
-              done = true;
-              if (result.err) {
-                reject(result.err);
-              } else {
-                this.lastSlot = context?.slot;
-                resolve(result);
-              }
-            },
-            'processed',
-          );
-        } catch (e) {
-          done = true;
-          console.log('WS error in setup', txid, e);
-        }
+        // try {
+        //   socketId = this.connection.onSignature(
+        //     txid,
+        //     (result, context) => {
+        //       done = true;
+        //       if (result.err) {
+        //         reject(result.err);
+        //       } else {
+        //         this.lastSlot = context?.slot;
+        //         resolve(result);
+        //       }
+        //     },
+        //     'processed',
+        //   );
+        // } catch (e) {
+        //   done = true;
+        //   console.log('WS error in setup', txid, e);
+        // }
         while (!done) {
           // eslint-disable-next-line no-loop-func
           (async () => {
@@ -453,9 +453,9 @@ export class MangoClient {
       })();
     });
 
-    if (socketId) {
-      this.connection.removeAccountChangeListener(socketId);
-    }
+    // if (socketId) {
+    //   this.connection.removeAccountChangeListener(socketId);
+    // }
 
     done = true;
     return result;
