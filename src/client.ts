@@ -457,7 +457,7 @@ export class MangoClient {
       try {
         console.log('Cancelling subscription', subscriptionId);
 
-        await this.connection.removeSignatureListener(subscriptionId);
+        this.connection.removeSignatureListener(subscriptionId);
       } catch (e) {
         console.log('WS error in cleanup', e);
       }
