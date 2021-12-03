@@ -1,6 +1,6 @@
 {
   "name": "@blockworks-foundation/mango-client",
-  "version": "3.2.10",
+  "version": "3.2.11",
   "description": "Client to interact with the Mango program on Solana",
   "main": "lib/src/index.js",
   "types": "lib/src/index.d.ts",
