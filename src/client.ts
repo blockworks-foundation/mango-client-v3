@@ -418,6 +418,8 @@ export class MangoClient {
               const response = await this.connection.getSignatureStatuses([
                 txid,
               ]);
+              console.log('Got signature status', response);
+
               const result = response && response.value[0];
               if (!done) {
                 if (!result) {
