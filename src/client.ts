@@ -216,7 +216,7 @@ export class MangoClient {
     });
 
     const rawTransaction = transaction.serialize();
-    const startTime = getUnixTs();
+    // const startTime = getUnixTs();
     if (postSignTxCallback) {
       try {
         postSignTxCallback();
@@ -237,17 +237,17 @@ export class MangoClient {
     );
 
     let done = false;
-    (async () => {
-      // TODO - make sure this works well on mainnet
-      await sleep(1000);
-      while (!done && getUnixTs() - startTime < timeout / 1000) {
-        console.log(new Date().toUTCString(), ' sending tx ', txid);
-        this.connection.sendRawTransaction(rawTransaction, {
-          skipPreflight: true,
-        });
-        await sleep(2000);
-      }
-    })();
+    // (async () => {
+    //   // TODO - make sure this works well on mainnet
+    //   await sleep(2000);
+    //   while (!done && getUnixTs() - startTime < timeout / 1000) {
+    //     // console.log(new Date().toUTCString(), ' sending tx ', txid);
+    //     this.connection.sendRawTransaction(rawTransaction, {
+    //       skipPreflight: true,
+    //     });
+    //     await sleep(2000);
+    //   }
+    // })();
 
     try {
       await this.awaitTransactionSignatureConfirmation(
@@ -381,7 +381,7 @@ export class MangoClient {
       confirmLevels.push('confirmed');
       confirmLevels.push('processed');
     }
-    // let socketId;
+    let subscriptionId;
 
     const result = await new Promise((resolve, reject) => {
       (async () => {
@@ -390,27 +390,28 @@ export class MangoClient {
             return;
           }
           done = true;
-          console.log('Timed out for txid', txid);
+          console.log('Timed out for txid: ', txid);
           reject({ timeout: true });
         }, timeout);
-        // try {
-        //   socketId = this.connection.onSignature(
-        //     txid,
-        //     (result, context) => {
-        //       done = true;
-        //       if (result.err) {
-        //         reject(result.err);
-        //       } else {
-        //         this.lastSlot = context?.slot;
-        //         resolve(result);
-        //       }
-        //     },
-        //     'processed',
-        //   );
-        // } catch (e) {
-        //   done = true;
-        //   console.log('WS error in setup', txid, e);
-        // }
+        try {
+          subscriptionId = this.connection.onSignature(
+            txid,
+            (result, context) => {
+              subscriptionId = undefined;
+              done = true;
+              if (result.err) {
+                reject(result.err);
+              } else {
+                this.lastSlot = context?.slot;
+                resolve(result);
+              }
+            },
+            'processed',
+          );
+        } catch (e) {
+          done = true;
+          console.log('WS error in setup', txid, e);
+        }
         while (!done) {
           // eslint-disable-next-line no-loop-func
           (async () => {
@@ -418,7 +419,6 @@ export class MangoClient {
               const response = await this.connection.getSignatureStatuses([
                 txid,
               ]);
-              console.log('Got signature status', response);
 
               const result = response && response.value[0];
               if (!done) {
@@ -453,9 +453,15 @@ export class MangoClient {
       })();
     });
 
-    // if (socketId) {
-    //   this.connection.removeAccountChangeListener(socketId);
-    // }
+    if (subscriptionId) {
+      try {
+        console.log('Cancelling subscription', subscriptionId);
+
+        await this.connection.removeSignatureListener(subscriptionId);
+      } catch (e) {
+        console.log('WS error in cleanup', e);
+      }
+    }
 
     done = true;
     return result;
