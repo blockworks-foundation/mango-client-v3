@@ -216,7 +216,7 @@ export class MangoClient {
     });
 
     const rawTransaction = transaction.serialize();
-    // const startTime = getUnixTs();
+    const startTime = getUnixTs();
     if (postSignTxCallback) {
       try {
         postSignTxCallback();
@@ -237,17 +237,17 @@ export class MangoClient {
     );
 
     let done = false;
-    // (async () => {
-    //   // TODO - make sure this works well on mainnet
-    //   await sleep(2000);
-    //   while (!done && getUnixTs() - startTime < timeout / 1000) {
-    //     // console.log(new Date().toUTCString(), ' sending tx ', txid);
-    //     this.connection.sendRawTransaction(rawTransaction, {
-    //       skipPreflight: true,
-    //     });
-    //     await sleep(2000);
-    //   }
-    // })();
+    (async () => {
+      // TODO - make sure this works well on mainnet
+      await sleep(2000);
+      while (!done && getUnixTs() - startTime < timeout / 1000) {
+        // console.log(new Date().toUTCString(), ' sending tx ', txid);
+        this.connection.sendRawTransaction(rawTransaction, {
+          skipPreflight: true,
+        });
+        await sleep(2000);
+      }
+    })();
 
     try {
       await this.awaitTransactionSignatureConfirmation(
