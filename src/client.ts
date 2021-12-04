@@ -229,12 +229,12 @@ export class MangoClient {
       { skipPreflight: true },
     );
 
-    console.log(
-      'Started awaiting confirmation for',
-      txid,
-      'size:',
-      rawTransaction.length,
-    );
+    // console.log(
+    //   'Started awaiting confirmation for',
+    //   txid,
+    //   'size:',
+    //   rawTransaction.length,
+    // );
 
     let done = false;
     (async () => {
@@ -437,7 +437,7 @@ export class MangoClient {
                   console.log('REST not confirmed', txid, result);
                 } else {
                   this.lastSlot = response?.context?.slot;
-                  console.log('REST confirmed', txid, result);
+                  // console.log('REST confirmed', txid, result);
                   done = true;
                   resolve(result);
                 }
@@ -454,13 +454,9 @@ export class MangoClient {
     });
 
     if (subscriptionId) {
-      try {
-        console.log('Cancelling subscription', subscriptionId);
-
-        this.connection.removeSignatureListener(subscriptionId);
-      } catch (e) {
+      this.connection.removeSignatureListener(subscriptionId).catch((e) => {
         console.log('WS error in cleanup', e);
-      }
+      });
     }
 
     done = true;
