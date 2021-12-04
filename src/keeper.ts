@@ -157,7 +157,7 @@ async function processConsumeEvents(
   perpMarkets: PerpMarket[],
 ) {
   try {
-    console.log('processConsumeEvents');
+    // console.log('processConsumeEvents');
 
     const eventQueuePks = perpMarkets.map((mkt) => mkt.eventQueue);
     const eventQueueAccts = await getMultipleAccounts(
