@@ -237,15 +237,17 @@ export class MangoClient {
     // );
 
     let done = false;
+    let retrySleep = 1500;
+
     (async () => {
       // TODO - make sure this works well on mainnet
-      await sleep(2000);
       while (!done && getUnixTs() - startTime < timeout / 1000) {
+        await sleep(retrySleep);
         // console.log(new Date().toUTCString(), ' sending tx ', txid);
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(2000);
+        retrySleep = retrySleep * 2;
       }
     })();
 
@@ -412,8 +414,10 @@ export class MangoClient {
           done = true;
           console.log('WS error in setup', txid, e);
         }
+        let retrySleep = 200;
         while (!done) {
           // eslint-disable-next-line no-loop-func
+          await sleep(retrySleep);
           (async () => {
             try {
               const response = await this.connection.getSignatureStatuses([
@@ -437,7 +441,7 @@ export class MangoClient {
                   console.log('REST not confirmed', txid, result);
                 } else {
                   this.lastSlot = response?.context?.slot;
-                  // console.log('REST confirmed', txid, result);
+                  console.log('REST confirmed', txid, result);
                   done = true;
                   resolve(result);
                 }
@@ -448,7 +452,9 @@ export class MangoClient {
               }
             }
           })();
-          await sleep(300);
+          if (retrySleep <= 1600) {
+            retrySleep = retrySleep * 2;
+          }
         }
       })();
     });
