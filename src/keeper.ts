@@ -23,7 +23,7 @@ import {
 } from './instruction';
 import BN from 'bn.js';
 import { PerpEventQueueLayout } from './layout';
-import { MangoGroup, PerpMarket } from '.';
+import { MangoGroup, PerpMarket, promiseUndef } from '.';
 import PerpEventQueue from './PerpEventQueue';
 
 let lastRootBankCacheUpdate = 0;
@@ -182,31 +182,30 @@ async function processConsumeEvents(
       },
     );
 
-    for (let i = 0; i < perpMktAndEventQueue.length; i++) {
-      const { perpMarket, eventQueue } = perpMktAndEventQueue[i];
-
-      const events = eventQueue.getUnconsumedEvents();
-      if (events.length === 0) {
-        // console.log('No events to consume');
-        continue;
-      }
-
-      const accounts: Set<string> = new Set();
-      for (const event of events) {
-        if (event.fill) {
-          accounts.add(event.fill.maker.toBase58());
-          accounts.add(event.fill.taker.toBase58());
-        } else if (event.out) {
-          accounts.add(event.out.owner.toBase58());
+    const promises: Promise<string | void>[] = perpMktAndEventQueue.map(
+      ({ perpMarket, eventQueue }) => {
+        const events = eventQueue.getUnconsumedEvents();
+        if (events.length === 0) {
+          // console.log('No events to consume');
+          return promiseUndef();
         }
 
-        // Limit unique accounts to first 20 or 21
-        if (accounts.size >= maxUniqueAccounts) {
-          break;
+        const accounts: Set<string> = new Set();
+        for (const event of events) {
+          if (event.fill) {
+            accounts.add(event.fill.maker.toBase58());
+            accounts.add(event.fill.taker.toBase58());
+          } else if (event.out) {
+            accounts.add(event.out.owner.toBase58());
+          }
+
+          // Limit unique accounts to first 20 or 21
+          if (accounts.size >= maxUniqueAccounts) {
+            break;
+          }
         }
-      }
-      if (accounts.size) {
-        await client
+
+        return client
           .consumeEvents(
             mangoGroup,
             perpMarket,
@@ -222,12 +221,18 @@ async function processConsumeEvents(
                 events.length
               } events ${perpMarket.publicKey.toBase58()}`,
             );
+            console.log(
+              'EVENTS:',
+              events.map((e) => e?.fill?.seqNum.toString()),
+            );
           })
           .catch((err) => {
             console.error('Error consuming events', err);
           });
-      }
-    }
+      },
+    );
+
+    await Promise.all(promises);
   } finally {
     setTimeout(
       processConsumeEvents,

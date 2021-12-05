@@ -570,7 +570,7 @@ yargs(hideBin(process.argv)).command(
     const realm = new PublicKey(args.realm as string);
     const tokenAccount = new PublicKey(args.token_account as string);
     const owner = new PublicKey(args.owner as string);
-    const [address, nonce] = await PublicKey.findProgramAddress(
+    const [address] = await PublicKey.findProgramAddress(
       [
         Buffer.from('token-governance', 'utf-8'),
         realm.toBuffer(),
