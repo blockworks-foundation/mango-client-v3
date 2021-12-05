@@ -206,7 +206,7 @@ async function processConsumeEvents(
         }
       }
       if (accounts.size) {
-        client
+        await client
           .consumeEvents(
             mangoGroup,
             perpMarket,
