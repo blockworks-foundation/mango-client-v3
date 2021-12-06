@@ -202,12 +202,20 @@ export class MangoClient {
   }
 
   // TODO - switch Account to Keypair and switch off setSigners due to deprecated
+  /**
+   * Send a transaction using the Solana Web3.js connection on the mango client
+   *
+   * @param transaction
+   * @param payer
+   * @param additionalSigners
+   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Defaults to 30000ms. Passing null will disable the transaction confirmation check and always return success.
+   * @param postSignTxCallback Callback to be called after the transaction is signed but before it's sent.
+   */
   async sendTransaction(
     transaction: Transaction,
     payer: Account | WalletAdapter | Keypair,
     additionalSigners: Account[],
-    timeout = 30000,
-    // @ts-ignore
+    timeout: number | null = 30000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
     postSignTxCallback?: any,
   ): Promise<TransactionSignature> {
@@ -231,16 +239,18 @@ export class MangoClient {
       { skipPreflight: true },
     );
 
-    // console.log(
-    //   'Started awaiting confirmation for',
-    //   txid,
-    //   'size:',
-    //   rawTransaction.length,
-    // );
+    if (!timeout) return txid;
+
+    console.log(
+      'Started awaiting confirmation for',
+      txid,
+      'size:',
+      rawTransaction.length,
+    );
 
     let done = false;
-    let retrySleep = 1500;
 
+    let retrySleep = 1500;
     (async () => {
       // TODO - make sure this works well on mainnet
       while (!done && getUnixTs() - startTime < timeout / 1000) {
@@ -1090,7 +1100,7 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(consumeEventsInstruction);
 
-    return await this.sendTransaction(transaction, payer, [], 15000);
+    return await this.sendTransaction(transaction, payer, [], null);
   }
 
   /**

@@ -160,8 +160,6 @@ async function processConsumeEvents(
   perpMarkets: PerpMarket[],
 ) {
   try {
-    // console.log('processConsumeEvents');
-
     const eventQueuePks = perpMarkets.map((mkt) => mkt.eventQueue);
     const eventQueueAccts = await getMultipleAccounts(
       connection,
@@ -232,7 +230,7 @@ async function processConsumeEvents(
       },
     );
 
-    await Promise.all(promises);
+    Promise.all(promises);
   } finally {
     setTimeout(
       processConsumeEvents,
