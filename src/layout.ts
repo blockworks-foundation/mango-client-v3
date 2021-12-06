@@ -524,7 +524,12 @@ MangoInstructionLayout.addVariant(
   'ChangePerpMarketParams2',
 );
 
-MangoInstructionLayout.addVariant(48, struct([]), 'UpdateMarginBasket');
+MangoInstructionLayout.addVariant(48, struct([]), 'CloseMangoAccount');
+MangoInstructionLayout.addVariant(49, struct([]), 'CloseSpotOpenOrders');
+MangoInstructionLayout.addVariant(50, struct([]), 'CloseAdvancedOrders');
+MangoInstructionLayout.addVariant(51, struct([]), 'CreateDustAccount');
+MangoInstructionLayout.addVariant(52, struct([]), 'ResolveDust');
+MangoInstructionLayout.addVariant(53, struct([]), 'UpdateMarginBasket');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore

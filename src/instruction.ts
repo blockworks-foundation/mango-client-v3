@@ -1801,21 +1801,141 @@ export function makeExecutePerpTriggerOrderInstruction(
   });
 }
 
-export function makeUpdateMarginBasketInstruction(
+export function makeCloseMangoAccountInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   mangoAccountPk: PublicKey,
-  openOrdersPks: PublicKey[],
+  ownerPk: PublicKey,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    CloseMangoAccount: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeCloseSpotOpenOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  dexProgramPk: PublicKey,
+  openOrdersPk: PublicKey,
+  spotMarketPk: PublicKey,
+  signerPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramPk },
+    { isSigner: false, isWritable: true, pubkey: openOrdersPk },
+    { isSigner: false, isWritable: false, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    CloseSpotOpenOrders: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeCloseAdvancedOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  advancedOrdersPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: advancedOrdersPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    CloseAdvancedOrders: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeCreateDustAccountInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  payerPK: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: payerPK },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+  ];
+
+  const data = encodeMangoInstruction({
+    CreateDustAccount: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeResolveDustInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  dustAccountPk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBankPk: PublicKey,
+  mangoCachePk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: dustAccountPk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+
+  ];
+
+  const data = encodeMangoInstruction({
+    ResolveDust: {},
     ...openOrdersPks.map((pubkey) => ({
       isSigner: false,
       isWritable: true,
       pubkey,
     })),
   ];
+    
+export function makeUpdateMarginBasketInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  openOrdersPks: PublicKey[],
+): TransactionInstruction {
   const data = encodeMangoInstruction({
     UpdateMarginBasket: {},
   });
