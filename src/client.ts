@@ -110,6 +110,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
+import { TimeoutError } from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -206,6 +207,7 @@ export class MangoClient {
     payer: Account | WalletAdapter | Keypair,
     additionalSigners: Account[],
     timeout = 30000,
+    // @ts-ignore
     confirmLevel: TransactionConfirmationStatus = 'processed',
     postSignTxCallback?: any,
   ): Promise<TransactionSignature> {
@@ -247,7 +249,9 @@ export class MangoClient {
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        retrySleep = retrySleep * 2;
+        if (retrySleep <= 6000) {
+          retrySleep = retrySleep * 2;
+        }
       }
     })();
 
@@ -259,7 +263,7 @@ export class MangoClient {
       );
     } catch (err: any) {
       if (err.timeout) {
-        throw err;
+        throw new TimeoutError({ txid });
       }
       let simulateResult: SimulatedTransactionResponse | null = null;
       try {
@@ -288,7 +292,7 @@ export class MangoClient {
       done = true;
     }
 
-    // console.log('Latency', txid, getUnixTs() - startTime);
+    console.log('Latency', txid, getUnixTs() - startTime);
     return txid;
   }
 
@@ -1086,7 +1090,7 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(consumeEventsInstruction);
 
-    return await this.sendTransaction(transaction, payer, []);
+    return await this.sendTransaction(transaction, payer, [], 15000);
   }
 
   /**
