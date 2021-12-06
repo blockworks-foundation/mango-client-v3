@@ -116,7 +116,7 @@ export default class MangoGroup {
    */
   getTokenDecimals(tokenIndex: number): number {
     const tokenInfo = this.tokens[tokenIndex];
-    if (tokenInfo.isEmpty()) {
+    if (tokenInfo.decimals == 0) {
       if (this.oracles[tokenIndex].equals(zeroKey)) {
         throw new Error('No oracle for this tokenIndex');
       } else {
@@ -141,6 +141,18 @@ export default class MangoGroup {
 
     return I80F48.fromBig(
       mangoCache.priceCache[tokenIndex]?.price.toBig().mul(decimalAdj),
+    );
+  }
+
+  getPriceUi(tokenIndex: number, mangoCache: MangoCache): number {
+    if (tokenIndex === QUOTE_INDEX) return 1;
+
+    return (
+      mangoCache.priceCache[tokenIndex]?.price.toNumber() *
+      Math.pow(
+        10,
+        this.getTokenDecimals(tokenIndex) - this.getTokenDecimals(QUOTE_INDEX),
+      )
     );
   }
 

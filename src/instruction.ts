@@ -818,6 +818,7 @@ export function makeCreatePerpMarketInstruction(
   exp: BN,
   version: BN,
   lmSizeShift: BN,
+  baseDecimals: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -851,6 +852,7 @@ export function makeCreatePerpMarketInstruction(
       exp,
       version,
       lmSizeShift,
+      baseDecimals,
     },
   });
 
@@ -1921,6 +1923,21 @@ export function makeResolveDustInstruction(
 
   const data = encodeMangoInstruction({
     ResolveDust: {},
+    ...openOrdersPks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
+    
+export function makeUpdateMarginBasketInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  openOrdersPks: PublicKey[],
+): TransactionInstruction {
+  const data = encodeMangoInstruction({
+    UpdateMarginBasket: {},
   });
   return new TransactionInstruction({
     keys,

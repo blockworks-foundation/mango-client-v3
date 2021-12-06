@@ -1,12 +1,11 @@
-import { Market, OpenOrders } from '@project-serum/serum';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Market, OpenOrders, Orderbook } from '@project-serum/serum';
+import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
 import {
   FREE_ORDER_SLOT,
   MangoAccountLayout,
   MangoCache,
   MAX_PAIRS,
-  MAX_PERP_OPEN_ORDERS,
   MetaData,
   QUOTE_INDEX,
   RootBankCache,
@@ -32,10 +31,12 @@ import {
   GroupConfig,
   PerpMarketConfig,
   PerpTriggerOrder,
+  sleep,
   TokenConfig,
   ZERO_BN,
 } from '.';
 import PerpMarket from './PerpMarket';
+import { Order } from '@project-serum/serum/lib/market';
 
 export default class MangoAccount {
   publicKey: PublicKey;
@@ -82,6 +83,59 @@ export default class MangoAccount {
       : '';
   }
 
+  getLiquidationPrice(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    oracleIndex: number,
+  ): I80F48 | undefined {
+    const { spot, perps, quote } = this.getHealthComponents(
+      mangoGroup,
+      mangoCache,
+    );
+
+    let partialHealth = quote;
+    let weightedAsset = ZERO_I80F48;
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      const w = getWeights(mangoGroup, i, 'Maint');
+      if (i === oracleIndex) {
+        const weightedSpot = spot[i].mul(
+          spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight,
+        );
+        const weightedPerps = perps[i].mul(
+          perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight,
+        );
+        weightedAsset = weightedSpot.add(weightedPerps).neg();
+      } else {
+        const price = mangoCache.priceCache[i].price;
+        const spotHealth = spot[i]
+          .mul(price)
+          .mul(spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight);
+        const perpHealth = perps[i]
+          .mul(price)
+          .mul(perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight);
+        partialHealth = partialHealth.add(spotHealth).add(perpHealth);
+      }
+    }
+
+    if (weightedAsset.isZero()) {
+      return undefined;
+    }
+    const liqPrice = partialHealth.div(weightedAsset);
+    if (liqPrice.isNeg()) {
+      return undefined;
+    }
+    return liqPrice.mul(
+      // adjust for decimals in the price
+      I80F48.fromNumber(
+        Math.pow(
+          10,
+          mangoGroup.tokens[oracleIndex].decimals -
+            mangoGroup.tokens[QUOTE_INDEX].decimals,
+        ),
+      ),
+    );
+  }
+
   hasAnySpotOrders(): boolean {
     return this.inMarginBasket.some((b) => b);
   }
@@ -97,6 +151,47 @@ export default class MangoAccount {
     return this;
   }
 
+  async reloadFromSlot(
+    connection: Connection,
+    lastSlot = 0,
+    dexProgramId: PublicKey | undefined = undefined,
+  ): Promise<MangoAccount> {
+    let slot = -1;
+    let value: AccountInfo<Buffer> | null = null;
+
+    while (slot <= lastSlot) {
+      const response = await connection.getAccountInfoAndContext(
+        this.publicKey,
+      );
+      slot = response.context?.slot;
+      value = response.value;
+      await sleep(250);
+    }
+
+    Object.assign(this, MangoAccountLayout.decode(value?.data));
+    if (dexProgramId) {
+      await this.loadOpenOrders(connection, dexProgramId);
+    }
+    return this;
+  }
+
+  async loadSpotOrdersForMarket(
+    connection: Connection,
+    market: Market,
+    marketIndex: number,
+  ): Promise<Order[]> {
+    const [bidsInfo, asksInfo] = await getMultipleAccounts(connection, [
+      market.bidsAddress,
+      market.asksAddress,
+    ]);
+
+    const bids = Orderbook.decode(market, bidsInfo.accountInfo.data);
+    const asks = Orderbook.decode(market, asksInfo.accountInfo.data);
+
+    return [...bids, ...asks].filter((o) =>
+      o.openOrdersAddress.equals(this.spotOpenOrders[marketIndex]),
+    );
+  }
   async loadOpenOrders(
     connection: Connection,
     serumDexPk: PublicKey,
@@ -386,18 +481,18 @@ export default class MangoAccount {
     quote: I80F48,
     healthType: HealthType,
   ): I80F48 {
-    let health = quote;
+    const health = quote;
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const w = getWeights(mangoGroup, i, healthType);
       const price = mangoCache.priceCache[i].price;
       const spotHealth = spot[i]
         .mul(price)
-        .mul(spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight);
+        .imul(spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight);
       const perpHealth = perps[i]
         .mul(price)
-        .mul(perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight);
+        .imul(perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight);
 
-      health = health.add(spotHealth).add(perpHealth);
+      health.iadd(spotHealth).iadd(perpHealth);
     }
 
     return health;
@@ -411,20 +506,20 @@ export default class MangoAccount {
     quote: I80F48,
     healthType: HealthType,
   ): { spot: I80F48; perp: I80F48 } {
-    let spotHealth = quote;
-    let perpHealth = quote;
+    const spotHealth = quote;
+    const perpHealth = quote;
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const w = getWeights(mangoGroup, i, healthType);
       const price = mangoCache.priceCache[i].price;
       const _spotHealth = spot[i]
         .mul(price)
-        .mul(spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight);
+        .imul(spot[i].isPos() ? w.spotAssetWeight : w.spotLiabWeight);
       const _perpHealth = perps[i]
         .mul(price)
-        .mul(perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight);
+        .imul(perps[i].isPos() ? w.perpAssetWeight : w.perpLiabWeight);
 
-      spotHealth = spotHealth.add(_spotHealth);
-      perpHealth = perpHealth.add(_perpHealth);
+      spotHealth.iadd(_spotHealth);
+      perpHealth.iadd(_perpHealth);
     }
 
     return { spot: spotHealth, perp: perpHealth };
@@ -493,7 +588,10 @@ export default class MangoAccount {
   ): { spot: I80F48[]; perps: I80F48[]; quote: I80F48 } {
     const spot = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
     const perps = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
-    let quote = this.getNet(mangoCache.rootBankCache[QUOTE_INDEX], QUOTE_INDEX);
+    const quote = this.getNet(
+      mangoCache.rootBankCache[QUOTE_INDEX],
+      QUOTE_INDEX,
+    );
 
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       const bankCache = mangoCache.rootBankCache[i];
@@ -509,8 +607,8 @@ export default class MangoAccount {
         // base total if all bids were executed
         const bidsBaseNet = baseNet
           .add(quoteLocked.div(price))
-          .add(baseFree)
-          .add(baseLocked);
+          .iadd(baseFree)
+          .iadd(baseLocked);
 
         // base total if all asks were executed
         const asksBaseNet = baseNet.add(baseFree);
@@ -518,14 +616,10 @@ export default class MangoAccount {
         // bids case worse if it has a higher absolute position
         if (bidsBaseNet.abs().gt(asksBaseNet.abs())) {
           spot[i] = bidsBaseNet;
-          quote = quote.add(quoteFree);
+          quote.iadd(quoteFree);
         } else {
           spot[i] = asksBaseNet;
-          quote = baseLocked
-            .mul(price)
-            .add(quoteFree)
-            .add(quoteLocked)
-            .add(quote);
+          quote.iadd(baseLocked.mul(price)).iadd(quoteFree).iadd(quoteLocked);
         }
       } else {
         spot[i] = baseNet;
@@ -541,7 +635,7 @@ export default class MangoAccount {
           perpAccount.takerQuote.mul(quoteLotSize),
         );
         const basePos = I80F48.fromI64(
-          perpAccount.basePosition.add(perpAccount.takerBase).mul(baseLotSize),
+          perpAccount.basePosition.add(perpAccount.takerBase).imul(baseLotSize),
         );
         const bidsQuantity = I80F48.fromI64(
           perpAccount.bidsQuantity.mul(baseLotSize),
@@ -557,15 +651,15 @@ export default class MangoAccount {
           const quotePos = perpAccount
             .getQuotePosition(perpMarketCache)
             .add(takerQuote)
-            .sub(bidsQuantity.mul(price));
-          quote = quote.add(quotePos);
+            .isub(bidsQuantity.mul(price));
+          quote.iadd(quotePos);
           perps[i] = bidsBaseNet;
         } else {
           const quotePos = perpAccount
             .getQuotePosition(perpMarketCache)
             .add(takerQuote)
-            .add(asksQuantity.mul(price));
-          quote = quote.add(quotePos);
+            .iadd(asksQuantity.mul(price));
+          quote.iadd(quotePos);
           perps[i] = asksBaseNet;
         }
       } else {

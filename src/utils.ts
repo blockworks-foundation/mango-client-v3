@@ -44,6 +44,17 @@ export function nativeI80F48ToUi(amount: I80F48, decimals: number): I80F48 {
   return amount.div(I80F48.fromNumber(Math.pow(10, decimals)));
 }
 
+export class TimeoutError extends Error {
+  message: string;
+  txid: string;
+
+  constructor({ txid }) {
+    super();
+    this.message = `Timed out awaiting confirmation. Please confirm in the explorer: `;
+    this.txid = txid;
+  }
+}
+
 /**
  * Return weights corresponding to health type;
  * Weights are all 1 if no healthType provided
@@ -322,6 +333,17 @@ export async function getFilteredProgramAccounts(
   );
 }
 
+// Clamp number between two values
+export function clamp(x: number, min: number, max: number): number {
+  if (x < min) {
+    return min;
+  } else if (x > max) {
+    return max;
+  } else {
+    return x;
+  }
+}
+
 export async function getMultipleAccounts(
   connection: Connection,
   publicKeys: PublicKey[],
@@ -377,4 +399,71 @@ export function throwUndefined<T>(x: T | undefined): T {
     throw new Error('Undefined');
   }
   return x;
+}
+
+/**
+ * Calculate the base lot size and quote lot size given a desired min tick and min size in the UI
+ */
+export function calculateLotSizes(
+  baseDecimals: number,
+  quoteDecimals: number,
+  minTick: number,
+  minSize: number,
+): { baseLotSize: BN; quoteLotSize: BN } {
+  const baseLotSize = minSize * Math.pow(10, baseDecimals);
+  const quoteLotSize =
+    (minTick * baseLotSize) / Math.pow(10, baseDecimals - quoteDecimals);
+  return {
+    baseLotSize: new BN(baseLotSize),
+    quoteLotSize: new BN(quoteLotSize),
+  };
+}
+
+/**
+ * Return some standard params for a new perp market
+ * oraclePrice is the current oracle price for the perp market being added
+ * Assumes a rate 1000 MNGO per hour for 500k liquidity rewarded
+ */
+export function findPerpMarketParams(
+  baseDecimals: number,
+  quoteDecimals: number,
+  oraclePrice: number,
+
+  leverage: number,
+  minTick: number,
+  minSize: number,
+  mngoPerHour: number,
+) {
+  const LIQUIDITY_PER_MNGO = 500; // implies 1000 MNGO per $500k top of book
+  const contractVal = minTick * oraclePrice;
+  const maxDepthBps = Math.floor(
+    (mngoPerHour * LIQUIDITY_PER_MNGO) / contractVal,
+  );
+  const lmSizeShift = Math.floor(Math.log2(maxDepthBps) - 3);
+
+  const { baseLotSize, quoteLotSize } = calculateLotSizes(
+    baseDecimals,
+    quoteDecimals,
+    minTick,
+    minSize,
+  );
+
+  return {
+    maintLeverage: leverage * 2,
+    initLeverage: leverage,
+    liquidationFee: 1 / (leverage * 4),
+    makerFee: -0.0004,
+    takerFee: 0.0005,
+    baseLotSize: baseLotSize.toNumber(),
+    quoteLotSize: quoteLotSize.toNumber(),
+    rate: 0.03,
+    maxDepthBps,
+    exp: 2,
+    maxNumEvents: 256,
+    targetPeriodLength: 3600,
+    mngoPerPeriod: mngoPerHour,
+    version: 1,
+    lmSizeShift,
+    decimals: baseDecimals,
+  };
 }
