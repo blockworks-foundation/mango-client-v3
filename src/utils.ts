@@ -44,6 +44,17 @@ export function nativeI80F48ToUi(amount: I80F48, decimals: number): I80F48 {
   return amount.div(I80F48.fromNumber(Math.pow(10, decimals)));
 }
 
+export class TimeoutError extends Error {
+  message: string;
+  txid: string;
+
+  constructor({ txid }) {
+    super();
+    this.message = `Timed out awaiting confirmation. Please confirm in the explorer: `;
+    this.txid = txid;
+  }
+}
+
 /**
  * Return weights corresponding to health type;
  * Weights are all 1 if no healthType provided
