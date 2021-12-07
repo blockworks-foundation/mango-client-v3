@@ -159,10 +159,9 @@ yarn cli add-perp-market mango_test_v2.2 BTC
 ```
 
 ## Run the Keeper
-Update the `groupName` in `src/keeper.ts` and then run:
-
+Set your keypair (e.g. copy this over to KEYPAIR env variable cat ~/.config/solana/id.json)
 ```
-yarn keeper
+KEYPAIR=[123, 456, 789, ...] yarn keeper
 ```
 
 ## Run the Market Maker
