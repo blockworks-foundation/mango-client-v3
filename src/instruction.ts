@@ -1825,3 +1825,26 @@ export function makeUpdateMarginBasketInstruction(
     programId,
   });
 }
+
+export function makeChangeMaxMangoAccountsInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  maxMangoAccounts: BN,
+) {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    ChangeMaxMangoAccounts: {
+      maxMangoAccounts,
+    },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
