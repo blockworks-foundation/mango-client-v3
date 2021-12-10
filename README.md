@@ -159,10 +159,16 @@ yarn cli add-perp-market mango_test_v2.2 BTC
 ```
 
 ## Run the Keeper
-Update the `groupName` in `src/keeper.ts` and then run:
+1. Install Node.js and npm (https://nodejs.org/en/download/), and Git (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+2. Open a new terminal window (if running Windows use Git Bash) and run `npm install -g yarn`
+3. Run `git clone https://github.com/blockworks-foundation/mango-client-v3.git && cd mango-client-v3` to get the client source code
+5. Run `yarn install` to install dependencies
+6. Set the KEYPAIR env variable (e.g. `export KEYPAIR=$(cat ~/.config/solana/id.json)`, or copy from Sollet)
+8. Run `yarn keeper` to start the Keeper
 
+Example: 
 ```
-yarn keeper
+KEYPAIR=[123, 456, 789, ...] yarn keeper
 ```
 
 ## Run the Market Maker

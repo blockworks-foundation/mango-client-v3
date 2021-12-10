@@ -584,6 +584,12 @@ MangoInstructionLayout.addVariant(
   'CreateMangoAccount',
 );
 
+MangoInstructionLayout.addVariant(
+  49,
+  struct([u32('maxMangoAccounts')]),
+  'ChangeMaxMangoAccounts',
+);
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),

@@ -1,6 +1,6 @@
 {
   "name": "@blockworks-foundation/mango-client",
-  "version": "3.2.14",
+  "version": "3.2.15",
   "description": "Client to interact with the Mango program on Solana",
   "main": "lib/src/index.js",
   "types": "lib/src/index.d.ts",
@@ -29,6 +29,7 @@
     "lint": "eslint . --ext ts --ext tsx --ext js --quiet",
     "shell": "node -e \"$(< shell)\" -i --experimental-repl-await",
     "keeper": "ts-node src/keeper.ts",
+    "reimburse": "ts-node test/reimburse.ts",
     "crank": "ts-node src/crank.ts",
     "scratch": "ts-node src/scratch.ts",
     "mm": "ts-node src/mm.ts",
