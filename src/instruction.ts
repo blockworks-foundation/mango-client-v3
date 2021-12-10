@@ -1808,7 +1808,7 @@ export function makeCloseMangoAccountInstruction(
   ownerPk: PublicKey,
 ): TransactionInstruction {
   const keys = [
-    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: true, pubkey: ownerPk },
   ];
@@ -1918,27 +1918,85 @@ export function makeResolveDustInstruction(
     { isSigner: false, isWritable: false, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
-
   ];
 
   const data = encodeMangoInstruction({
     ResolveDust: {},
-    ...openOrdersPks.map((pubkey) => ({
-      isSigner: false,
-      isWritable: true,
-      pubkey,
-    })),
-  ];
-    
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
 export function makeUpdateMarginBasketInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   mangoAccountPk: PublicKey,
   openOrdersPks: PublicKey[],
 ): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    ...openOrdersPks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
   const data = encodeMangoInstruction({
     UpdateMarginBasket: {},
   });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeCreateMangoAccountInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  accountNum: BN,
+) {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+  ];
+  const data = encodeMangoInstruction({
+    CreateMangoAccount: {
+      accountNum,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeUpgradeMangoAccountV0V1Instruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+) {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+  ];
+  const data = encodeMangoInstruction({
+    UpgradeMangoAccountV0V1: {},
+  });
+
   return new TransactionInstruction({
     keys,
     data,

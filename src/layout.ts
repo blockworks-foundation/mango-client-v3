@@ -531,6 +531,59 @@ MangoInstructionLayout.addVariant(51, struct([]), 'CreateDustAccount');
 MangoInstructionLayout.addVariant(52, struct([]), 'ResolveDust');
 MangoInstructionLayout.addVariant(53, struct([]), 'UpdateMarginBasket');
 
+MangoInstructionLayout.addVariant(
+  50,
+  struct([]),
+  'CloseMangoAccount',
+);
+
+MangoInstructionLayout.addVariant(
+  51,
+  struct([]),
+  'CloseSpotOpenOrders',
+);
+
+MangoInstructionLayout.addVariant(
+  52,
+  struct([]),
+  'CloseAdvancedOrders',
+);
+
+MangoInstructionLayout.addVariant(
+  53,
+  struct([]),
+  'CreateDustAccount',
+);
+
+MangoInstructionLayout.addVariant(
+  54,
+  struct([]),
+  'ResolveDust',
+);
+
+MangoInstructionLayout.addVariant(
+  55,
+  struct([
+    I80F48Layout('maintLeverage'),
+    I80F48Layout('initLeverage'),
+    I80F48Layout('liquidationFee'),
+    I80F48Layout('util0'),
+    I80F48Layout('util1'),
+    I80F48Layout('rate0'),
+    I80F48Layout('rate1'),
+    I80F48Layout('maxRate'),
+    u8('version'),
+
+  ]),
+  'ChangeSpotMarketParams',
+);
+
+MangoInstructionLayout.addVariant(
+  56,
+  struct([u64('accountNum')]),
+  'CreateMangoAccount',
+);
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
