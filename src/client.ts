@@ -4127,6 +4127,17 @@ export class MangoClient {
       );
     }
 
+    if(mangoAccount.metaData.version == 0) {
+      closeAccountsTransaction.transaction.add(
+        makeUpgradeMangoAccountV0V1Instruction(
+          this.programId,
+          mangoGroup.publicKey,
+          mangoAccount.publicKey,
+          payer.publicKey,
+        )
+      );
+    }
+
     closeAccountsTransaction.transaction.add(
       makeCloseMangoAccountInstruction(
         this.programId,
