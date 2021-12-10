@@ -92,6 +92,8 @@ import {
   makeCloseSpotOpenOrdersInstruction,
   makeCreateDustAccountInstruction,
   makeResolveDustInstruction,
+  makeCreateMangoAccountInstruction,
+  makeUpgradeMangoAccountV0V1Instruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -631,7 +633,7 @@ export class MangoClient {
   }
 
   /**
-   * Create a new Mango Account on a given group
+   * DEPRECATED - Create a new Mango Account on a given group
    */
   async initMangoAccount(
     mangoGroup: MangoGroup,
@@ -660,6 +662,75 @@ export class MangoClient {
     await this.sendTransaction(transaction, owner, additionalSigners);
 
     return accountInstruction.account.publicKey;
+  }
+
+  /**
+   * Create a new Mango Account (PDA) on a given group
+   */
+  async createMangoAccount(
+    mangoGroup: MangoGroup,
+    owner: Account | WalletAdapter,
+    accountNum: number,
+  ): Promise<PublicKey> {
+    const accountNumBN = new BN(accountNum);
+    const [mangoAccountPk] = await PublicKey.findProgramAddress(
+      [
+        mangoGroup.publicKey.toBytes(),
+        owner.publicKey.toBytes(),
+        accountNumBN.toBuffer(),
+      ],
+      this.programId,
+    );
+
+    const createMangoAccountInstruction = makeCreateMangoAccountInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccountPk,
+      owner.publicKey,
+      accountNumBN,
+    );
+
+    // Add all instructions to one atomic transaction
+    const transaction = new Transaction();
+    transaction.add(createMangoAccountInstruction);
+
+    await this.sendTransaction(transaction, owner, []);
+
+    return mangoAccountPk;
+  }
+
+  /**
+   * Upgrade a Mango Account from V0 (not deletable) to V1 (deletable)
+   */
+  async upgradeMangoAccountV0V1(
+    mangoGroup: MangoGroup,
+    owner: Account | WalletAdapter,
+    accountNum: number,
+  ): Promise<PublicKey> {
+    const accountNumBN = new BN(accountNum);
+    const [mangoAccountPk] = await PublicKey.findProgramAddress(
+      [
+        mangoGroup.publicKey.toBytes(),
+        owner.publicKey.toBytes(),
+        accountNumBN.toBuffer(),
+      ],
+      this.programId,
+    );
+
+    const upgradeMangoAccountInstruction =
+      makeUpgradeMangoAccountV0V1Instruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoAccountPk,
+        owner.publicKey,
+      );
+
+    const transaction = new Transaction();
+    transaction.add(upgradeMangoAccountInstruction);
+
+    await this.sendTransaction(transaction, owner, []);
+
+    return mangoAccountPk;
   }
 
   /**
