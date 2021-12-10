@@ -423,19 +423,27 @@ export function calculateLotSizes(
  * Return some standard params for a new perp market
  * oraclePrice is the current oracle price for the perp market being added
  * Assumes a rate 1000 MNGO per hour for 500k liquidity rewarded
+ * `nativeBaseDecimals` are the decimals for the asset on the native chain
  */
 export function findPerpMarketParams(
-  baseDecimals: number,
+  nativeBaseDecimals: number,
   quoteDecimals: number,
   oraclePrice: number,
 
   leverage: number,
-  minTick: number,
-  minSize: number,
   mngoPerHour: number,
 ) {
+  // wormhole wrapped tokens on solana will have a max of 8 decimals
+  const baseDecimals = Math.min(nativeBaseDecimals, 8);
+
+  // min tick targets around 1 basis point or 0.01% of price
+  const minTick = Math.pow(10, Math.round(Math.log10(oraclePrice)) - 4);
+
+  // minSize is targeted to be between 0.1 - 1 assuming USDC quote currency
+  const minSize = Math.pow(10, -Math.round(Math.log10(oraclePrice)));
+
   const LIQUIDITY_PER_MNGO = 500; // implies 1000 MNGO per $500k top of book
-  const contractVal = minTick * oraclePrice;
+  const contractVal = minSize * oraclePrice;
   const maxDepthBps = Math.floor(
     (mngoPerHour * LIQUIDITY_PER_MNGO) / contractVal,
   );
@@ -465,5 +473,8 @@ export function findPerpMarketParams(
     version: 1,
     lmSizeShift,
     decimals: baseDecimals,
+    minTick,
+    minSize,
+    baseDecimals,
   };
 }
