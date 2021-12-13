@@ -531,7 +531,7 @@ yargs(hideBin(process.argv)).command(
       console.log(
         `Perp Market Index ${i} base decimals: ${
           mangoGroup.tokens[i].decimals
-        } perp market pubkey: ${perpMarket.perpMarket.toString()}`,
+        } perp market pubkey: ${perpMarket.perpMarket.toString()} base lot size: ${perpMarket.baseLotSize.toString()} quote lot size: ${perpMarket.quoteLotSize.toString()}`,
       );
     }
 

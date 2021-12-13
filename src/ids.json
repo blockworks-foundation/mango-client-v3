@@ -645,7 +645,12 @@
         {
           "symbol": "LUNA",
           "publicKey": "7rDLFn73inQQ3F1dYJhouHmbryngWZH5WMNGgEKcJZvf"
+        },
+        {
+          "symbol": "BNB",
+          "publicKey": "GwzBgrXb4PG59zjce24SF2b9JXbLEjJJTBkmytuEZj1b"
         }
+
       ],
       "perpMarkets": [
         {
@@ -736,6 +741,17 @@
           "bidsKey": "ACPFzNGukMiv6nTJDfXvL4ctQpjo5Uwv45tSdoVbCEfg",
           "asksKey": "3qay74WyTeiqc3iJ3g7GpCUiMQ5wnGnVs4pW2dFdq3CP",
           "eventsKey": "65X4vefU5AkQJWD5S5fAzJeN5XqwnngdSN8RZ79zzi4f"
+        },
+        {
+          "name": "BNB-PERP",
+          "publicKey": "3Le8zLUKsa1kVr1Uq63DsStVdaekp3pJzcF8GaZpauK9",
+          "baseSymbol": "BNB",
+          "baseDecimals": 8,
+          "quoteDecimals": 6,
+          "marketIndex": 11,
+          "bidsKey": "GqwmfoAxgJLDDs5x1K6u1YVkHXSjPKG4GgwFoAgfGH1G",
+          "asksKey": "H57z5imzrExpqYJ4WP4MKEg8GyMV2VTQAbF25DEP9i7k",
+          "eventsKey": "96Y87LTz5Mops7wdT9EJo1eM79XToKYJJmRZxNatV85d"
         }
       ],
       "spotMarkets": [
