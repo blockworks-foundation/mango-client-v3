@@ -136,6 +136,14 @@
         {
           "symbol": "MSOL",
           "publicKey": "E4v1BBgoso9s64TQvmyownAVJbhbEPGyzA3qn4n46qj9"
+        },
+        {
+          "symbol": "BNB",
+          "publicKey": "4CkQJBxhU8EZ2UjhigbtdaPbpTe6mqf811fipYBFbSYN"
+        },
+        {
+          "symbol": "AVAX",
+          "publicKey": "C2GXZT21UUm6G3J4N26h6d3tpgfUhh6ok5aNi24K88Wu"
         }
       ],
       "perpMarkets": [
@@ -226,6 +234,28 @@
           "bidsKey": "ivYhvYgribqdCzDg4m8fUF9ejgJHE4mnRUseR4d9khN",
           "asksKey": "F4UTmEXxEUgGSL7P3HePAuz3PsXvx6hWr256vqVnzxKE",
           "eventsKey": "G6Dsw9KnP4G38hePtedTH6gDfDQmPJGJw8zipBJvKc12"
+        },
+        {
+          "name": "BNB-PERP",
+          "publicKey": "CqxX2QupYiYafBSbA519j4vRVxxecidbh2zwX66Lmqem",
+          "baseSymbol": "BNB",
+          "baseDecimals": 8,
+          "quoteDecimals": 6,
+          "marketIndex": 11,
+          "bidsKey": "6Pg82x4SSejLny5v1wSWs7QhnheLDq7EX1pMVY8LTsB3",
+          "asksKey": "6n2ooaNFP6X54ZiwDskhhVeW81F4hHNEibsJ8vfjVNDU",
+          "eventsKey": "GmX4qXMpXvs1DuUXNB4eqL1rfF8LeYEjkKgpFeYsm55n"
+        },
+        {
+          "name": "AVAX-PERP",
+          "publicKey": "EAC7jtzsoQwCbXj1M3DapWrNLnc3MBwXAarvWDPr2ZV9",
+          "baseSymbol": "AVAX",
+          "baseDecimals": 8,
+          "quoteDecimals": 6,
+          "marketIndex": 12,
+          "bidsKey": "BD1vpQjLXx7Rmd5n1SFNTLcwujPYTnFpoaArvPd9ixB9",
+          "asksKey": "8Q11iGHXFTr267J4bgbeEeWPYPSANVcs6NQWHQK4UrNs",
+          "eventsKey": "5Grgo9kLu692SUcJ6S7jtbi1WkdwiyRWgThAfN1PcvbL"
         }
       ],
       "spotMarkets": [
@@ -650,7 +680,6 @@
           "symbol": "BNB",
           "publicKey": "GwzBgrXb4PG59zjce24SF2b9JXbLEjJJTBkmytuEZj1b"
         }
-
       ],
       "perpMarkets": [
         {
