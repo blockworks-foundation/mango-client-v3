@@ -28,6 +28,7 @@ import {
 } from './config';
 import { MangoClient } from './client';
 import { throwUndefined, uiToNative } from './utils';
+import { QUOTE_INDEX } from './layout';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -503,6 +504,40 @@ yargs(hideBin(process.argv)).command(
   },
 ).argv;
 
+yargs(hideBin(process.argv)).command(
+  'show-group <group>',
+  'Print relevant details about a MangoGroup',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-group', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+
+    for (let i = 0; i < QUOTE_INDEX; i++) {
+      const perpMarket = mangoGroup.perpMarkets[i];
+      if (perpMarket.isEmpty()) {
+        continue;
+      }
+
+      console.log(
+        `Perp Market Index ${i} base decimals: ${
+          mangoGroup.tokens[i].decimals
+        } perp market pubkey: ${perpMarket.perpMarket.toString()}`,
+      );
+    }
+
+    process.exit(0);
+  },
+).argv;
 yargs(hideBin(process.argv)).command(
   'show-perp-market <group> <symbol>',
   'Print relevant details about a perp market',

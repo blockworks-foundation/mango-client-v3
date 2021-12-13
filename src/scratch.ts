@@ -64,7 +64,7 @@ async function main() {
   const dotParams = findPerpMarketParams(
     10,
     group.tokens[QUOTE_INDEX].decimals,
-    64,
+    27,
     10,
     500,
   );
