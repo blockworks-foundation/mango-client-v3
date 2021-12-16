@@ -29,6 +29,8 @@ import {
 import { MangoClient } from './client';
 import { throwUndefined, uiToNative } from './utils';
 import { QUOTE_INDEX } from './layout';
+import { Coder } from '@project-serum/anchor';
+import idl from './mango_logs.json';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -500,6 +502,39 @@ yargs(hideBin(process.argv)).command(
     );
     const cache = await mangoGroup.loadCache(connection);
     console.log(mangoAccount.toPrettyString(groupConfig, mangoGroup, cache));
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'decode-log <log_b64>',
+  'Decode and print out log',
+  (y) => {
+    return y
+      .positional('log_b64', {
+        describe: 'base 64 encoded mango log',
+        type: 'string',
+      })
+      .option(...configDesc);
+  },
+  async (args) => {
+    console.log('show', args);
+    // @ts-ignore
+    const coder = new Coder(idl);
+    const event = coder.events.decode(args.log_b64 as string);
+    if (!event) {
+      throw new Error('Invalid mango log');
+    }
+    if (event.name === 'CancelAllPerpOrdersLog') {
+      const data: any = event.data;
+      data.allOrderIds = data.allOrderIds.map((oid) => oid.toString());
+      data.canceledOrderIds = data.canceledOrderIds.map((oid) =>
+        oid.toString(),
+      );
+      data.mangoGroup = data['mangoGroup'].toString();
+      data.mangoAccount = data['mangoAccount'].toString();
+    }
+    console.log(event);
     process.exit(0);
   },
 ).argv;
