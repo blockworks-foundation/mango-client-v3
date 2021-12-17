@@ -518,22 +518,28 @@ yargs(hideBin(process.argv)).command(
       .option(...configDesc);
   },
   async (args) => {
-    console.log('show', args);
+    console.log('decode-log', args);
     // @ts-ignore
     const coder = new Coder(idl);
     const event = coder.events.decode(args.log_b64 as string);
     if (!event) {
       throw new Error('Invalid mango log');
     }
+    const data: any = event.data;
+
     if (event.name === 'CancelAllPerpOrdersLog') {
-      const data: any = event.data;
       data.allOrderIds = data.allOrderIds.map((oid) => oid.toString());
       data.canceledOrderIds = data.canceledOrderIds.map((oid) =>
         oid.toString(),
       );
       data.mangoGroup = data['mangoGroup'].toString();
       data.mangoAccount = data['mangoAccount'].toString();
+    } else {
+      for (const key in data) {
+        data[key] = data[key].toString();
+      }
     }
+
     console.log(event);
     process.exit(0);
   },
