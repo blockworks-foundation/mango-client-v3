@@ -10,9 +10,6 @@
     "email": "hello@blockworks.foundation",
     "url": "https://blockworks.foundation"
   },
-  "engines": {
-    "node": ">=14.15.3"
-  },
   "license": "MIT",
   "scripts": {
     "build": "tsc",
