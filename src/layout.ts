@@ -825,7 +825,11 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('srmVault'),
   publicKeyLayout('msrmVault'),
   publicKeyLayout('feesVault'),
-  seq(u8(), 32, 'padding'),
+
+  u32('maxMangoAccounts'),
+  u32('numMangoAccounts'),
+
+  seq(u8(), 24, 'padding'),
 ]);
 /** @internal */
 export const MangoAccountLayout = struct([
@@ -850,7 +854,10 @@ export const MangoAccountLayout = struct([
   bool('isBankrupt'),
   seq(u8(), INFO_LEN, 'info'),
   publicKeyLayout('advancedOrdersKey'),
-  seq(u8(), 38, 'padding'),
+  bool('notUpgradable'),
+  publicKeyLayout('delegate'),
+
+  seq(u8(), 5, 'padding'),
 ]);
 /** @internal */
 export const RootBankLayout = struct([
