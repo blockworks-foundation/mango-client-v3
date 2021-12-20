@@ -257,7 +257,7 @@ export class MangoClient {
 
     let done = false;
 
-    let retrySleep = 1500;
+    let retrySleep = 15000;
     (async () => {
       // TODO - make sure this works well on mainnet
       while (!done && getUnixTs() - startTime < timeout / 1000) {
@@ -4127,14 +4127,14 @@ export class MangoClient {
       );
     }
 
-    if(mangoAccount.metaData.version == 0) {
+    if (mangoAccount.metaData.version == 0) {
       closeAccountsTransaction.transaction.add(
         makeUpgradeMangoAccountV0V1Instruction(
           this.programId,
           mangoGroup.publicKey,
           mangoAccount.publicKey,
           payer.publicKey,
-        )
+        ),
       );
     }
 
