@@ -250,7 +250,7 @@ export class MangoClient {
 
     let done = false;
 
-    let retrySleep = 1500;
+    let retrySleep = 15000;
     (async () => {
       // TODO - make sure this works well on mainnet
       while (!done && getUnixTs() - startTime < timeout / 1000) {
