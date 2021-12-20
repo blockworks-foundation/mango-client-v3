@@ -28,6 +28,9 @@ import {
 } from './config';
 import { MangoClient } from './client';
 import { throwUndefined, uiToNative } from './utils';
+import { QUOTE_INDEX } from './layout';
+import { Coder } from '@project-serum/anchor';
+import idl from './mango_logs.json';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -503,6 +506,79 @@ yargs(hideBin(process.argv)).command(
   },
 ).argv;
 
+yargs(hideBin(process.argv)).command(
+  'decode-log <log_b64>',
+  'Decode and print out log',
+  (y) => {
+    return y
+      .positional('log_b64', {
+        describe: 'base 64 encoded mango log',
+        type: 'string',
+      })
+      .option(...configDesc);
+  },
+  async (args) => {
+    console.log('decode-log', args);
+    // @ts-ignore
+    const coder = new Coder(idl);
+    const event = coder.events.decode(args.log_b64 as string);
+    if (!event) {
+      throw new Error('Invalid mango log');
+    }
+    const data: any = event.data;
+
+    if (event.name === 'CancelAllPerpOrdersLog') {
+      data.allOrderIds = data.allOrderIds.map((oid) => oid.toString());
+      data.canceledOrderIds = data.canceledOrderIds.map((oid) =>
+        oid.toString(),
+      );
+      data.mangoGroup = data['mangoGroup'].toString();
+      data.mangoAccount = data['mangoAccount'].toString();
+    } else {
+      for (const key in data) {
+        data[key] = data[key].toString();
+      }
+    }
+
+    console.log(event);
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'show-group <group>',
+  'Print relevant details about a MangoGroup',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-group', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+
+    for (let i = 0; i < QUOTE_INDEX; i++) {
+      const perpMarket = mangoGroup.perpMarkets[i];
+      if (perpMarket.isEmpty()) {
+        continue;
+      }
+
+      console.log(
+        `Perp Market Index ${i} base decimals: ${
+          mangoGroup.tokens[i].decimals
+        } perp market pubkey: ${perpMarket.perpMarket.toString()} base lot size: ${perpMarket.baseLotSize.toString()} quote lot size: ${perpMarket.quoteLotSize.toString()}`,
+      );
+    }
+
+    process.exit(0);
+  },
+).argv;
 yargs(hideBin(process.argv)).command(
   'show-perp-market <group> <symbol>',
   'Print relevant details about a perp market',
