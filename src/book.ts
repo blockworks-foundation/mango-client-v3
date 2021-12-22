@@ -81,7 +81,7 @@ export class BookSide {
    * return undefined if `quantity` not on book
    */
   getImpactPriceUi(quantity: BN): number | undefined {
-    const s = ZERO_BN;
+    const s = ZERO_BN.clone();
     for (const order of this) {
       s.iadd(order.sizeLots);
       if (s.gte(quantity)) {
