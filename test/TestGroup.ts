@@ -109,7 +109,7 @@ export default class TestGroup {
     this.FIXED_IDS.find((id) => id.symbol === 'USDC')?.mint,
   );
   mangoProgramId = new PublicKey(
-    '71mvUdhymv4ki4kkXVjvbRQytqN7WG8kbASh8PAxaMC9',
+    '4skJ85cdxQAFVKbcGgfun8iZPL7BadVYXG3kGEGkufqA',
   );
   serumProgramId = new PublicKey(
     'DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY',

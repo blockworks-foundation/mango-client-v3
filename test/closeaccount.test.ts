@@ -48,8 +48,11 @@ async function testCloseAccount() {
   }
   const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
 
-  const accountPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
+  //const accountPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
+  const accountPk = await testGroup.client.createMangoAccount(mangoGroup, payer, 1);
+  //const accountPk2 = await testGroup.client.createMangoAccount(mangoGroup, payer, 1);
   console.log('Created Account:', accountPk.toBase58());
+  //console.log('Created Account:', accountPk2.toBase58());
   await sleep(sleepTime);
   const account = await testGroup.client.getMangoAccount(
     accountPk,

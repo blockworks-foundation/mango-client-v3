@@ -677,7 +677,7 @@ export class MangoClient {
       [
         mangoGroup.publicKey.toBytes(),
         owner.publicKey.toBytes(),
-        accountNumBN.toBuffer(),
+        accountNumBN.toBuffer('le', 8),
       ],
       this.programId,
     );
