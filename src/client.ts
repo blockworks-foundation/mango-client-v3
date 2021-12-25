@@ -2018,6 +2018,7 @@ export class MangoClient {
     quoteRootBank: RootBank,
     price: I80F48, // should be the MangoCache price
     owner: Account | WalletAdapter,
+    mangoAccounts?: MangoAccount[],
   ): Promise<TransactionSignature | null> {
     // fetch all MangoAccounts filtered for having this perp market in basket
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
@@ -2068,7 +2069,9 @@ export class MangoClient {
       }
     }
 
-    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+    if (mangoAccounts === undefined) {
+      mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+    }
 
     const accountsWithPnl = mangoAccounts
       .map((m) => ({
