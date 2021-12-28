@@ -1156,7 +1156,7 @@ export class MangoClient {
   async placePerpOrder(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
-    mangoCache: PublicKey, // TODO - remove; already in MangoGroup
+    mangoCache: PublicKey = null,
     perpMarket: PerpMarket,
     owner: Account | WalletAdapter,
 
@@ -1173,14 +1173,12 @@ export class MangoClient {
       quantity,
     );
     const transaction = new Transaction();
-    const additionalSigners: Account[] = [];
-
     const instruction = makePlacePerpOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
       mangoAccount.publicKey,
       owner.publicKey,
-      mangoCache,
+      mangoCache ?? mangoGroup.mangoCache,
       perpMarket.publicKey,
       perpMarket.bids,
       perpMarket.asks,
@@ -1227,6 +1225,7 @@ export class MangoClient {
       transaction.add(consumeInstruction);
     }
 
+    const additionalSigners: Account[] = [];
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
