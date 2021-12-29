@@ -132,7 +132,7 @@ export class MangoClient {
   constructor(
     connection: Connection,
     programId: PublicKey,
-    opts: { postSendTxCallback?: ({ txid: string }) => void } = {},
+    opts: { postSendTxCallback?: ({ txid }: { txid: string }) => void } = {},
   ) {
     this.connection = connection;
     this.programId = programId;
