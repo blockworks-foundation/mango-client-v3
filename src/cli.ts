@@ -22,6 +22,7 @@ import {
   Cluster,
   Config,
   getPerpMarketByBaseSymbol,
+  getPerpMarketByIndex,
   getTokenBySymbol,
   GroupConfig,
   PerpMarketConfig,
@@ -568,17 +569,68 @@ yargs(hideBin(process.argv)).command(
       if (perpMarket.isEmpty()) {
         continue;
       }
+      const pmc = getPerpMarketByIndex(groupConfig, i) as PerpMarketConfig;
+      const pm = await client.getPerpMarket(
+        perpMarket.perpMarket,
+        pmc.baseDecimals,
+        pmc.quoteDecimals,
+      );
+      const x = await connection.getTokenAccountBalance(pm.mngoVault);
+      console.log(pmc.baseSymbol, pm.mngoVault.toBase58(), x);
+    }
 
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'show-top-positions <group> <symbol>',
+  'Print top 10 positions for the symbol perp market',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-group', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const perpMarketConfig: PerpMarketConfig = throwUndefined(
+      getPerpMarketByBaseSymbol(groupConfig, args.symbol as string),
+    );
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccounts = await client.getAllMangoAccounts(
+      mangoGroup,
+      [],
+      false,
+    );
+
+    mangoAccounts.sort((a, b) =>
+      a.perpAccounts[perpMarketConfig.marketIndex].basePosition.cmp(
+        b.perpAccounts[perpMarketConfig.marketIndex].basePosition,
+      ),
+    );
+
+    const mangoCache = await mangoGroup.loadCache(connection);
+    for (let i = 0; i < 10; i++) {
       console.log(
-        `Perp Market Index ${i} base decimals: ${
-          mangoGroup.tokens[i].decimals
-        } perp market pubkey: ${perpMarket.perpMarket.toString()} base lot size: ${perpMarket.baseLotSize.toString()} quote lot size: ${perpMarket.quoteLotSize.toString()}`,
+        `${i}: ${mangoAccounts[i].toPrettyString(
+          groupConfig,
+          mangoGroup,
+          mangoCache,
+        )}\n`,
       );
     }
 
     process.exit(0);
   },
 ).argv;
+
 yargs(hideBin(process.argv)).command(
   'show-perp-market <group> <symbol>',
   'Print relevant details about a perp market',
