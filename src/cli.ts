@@ -611,9 +611,9 @@ yargs(hideBin(process.argv)).command(
     );
 
     mangoAccounts.sort((a, b) =>
-      a.perpAccounts[perpMarketConfig.marketIndex].basePosition
+      b.perpAccounts[perpMarketConfig.marketIndex].basePosition
         .abs()
-        .cmp(b.perpAccounts[perpMarketConfig.marketIndex].basePosition.abs()),
+        .cmp(a.perpAccounts[perpMarketConfig.marketIndex].basePosition.abs()),
     );
 
     const mangoCache = await mangoGroup.loadCache(connection);
