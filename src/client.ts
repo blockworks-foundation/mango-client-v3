@@ -117,17 +117,29 @@ export const getUnixTs = () => {
 };
 
 /**
- * A class for interacting with a particular Mango V3 Program
+ * A class for interacting with the Mango V3 Program
+ *
+ * @param connection A solana web.js Connection object
+ * @param programId The PublicKey of the Mango V3 Program
+ * @param opts An object used to configure the MangoClient. Accepts a postSendTxCallback
  */
 export class MangoClient {
   connection: Connection;
   programId: PublicKey;
   lastSlot: number;
+  postSendTxCallback?: ({ txid: string }) => void;
 
-  constructor(connection: Connection, programId: PublicKey) {
+  constructor(
+    connection: Connection,
+    programId: PublicKey,
+    opts: { postSendTxCallback?: ({ txid: string }) => void } = {},
+  ) {
     this.connection = connection;
     this.programId = programId;
     this.lastSlot = 0;
+    if (opts.postSendTxCallback) {
+      this.postSendTxCallback = opts.postSendTxCallback;
+    }
   }
 
   async sendTransactions(
@@ -209,7 +221,6 @@ export class MangoClient {
    * @param payer
    * @param additionalSigners
    * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Defaults to 30000ms. Passing null will disable the transaction confirmation check and always return success.
-   * @param postSignTxCallback Callback to be called after the transaction is signed but before it's sent.
    */
   async sendTransaction(
     transaction: Transaction,
@@ -217,7 +228,6 @@ export class MangoClient {
     additionalSigners: Account[],
     timeout: number | null = 30000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
-    postSignTxCallback?: any,
   ): Promise<TransactionSignature> {
     await this.signTransaction({
       transaction,
@@ -227,17 +237,19 @@ export class MangoClient {
 
     const rawTransaction = transaction.serialize();
     const startTime = getUnixTs();
-    if (postSignTxCallback) {
-      try {
-        postSignTxCallback();
-      } catch (e) {
-        console.log(`postSignTxCallback error ${e}`);
-      }
-    }
+
     const txid: TransactionSignature = await this.connection.sendRawTransaction(
       rawTransaction,
       { skipPreflight: true },
     );
+
+    if (this.postSendTxCallback) {
+      try {
+        this.postSendTxCallback({ txid });
+      } catch (e) {
+        console.log(`postSendTxCallback error ${e}`);
+      }
+    }
 
     if (!timeout) return txid;
 
