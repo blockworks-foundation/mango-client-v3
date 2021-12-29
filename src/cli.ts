@@ -590,7 +590,7 @@ yargs(hideBin(process.argv)).command(
     return y.positional(...groupDesc).option(...configDesc);
   },
   async (args) => {
-    console.log('show-group', args);
+    console.log('show-top-positions', args);
     const config = readConfig(args.config as string);
     const groupConfig = config.getGroupWithName(
       args.group as string,
@@ -611,9 +611,9 @@ yargs(hideBin(process.argv)).command(
     );
 
     mangoAccounts.sort((a, b) =>
-      a.perpAccounts[perpMarketConfig.marketIndex].basePosition.cmp(
-        b.perpAccounts[perpMarketConfig.marketIndex].basePosition,
-      ),
+      a.perpAccounts[perpMarketConfig.marketIndex].basePosition
+        .abs()
+        .cmp(b.perpAccounts[perpMarketConfig.marketIndex].basePosition.abs()),
     );
 
     const mangoCache = await mangoGroup.loadCache(connection);
