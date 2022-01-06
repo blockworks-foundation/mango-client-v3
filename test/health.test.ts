@@ -2,242 +2,257 @@
 import { expect } from 'chai';
 import MangoGroup from '../src/MangoGroup';
 import MangoAccount from '../src/MangoAccount';
-import { loadTestMangoAccount, loadTestMangoCache, loadTestMangoGroup, loadTestMangoNodeBank, loadTestMangoRootBank } from './testdata';
-import { MangoCache, NodeBank, RootBank } from '../src';
+import { loadTestMangoAccount, loadTestMangoCache, loadTestMangoGroup, loadTestOpenOrders } from './testdata';
+import { MangoCache } from '../src';
 
 describe('Health', async () => {
   before(async () => {
   });
 
   describe('empty', async () => {
-    it('getHealth() should return correct result', async () => {
+    it('Health calculations should return the correct results', async () => {
       const prefix = "./testdata/empty"
       const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
       const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
       const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
-      const result = mangoAccount.getHealth(mangoGroup, mangoCache, 'Init')
 
       expect(
-        result
-          .toString()
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Init').toString()
       ).to.equal("0");
-    });
-  });
-
-  describe('cache', async () => {
-    it('loading the cache from a file should load the correct values', async () => {
-      const prefix = "./testdata/1deposit"
-      const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
-
-      expect(mangoCache.priceCache[0].price.toString()).to.equal("0.33642499999999841975")
-      expect(mangoCache.priceCache[1].price.toString()).to.equal("47380.32499999999999928946")
-      expect(mangoCache.priceCache[2].price.toString()).to.equal("3309.69549999999999911893")
-      expect(mangoCache.priceCache[3].price.toString()).to.equal("0.17261599999999788224")
-      expect(mangoCache.priceCache[4].price.toString()).to.equal("8.79379999999999739657")
-      expect(mangoCache.priceCache[5].price.toString()).to.equal("1")
-      expect(mangoCache.priceCache[6].price.toString()).to.equal("1.00039999999999906777")
-      expect(mangoCache.priceCache[7].price.toString()).to.equal("0")
-      expect(mangoCache.priceCache[8].price.toString()).to.equal("0")
-      expect(mangoCache.priceCache[9].price.toString()).to.equal("0")
-      expect(mangoCache.priceCache[10].price.toString()).to.equal("0")
-      expect(mangoCache.priceCache[11].price.toString()).to.equal("0")
-      expect(mangoCache.priceCache[12].price.toString()).to.equal("0")
-      expect(mangoCache.priceCache[13].price.toString()).to.equal("0")
-      expect(mangoCache.priceCache[14].price.toString()).to.equal("0")
-
-      expect(mangoCache.rootBankCache[0].depositIndex.toString()).to.equal("1001923.86460821722014813417")
-      expect(mangoCache.rootBankCache[0].borrowIndex.toString()).to.equal("1002515.45257855337824182129")
-      expect(mangoCache.rootBankCache[1].depositIndex.toString()).to.equal("1000007.37249653914441083202")
-      expect(mangoCache.rootBankCache[1].borrowIndex.toString()).to.equal("1000166.98522159213999316307")
-      expect(mangoCache.rootBankCache[2].depositIndex.toString()).to.equal("1000000.19554886875829424753")
-      expect(mangoCache.rootBankCache[2].borrowIndex.toString()).to.equal("1000001.13273253565107623331")
-      expect(mangoCache.rootBankCache[3].depositIndex.toString()).to.equal("1000037.82149923799070379005")
-      expect(mangoCache.rootBankCache[3].borrowIndex.toString()).to.equal("1000044.28925241010965052624")
-      expect(mangoCache.rootBankCache[4].depositIndex.toString()).to.equal("1000000.0000132182767842437")
-      expect(mangoCache.rootBankCache[4].borrowIndex.toString()).to.equal("1000000.14235973938041368569")
-      expect(mangoCache.rootBankCache[5].depositIndex.toString()).to.equal("1000000.35244386506945346582")
-      expect(mangoCache.rootBankCache[5].borrowIndex.toString()).to.equal("1000000.66156146420993522383")
-      expect(mangoCache.rootBankCache[6].depositIndex.toString()).to.equal("1000473.25161608998580575758")
-      expect(mangoCache.rootBankCache[6].borrowIndex.toString()).to.equal("1000524.37279217702128875089")
-      expect(mangoCache.rootBankCache[7].depositIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[7].borrowIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[8].depositIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[8].borrowIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[9].depositIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[9].borrowIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[10].depositIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[10].borrowIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[11].depositIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[11].borrowIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[12].depositIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[12].borrowIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[13].depositIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[13].borrowIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[14].depositIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[14].borrowIndex.toString()).to.equal("0")
-      expect(mangoCache.rootBankCache[15].depositIndex.toString()).to.equal("1000154.42276607534055088422")
-      expect(mangoCache.rootBankCache[15].borrowIndex.toString()).to.equal("1000219.00868743509063563124")
-
-      expect(mangoCache.perpMarketCache[0].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[0].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[1].longFunding.toString()).to.equal("-751864.70031280454435673732")
-      expect(mangoCache.perpMarketCache[1].shortFunding.toString()).to.equal("-752275.3557979761382519257")
-      expect(mangoCache.perpMarketCache[2].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[2].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[3].longFunding.toString()).to.equal("-636425.51790158202868497028")
-      expect(mangoCache.perpMarketCache[3].shortFunding.toString()).to.equal("-636425.51790158202868497028")
-      expect(mangoCache.perpMarketCache[4].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[4].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[5].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[5].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[6].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[6].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[7].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[7].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[8].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[8].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[9].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[9].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[10].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[10].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[11].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[11].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[12].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[12].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[13].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[13].shortFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[14].longFunding.toString()).to.equal("0")
-      expect(mangoCache.perpMarketCache[14].shortFunding.toString()).to.equal("0")
-    });
-  });
-
-  describe('root bank', async () => {
-    it('loading the root bank from a file should load the correct values', async () => {
-      const prefix = "./testdata/1deposit"
-      const rootBank: RootBank = loadTestMangoRootBank(`${prefix}/root_bank0.json`)
-
-      expect(rootBank.publicKey.toBase58()).to.equal("HUBX4iwWEUK5VrXXXcB7uhuKrfT4fpu2T9iZbg712JrN")
-      expect(rootBank.optimalUtil.toString()).to.equal("0.69999999999999928946")
-      expect(rootBank.optimalRate.toString()).to.equal("0.05999999999999872102")
-      expect(rootBank.maxRate.toString()).to.equal("1.5")
-      expect(rootBank.numNodeBanks.toString()).to.equal("1")
-      expect(rootBank.depositIndex.toString()).to.equal("1000154.42276607355830719825")
-      expect(rootBank.borrowIndex.toString()).to.equal("1000219.00867863010088498754")
-      expect(rootBank.lastUpdated.toString(10)).to.equal("1633359485")
+      expect(
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("0");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("100");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("100");
+      expect(
+        mangoAccount.computeValue(mangoGroup, mangoCache).toString()
+      ).to.equal("0");
+      expect(
+        mangoAccount.getLeverage(mangoGroup, mangoCache).toString()
+      ).to.equal("0");
+      expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.false
     });
   });
 
   describe('1deposit', async () => {
-    it('getHealth() should return correct result', async () => {
+    it('Health calculations should return the correct results', async () => {
       const prefix = "./testdata/1deposit"
       const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
       const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
       const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
-      console.log("mangoCache", mangoCache)
-      const result = mangoAccount.getHealth(mangoGroup, mangoCache, 'Init')
 
       expect(
-        result
-          .toString()
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Init').toString()
       ).to.equal("37904260000.05905822642118252475");
-    });
-  });
-
-  describe('perpAccountNoSpotOpenordersX', async () => {
-    it('getHealth() should return correct result', async () => {
-      const prefix = "./testdata/perp_account_no_spot_openorders"
-      const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
-      const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
-      const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
-      const result = mangoAccount.getHealth(mangoGroup, mangoCache, 'Init')
-
       expect(
-        result
-          .toString()
-      ).to.equal("341025333625.51856223547208912805");
-    });
-  });
-
-  describe('perpAccountNoSpotOpenordersUnhealthy', async () => {
-    it('getHealth() should return correct result', async () => {
-      const prefix = "./testdata/perp_account_no_spot_openorders_unhealthy"
-      const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
-      const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
-      const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
-      const result = mangoAccount.getHealth(mangoGroup, mangoCache, 'Init')
-
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("42642292500.06652466908819931746");
       expect(
-        result
-          .toString()
-      ).to.equal("-848086876487.04950427436299875694");
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("100");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("100");
+      expect(
+        mangoAccount.computeValue(mangoGroup, mangoCache).toString()
+      ).to.equal("47380.32499999999999928946");
+      expect(
+        mangoAccount.getLeverage(mangoGroup, mangoCache).toString()
+      ).to.equal("0");
+      expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.false
     });
   });
 
   describe('account1', async () => {
-    it('getHealth() should return correct result', async () => {
+    it('Health calculations should return the correct results', async () => {
       const prefix = "./testdata/account1"
       const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
       const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
+      mangoAccount.spotOpenOrdersAccounts[3] = loadTestOpenOrders(`${prefix}/openorders3.json`)
+      mangoAccount.spotOpenOrdersAccounts[6] = loadTestOpenOrders(`${prefix}/openorders6.json`)
+      mangoAccount.spotOpenOrdersAccounts[7] = loadTestOpenOrders(`${prefix}/openorders7.json`)
       const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
-      const result = mangoAccount.getHealth(mangoGroup, mangoCache, 'Init')
 
       expect(
-        result
-          .toString()
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Init').toString()
       ).to.equal("454884281.15520619643754685058");
+      expect(
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("901472688.63722587052636470162");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("10.48860467608925262084");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("20.785925232226531989");
+      expect(
+        mangoAccount.computeValue(mangoGroup, mangoCache).toString()
+      ).to.equal("1348.25066158888197520582");
+      expect(
+        mangoAccount.getLeverage(mangoGroup, mangoCache).toString()
+      ).to.equal("3.21671490144456129201");
+      expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.false
     });
   });
 
   describe('account2', async () => {
-    it('getHealth() should return correct result', async () => {
+    it('Health calculations should return the correct results', async () => {
       const prefix = "./testdata/account2"
       const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
       const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
+      mangoAccount.spotOpenOrdersAccounts[2] = loadTestOpenOrders(`${prefix}/openorders2.json`)
+      mangoAccount.spotOpenOrdersAccounts[3] = loadTestOpenOrders(`${prefix}/openorders3.json`)
       const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
-      const result = mangoAccount.getHealth(mangoGroup, mangoCache, 'Init')
 
       expect(
-        result
-          .toString()
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Init').toString()
       ).to.equal("7516159604.84918334545095675026");
+      expect(
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("9618709877.45119083596852505025");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("24.80680004365716229131");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("31.74618756817508824497");
+      expect(
+        mangoAccount.computeValue(mangoGroup, mangoCache).toString()
+      ).to.equal("11721.35669142618275273549");
+      expect(
+        mangoAccount.getLeverage(mangoGroup, mangoCache).toString()
+      ).to.equal("3.56338611204225585993");
+      expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.false
     });
   });
 
-  describe('interest rates', async () => {
-    it('BTC root bank should return correct interest rate', async () => {
-      const prefix = "./testdata/tokenbank"
+  describe('account3', async () => {
+    it('Health calculations should return the correct results', async () => {
+      const prefix = "./testdata/account3"
       const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
-      const rootBank: RootBank = loadTestMangoRootBank(`${prefix}/btc_root_bank.json`)
-      const nodeBank: NodeBank = loadTestMangoNodeBank(`${prefix}/btc_node_bank.json`)
-      rootBank.nodeBankAccounts = [nodeBank]
+      const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
+      const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
 
       expect(
-        rootBank.getBorrowRate(mangoGroup)
-          .toString()
-      ).to.equal("0.0060962691428017024");
-
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("341025333625.51856223547208912805");
       expect(
-        rootBank.getDepositRate(mangoGroup)
-          .toString()
-      ).to.equal("0.00074328994922723268");
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("683477170424.20340250929429970483");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("4.52652018845647319267");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("9.50397353076404272088");
+      expect(
+        mangoAccount.computeValue(mangoGroup, mangoCache).toString()
+      ).to.equal("1025929.00722205438034961844");
+      expect(
+        mangoAccount.getLeverage(mangoGroup, mangoCache).toString()
+      ).to.equal("6.50157472788435697453");
+      expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.false
     });
+  });
 
-    it('USDC root bank should return correct interest rate', async () => {
-      const prefix = "./testdata/tokenbank"
+  describe('account4', async () => {
+    it('Health calculations should return the correct results', async () => {
+      const prefix = "./testdata/account4"
       const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
-      const rootBank: RootBank = loadTestMangoRootBank(`${prefix}/usdc_root_bank.json`)
-      const nodeBank: NodeBank = loadTestMangoNodeBank(`${prefix}/usdc_node_bank.json`)
-      rootBank.nodeBankAccounts = [nodeBank]
+      const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
+      const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
 
       expect(
-        rootBank.getBorrowRate(mangoGroup)
-          .toString()
-      ).to.equal("0.23058349895659091544");
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("-848086876487.04950427436299875694");
+      expect(
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("-433869053006.07361789143756070075");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("-9.30655353087566084014");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("-4.98781798472691662028");
+      expect(
+        mangoAccount.computeValue(mangoGroup, mangoCache).toString()
+      ).to.equal("-19651.22952604663374742699");
+      expect(
+        mangoAccount.getLeverage(mangoGroup, mangoCache).toString()
+      ).to.equal("-421.56937094643044972031");
+      expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.true
+    });
+  });
+
+  describe('account5', async () => {
+    it('Health calculations should return the correct results', async () => {
+      const prefix = "./testdata/account5"
+      const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
+      const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
+      mangoAccount.spotOpenOrdersAccounts[0] = loadTestOpenOrders(`${prefix}/openorders0.json`)
+      mangoAccount.spotOpenOrdersAccounts[1] = loadTestOpenOrders(`${prefix}/openorders1.json`)
+      mangoAccount.spotOpenOrdersAccounts[2] = loadTestOpenOrders(`${prefix}/openorders2.json`)
+      mangoAccount.spotOpenOrdersAccounts[3] = loadTestOpenOrders(`${prefix}/openorders3.json`)
+      mangoAccount.spotOpenOrdersAccounts[8] = loadTestOpenOrders(`${prefix}/openorders8.json`)
+      const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
 
       expect(
-        rootBank.getDepositRate(mangoGroup)
-          .toString()
-      ).to.equal("0.16874409787690680673");
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("15144959918141.09175135195858530324");
+      expect(
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("15361719060997.68276021614036608298");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("878.88913077823325181726");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("946.44498820888003365326");
+      expect(
+        mangoAccount.computeValue(mangoGroup, mangoCache).toString()
+      ).to.equal("15578478.17337437202354522015");
+      expect(
+        mangoAccount.getLeverage(mangoGroup, mangoCache).toString()
+      ).to.equal("0.09884076560217636143");
+      expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.false
+    });
+  });
+
+  describe('account6', async () => {
+    it('Health calculations should return the correct results', async () => {
+      const prefix = "./testdata/account6"
+      const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
+      const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
+      mangoAccount.spotOpenOrdersAccounts[0] = loadTestOpenOrders(`${prefix}/openorders0.json`)
+      mangoAccount.spotOpenOrdersAccounts[1] = loadTestOpenOrders(`${prefix}/openorders1.json`)
+      mangoAccount.spotOpenOrdersAccounts[2] = loadTestOpenOrders(`${prefix}/openorders2.json`)
+      mangoAccount.spotOpenOrdersAccounts[3] = loadTestOpenOrders(`${prefix}/openorders3.json`)
+      mangoAccount.spotOpenOrdersAccounts[8] = loadTestOpenOrders(`${prefix}/openorders8.json`)
+      const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
+
+      expect(
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("14480970069238.33686487450164648294");
+      expect(
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("15030566251990.17026082618337312624");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("215.03167137712999590349");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("236.77769605824430243501");
+      expect(
+        mangoAccount.computeValue(mangoGroup, mangoCache).toString()
+      ).to.equal("15580162.40781940827396567784");
+      expect(
+        mangoAccount.getLeverage(mangoGroup, mangoCache).toString()
+      ).to.equal("0.07913870989902704878");
+      expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.false
     });
   });
 });
