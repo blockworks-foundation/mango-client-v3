@@ -4,8 +4,10 @@ import BN from 'bn.js';
 import {
   BookSide,
   BookSideLayout,
+  clamp,
   FillEvent,
   MangoAccount,
+  MangoCache,
   MetaData,
   nativeToUi,
   PerpEventQueue,
@@ -104,6 +106,39 @@ export default class PerpMarket {
     return this.priceLotsToNumber(new BN(1));
   }
 
+  /**
+   * Calculate the instantaneous funding rate using the bids and asks
+   * Reported as an hourly number
+   * Make sure `cache`, `bids` and `asks` are up to date
+   */
+  getCurrentFundingRate(
+    group: MangoGroup,
+    cache: MangoCache,
+    marketIndex: number,
+    bids: BookSide,
+    asks: BookSide,
+  ) {
+    const IMPACT_QUANTITY = new BN(100);
+    const MIN_FUNDING = -0.05;
+    const MAX_FUNDING = 0.05;
+    const bid = bids.getImpactPriceUi(IMPACT_QUANTITY);
+    const ask = asks.getImpactPriceUi(IMPACT_QUANTITY);
+    const indexPrice = group.getPriceUi(marketIndex, cache);
+
+    let diff;
+    if (bid !== undefined && ask !== undefined) {
+      const bookPrice = (bid + ask) / 2;
+      diff = clamp(bookPrice / indexPrice - 1, MIN_FUNDING, MAX_FUNDING);
+    } else if (bid !== undefined) {
+      diff = MAX_FUNDING;
+    } else if (ask !== undefined) {
+      diff = MIN_FUNDING;
+    } else {
+      diff = 0;
+    }
+    return diff / 24;
+  }
+
   async loadEventQueue(connection: Connection): Promise<PerpEventQueue> {
     const acc = await connection.getAccountInfo(this.eventQueue);
     const parsed = PerpEventQueueLayout.decode(acc?.data);
@@ -176,6 +211,7 @@ export default class PerpMarket {
     group: MangoGroup,
     perpMarketConfig: PerpMarketConfig,
   ): string {
+    const info = group.perpMarkets[perpMarketConfig.marketIndex];
     const lmi = this.liquidityMiningInfo;
     const now = Date.now() / 1000;
     const start = lmi.periodStart.toNumber();
@@ -206,6 +242,9 @@ export default class PerpMarket {
         this.lastUpdated.toNumber() * 1000,
       ).toUTCString()}`,
       `seqNum: ${this.seqNum.toString()}`,
+      `liquidationFee: ${info.liquidationFee.toString()}`,
+      `takerFee: ${info.takerFee.toString()}`,
+      `makerFee: ${info.makerFee.toString()}`,
       `feesAccrued: ${nativeToUi(this.feesAccrued.toNumber(), 6).toFixed(6)}`,
       `\n----- ${perpMarketConfig.name} Liquidity Mining Info -----`,
       `rate: ${lmi.rate.toString()}`,

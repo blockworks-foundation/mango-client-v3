@@ -13,7 +13,6 @@ import {
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import {
-  awaitTransactionSignatureConfirmation,
   createAccountInstruction,
   createSignerKeyAndNonce,
   createTokenAccountInstructions,
@@ -33,7 +32,6 @@ import {
   MangoCache,
   MangoCacheLayout,
   MangoGroupLayout,
-  MAX_NUM_IN_MARGIN_BASKET,
   NodeBankLayout,
   PerpEventLayout,
   PerpEventQueueHeaderLayout,
@@ -88,6 +86,7 @@ import {
   makeRemoveAdvancedOrderInstruction,
   makeCreatePerpMarketInstruction,
   makeChangePerpMarketParams2Instruction,
+  makeUpdateMarginBasketInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -111,21 +110,36 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
+import { TimeoutError } from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
 };
 
 /**
- * A class for interacting with a particular Mango V3 Program
+ * A class for interacting with the Mango V3 Program
+ *
+ * @param connection A solana web.js Connection object
+ * @param programId The PublicKey of the Mango V3 Program
+ * @param opts An object used to configure the MangoClient. Accepts a postSendTxCallback
  */
 export class MangoClient {
   connection: Connection;
   programId: PublicKey;
+  lastSlot: number;
+  postSendTxCallback?: ({ txid: string }) => void;
 
-  constructor(connection: Connection, programId: PublicKey) {
+  constructor(
+    connection: Connection,
+    programId: PublicKey,
+    opts: { postSendTxCallback?: ({ txid }: { txid: string }) => void } = {},
+  ) {
     this.connection = connection;
     this.programId = programId;
+    this.lastSlot = 0;
+    if (opts.postSendTxCallback) {
+      this.postSendTxCallback = opts.postSendTxCallback;
+    }
   }
 
   async sendTransactions(
@@ -200,13 +214,20 @@ export class MangoClient {
   }
 
   // TODO - switch Account to Keypair and switch off setSigners due to deprecated
+  /**
+   * Send a transaction using the Solana Web3.js connection on the mango client
+   *
+   * @param transaction
+   * @param payer
+   * @param additionalSigners
+   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Defaults to 30000ms. Passing null will disable the transaction confirmation check and always return success.
+   */
   async sendTransaction(
     transaction: Transaction,
     payer: Account | WalletAdapter | Keypair,
     additionalSigners: Account[],
-    timeout = 30000,
+    timeout: number | null = 30000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
-    postSignTxCallback?: any,
   ): Promise<TransactionSignature> {
     await this.signTransaction({
       transaction,
@@ -216,17 +237,21 @@ export class MangoClient {
 
     const rawTransaction = transaction.serialize();
     const startTime = getUnixTs();
-    if (postSignTxCallback) {
-      try {
-        postSignTxCallback();
-      } catch (e) {
-        console.log(`postSignTxCallback error ${e}`);
-      }
-    }
+
     const txid: TransactionSignature = await this.connection.sendRawTransaction(
       rawTransaction,
       { skipPreflight: true },
     );
+
+    if (this.postSendTxCallback) {
+      try {
+        this.postSendTxCallback({ txid });
+      } catch (e) {
+        console.log(`postSendTxCallback error ${e}`);
+      }
+    }
+
+    if (!timeout) return txid;
 
     console.log(
       'Started awaiting confirmation for',
@@ -236,28 +261,31 @@ export class MangoClient {
     );
 
     let done = false;
+
+    let retrySleep = 15000;
     (async () => {
       // TODO - make sure this works well on mainnet
-      await sleep(1000);
       while (!done && getUnixTs() - startTime < timeout / 1000) {
-        console.log(new Date().toUTCString(), ' sending tx ', txid);
+        await sleep(retrySleep);
+        // console.log(new Date().toUTCString(), ' sending tx ', txid);
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(2000);
+        if (retrySleep <= 6000) {
+          retrySleep = retrySleep * 2;
+        }
       }
     })();
 
     try {
-      await awaitTransactionSignatureConfirmation(
+      await this.awaitTransactionSignatureConfirmation(
         txid,
         timeout,
-        this.connection,
         confirmLevel,
       );
-    } catch (err) {
+    } catch (err: any) {
       if (err.timeout) {
-        throw new Error('Timed out awaiting confirmation on transaction');
+        throw new TimeoutError({ txid });
       }
       let simulateResult: SimulatedTransactionResponse | null = null;
       try {
@@ -286,7 +314,7 @@ export class MangoClient {
       done = true;
     }
 
-    // console.log('Latency', txid, getUnixTs() - startTime);
+    console.log('Latency', txid, getUnixTs() - startTime);
     return txid;
   }
 
@@ -318,19 +346,18 @@ export class MangoClient {
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        await sleep(500);
+        await sleep(1000);
       }
     })();
     try {
-      await awaitTransactionSignatureConfirmation(
+      await this.awaitTransactionSignatureConfirmation(
         txid,
         timeout,
-        this.connection,
         confirmLevel,
       );
-    } catch (err) {
+    } catch (err: any) {
       if (err.timeout) {
-        throw new Error('Timed out awaiting confirmation on transaction');
+        throw err;
       }
       let simulateResult: SimulatedTransactionResponse | null = null;
       try {
@@ -364,6 +391,108 @@ export class MangoClient {
 
     // console.log('Latency', txid, getUnixTs() - startTime);
     return txid;
+  }
+
+  async awaitTransactionSignatureConfirmation(
+    txid: TransactionSignature,
+    timeout: number,
+    confirmLevel: TransactionConfirmationStatus,
+  ) {
+    let done = false;
+
+    const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] =
+      ['finalized'];
+
+    if (confirmLevel === 'confirmed') {
+      confirmLevels.push('confirmed');
+    } else if (confirmLevel === 'processed') {
+      confirmLevels.push('confirmed');
+      confirmLevels.push('processed');
+    }
+    let subscriptionId;
+
+    const result = await new Promise((resolve, reject) => {
+      (async () => {
+        setTimeout(() => {
+          if (done) {
+            return;
+          }
+          done = true;
+          console.log('Timed out for txid: ', txid);
+          reject({ timeout: true });
+        }, timeout);
+        try {
+          subscriptionId = this.connection.onSignature(
+            txid,
+            (result, context) => {
+              subscriptionId = undefined;
+              done = true;
+              if (result.err) {
+                reject(result.err);
+              } else {
+                this.lastSlot = context?.slot;
+                resolve(result);
+              }
+            },
+            'processed',
+          );
+        } catch (e) {
+          done = true;
+          console.log('WS error in setup', txid, e);
+        }
+        let retrySleep = 200;
+        while (!done) {
+          // eslint-disable-next-line no-loop-func
+          await sleep(retrySleep);
+          (async () => {
+            try {
+              const response = await this.connection.getSignatureStatuses([
+                txid,
+              ]);
+
+              const result = response && response.value[0];
+              if (!done) {
+                if (!result) {
+                  // console.log('REST null result for', txid, result);
+                } else if (result.err) {
+                  console.log('REST error for', txid, result);
+                  done = true;
+                  reject(result.err);
+                } else if (
+                  !(
+                    result.confirmations ||
+                    confirmLevels.includes(result.confirmationStatus)
+                  )
+                ) {
+                  console.log('REST not confirmed', txid, result);
+                } else {
+                  this.lastSlot = response?.context?.slot;
+                  console.log('REST confirmed', txid, result);
+                  done = true;
+                  resolve(result);
+                }
+              }
+            } catch (e) {
+              if (!done) {
+                console.log('REST connection error: txid', txid, e);
+              }
+            }
+          })();
+          if (retrySleep <= 1600) {
+            retrySleep = retrySleep * 2;
+          }
+        }
+      })();
+    });
+
+    if (subscriptionId) {
+      this.connection.removeSignatureListener(subscriptionId).catch((e) => {
+        console.log('WS error in cleanup', e);
+      });
+    }
+
+    done = true;
+    return result;
   }
 
   /**
@@ -983,7 +1112,7 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(consumeEventsInstruction);
 
-    return await this.sendTransaction(transaction, payer, []);
+    return await this.sendTransaction(transaction, payer, [], null);
   }
 
   /**
@@ -1789,6 +1918,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
+  /**
+   * Assumes spotMarkets contains all Markets in MangoGroup in order
+   */
   async settleAll(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
@@ -1797,12 +1929,17 @@ export class MangoClient {
   ) {
     const transactions: Transaction[] = [];
 
-    for (let i = 0; i < spotMarkets.length; i++) {
+    let j = 0;
+    for (let i = 0; i < mangoGroup.spotMarkets.length; i++) {
+      if (mangoGroup.spotMarkets[i].isEmpty()) continue;
+      const spotMarket = spotMarkets[j];
+      j++;
+
       const transaction = new Transaction();
       const openOrdersAccount = mangoAccount.spotOpenOrdersAccounts[i];
-      if (openOrdersAccount === undefined) {
-        continue;
-      } else if (
+      if (openOrdersAccount === undefined) continue;
+
+      if (
         openOrdersAccount.quoteTokenFree.toNumber() +
           openOrdersAccount['referrerRebatesAccrued'].toNumber() ===
           0 &&
@@ -1811,7 +1948,6 @@ export class MangoClient {
         continue;
       }
 
-      const spotMarket = spotMarkets[i];
       const dexSigner = await PublicKey.createProgramAddress(
         [
           spotMarket.publicKey.toBuffer(),
@@ -1894,6 +2030,7 @@ export class MangoClient {
     quoteRootBank: RootBank,
     price: I80F48, // should be the MangoCache price
     owner: Account | WalletAdapter,
+    mangoAccounts?: MangoAccount[],
   ): Promise<TransactionSignature | null> {
     // fetch all MangoAccounts filtered for having this perp market in basket
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
@@ -1944,7 +2081,9 @@ export class MangoClient {
       }
     }
 
-    const mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+    if (mangoAccounts === undefined) {
+      mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+    }
 
     const accountsWithPnl = mangoAccounts
       .map((m) => ({
@@ -2255,6 +2394,7 @@ export class MangoClient {
     exp: number,
     version: number,
     lmSizeShift: number,
+    baseDecimals: number,
   ) {
     const [perpMarketPk] = await PublicKey.findProgramAddress(
       [
@@ -2319,6 +2459,7 @@ export class MangoClient {
       new BN(exp),
       new BN(version),
       new BN(lmSizeShift),
+      new BN(baseDecimals),
     );
 
     const transaction = new Transaction();
@@ -3394,6 +3535,23 @@ export class MangoClient {
       perpMarket.eventQueue,
       openOrders,
       new BN(orderIndex),
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async updateMarginBasket(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter,
+  ) {
+    const instruction = makeUpdateMarginBasketInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      mangoAccount.spotOpenOrders,
     );
     const transaction = new Transaction();
     transaction.add(instruction);

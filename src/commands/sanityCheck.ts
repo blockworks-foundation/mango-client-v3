@@ -1,84 +1,90 @@
-import { Connection } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import MangoAccount from '../MangoAccount';
 import PerpMarket from '../PerpMarket';
-import { getTokenByMint, GroupConfig } from '../config';
-import { QUOTE_INDEX } from '../layout';
+import { getPerpMarketByIndex, getTokenByMint, GroupConfig } from '../config';
+import { MangoCache, QUOTE_INDEX } from '../layout';
 import { I80F48, ZERO_I80F48 } from '../fixednum';
-import { zeroKey } from '../utils';
+import { ZERO_BN, zeroKey } from '../utils';
+import RootBank from '../RootBank';
 
-const setUp = async (client, mangoGroupKey) => {
+async function setUp(client: MangoClient, mangoGroupKey: PublicKey) {
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
+  await mangoGroup.loadRootBanks(client.connection);
+
   const mangoAccounts = await client.getAllMangoAccounts(
     mangoGroup,
     undefined,
     true,
   );
-  const perpMarkets: PerpMarket[] = [];
-  for (let i = 0; i < QUOTE_INDEX; i++) {
-    const perpMarketInfo = mangoGroup.perpMarkets[i];
-    const perpMarket = await client.getPerpMarket(
-      perpMarketInfo.perpMarket,
-      mangoGroup.tokens[i].decimals,
-      mangoGroup.tokens[QUOTE_INDEX].decimals,
-    );
-    perpMarkets.push(perpMarket);
-  }
-  return { mangoGroup, mangoAccounts, perpMarkets };
-};
 
-const checkSumOfBasePositions = async (mangoAccounts: MangoAccount[]) => {
-  const sumOfAllBasePositions = mangoAccounts.reduce((sumAll, mangoAccount) => {
-    const sumOfBasePositions = mangoAccount.perpAccounts.reduce(
-      (sum, perpAccount) => {
-        return sum + perpAccount.basePosition.toNumber();
-      },
-      0,
-    );
-    return sumAll + sumOfBasePositions;
-  }, 0);
-  console.log('checkSumOfBasePositions', sumOfAllBasePositions);
-};
-
-const checkSumOfQuotePositions = async (
-  connection,
-  mangoGroup,
-  mangoAccounts,
-  perpMarkets,
-) => {
-  const mangoCache = await mangoGroup.loadCache(connection);
-  const sumOfAllQuotePositions = mangoAccounts.reduce(
-    (sumAll, mangoAccount) => {
-      const sumOfQuotePositions = mangoAccount.perpAccounts.reduce(
-        (sum, perpAccount, index) => {
-          const perpMarketCache = mangoCache.perpMarketCache[index];
-          return sum.add(perpAccount.getQuotePosition(perpMarketCache));
-        },
-        ZERO_I80F48,
-      );
-      return sumAll.add(sumOfQuotePositions);
-    },
-    ZERO_I80F48,
+  const mangoCache = await mangoGroup.loadCache(client.connection);
+  const perpMarkets: (PerpMarket | undefined)[] = await Promise.all(
+    mangoGroup.perpMarkets.map((pmi, i) =>
+      pmi.isEmpty()
+        ? undefined
+        : client.getPerpMarket(
+            pmi.perpMarket,
+            mangoGroup.tokens[i].decimals,
+            mangoGroup.tokens[QUOTE_INDEX].decimals,
+          ),
+    ),
   );
 
-  const sumOfFeesAccrued = perpMarkets.reduce((sum, perpMarket) => {
-    return sum.add(perpMarket.feesAccrued);
-  }, ZERO_I80F48);
+  return { mangoGroup, mangoCache, mangoAccounts, perpMarkets };
+}
+
+function checkSumOfBasePositions(
+  groupConfig: GroupConfig,
+  mangoCache: MangoCache,
+  mangoAccounts: MangoAccount[],
+  perpMarkets: (PerpMarket | undefined)[],
+) {
+  let totalBase = ZERO_BN;
+  let totalQuote = ZERO_I80F48;
+
+  for (let i = 0; i < QUOTE_INDEX; i++) {
+    if (perpMarkets[i] === undefined) {
+      continue;
+    }
+    const perpMarket = perpMarkets[i] as PerpMarket;
+    let sumOfAllBasePositions = ZERO_BN;
+    let absBasePositions = ZERO_BN;
+    let sumQuote = perpMarket.feesAccrued;
+    const perpMarketCache = mangoCache.perpMarketCache[i];
+    for (const mangoAccount of mangoAccounts) {
+      const perpAccount = mangoAccount.perpAccounts[i];
+      sumOfAllBasePositions = sumOfAllBasePositions.add(
+        perpAccount.basePosition,
+      );
+      absBasePositions = absBasePositions.add(perpAccount.basePosition.abs());
+      sumQuote = sumQuote.add(perpAccount.getQuotePosition(perpMarketCache));
+    }
+
+    console.log(
+      `Market: ${getPerpMarketByIndex(groupConfig, i)?.name}
+      Sum Base Pos: ${sumOfAllBasePositions.toString()}
+      Sum Abs Base Pos ${absBasePositions.toString()}
+      Open Interest: ${perpMarket.openInterest.toString()}
+      Sum Quote: ${sumQuote.toString()}\n`,
+    );
+
+    totalBase = totalBase.add(sumOfAllBasePositions);
+    totalQuote = totalQuote.add(sumQuote);
+  }
 
   console.log(
-    'checkSumOfQuotePositions:',
-    sumOfAllQuotePositions.add(sumOfFeesAccrued).toString(),
+    `Total Base: ${totalBase.toString()}\nTotal Quote: ${totalQuote.toString()}`,
   );
-};
+}
 
-const checkSumOfNetDeposit = async (
+async function checkSumOfNetDeposit(
   groupConfig,
   connection,
   mangoGroup,
+  mangoCache,
   mangoAccounts,
-) => {
-  const mangoCache = await mangoGroup.loadCache(connection);
-  const rootBanks = await mangoGroup.loadRootBanks(connection);
+) {
   for (let i = 0; i < mangoGroup.tokens.length; i++) {
     if (mangoGroup.tokens[i].mint.equals(zeroKey)) {
       continue;
@@ -106,9 +112,12 @@ const checkSumOfNetDeposit = async (
     );
 
     let vaultAmount = ZERO_I80F48;
-    const rootBank = rootBanks[i];
+    const rootBank = mangoGroup.rootBankAccounts[i] as RootBank;
     if (rootBank) {
-      const nodeBanks = await rootBanks[i].loadNodeBanks(connection);
+      const nodeBanks = rootBank.nodeBankAccounts;
+      const vaults = await Promise.all(
+        nodeBanks.map((n) => connection.getTokenAccountBalance(n.vault)),
+      );
       const sumOfNetDepositsAcrossNodes = nodeBanks.reduce((sum, nodeBank) => {
         return sum.add(
           nodeBank.deposits.mul(mangoCache.rootBankCache[i].depositIndex),
@@ -128,10 +137,8 @@ const checkSumOfNetDeposit = async (
         sumOfNetBorrowsAcrossNodes.toString(),
       );
 
-      for (let j = 0; j < nodeBanks.length; j++) {
-        const vault = await connection.getTokenAccountBalance(
-          nodeBanks[j].vault,
-        );
+      for (const vault of vaults) {
+        // @ts-ignore
         vaultAmount = vaultAmount.add(I80F48.fromString(vault.value.amount));
       }
       console.log('vaultAmount:', vaultAmount.toString());
@@ -147,28 +154,23 @@ const checkSumOfNetDeposit = async (
 
     console.log('Diff', vaultAmount.sub(sumOfNetDepositsAcrossMAs).toString());
   }
-};
+}
 
 export default async function sanityCheck(
   connection: Connection,
   groupConfig: GroupConfig,
 ) {
   const client = new MangoClient(connection, groupConfig.mangoProgramId);
-  const { mangoGroup, mangoAccounts, perpMarkets } = await setUp(
+  const { mangoGroup, mangoCache, mangoAccounts, perpMarkets } = await setUp(
     client,
     groupConfig.publicKey,
   );
-  await checkSumOfBasePositions(mangoAccounts);
-  await checkSumOfQuotePositions(
-    connection,
-    mangoGroup,
-    mangoAccounts,
-    perpMarkets,
-  );
+  checkSumOfBasePositions(groupConfig, mangoCache, mangoAccounts, perpMarkets);
   await checkSumOfNetDeposit(
     groupConfig,
     connection,
     mangoGroup,
+    mangoCache,
     mangoAccounts,
   );
 }

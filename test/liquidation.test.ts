@@ -3,11 +3,6 @@ import os from 'os';
 import {
   Cluster,
   Config,
-  MangoClient,
-  MAX_PAIRS,
-  sleep,
-  throwUndefined,
-  MAX_NUM_IN_MARGIN_BASKET,
   QUOTE_INDEX,
   AssetType,
   I80F48,

@@ -22,12 +22,16 @@ import {
   Cluster,
   Config,
   getPerpMarketByBaseSymbol,
+  getPerpMarketByIndex,
   getTokenBySymbol,
   GroupConfig,
   PerpMarketConfig,
 } from './config';
 import { MangoClient } from './client';
 import { throwUndefined, uiToNative } from './utils';
+import { QUOTE_INDEX } from './layout';
+import { Coder } from '@project-serum/anchor';
+import idl from './mango_logs.json';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -497,10 +501,132 @@ yargs(hideBin(process.argv)).command(
       new PublicKey(args.mango_account_pk as string),
       groupConfig.serumProgramId,
     );
-
     const cache = await mangoGroup.loadCache(connection);
-
     console.log(mangoAccount.toPrettyString(groupConfig, mangoGroup, cache));
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'decode-log <log_b64>',
+  'Decode and print out log',
+  (y) => {
+    return y
+      .positional('log_b64', {
+        describe: 'base 64 encoded mango log',
+        type: 'string',
+      })
+      .option(...configDesc);
+  },
+  async (args) => {
+    console.log('decode-log', args);
+    // @ts-ignore
+    const coder = new Coder(idl);
+    const event = coder.events.decode(args.log_b64 as string);
+    if (!event) {
+      throw new Error('Invalid mango log');
+    }
+    const data: any = event.data;
+
+    if (event.name === 'CancelAllPerpOrdersLog') {
+      data.allOrderIds = data.allOrderIds.map((oid) => oid.toString());
+      data.canceledOrderIds = data.canceledOrderIds.map((oid) =>
+        oid.toString(),
+      );
+      data.mangoGroup = data['mangoGroup'].toString();
+      data.mangoAccount = data['mangoAccount'].toString();
+    } else {
+      for (const key in data) {
+        data[key] = data[key].toString();
+      }
+    }
+
+    console.log(event);
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'show-group <group>',
+  'Print relevant details about a MangoGroup',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-group', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+
+    for (let i = 0; i < QUOTE_INDEX; i++) {
+      const perpMarket = mangoGroup.perpMarkets[i];
+      if (perpMarket.isEmpty()) {
+        continue;
+      }
+      const pmc = getPerpMarketByIndex(groupConfig, i) as PerpMarketConfig;
+      const pm = await client.getPerpMarket(
+        perpMarket.perpMarket,
+        pmc.baseDecimals,
+        pmc.quoteDecimals,
+      );
+      const x = await connection.getTokenAccountBalance(pm.mngoVault);
+      console.log(pmc.baseSymbol, pm.mngoVault.toBase58(), x);
+    }
+
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'show-top-positions <group> <symbol>',
+  'Print top 10 positions for the symbol perp market',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-top-positions', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const perpMarketConfig: PerpMarketConfig = throwUndefined(
+      getPerpMarketByBaseSymbol(groupConfig, args.symbol as string),
+    );
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccounts = await client.getAllMangoAccounts(
+      mangoGroup,
+      [],
+      false,
+    );
+
+    mangoAccounts.sort((a, b) =>
+      b.perpAccounts[perpMarketConfig.marketIndex].basePosition
+        .abs()
+        .cmp(a.perpAccounts[perpMarketConfig.marketIndex].basePosition.abs()),
+    );
+
+    const mangoCache = await mangoGroup.loadCache(connection);
+    for (let i = 0; i < 10; i++) {
+      console.log(
+        `${i}: ${mangoAccounts[i].toPrettyString(
+          groupConfig,
+          mangoGroup,
+          mangoCache,
+        )}\n`,
+      );
+    }
+
     process.exit(0);
   },
 ).argv;
@@ -572,7 +698,7 @@ yargs(hideBin(process.argv)).command(
     const realm = new PublicKey(args.realm as string);
     const tokenAccount = new PublicKey(args.token_account as string);
     const owner = new PublicKey(args.owner as string);
-    const [address, nonce] = await PublicKey.findProgramAddress(
+    const [address] = await PublicKey.findProgramAddress(
       [
         Buffer.from('token-governance', 'utf-8'),
         realm.toBuffer(),

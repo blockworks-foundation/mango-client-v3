@@ -23,29 +23,29 @@ import {
 } from './instruction';
 import BN from 'bn.js';
 import { PerpEventQueueLayout } from './layout';
-import { MangoGroup, PerpMarket } from '.';
+import { MangoGroup, PerpMarket, promiseUndef } from '.';
 import PerpEventQueue from './PerpEventQueue';
 
 let lastRootBankCacheUpdate = 0;
-const groupName = process.env.GROUP || 'devnet.2';
+const groupName = process.env.GROUP || 'mainnet.1';
 const updateCacheInterval = parseInt(
-  process.env.UPDATE_CACHE_INTERVAL || '1000',
+  process.env.UPDATE_CACHE_INTERVAL || '3000',
 );
 const updateRootBankCacheInterval = parseInt(
   process.env.UPDATE_ROOT_BANK_CACHE_INTERVAL || '5000',
 );
 const processKeeperInterval = parseInt(
-  process.env.PROCESS_KEEPER_INTERVAL || '15000',
+  process.env.PROCESS_KEEPER_INTERVAL || '10000',
 );
 const consumeEventsInterval = parseInt(
-  process.env.CONSUME_EVENTS_INTERVAL || '2000',
+  process.env.CONSUME_EVENTS_INTERVAL || '1000',
 );
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '10');
-const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '5');
+const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const consumeEvents = process.env.CONSUME_EVENTS
   ? process.env.CONSUME_EVENTS === 'true'
   : true;
-const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
+const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
 const config = new Config(configFile);
 const groupIds = config.getGroup(cluster, groupName);
 
@@ -57,7 +57,7 @@ const mangoGroupKey = groupIds.publicKey;
 const payer = new Account(
   JSON.parse(
     process.env.KEYPAIR ||
-      fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+      fs.readFileSync(os.homedir() + '/.config/solana/blw.json', 'utf-8'),
   ),
 );
 const connection = new Connection(
@@ -89,10 +89,12 @@ async function main() {
     processConsumeEvents(mangoGroup, perpMarkets);
   }
 }
+console.time('processUpdateCache');
 
 async function processUpdateCache(mangoGroup: MangoGroup) {
+  console.timeEnd('processUpdateCache');
+
   try {
-    console.log('processUpdateCache');
     const batchSize = 8;
     const promises: Promise<string>[] = [];
     const rootBanks = mangoGroup.tokens
@@ -102,7 +104,7 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
     const perpMarkets = mangoGroup.perpMarkets
       .filter((pm) => !pm.isEmpty())
       .map((pm) => pm.perpMarket);
-    let nowTs = Date.now();
+    const nowTs = Date.now();
     let shouldUpdateRootBankCache = false;
     if (nowTs - lastRootBankCacheUpdate > updateRootBankCacheInterval) {
       shouldUpdateRootBankCache = true;
@@ -144,10 +146,11 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
       }
     }
 
-    await Promise.all(promises);
-  } catch (err) {
-    console.error('Error updating cache', err);
+    Promise.all(promises).catch((err) => {
+      console.error('Error updating cache', err);
+    });
   } finally {
+    console.time('processUpdateCache');
     setTimeout(processUpdateCache, updateCacheInterval, mangoGroup);
   }
 }
@@ -157,8 +160,6 @@ async function processConsumeEvents(
   perpMarkets: PerpMarket[],
 ) {
   try {
-    console.log('processConsumeEvents');
-
     const eventQueuePks = perpMarkets.map((mkt) => mkt.eventQueue);
     const eventQueueAccts = await getMultipleAccounts(
       connection,
@@ -179,43 +180,57 @@ async function processConsumeEvents(
       },
     );
 
-    for (let i = 0; i < perpMktAndEventQueue.length; i++) {
-      const { perpMarket, eventQueue } = perpMktAndEventQueue[i];
-
-      const events = eventQueue.getUnconsumedEvents();
-      if (events.length === 0) {
-        // console.log('No events to consume');
-        continue;
-      }
-
-      const accounts: Set<string> = new Set();
-      for (const event of events) {
-        if (event.fill) {
-          accounts.add(event.fill.maker.toBase58());
-          accounts.add(event.fill.taker.toBase58());
-        } else if (event.out) {
-          accounts.add(event.out.owner.toBase58());
+    const promises: Promise<string | void>[] = perpMktAndEventQueue.map(
+      ({ perpMarket, eventQueue }) => {
+        const events = eventQueue.getUnconsumedEvents();
+        if (events.length === 0) {
+          // console.log('No events to consume');
+          return promiseUndef();
         }
 
-        // Limit unique accounts to first 20 or 21
-        if (accounts.size >= maxUniqueAccounts) {
-          break;
-        }
-      }
+        const accounts: Set<string> = new Set();
+        for (const event of events) {
+          if (event.fill) {
+            accounts.add(event.fill.maker.toBase58());
+            accounts.add(event.fill.taker.toBase58());
+          } else if (event.out) {
+            accounts.add(event.out.owner.toBase58());
+          }
 
-      await client.consumeEvents(
-        mangoGroup,
-        perpMarket,
-        Array.from(accounts)
-          .map((s) => new PublicKey(s))
-          .sort(),
-        payer,
-        consumeEventsLimit,
-      );
-      console.log(`Consumed up to ${events.length} events`);
-    }
-  } catch (err) {
-    console.error('Error consuming events', err);
+          // Limit unique accounts to first 20 or 21
+          if (accounts.size >= maxUniqueAccounts) {
+            break;
+          }
+        }
+
+        return client
+          .consumeEvents(
+            mangoGroup,
+            perpMarket,
+            Array.from(accounts)
+              .map((s) => new PublicKey(s))
+              .sort(),
+            payer,
+            consumeEventsLimit,
+          )
+          .then(() => {
+            console.log(
+              `Consumed up to ${
+                events.length
+              } events ${perpMarket.publicKey.toBase58()}`,
+            );
+            console.log(
+              'EVENTS:',
+              events.map((e) => e?.fill?.seqNum.toString()),
+            );
+          })
+          .catch((err) => {
+            console.error('Error consuming events', err);
+          });
+      },
+    );
+
+    Promise.all(promises);
   } finally {
     setTimeout(
       processConsumeEvents,
@@ -287,9 +302,9 @@ async function processKeeperTransactions(
       }
     }
 
-    await Promise.all(promises);
-  } catch (err) {
-    console.error('Error processing keeper instructions', err);
+    Promise.all(promises).catch((err) => {
+      console.error('Error processing keeper instructions', err);
+    });
   } finally {
     setTimeout(
       processKeeperTransactions,

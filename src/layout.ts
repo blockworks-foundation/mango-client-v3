@@ -488,6 +488,7 @@ MangoInstructionLayout.addVariant(
     u8('exp'),
     u8('version'),
     u8('lmSizeShift'),
+    u8('baseDecimals'),
   ]),
   'CreatePerpMarket',
 );
@@ -521,6 +522,14 @@ MangoInstructionLayout.addVariant(
     u8('lmSizeShift'),
   ]),
   'ChangePerpMarketParams2',
+);
+
+MangoInstructionLayout.addVariant(48, struct([]), 'UpdateMarginBasket');
+
+MangoInstructionLayout.addVariant(
+  49,
+  struct([u32('maxMangoAccounts')]),
+  'ChangeMaxMangoAccounts',
 );
 
 const instructionMaxSpan = Math.max(

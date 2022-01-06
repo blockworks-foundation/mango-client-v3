@@ -134,8 +134,8 @@ async function exampleSpot() {
   );
 
   // Fetch orderbooks
-  const bids = await spotMarket.loadBids(connection);
-  const asks = await spotMarket.loadAsks(connection);
+  let bids = await spotMarket.loadBids(connection);
+  let asks = await spotMarket.loadAsks(connection);
 
   // L2 orderbook data
   for (const [price, size] of bids.getL2(20)) {
@@ -158,22 +158,25 @@ async function exampleSpot() {
   const mangoAccount = (
     await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
-  await client.placeSpotOrder(
+  await client.placeSpotOrder2(
     mangoGroup,
     mangoAccount,
-    mangoGroup.mangoCache,
     spotMarket,
     owner,
     'buy', // or 'sell'
     41000,
     0.0001,
     'limit',
+    ZERO_BN, // client order id, set to whatever you want
+    true, // use the mango MSRM vault for fee discount
   ); // or 'ioc' or 'postOnly'
 
-  // retrieve open orders for account
-  const openOrders = await spotMarket.loadOrdersForOwner(
+  // Reload bids and asks and find your open orders
+  // Possibly have a wait here so RPC node can catch up
+  const openOrders = await mangoAccount.loadSpotOrdersForMarket(
     connection,
-    mangoAccount.publicKey,
+    spotMarket,
+    spotMarketConfig.marketIndex,
   );
 
   // cancel orders

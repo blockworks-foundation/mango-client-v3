@@ -1,5 +1,6 @@
 import BN from 'bn.js';
 import Big from 'big.js';
+import { ZERO_BN } from './utils';
 
 // TODO - this whole class is inefficient; consider optimizing
 export class I80F48 {
@@ -15,6 +16,7 @@ export class I80F48 {
   static FRACTIONS = 48;
   static MULTIPLIER_BIG = new Big(2).pow(I80F48.FRACTIONS);
   static MULTIPLIER_BN = new BN(2).pow(new BN(I80F48.FRACTIONS));
+  static MULTIPLIER_NUMBER = Math.pow(2, I80F48.FRACTIONS);
   static MAX_BN: BN = new BN(2)
     .pow(new BN(I80F48.MAX_SIZE))
     .div(new BN(2))
@@ -26,7 +28,6 @@ export class I80F48 {
     .neg();
 
   data: BN; // This is i128 => array of 16 bytes
-  binaryLayout: string;
 
   constructor(data: BN) {
     if (data.lt(I80F48.MIN_BN) || data.gt(I80F48.MAX_BN)) {
@@ -34,13 +35,12 @@ export class I80F48 {
     }
 
     this.data = data;
-    this.binaryLayout = data
-      .toTwos(I80F48.MAX_SIZE)
-      .toString(2, I80F48.MAX_SIZE)
-      .replace(/-/g, '');
   }
   static fromNumber(x: number): I80F48 {
-    return this.fromString(x.toString());
+    let int_part = Math.trunc(x);
+    let v = (new BN(int_part)).iushln(48);
+    v.iadd(new BN((x - int_part) * I80F48.MULTIPLIER_NUMBER));
+    return new I80F48(v);
   }
   static fromNumberOrUndef(x: number | undefined): I80F48 | undefined {
     return x === undefined ? undefined : I80F48.fromNumber(x);
@@ -51,10 +51,10 @@ export class I80F48 {
     return new I80F48(fixedPointValue);
   }
   static fromI64(x: BN): I80F48 {
-    return this.fromString(x.toString());
+    return new I80F48(x.ushln(48));
   }
   static fromU64(x: BN): I80F48 {
-    return this.fromString(x.toString());
+    return new I80F48(x.ushln(48));
   }
   toTwos(): BN {
     return this.data.toTwos(I80F48.MAX_SIZE);
@@ -100,13 +100,24 @@ export class I80F48 {
     return this.data;
   }
   getBinaryLayout(): string {
-    return this.binaryLayout;
+    return this.data
+      .toTwos(I80F48.MAX_SIZE)
+      .toString(2, I80F48.MAX_SIZE)
+      .replace(/-/g, '');
   }
   add(x: I80F48): I80F48 {
     return new I80F48(this.data.add(x.getData()));
   }
   sub(x: I80F48): I80F48 {
     return new I80F48(this.data.sub(x.getData()));
+  }
+  iadd(x: I80F48): I80F48 {
+    this.data.iadd(x.getData());
+    return this;
+  }
+  isub(x: I80F48): I80F48 {
+    this.data.isub(x.getData());
+    return this;
   }
   floor(): I80F48 {
     // Low IQ method
@@ -132,11 +143,19 @@ export class I80F48 {
    * Multiply the two and shift
    */
   mul(x: I80F48): I80F48 {
-    return new I80F48(this.data.mul(x.data).div(I80F48.MULTIPLIER_BN));
+    return new I80F48(this.data.mul(x.data).iushrn(I80F48.FRACTIONS));
+  }
+  imul(x: I80F48): I80F48 {
+    this.data.imul(x.getData()).iushrn(I80F48.FRACTIONS);
+    return this;
   }
 
   div(x: I80F48): I80F48 {
-    return new I80F48(this.data.mul(I80F48.MULTIPLIER_BN).div(x.data));
+    return new I80F48(this.data.ushln(I80F48.FRACTIONS).div(x.data));
+  }
+  idiv(x: I80F48): I80F48 {
+    this.data = this.data.iushln(I80F48.FRACTIONS).div(x.data);
+    return this;
   }
 
   gt(x: I80F48): boolean {
@@ -167,6 +186,9 @@ export class I80F48 {
   }
   isNeg(): boolean {
     return this.data.isNeg();
+  }
+  isZero(): boolean {
+    return this.eq(ZERO_I80F48);
   }
   min(x: I80F48): I80F48 {
     return this.lte(x) ? this : x;
