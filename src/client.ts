@@ -24,6 +24,7 @@ import {
   uiToNative,
   zeroKey,
   ZERO_BN,
+  promiseUndef,
 } from './utils';
 import {
   AssetType,
@@ -2882,19 +2883,26 @@ export class MangoClient {
     mngoNodeBank: PublicKey,
     mngoVault: PublicKey,
   ): Promise<TransactionSignature> {
-    const transaction = new Transaction();
+    const txProms: any[] = [];
+    let transaction = new Transaction();
+
+    const perpMarkets = await Promise.all(
+      mangoAccount.perpAccounts.map((perpAccount, i) => {
+        if (perpAccount.mngoAccrued.eq(ZERO_BN)) {
+          return promiseUndef();
+        } else {
+          return this.getPerpMarket(
+            mangoGroup.perpMarkets[i].perpMarket,
+            mangoGroup.tokens[i].decimals,
+            mangoGroup.tokens[QUOTE_INDEX].decimals,
+          );
+        }
+      }),
+    );
 
     for (let i = 0; i < mangoAccount.perpAccounts.length; i++) {
-      const perpAccount = mangoAccount.perpAccounts[i];
-      if (perpAccount.mngoAccrued.eq(ZERO_BN)) {
-        continue;
-      }
-      const perpMarketInfo = mangoGroup.perpMarkets[i];
-      const perpMarket = await this.getPerpMarket(
-        perpMarketInfo.perpMarket,
-        mangoGroup.tokens[i].decimals,
-        mangoGroup.tokens[QUOTE_INDEX].decimals,
-      );
+      const perpMarket = perpMarkets[i];
+      if (perpMarket === undefined) continue;
 
       const instruction = makeRedeemMngoInstruction(
         this.programId,
@@ -2910,9 +2918,21 @@ export class MangoClient {
         mangoGroup.signerKey,
       );
       transaction.add(instruction);
-    }
 
-    return await this.sendTransaction(transaction, payer, []);
+      if (transaction.instructions.length === 9) {
+        txProms.push(this.sendTransaction(transaction, payer, []));
+        transaction = new Transaction();
+      }
+    }
+    if (transaction.instructions.length > 0) {
+      txProms.push(this.sendTransaction(transaction, payer, []));
+    }
+    if (txProms.length) {
+      const txSigs = await Promise.all(txProms);
+      return txSigs[0];
+    } else {
+      throw new Error('No MNGO to redeem');
+    }
   }
 
   async addMangoAccountInfo(
