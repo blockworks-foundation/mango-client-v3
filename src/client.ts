@@ -2918,7 +2918,7 @@ export class MangoClient {
         mangoGroup.signerKey,
       );
       transaction.add(instruction);
-
+      console.log(transaction.instructions.length);
       if (transaction.instructions.length === 8) {
         txProms.push(this.sendTransaction(transaction, payer, []));
         transaction = new Transaction();
