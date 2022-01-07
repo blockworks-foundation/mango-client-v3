@@ -2919,7 +2919,7 @@ export class MangoClient {
       );
       transaction.add(instruction);
 
-      if (transaction.instructions.length === 9) {
+      if (transaction.instructions.length === 8) {
         txProms.push(this.sendTransaction(transaction, payer, []));
         transaction = new Transaction();
       }
