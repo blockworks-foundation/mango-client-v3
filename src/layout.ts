@@ -546,6 +546,14 @@ MangoInstructionLayout.addVariant(
 
 MangoInstructionLayout.addVariant(56, struct([]), 'UpgradeMangoAccountV0V1');
 
+MangoInstructionLayout.addVariant(
+  57,
+  struct([sideLayout(1, 'side'), u8('limit')]),
+  'CancelPerpOrdersSide',
+);
+
+MangoInstructionLayout.addVariant(58, struct([]), 'SetDelegate');
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),

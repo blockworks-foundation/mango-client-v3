@@ -94,6 +94,8 @@ import {
   makeResolveDustInstruction,
   makeCreateMangoAccountInstruction,
   makeUpgradeMangoAccountV0V1Instruction,
+  makeCancelPerpOrdersSideInstruction,
+  makeSetDelegateInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -4169,5 +4171,51 @@ export class MangoClient {
     } else {
       throw new Error('Unable to sign emptyAndCloseMangoAccount transactions');
     }
+  }
+
+  async cancelPerpOrderSide(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    payer: Account | WalletAdapter,
+    side: 'buy' | 'sell',
+    limit: number,
+  ) {
+    const instruction = makeCancelPerpOrdersSideInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      side,
+      new BN(limit),
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async setDelegate(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter,
+    delegate: PublicKey,
+  ) {
+    const instruction = makeSetDelegateInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      delegate,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
   }
 }

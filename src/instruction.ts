@@ -2025,3 +2025,60 @@ export function makeChangeMaxMangoAccountsInstruction(
     programId,
   });
 }
+
+export function makeCancelPerpOrdersSideInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  perpMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  side: 'buy' | 'sell',
+  limit: BN,
+) {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    CancelPerpOrdersSide: {
+      side,
+      limit,
+    },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeSetDelegateInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  delegatePk: PublicKey,
+) {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: delegatePk },
+  ];
+
+  const data = encodeMangoInstruction({
+    SetDelegate: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
