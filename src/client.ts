@@ -19,12 +19,12 @@ import {
   getFilteredProgramAccounts,
   getMultipleAccounts,
   nativeToUi,
+  promiseUndef,
   simulateTransaction,
   sleep,
   uiToNative,
-  zeroKey,
   ZERO_BN,
-  promiseUndef,
+  zeroKey,
 } from './utils';
 import {
   AssetType,
@@ -55,12 +55,16 @@ import {
   makeCacheRootBankInstruction,
   makeCancelPerpOrderInstruction,
   makeCancelSpotOrderInstruction,
+  makeChangePerpMarketParams2Instruction,
   makeChangePerpMarketParamsInstruction,
   makeConsumeEventsInstruction,
+  makeCreatePerpMarketInstruction,
   makeDepositInstruction,
   makeDepositMsrmInstruction,
+  makeExecutePerpTriggerOrderInstruction,
   makeForceCancelPerpOrdersInstruction,
   makeForceCancelSpotOrdersInstruction,
+  makeInitAdvancedOrdersInstruction,
   makeInitMangoAccountInstruction,
   makeInitMangoGroupInstruction,
   makeInitSpotOpenOrdersInstruction,
@@ -68,8 +72,10 @@ import {
   makeLiquidateTokenAndPerpInstruction,
   makeLiquidateTokenAndTokenInstruction,
   makePlacePerpOrderInstruction,
+  makePlaceSpotOrder2Instruction,
   makePlaceSpotOrderInstruction,
   makeRedeemMngoInstruction,
+  makeRemoveAdvancedOrderInstruction,
   makeResolvePerpBankruptcyInstruction,
   makeResolveTokenBankruptcyInstruction,
   makeSetGroupAdminInstruction,
@@ -78,16 +84,10 @@ import {
   makeSettleFundsInstruction,
   makeSettlePnlInstruction,
   makeUpdateFundingInstruction,
+  makeUpdateMarginBasketInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
   makeWithdrawMsrmInstruction,
-  makeExecutePerpTriggerOrderInstruction,
-  makeInitAdvancedOrdersInstruction,
-  makePlaceSpotOrder2Instruction,
-  makeRemoveAdvancedOrderInstruction,
-  makeCreatePerpMarketInstruction,
-  makeChangePerpMarketParams2Instruction,
-  makeUpdateMarginBasketInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -2883,7 +2883,7 @@ export class MangoClient {
     mngoNodeBank: PublicKey,
     mngoVault: PublicKey,
   ): Promise<TransactionSignature> {
-    const txProms: any[] = [];
+    const transactions: Transaction[] = [];
     let transaction = new Transaction();
 
     const perpMarkets = await Promise.all(
@@ -2919,18 +2919,40 @@ export class MangoClient {
       );
       transaction.add(instruction);
       if (transaction.instructions.length === 9) {
-        txProms.push(this.sendTransaction(transaction, payer, []));
+        transactions.push(transaction);
         transaction = new Transaction();
       }
     }
     if (transaction.instructions.length > 0) {
-      txProms.push(this.sendTransaction(transaction, payer, []));
+      transactions.push(transaction);
+
+      // txProms.push(this.sendTransaction(transaction, payer, []));
     }
-    if (txProms.length) {
-      const txSigs = await Promise.all(txProms);
+
+    const transactionsAndSigners = transactions.map((tx) => ({
+      transaction: tx,
+      signers: [],
+    }));
+
+    if (transactionsAndSigners.length === 0) {
+      throw new Error('No MNGO rewards to redeem');
+    }
+
+    // Sign multiple transactions at once for better UX
+    const signedTransactions = await this.signTransactions({
+      transactionsAndSigners,
+      payer,
+    });
+
+    if (signedTransactions) {
+      const txSigs = await Promise.all(
+        signedTransactions.map((signedTransaction) =>
+          this.sendSignedTransaction({ signedTransaction }),
+        ),
+      );
       return txSigs[0];
     } else {
-      throw new Error('No MNGO to redeem');
+      throw new Error('Unable to sign all RedeemMngo transactions');
     }
   }
 
