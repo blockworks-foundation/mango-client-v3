@@ -326,7 +326,7 @@ export class MangoClient {
     signedTransaction: Transaction;
     timeout?: number;
     confirmLevel?: TransactionConfirmationStatus;
-  }): Promise<string> {
+  }): Promise<TransactionSignature> {
     const rawTransaction = signedTransaction.serialize();
     const startTime = getUnixTs();
 
@@ -336,6 +336,14 @@ export class MangoClient {
         skipPreflight: true,
       },
     );
+
+    if (this.postSendTxCallback) {
+      try {
+        this.postSendTxCallback({ txid });
+      } catch (e) {
+        console.log(`postSendTxCallback error ${e}`);
+      }
+    }
 
     // console.log('Started awaiting confirmation for', txid);
 
@@ -357,7 +365,7 @@ export class MangoClient {
       );
     } catch (err: any) {
       if (err.timeout) {
-        throw err;
+        throw new TimeoutError({ txid });
       }
       let simulateResult: SimulatedTransactionResponse | null = null;
       try {
@@ -1926,7 +1934,7 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     spotMarkets: Market[],
     owner: Account | WalletAdapter,
-  ) {
+  ): Promise<TransactionSignature[]> {
     const transactions: Transaction[] = [];
 
     let j = 0;
@@ -2004,18 +2012,23 @@ export class MangoClient {
       payer: owner,
     });
 
+    const txids: TransactionSignature[] = [];
+
     if (signedTransactions) {
       for (const signedTransaction of signedTransactions) {
         if (signedTransaction.instructions.length == 0) {
           continue;
         }
-        await this.sendSignedTransaction({
+        const txid = await this.sendSignedTransaction({
           signedTransaction,
         });
+        txids.push(txid);
       }
     } else {
       throw new Error('Unable to sign Settle All transaction');
     }
+
+    return txids;
   }
 
   /**
