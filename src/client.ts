@@ -19,15 +19,17 @@ import {
   getFilteredProgramAccounts,
   getMultipleAccounts,
   nativeToUi,
+  promiseUndef,
   simulateTransaction,
   sleep,
   uiToNative,
-  zeroKey,
   ZERO_BN,
+  zeroKey,
 } from './utils';
 import {
   AssetType,
   BookSideLayout,
+  FREE_ORDER_SLOT,
   MangoAccountLayout,
   MangoCache,
   MangoCacheLayout,
@@ -52,14 +54,19 @@ import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
+  makeCancelAllPerpOrdersInstruction,
   makeCancelPerpOrderInstruction,
   makeCancelSpotOrderInstruction,
+  makeChangePerpMarketParams2Instruction,
   makeChangePerpMarketParamsInstruction,
   makeConsumeEventsInstruction,
+  makeCreatePerpMarketInstruction,
   makeDepositInstruction,
   makeDepositMsrmInstruction,
+  makeExecutePerpTriggerOrderInstruction,
   makeForceCancelPerpOrdersInstruction,
   makeForceCancelSpotOrdersInstruction,
+  makeInitAdvancedOrdersInstruction,
   makeInitMangoAccountInstruction,
   makeInitMangoGroupInstruction,
   makeInitSpotOpenOrdersInstruction,
@@ -67,8 +74,10 @@ import {
   makeLiquidateTokenAndPerpInstruction,
   makeLiquidateTokenAndTokenInstruction,
   makePlacePerpOrderInstruction,
+  makePlaceSpotOrder2Instruction,
   makePlaceSpotOrderInstruction,
   makeRedeemMngoInstruction,
+  makeRemoveAdvancedOrderInstruction,
   makeResolvePerpBankruptcyInstruction,
   makeResolveTokenBankruptcyInstruction,
   makeSetGroupAdminInstruction,
@@ -77,16 +86,10 @@ import {
   makeSettleFundsInstruction,
   makeSettlePnlInstruction,
   makeUpdateFundingInstruction,
+  makeUpdateMarginBasketInstruction,
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
   makeWithdrawMsrmInstruction,
-  makeExecutePerpTriggerOrderInstruction,
-  makeInitAdvancedOrdersInstruction,
-  makePlaceSpotOrder2Instruction,
-  makeRemoveAdvancedOrderInstruction,
-  makeCreatePerpMarketInstruction,
-  makeChangePerpMarketParams2Instruction,
-  makeUpdateMarginBasketInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -1282,6 +1285,81 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
+  /**
+   * Cancel all perp orders across all markets
+   */
+  async cancelAllPerpOrders(
+    group: MangoGroup,
+    perpMarkets: PerpMarket[],
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+  ): Promise<TransactionSignature[]> {
+    let tx = new Transaction();
+    const transactions: Transaction[] = [];
+
+    // Determine which market indexes have open orders
+    const hasOrders = new Array(group.perpMarkets.length).fill(false);
+    for (let i = 0; i < mangoAccount.orderMarket.length; i++) {
+      if (mangoAccount.orderMarket[i] !== FREE_ORDER_SLOT) {
+        hasOrders[mangoAccount.orderMarket[i]] = true;
+      }
+    }
+
+    for (let i = 0; i < group.perpMarkets.length; i++) {
+      if (!hasOrders[i]) continue;
+
+      const pmi = group.perpMarkets[i];
+      if (pmi.isEmpty()) continue;
+      const perpMarket = perpMarkets.find((pm) =>
+        pm.publicKey.equals(pmi.perpMarket),
+      );
+      if (perpMarket === undefined) continue;
+
+      const cancelAllInstr = makeCancelAllPerpOrdersInstruction(
+        this.programId,
+        group.publicKey,
+        mangoAccount.publicKey,
+        owner.publicKey,
+        perpMarket.publicKey,
+        perpMarket.bids,
+        perpMarket.asks,
+        new BN(20),
+      );
+      tx.add(cancelAllInstr);
+      if (tx.instructions.length === 2) {
+        transactions.push(tx);
+        tx = new Transaction();
+      }
+    }
+    if (tx.instructions.length > 0) {
+      transactions.push(tx);
+    }
+
+    const transactionsAndSigners = transactions.map((tx) => ({
+      transaction: tx,
+      signers: [],
+    }));
+
+    if (transactionsAndSigners.length === 0) {
+      throw new Error('No orders to cancel');
+    }
+
+    // Sign multiple transactions at once for better UX
+    const signedTransactions = await this.signTransactions({
+      transactionsAndSigners,
+      payer: owner,
+    });
+
+    if (signedTransactions) {
+      return await Promise.all(
+        signedTransactions.map((signedTransaction) =>
+          this.sendSignedTransaction({ signedTransaction }),
+        ),
+      );
+    } else {
+      throw new Error('Unable to sign all CancelAllPerpOrders transactions');
+    }
+  }
   /*
   async loadPerpMarkets(perpMarkets: PublicKey[]): Promise<PerpMarket[]> {
     const accounts = await Promise.all(
@@ -2895,19 +2973,26 @@ export class MangoClient {
     mngoNodeBank: PublicKey,
     mngoVault: PublicKey,
   ): Promise<TransactionSignature> {
-    const transaction = new Transaction();
+    const transactions: Transaction[] = [];
+    let transaction = new Transaction();
+
+    const perpMarkets = await Promise.all(
+      mangoAccount.perpAccounts.map((perpAccount, i) => {
+        if (perpAccount.mngoAccrued.eq(ZERO_BN)) {
+          return promiseUndef();
+        } else {
+          return this.getPerpMarket(
+            mangoGroup.perpMarkets[i].perpMarket,
+            mangoGroup.tokens[i].decimals,
+            mangoGroup.tokens[QUOTE_INDEX].decimals,
+          );
+        }
+      }),
+    );
 
     for (let i = 0; i < mangoAccount.perpAccounts.length; i++) {
-      const perpAccount = mangoAccount.perpAccounts[i];
-      if (perpAccount.mngoAccrued.eq(ZERO_BN)) {
-        continue;
-      }
-      const perpMarketInfo = mangoGroup.perpMarkets[i];
-      const perpMarket = await this.getPerpMarket(
-        perpMarketInfo.perpMarket,
-        mangoGroup.tokens[i].decimals,
-        mangoGroup.tokens[QUOTE_INDEX].decimals,
-      );
+      const perpMarket = perpMarkets[i];
+      if (perpMarket === undefined) continue;
 
       const instruction = makeRedeemMngoInstruction(
         this.programId,
@@ -2923,9 +3008,42 @@ export class MangoClient {
         mangoGroup.signerKey,
       );
       transaction.add(instruction);
+      if (transaction.instructions.length === 9) {
+        transactions.push(transaction);
+        transaction = new Transaction();
+      }
+    }
+    if (transaction.instructions.length > 0) {
+      transactions.push(transaction);
+
+      // txProms.push(this.sendTransaction(transaction, payer, []));
     }
 
-    return await this.sendTransaction(transaction, payer, []);
+    const transactionsAndSigners = transactions.map((tx) => ({
+      transaction: tx,
+      signers: [],
+    }));
+
+    if (transactionsAndSigners.length === 0) {
+      throw new Error('No MNGO rewards to redeem');
+    }
+
+    // Sign multiple transactions at once for better UX
+    const signedTransactions = await this.signTransactions({
+      transactionsAndSigners,
+      payer,
+    });
+
+    if (signedTransactions) {
+      const txSigs = await Promise.all(
+        signedTransactions.map((signedTransaction) =>
+          this.sendSignedTransaction({ signedTransaction }),
+        ),
+      );
+      return txSigs[0];
+    } else {
+      throw new Error('Unable to sign all RedeemMngo transactions');
+    }
   }
 
   async addMangoAccountInfo(
