@@ -1,0 +1,12 @@
+#! /usr/bin/env bash
+
+export CLUSTER_NAME=mainnet
+show-account-info --address 98pjRuQjK3qA6gXts96PqZT4Ze5QmnCmt3QYjhbUSPue --filename group.json
+show-account-info --address EBDRoayCDDUvDgCimta45ajQeXbexv7aKqJubruqpyvu --filename cache.json
+show-account-info --address 7eVBjqNwXzj8LFGECpkVH5suA22bagHvRXrtU9xf9cnh --filename openorders0.json
+show-account-info --address HCQ4qTPAiWdr3tLdxBhxPUHXZQUdYqEddvfhgPqfKiDb --filename openorders1.json
+show-account-info --address CVpWHhcWk6PHiRsziGk5oJz38ds9yc9vKXhWzW2EqDGH --filename openorders2.json
+
+# From Nicky
+# 'this one should be around 22.48%'
+show-account-info --address 2BRWAijnbHbEwyPpSy4rvPNbukAupE2DVw2KCUGuLQg7 --filename account.json
