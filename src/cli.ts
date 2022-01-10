@@ -32,6 +32,7 @@ import { throwUndefined, uiToNative } from './utils';
 import { QUOTE_INDEX } from './layout';
 import { Coder } from '@project-serum/anchor';
 import idl from './mango_logs.json';
+import { getMarketIndexBySymbol } from '.';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -622,6 +623,31 @@ yargs(hideBin(process.argv)).command(
 ).argv;
 
 yargs(hideBin(process.argv)).command(
+  'show-insurance-vault <group>',
+  'Print relevant details about a MangoGroup',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-group', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const vaultBalance = await connection.getTokenAccountBalance(
+      new PublicKey('59BEyxwrFpt3x4sZ7TcXC3bHx3seGfqGkATcDx6siLWy'),
+    );
+
+    console.log(`Insurance Vault: ${vaultBalance.value.uiAmountString}`);
+
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
   'show-top-positions <group> <symbol>',
   'Print top 10 positions for the symbol perp market',
   (y) => {
@@ -652,6 +678,54 @@ yargs(hideBin(process.argv)).command(
       b.perpAccounts[perpMarketConfig.marketIndex].basePosition
         .abs()
         .cmp(a.perpAccounts[perpMarketConfig.marketIndex].basePosition.abs()),
+    );
+
+    const mangoCache = await mangoGroup.loadCache(connection);
+    for (let i = 0; i < 10; i++) {
+      console.log(
+        `${i}: ${mangoAccounts[i].toPrettyString(
+          groupConfig,
+          mangoGroup,
+          mangoCache,
+        )}\n`,
+      );
+    }
+
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'show-top-spot-positions <group> <symbol> <deposits_or_borrows>',
+  'Print top 10 positions for the symbol perp market',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-top-positions', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const marketIndex: number = throwUndefined(
+      getMarketIndexBySymbol(groupConfig, args.symbol as string),
+    );
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccounts = await client.getAllMangoAccounts(
+      mangoGroup,
+      [],
+      false,
+    );
+
+    mangoAccounts.sort((a, b) =>
+      b[args.deposits_or_borrows as string][marketIndex]
+        .abs()
+        .cmp(a[args.deposits_or_borrows as string][marketIndex].abs()),
     );
 
     const mangoCache = await mangoGroup.loadCache(connection);
