@@ -29,6 +29,7 @@ import {
 import {
   AssetType,
   BookSideLayout,
+  FREE_ORDER_SLOT,
   MangoAccountLayout,
   MangoCache,
   MangoCacheLayout,
@@ -53,6 +54,7 @@ import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
+  makeCancelAllPerpOrdersInstruction,
   makeCancelPerpOrderInstruction,
   makeCancelSpotOrderInstruction,
   makeChangePerpMarketParams2Instruction,
@@ -1283,6 +1285,81 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
+  /**
+   * Cancel all perp orders across all markets
+   */
+  async cancelAllPerpOrders(
+    group: MangoGroup,
+    perpMarkets: PerpMarket[],
+    mangoAccount: MangoAccount,
+    owner: Account | WalletAdapter,
+  ): Promise<TransactionSignature[]> {
+    let tx = new Transaction();
+    const transactions: Transaction[] = [];
+
+    // Determine which market indexes have open orders
+    const hasOrders = new Array(group.perpMarkets.length).fill(false);
+    for (let i = 0; i < mangoAccount.orderMarket.length; i++) {
+      if (mangoAccount.orderMarket[i] !== FREE_ORDER_SLOT) {
+        hasOrders[mangoAccount.orderMarket[i]] = true;
+      }
+    }
+
+    for (let i = 0; i < group.perpMarkets.length; i++) {
+      if (!hasOrders[i]) continue;
+
+      const pmi = group.perpMarkets[i];
+      if (pmi.isEmpty()) continue;
+      const perpMarket = perpMarkets.find((pm) =>
+        pm.publicKey.equals(pmi.perpMarket),
+      );
+      if (perpMarket === undefined) continue;
+
+      const cancelAllInstr = makeCancelAllPerpOrdersInstruction(
+        this.programId,
+        group.publicKey,
+        mangoAccount.publicKey,
+        owner.publicKey,
+        perpMarket.publicKey,
+        perpMarket.bids,
+        perpMarket.asks,
+        new BN(20),
+      );
+      tx.add(cancelAllInstr);
+      if (tx.instructions.length === 2) {
+        transactions.push(tx);
+        tx = new Transaction();
+      }
+    }
+    if (tx.instructions.length > 0) {
+      transactions.push(tx);
+    }
+
+    const transactionsAndSigners = transactions.map((tx) => ({
+      transaction: tx,
+      signers: [],
+    }));
+
+    if (transactionsAndSigners.length === 0) {
+      throw new Error('No orders to cancel');
+    }
+
+    // Sign multiple transactions at once for better UX
+    const signedTransactions = await this.signTransactions({
+      transactionsAndSigners,
+      payer: owner,
+    });
+
+    if (signedTransactions) {
+      return await Promise.all(
+        signedTransactions.map((signedTransaction) =>
+          this.sendSignedTransaction({ signedTransaction }),
+        ),
+      );
+    } else {
+      throw new Error('Unable to sign all CancelAllPerpOrders transactions');
+    }
+  }
   /*
   async loadPerpMarkets(perpMarkets: PublicKey[]): Promise<PerpMarket[]> {
     const accounts = await Promise.all(
