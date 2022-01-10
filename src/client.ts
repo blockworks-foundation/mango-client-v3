@@ -113,7 +113,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import { TimeoutError } from '.';
+import { MangoError, TimeoutError } from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -304,15 +304,20 @@ export class MangoClient {
           for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
             const line = simulateResult.logs[i];
             if (line.startsWith('Program log: ')) {
-              throw new Error(
-                'Transaction failed: ' + line.slice('Program log: '.length),
-              );
+              throw new MangoError({
+                message:
+                  'Transaction failed: ' + line.slice('Program log: '.length),
+                txid,
+              });
             }
           }
         }
-        throw new Error(JSON.stringify(simulateResult.err));
+        throw new MangoError({
+          message: JSON.stringify(simulateResult.err),
+          txid,
+        });
       }
-      throw new Error('Transaction failed');
+      throw new MangoError({ message: 'Transaction failed', txid });
     } finally {
       done = true;
     }
@@ -387,15 +392,20 @@ export class MangoClient {
           for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
             const line = simulateResult.logs[i];
             if (line.startsWith('Program log: ')) {
-              throw new Error(
-                'Transaction failed: ' + line.slice('Program log: '.length),
-              );
+              throw new MangoError({
+                message:
+                  'Transaction failed: ' + line.slice('Program log: '.length),
+                txid,
+              });
             }
           }
         }
-        throw new Error(JSON.stringify(simulateResult.err));
+        throw new MangoError({
+          message: JSON.stringify(simulateResult.err),
+          txid,
+        });
       }
-      throw new Error('Transaction failed');
+      throw new MangoError({ message: 'Transaction failed', txid });
     } finally {
       done = true;
     }
