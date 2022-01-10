@@ -508,6 +508,44 @@ yargs(hideBin(process.argv)).command(
 ).argv;
 
 yargs(hideBin(process.argv)).command(
+  'inspect-wallet <group> <wallet_pk>',
+  'Print relevant details about a mango account',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional('mango_account_pk', {
+        describe: 'the public key of the MangoAccount',
+        type: 'string',
+      })
+      .option(...configDesc);
+  },
+  async (args) => {
+    console.log('inspect-wallet', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccounts = await client.getMangoAccountsForOwner(
+      mangoGroup,
+      new PublicKey(args.wallet_pk as string),
+      false,
+    );
+
+    const cache = await mangoGroup.loadCache(connection);
+    for (const mangoAccount of mangoAccounts) {
+      console.log(mangoAccount.toPrettyString(groupConfig, mangoGroup, cache));
+    }
+
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
   'decode-log <log_b64>',
   'Decode and print out log',
   (y) => {
