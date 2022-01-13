@@ -871,6 +871,127 @@ export class MangoClient {
   }
 
   /**
+   * Create a new Mango Account (PDA) and deposit some tokens in a single transaction
+   *
+   * @param rootBank The RootBank for the deposit currency
+   * @param nodeBank The NodeBank asociated with the RootBank
+   * @param vault The token account asociated with the NodeBank
+   * @param tokenAcc The token account to transfer from
+   * @param info An optional UI name for the account
+   */
+   async createMangoAccountAndDeposit(
+    mangoGroup: MangoGroup,
+    owner: Account | WalletAdapter,
+    rootBank: PublicKey,
+    nodeBank: PublicKey,
+    vault: PublicKey,
+    tokenAcc: PublicKey,
+
+    quantity: number,
+    accountNum: number,
+    info?: string,
+  ): Promise<string> {
+    const transaction = new Transaction();
+  
+    const accountNumBN = new BN(accountNum);
+    const [mangoAccountPk] = await PublicKey.findProgramAddress(
+      [
+        mangoGroup.publicKey.toBytes(),
+        owner.publicKey.toBytes(),
+        accountNumBN.toArrayLike(Buffer, 'le', 8),
+      ],
+      this.programId,
+    );
+
+    const createMangoAccountInstruction = makeCreateMangoAccountInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccountPk,
+      owner.publicKey,
+      accountNumBN,
+    );
+
+    transaction.add(createMangoAccountInstruction);
+
+    const additionalSigners: Account[] = [];
+
+    const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
+    const tokenMint = mangoGroup.tokens[tokenIndex].mint;
+
+    let wrappedSolAccount: Account | null = null;
+    if (
+      tokenMint.equals(WRAPPED_SOL_MINT) &&
+      tokenAcc.toBase58() === owner.publicKey.toBase58()
+    ) {
+      wrappedSolAccount = new Account();
+      const lamports = Math.round(quantity * LAMPORTS_PER_SOL) + 1e7;
+      transaction.add(
+        SystemProgram.createAccount({
+          fromPubkey: owner.publicKey,
+          newAccountPubkey: wrappedSolAccount.publicKey,
+          lamports,
+          space: 165,
+          programId: TOKEN_PROGRAM_ID,
+        }),
+      );
+
+      transaction.add(
+        initializeAccount({
+          account: wrappedSolAccount.publicKey,
+          mint: WRAPPED_SOL_MINT,
+          owner: owner.publicKey,
+        }),
+      );
+
+      additionalSigners.push(wrappedSolAccount);
+    }
+
+    const nativeQuantity = uiToNative(
+      quantity,
+      mangoGroup.tokens[tokenIndex].decimals,
+    );
+
+    const instruction = makeDepositInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      owner.publicKey,
+      mangoGroup.mangoCache,
+      mangoAccountPk,
+      rootBank,
+      nodeBank,
+      vault,
+      wrappedSolAccount?.publicKey ?? tokenAcc,
+      nativeQuantity,
+    );
+    transaction.add(instruction);
+
+    if (info) {
+      const addAccountNameinstruction = makeAddMangoAccountInfoInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoAccountPk,
+        owner.publicKey,
+        info,
+      );
+      transaction.add(addAccountNameinstruction);
+    }
+
+    if (wrappedSolAccount) {
+      transaction.add(
+        closeAccount({
+          source: wrappedSolAccount.publicKey,
+          destination: owner.publicKey,
+          owner: owner.publicKey,
+        }),
+      );
+    }
+
+    await this.sendTransaction(transaction, owner, additionalSigners);
+
+    return mangoAccountPk.toString();
+  }
+
+  /**
    * Deposit tokens in a Mango Account
    *
    * @param rootBank The RootBank for the deposit currency
