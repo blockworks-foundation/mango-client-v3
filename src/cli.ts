@@ -536,7 +536,7 @@ yargs(hideBin(process.argv)).command(
       new PublicKey(args.wallet_pk as string),
       false,
     );
-
+    console.log('total # mango accts: ', mangoAccounts.length);
     const cache = await mangoGroup.loadCache(connection);
     for (const mangoAccount of mangoAccounts) {
       console.log(mangoAccount.toPrettyString(groupConfig, mangoGroup, cache));
@@ -674,13 +674,14 @@ yargs(hideBin(process.argv)).command(
       false,
     );
 
+    const mangoCache = await mangoGroup.loadCache(connection);
+
     mangoAccounts.sort((a, b) =>
       b.perpAccounts[perpMarketConfig.marketIndex].basePosition
         .abs()
         .cmp(a.perpAccounts[perpMarketConfig.marketIndex].basePosition.abs()),
     );
 
-    const mangoCache = await mangoGroup.loadCache(connection);
     for (let i = 0; i < 10; i++) {
       console.log(
         `${i}: ${mangoAccounts[i].toPrettyString(
@@ -690,6 +691,44 @@ yargs(hideBin(process.argv)).command(
         )}\n`,
       );
     }
+
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'get-mango-account-by-oo <group> <oo_account_pk>',
+  'Print top 10 positions for the symbol perp market',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-top-positions', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccounts = await client.getAllMangoAccounts(
+      mangoGroup,
+      [],
+      false,
+    );
+
+    const mangoAccount = mangoAccounts.find((ma) =>
+      ma.spotOpenOrders.find((x) =>
+        x.equals(new PublicKey(args.oo_account_pk as string)),
+      ),
+    );
+    const mangoCache = await mangoGroup.loadCache(connection);
+
+    console.log(
+      mangoAccount?.toPrettyString(groupConfig, mangoGroup, mangoCache),
+    );
 
     process.exit(0);
   },
@@ -713,7 +752,6 @@ yargs(hideBin(process.argv)).command(
     );
 
     const connection = openConnection(config, groupConfig.cluster);
-
     const client = new MangoClient(connection, groupConfig.mangoProgramId);
     const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
     const mangoAccounts = await client.getAllMangoAccounts(
