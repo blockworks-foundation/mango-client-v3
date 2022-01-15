@@ -4159,9 +4159,9 @@ export class MangoClient {
           tokenIndex,
         );
         const nativeBorrow = mangoAccount.getNativeBorrow(rootBank, tokenIndex);
-        console.log('nativeDeposit', nativeDeposit);
-        console.log('nativeBorrow', nativeBorrow);
-        console.log('tokenIndex', tokenIndex);
+        console.log('nativeDeposit', nativeDeposit.toString());
+        console.log('nativeBorrow', nativeBorrow.toString());
+        console.log('tokenIndex', tokenIndex.toString());
 
         if (
           (nativeDeposit.gt(ZERO_I80F48) && nativeDeposit.lt(ONE_I80F48)) ||
