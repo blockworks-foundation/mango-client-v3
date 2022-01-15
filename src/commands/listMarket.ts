@@ -38,7 +38,7 @@ export default async function listMarket(
   const quoteDustThreshold = new BN(100);
 
   async function getVaultOwnerAndNonce() {
-    const nonce = ZERO_BN;
+    const nonce = ZERO_BN.clone();
     while (true) {
       try {
         const vaultOwner = await PublicKey.createProgramAddress(

@@ -22,6 +22,7 @@ import {
   Cluster,
   Config,
   getPerpMarketByBaseSymbol,
+  getPerpMarketByIndex,
   getTokenBySymbol,
   GroupConfig,
   PerpMarketConfig,
@@ -31,6 +32,7 @@ import { throwUndefined, uiToNative } from './utils';
 import { QUOTE_INDEX } from './layout';
 import { Coder } from '@project-serum/anchor';
 import idl from './mango_logs.json';
+import { getMarketIndexBySymbol } from '.';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -507,6 +509,44 @@ yargs(hideBin(process.argv)).command(
 ).argv;
 
 yargs(hideBin(process.argv)).command(
+  'inspect-wallet <group> <wallet_pk>',
+  'Print relevant details about a mango account',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional('mango_account_pk', {
+        describe: 'the public key of the MangoAccount',
+        type: 'string',
+      })
+      .option(...configDesc);
+  },
+  async (args) => {
+    console.log('inspect-wallet', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccounts = await client.getMangoAccountsForOwner(
+      mangoGroup,
+      new PublicKey(args.wallet_pk as string),
+      false,
+    );
+    console.log('total # mango accts: ', mangoAccounts.length);
+    const cache = await mangoGroup.loadCache(connection);
+    for (const mangoAccount of mangoAccounts) {
+      console.log(mangoAccount.toPrettyString(groupConfig, mangoGroup, cache));
+    }
+
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
   'decode-log <log_b64>',
   'Decode and print out log',
   (y) => {
@@ -568,17 +608,179 @@ yargs(hideBin(process.argv)).command(
       if (perpMarket.isEmpty()) {
         continue;
       }
+      const pmc = getPerpMarketByIndex(groupConfig, i) as PerpMarketConfig;
+      const pm = await client.getPerpMarket(
+        perpMarket.perpMarket,
+        pmc.baseDecimals,
+        pmc.quoteDecimals,
+      );
+      const x = await connection.getTokenAccountBalance(pm.mngoVault);
+      console.log(pmc.baseSymbol, pm.mngoVault.toBase58(), x);
+    }
 
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'show-insurance-vault <group>',
+  'Print relevant details about a MangoGroup',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-group', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const vaultBalance = await connection.getTokenAccountBalance(
+      new PublicKey('59BEyxwrFpt3x4sZ7TcXC3bHx3seGfqGkATcDx6siLWy'),
+    );
+
+    console.log(`Insurance Vault: ${vaultBalance.value.uiAmountString}`);
+
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'show-top-positions <group> <symbol>',
+  'Print top 10 positions for the symbol perp market',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-top-positions', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const perpMarketConfig: PerpMarketConfig = throwUndefined(
+      getPerpMarketByBaseSymbol(groupConfig, args.symbol as string),
+    );
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccounts = await client.getAllMangoAccounts(
+      mangoGroup,
+      [],
+      false,
+    );
+
+    const mangoCache = await mangoGroup.loadCache(connection);
+
+    mangoAccounts.sort((a, b) =>
+      b.perpAccounts[perpMarketConfig.marketIndex].basePosition
+        .abs()
+        .cmp(a.perpAccounts[perpMarketConfig.marketIndex].basePosition.abs()),
+    );
+
+    for (let i = 0; i < 10; i++) {
       console.log(
-        `Perp Market Index ${i} base decimals: ${
-          mangoGroup.tokens[i].decimals
-        } perp market pubkey: ${perpMarket.perpMarket.toString()} base lot size: ${perpMarket.baseLotSize.toString()} quote lot size: ${perpMarket.quoteLotSize.toString()}`,
+        `${i}: ${mangoAccounts[i].toPrettyString(
+          groupConfig,
+          mangoGroup,
+          mangoCache,
+        )}\n`,
       );
     }
 
     process.exit(0);
   },
 ).argv;
+
+yargs(hideBin(process.argv)).command(
+  'get-mango-account-by-oo <group> <oo_account_pk>',
+  'Print top 10 positions for the symbol perp market',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-top-positions', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const connection = openConnection(config, groupConfig.cluster);
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccounts = await client.getAllMangoAccounts(
+      mangoGroup,
+      [],
+      false,
+    );
+
+    const mangoAccount = mangoAccounts.find((ma) =>
+      ma.spotOpenOrders.find((x) =>
+        x.equals(new PublicKey(args.oo_account_pk as string)),
+      ),
+    );
+    const mangoCache = await mangoGroup.loadCache(connection);
+
+    console.log(
+      mangoAccount?.toPrettyString(groupConfig, mangoGroup, mangoCache),
+    );
+
+    process.exit(0);
+  },
+).argv;
+
+yargs(hideBin(process.argv)).command(
+  'show-top-spot-positions <group> <symbol> <deposits_or_borrows>',
+  'Print top 10 positions for the symbol perp market',
+  (y) => {
+    return y.positional(...groupDesc).option(...configDesc);
+  },
+  async (args) => {
+    console.log('show-top-positions', args);
+    const config = readConfig(args.config as string);
+    const groupConfig = config.getGroupWithName(
+      args.group as string,
+    ) as GroupConfig;
+
+    const marketIndex: number = throwUndefined(
+      getMarketIndexBySymbol(groupConfig, args.symbol as string),
+    );
+
+    const connection = openConnection(config, groupConfig.cluster);
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccounts = await client.getAllMangoAccounts(
+      mangoGroup,
+      [],
+      false,
+    );
+
+    mangoAccounts.sort((a, b) =>
+      b[args.deposits_or_borrows as string][marketIndex]
+        .abs()
+        .cmp(a[args.deposits_or_borrows as string][marketIndex].abs()),
+    );
+
+    const mangoCache = await mangoGroup.loadCache(connection);
+    for (let i = 0; i < 10; i++) {
+      console.log(
+        `${i}: ${mangoAccounts[i].toPrettyString(
+          groupConfig,
+          mangoGroup,
+          mangoCache,
+        )}\n`,
+      );
+    }
+
+    process.exit(0);
+  },
+).argv;
+
 yargs(hideBin(process.argv)).command(
   'show-perp-market <group> <symbol>',
   'Print relevant details about a perp market',

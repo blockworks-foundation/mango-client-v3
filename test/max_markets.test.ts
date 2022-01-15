@@ -37,6 +37,7 @@ describe('MaxMarkets', async () => {
         quoteMint.publicKey,
         Test.MSRMMint,
         Test.DexProgramId,
+        Test.FeesVault,
         5,
         Test.OPTIMAL_UTIL,
         Test.OPTIMAL_RATE,

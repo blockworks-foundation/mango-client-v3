@@ -1,12 +1,11 @@
 import BN from 'bn.js';
 import { struct } from 'buffer-layout';
 import { expect } from 'chai';
-import { readFileSync } from 'fs';
-import { i64, MangoAccountLayout } from '../src/layout';
+import { i64, MangoAccountLayout, RootBankLayout } from '../src/layout';
 
 describe('layout parsing', async () => {
   it('all accounts have the correct size', () => {
-    expect(MangoAccountLayout.span).to.eq(28912);
+    expect(MangoAccountLayout.span).to.eq(4296);
   });
 
   /*

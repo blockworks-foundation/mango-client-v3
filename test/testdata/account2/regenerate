@@ -1,0 +1,11 @@
+#! /usr/bin/env bash
+
+export CLUSTER_NAME=mainnet
+show-account-info --address 98pjRuQjK3qA6gXts96PqZT4Ze5QmnCmt3QYjhbUSPue --filename group.json
+show-account-info --address EBDRoayCDDUvDgCimta45ajQeXbexv7aKqJubruqpyvu --filename cache.json
+show-account-info --address 2AHpoNPb8hYeXatFBy7jy79Q1PyLmJd4rRunpozR4TRj --filename openorders0.json
+show-account-info --address 3Zpr7fQL2yj1w8fipHhNuBjWfpSXqJ7eLFk5sd8N2t7C --filename openorders1.json
+
+# From Nicky
+# 'this mango account should be 29.2%'
+show-account-info --address AWFvEE8FXUqtDHLGWdoEyDiJPcnxGhen61LAAKk8PJJC --filename account.json

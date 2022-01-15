@@ -55,6 +55,17 @@ export class TimeoutError extends Error {
   }
 }
 
+export class MangoError extends Error {
+  message: string;
+  txid: string;
+
+  constructor({ txid, message }) {
+    super();
+    this.message = message;
+    this.txid = txid;
+  }
+}
+
 /**
  * Return weights corresponding to health type;
  * Weights are all 1 if no healthType provided

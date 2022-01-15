@@ -31,6 +31,9 @@ export const DexProgramId = new PublicKey(
 export const USDCMint = new PublicKey(
   'H6hy7Ykzc43EuGivv7VVuUKNpKgUoFAfUY3wdPr4UyRX',
 );
+export const FeesVault = new PublicKey(
+  '54PcMYTAZd8uRaYyb3Cwgctcfc1LchGMaqVrmxgr3yVs',
+);
 export const MSRMMint = msrmMints['devnet'];
 const FAUCET_PROGRAM_ID = new PublicKey(
   '4bXpkKSV8swHSnwqtzuboGPaPDeEgAn4Vt8GfarV5rZt',
