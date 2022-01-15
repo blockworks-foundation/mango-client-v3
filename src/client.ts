@@ -4209,7 +4209,7 @@ export class MangoClient {
     mangoCache: MangoCache,
     mngoIndex: number,
     payer: Account | WalletAdapter,
-  ) {
+  ): Promise<TransactionSignature[]> {
     const transactionsAndSigners: {
       transaction: Transaction;
       signers: Account[];
@@ -4432,6 +4432,7 @@ export class MangoClient {
       payer: payer,
     });
 
+    const txids: TransactionSignature[] = [];
     if (signedTransactions) {
       for (const signedTransaction of signedTransactions) {
         if (signedTransaction.instructions.length == 0) {
@@ -4440,11 +4441,14 @@ export class MangoClient {
         const txid = await this.sendSignedTransaction({
           signedTransaction,
         });
+        txids.push(txid);
         console.log(txid);
       }
     } else {
       throw new Error('Unable to sign emptyAndCloseMangoAccount transactions');
     }
+
+    return txids;
   }
 
   async cancelPerpOrderSide(
