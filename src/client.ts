@@ -90,13 +90,6 @@ import {
   makeUpdateRootBankInstruction,
   makeWithdrawInstruction,
   makeWithdrawMsrmInstruction,
-  makeExecutePerpTriggerOrderInstruction,
-  makeInitAdvancedOrdersInstruction,
-  makePlaceSpotOrder2Instruction,
-  makeRemoveAdvancedOrderInstruction,
-  makeCreatePerpMarketInstruction,
-  makeChangePerpMarketParams2Instruction,
-  makeUpdateMarginBasketInstruction,
   makeCloseAdvancedOrdersInstruction,
   makeCloseMangoAccountInstruction,
   makeCloseSpotOpenOrdersInstruction,
@@ -919,7 +912,7 @@ export class MangoClient {
    * @param tokenAcc The token account to transfer from
    * @param info An optional UI name for the account
    */
-   async createMangoAccountAndDeposit(
+  async createMangoAccountAndDeposit(
     mangoGroup: MangoGroup,
     owner: Account | WalletAdapter,
     rootBank: PublicKey,
@@ -932,7 +925,7 @@ export class MangoClient {
     info?: string,
   ): Promise<string> {
     const transaction = new Transaction();
-  
+
     const accountNumBN = new BN(accountNum);
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
       [
@@ -1247,7 +1240,7 @@ export class MangoClient {
       if (rootBank) {
         const tokenIndex = mangoGroup.getRootBankIndex(rootBank?.publicKey);
         const tokenMint = mangoGroup.tokens[tokenIndex].mint;
-        const decimals = mangoGroup.tokens[tokenIndex].decimals;
+        // const decimals = mangoGroup.tokens[tokenIndex].decimals;
         if (mangoAccount.deposits[tokenIndex].isPos()) {
           let tokenAcc = await Token.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -4271,7 +4264,7 @@ export class MangoClient {
       if (rootBank) {
         const tokenIndex = mangoGroup.getRootBankIndex(rootBank?.publicKey);
         const tokenMint = mangoGroup.tokens[tokenIndex].mint;
-        let shouldWithdrawMngo = redeemedMngo && tokenIndex == mngoIndex;
+        const shouldWithdrawMngo = redeemedMngo && tokenIndex == mngoIndex;
 
         if (mangoAccount.deposits[tokenIndex].isPos() || shouldWithdrawMngo) {
           const withdrawTransaction: {
