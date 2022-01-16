@@ -493,6 +493,38 @@ export function makeInitSpotOpenOrdersInstruction(
   });
 }
 
+export function makeCreateSpotOpenOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  serumDexPk: PublicKey,
+  openOrdersPk: PublicKey,
+  spotMarketPk: PublicKey,
+  signerPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: serumDexPk },
+    { isSigner: false, isWritable: true, pubkey: openOrdersPk },
+    { isSigner: false, isWritable: false, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+  ];
+
+  const data = encodeMangoInstruction({
+    CreateSpotOpenOrders: {},
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
 export function makePlaceSpotOrderInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,

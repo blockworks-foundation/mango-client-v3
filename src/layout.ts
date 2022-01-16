@@ -556,6 +556,8 @@ MangoInstructionLayout.addVariant(
 
 MangoInstructionLayout.addVariant(58, struct([]), 'SetDelegate');
 
+MangoInstructionLayout.addVariant(60, struct([]), 'CreateSpotOpenOrders');
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),

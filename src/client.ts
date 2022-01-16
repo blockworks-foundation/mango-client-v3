@@ -122,7 +122,11 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import { MangoError, TimeoutError } from '.';
+import {
+  makeCreateSpotOpenOrdersInstruction,
+  MangoError,
+  TimeoutError,
+} from '.';
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
@@ -2033,9 +2037,10 @@ export class MangoClient {
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId?: BN,
     useMsrmVault?: boolean | undefined,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature[]> {
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
+    const allTransactions: Transaction[] = [];
 
     // TODO implement srm vault fee discount
     // const feeTier = getFeeTier(0, nativeToUi(mangoGroup.nativeSrm || 0, SRM_DECIMALS));
@@ -2087,12 +2092,12 @@ export class MangoClient {
     }
 
     const transaction = new Transaction();
-    const additionalSigners: Account[] = [];
     const openOrdersKeys: { pubkey: PublicKey; isWritable: boolean }[] = [];
 
     // Only pass in open orders if in margin basket or current market index, and
     // the only writable account should be OpenOrders for current market index
     let marketOpenOrdersKey = zeroKey;
+    const initTx = new Transaction();
     for (let i = 0; i < mangoAccount.spotOpenOrders.length; i++) {
       let pubkey = zeroKey;
       let isWritable = false;
@@ -2101,43 +2106,31 @@ export class MangoClient {
         isWritable = true;
 
         if (mangoAccount.spotOpenOrders[spotMarketIndex].equals(zeroKey)) {
-          // open orders missing for this market; create a new one now
-          const openOrdersSpace = OpenOrders.getLayout(
-            mangoGroup.dexProgramId,
-          ).span;
-
-          const openOrdersLamports =
-            await this.connection.getMinimumBalanceForRentExemption(
-              openOrdersSpace,
-              'processed',
-            );
-
-          const accInstr = await createAccountInstruction(
-            this.connection,
-            owner.publicKey,
-            openOrdersSpace,
-            mangoGroup.dexProgramId,
-            openOrdersLamports,
+          const spotMarketIndexBN = new BN(spotMarketIndex);
+          const [openOrdersPk] = await PublicKey.findProgramAddress(
+            [
+              mangoAccount.publicKey.toBytes(),
+              spotMarketIndexBN.toArrayLike(Buffer, 'le', 8),
+              new Buffer('OpenOrders', 'utf-8'),
+            ],
+            this.programId,
           );
 
-          const initOpenOrders = makeInitSpotOpenOrdersInstruction(
+          const initOpenOrders = makeCreateSpotOpenOrdersInstruction(
             this.programId,
             mangoGroup.publicKey,
             mangoAccount.publicKey,
             owner.publicKey,
             mangoGroup.dexProgramId,
-            accInstr.account.publicKey,
+            openOrdersPk,
             spotMarket.publicKey,
             mangoGroup.signerKey,
           );
 
-          const initTx = new Transaction();
-
-          initTx.add(accInstr.instruction);
           initTx.add(initOpenOrders);
+          allTransactions.push(initTx);
 
-          await this.sendTransaction(initTx, owner, [accInstr.account]);
-          pubkey = accInstr.account.publicKey;
+          pubkey = openOrdersPk;
         } else {
           pubkey = mangoAccount.spotOpenOrders[i];
         }
@@ -2193,26 +2186,48 @@ export class MangoClient {
       clientOrderId ?? new BN(Date.now()),
     );
     transaction.add(placeOrderInstruction);
+    allTransactions.push(transaction);
 
-    const txid = await this.sendTransaction(
-      transaction,
-      owner,
-      additionalSigners,
-    );
+    const signers = [];
+    const transactionsAndSigners = allTransactions.map((tx) => ({
+      transaction: tx,
+      signers,
+    }));
 
-    // update MangoAccount to have new OpenOrders pubkey
-    // We know this new key is in margin basket because if it was a full taker trade
-    // there is some leftover from fee rebate. If maker trade there's the order.
-    // and if it failed then we already exited before this line
-    mangoAccount.spotOpenOrders[spotMarketIndex] = marketOpenOrdersKey;
-    mangoAccount.inMarginBasket[spotMarketIndex] = true;
-    console.log(
-      spotMarketIndex,
-      mangoAccount.spotOpenOrders[spotMarketIndex].toBase58(),
-      marketOpenOrdersKey.toBase58(),
-    );
+    const signedTransactions = await this.signTransactions({
+      transactionsAndSigners,
+      payer: owner,
+    });
 
-    return txid;
+    const txids: TransactionSignature[] = [];
+
+    if (signedTransactions) {
+      for (const signedTransaction of signedTransactions) {
+        if (signedTransaction.instructions.length == 0) {
+          continue;
+        }
+        const txid = await this.sendSignedTransaction({
+          signedTransaction,
+        });
+        txids.push(txid);
+      }
+
+      // update MangoAccount to have new OpenOrders pubkey
+      // We know this new key is in margin basket because if it was a full taker trade
+      // there is some leftover from fee rebate. If maker trade there's the order.
+      // and if it failed then we already exited before this line
+      mangoAccount.spotOpenOrders[spotMarketIndex] = marketOpenOrdersKey;
+      mangoAccount.inMarginBasket[spotMarketIndex] = true;
+      console.log(
+        spotMarketIndex,
+        mangoAccount.spotOpenOrders[spotMarketIndex].toBase58(),
+        marketOpenOrdersKey.toBase58(),
+      );
+    } else {
+      throw new Error('Unable to sign Settle All transaction');
+    }
+
+    return txids;
   }
 
   async cancelSpotOrder(
