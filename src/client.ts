@@ -4220,6 +4220,20 @@ export class MangoClient {
       signers: [],
     };
     const mngoRootBank = mangoGroup.rootBankAccounts[mngoIndex] as RootBank;
+    const perpMarkets = await Promise.all(
+      mangoAccount.perpAccounts.map((perpAccount, i) => {
+        if (perpAccount.mngoAccrued.eq(ZERO_BN)) {
+          return promiseUndef();
+        } else {
+          return this.getPerpMarket(
+            mangoGroup.perpMarkets[i].perpMarket,
+            mangoGroup.tokens[i].decimals,
+            mangoGroup.tokens[QUOTE_INDEX].decimals,
+          );
+        }
+      }),
+    );
+
     let redeemedMngo = false;
     for (let i = 0; i < mangoAccount.perpAccounts.length; i++) {
       const perpAccount = mangoAccount.perpAccounts[i];
@@ -4227,12 +4241,9 @@ export class MangoClient {
         continue;
       }
       redeemedMngo = true;
-      const perpMarketInfo = mangoGroup.perpMarkets[i];
-      const perpMarket = await this.getPerpMarket(
-        perpMarketInfo.perpMarket,
-        mangoGroup.tokens[i].decimals,
-        mangoGroup.tokens[QUOTE_INDEX].decimals,
-      );
+      const perpMarket = perpMarkets[i];
+      // this is actually an error state; Means there is mngo accrued but PerpMarket doesn't exist
+      if (perpMarket === undefined) continue;
 
       const instruction = makeRedeemMngoInstruction(
         this.programId,
@@ -4264,7 +4275,7 @@ export class MangoClient {
       if (rootBank) {
         const tokenIndex = mangoGroup.getRootBankIndex(rootBank?.publicKey);
         const tokenMint = mangoGroup.tokens[tokenIndex].mint;
-        const shouldWithdrawMngo = redeemedMngo && tokenIndex == mngoIndex;
+        const shouldWithdrawMngo = redeemedMngo && tokenIndex === mngoIndex;
 
         if (mangoAccount.deposits[tokenIndex].isPos() || shouldWithdrawMngo) {
           const withdrawTransaction: {
@@ -4311,7 +4322,7 @@ export class MangoClient {
           } else {
             const tokenAccExists = await this.connection.getAccountInfo(
               tokenAcc,
-              'recent',
+              'processed',
             );
             if (!tokenAccExists) {
               withdrawTransaction.transaction.add(
@@ -4356,17 +4367,28 @@ export class MangoClient {
           transactionsAndSigners.push(withdrawTransaction);
         }
 
-        const instruction = makeResolveDustInstruction(
-          this.programId,
-          mangoGroup.publicKey,
-          mangoAccount.publicKey,
-          payer.publicKey,
-          dustAccountPk,
-          rootBank.publicKey,
-          rootBank.nodeBanks[0],
-          mangoCache.publicKey,
+        const nativeBorrow = mangoAccount.getNativeBorrow(
+          mangoCache.rootBankCache[tokenIndex],
+          tokenIndex,
         );
-        resolveAllDustTransaction.transaction.add(instruction);
+
+        if (
+          shouldWithdrawMngo ||
+          mangoAccount.deposits[tokenIndex].isPos() ||
+          (nativeBorrow.gt(ZERO_I80F48) && nativeBorrow.lt(ONE_I80F48))
+        ) {
+          const instruction = makeResolveDustInstruction(
+            this.programId,
+            mangoGroup.publicKey,
+            mangoAccount.publicKey,
+            payer.publicKey,
+            dustAccountPk,
+            rootBank.publicKey,
+            rootBank.nodeBanks[0],
+            mangoCache.publicKey,
+          );
+          resolveAllDustTransaction.transaction.add(instruction);
+        }
       }
     }
 
