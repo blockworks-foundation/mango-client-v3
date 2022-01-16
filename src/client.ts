@@ -923,7 +923,7 @@ export class MangoClient {
     quantity: number,
     accountNum: number,
     info?: string,
-  ): Promise<string> {
+  ): Promise<[string, TransactionSignature]> {
     const transaction = new Transaction();
 
     const accountNumBN = new BN(accountNum);
@@ -1019,9 +1019,13 @@ export class MangoClient {
       );
     }
 
-    await this.sendTransaction(transaction, owner, additionalSigners);
+    const txid = await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+    );
 
-    return mangoAccountPk.toString();
+    return [mangoAccountPk.toString(), txid];
   }
 
   /**
