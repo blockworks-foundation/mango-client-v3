@@ -1167,10 +1167,7 @@ export class MangoClient {
       );
       additionalSigners.push(wrappedSolAccount);
     } else {
-      const tokenAccExists = await this.connection.getAccountInfo(
-        tokenAcc,
-        'recent',
-      );
+      const tokenAccExists = await this.connection.getAccountInfo(tokenAcc);
       if (!tokenAccExists) {
         transaction.add(
           Token.createAssociatedTokenAccountInstruction(
