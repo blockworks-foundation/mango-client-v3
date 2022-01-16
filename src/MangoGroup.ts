@@ -186,6 +186,20 @@ export default class MangoGroup {
     return new MangoCache(this.mangoCache, decoded);
   }
 
+  onCacheChange(connection: Connection, cb: (c: MangoCache) => void): number {
+    const sub = connection.onAccountChange(
+      this.mangoCache,
+      (ai, _) => {
+        const decoded = MangoCacheLayout.decode(ai.data);
+        const parsed = new MangoCache(this.mangoCache, decoded);
+        cb(parsed);
+      },
+      connection.commitment,
+    );
+
+    return sub;
+  }
+
   async loadRootBanks(
     connection: Connection,
   ): Promise<(RootBank | undefined)[]> {
