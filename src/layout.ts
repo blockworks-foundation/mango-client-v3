@@ -126,12 +126,14 @@ export function bool(property?: string) {
 }
 
 function decodeBool(value: number): boolean {
-  if (value === 0) {
-    return false;
-  } else if (value === 1) {
-    return true;
-  }
-  throw new Error('Invalid bool: ' + value);
+  // TODO - use commented lines after deprecating devnet.2
+  return value !== 0;
+  // if (value === 0) {
+  //   return false;
+  // } else if (value === 1) {
+  //   return true;
+  // }
+  // throw new Error('Invalid bool: ' + value);
 }
 
 function encodeBool(value: boolean): number {
