@@ -2040,7 +2040,7 @@ export class MangoClient {
   ): Promise<TransactionSignature[]> {
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
-    const allTransactions: Transaction[] = [];
+    // const allTransactions: Transaction[] = [];
 
     // TODO implement srm vault fee discount
     // const feeTier = getFeeTier(0, nativeToUi(mangoGroup.nativeSrm || 0, SRM_DECIMALS));
@@ -2091,13 +2091,14 @@ export class MangoClient {
       throw new Error('Invalid or missing banks');
     }
 
-    const transaction = new Transaction();
+    // const transaction = new Transaction();
     const openOrdersKeys: { pubkey: PublicKey; isWritable: boolean }[] = [];
 
     // Only pass in open orders if in margin basket or current market index, and
     // the only writable account should be OpenOrders for current market index
     let marketOpenOrdersKey = zeroKey;
-    const initTx = new Transaction();
+    // const initTx = new Transaction();
+    const tx = new Transaction();
     for (let i = 0; i < mangoAccount.spotOpenOrders.length; i++) {
       let pubkey = zeroKey;
       let isWritable = false;
@@ -2127,9 +2128,9 @@ export class MangoClient {
             mangoGroup.signerKey,
           );
 
-          initTx.add(initOpenOrders);
-          allTransactions.push(initTx);
-
+          // initTx.add(initOpenOrders);
+          // allTransactions.push(initTx);
+          tx.add(initOpenOrders);
           pubkey = openOrdersPk;
         } else {
           pubkey = mangoAccount.spotOpenOrders[i];
@@ -2185,49 +2186,65 @@ export class MangoClient {
       orderType,
       clientOrderId ?? new BN(Date.now()),
     );
-    transaction.add(placeOrderInstruction);
-    allTransactions.push(transaction);
+    // transaction.add(placeOrderInstruction);
+    // allTransactions.push(transaction);
+    tx.add(placeOrderInstruction);
 
-    const signers = [];
-    const transactionsAndSigners = allTransactions.map((tx) => ({
-      transaction: tx,
-      signers,
-    }));
+    const txid = await this.sendTransaction(tx, owner, []);
+    // update MangoAccount to have new OpenOrders pubkey
+    // We know this new key is in margin basket because if it was a full taker trade
+    // there is some leftover from fee rebate. If maker trade there's the order.
+    // and if it failed then we already exited before this line
+    mangoAccount.spotOpenOrders[spotMarketIndex] = marketOpenOrdersKey;
+    mangoAccount.inMarginBasket[spotMarketIndex] = true;
+    console.log(
+      spotMarketIndex,
+      mangoAccount.spotOpenOrders[spotMarketIndex].toBase58(),
+      marketOpenOrdersKey.toBase58(),
+    );
 
-    const signedTransactions = await this.signTransactions({
-      transactionsAndSigners,
-      payer: owner,
-    });
+    return [txid];
 
-    const txids: TransactionSignature[] = [];
-
-    if (signedTransactions) {
-      for (const signedTransaction of signedTransactions) {
-        if (signedTransaction.instructions.length == 0) {
-          continue;
-        }
-        const txid = await this.sendSignedTransaction({
-          signedTransaction,
-        });
-        txids.push(txid);
-      }
-
-      // update MangoAccount to have new OpenOrders pubkey
-      // We know this new key is in margin basket because if it was a full taker trade
-      // there is some leftover from fee rebate. If maker trade there's the order.
-      // and if it failed then we already exited before this line
-      mangoAccount.spotOpenOrders[spotMarketIndex] = marketOpenOrdersKey;
-      mangoAccount.inMarginBasket[spotMarketIndex] = true;
-      console.log(
-        spotMarketIndex,
-        mangoAccount.spotOpenOrders[spotMarketIndex].toBase58(),
-        marketOpenOrdersKey.toBase58(),
-      );
-    } else {
-      throw new Error('Unable to sign Settle All transaction');
-    }
-
-    return txids;
+    // const signers = [];
+    // const transactionsAndSigners = allTransactions.map((tx) => ({
+    //   transaction: tx,
+    //   signers,
+    // }));
+    //
+    // const signedTransactions = await this.signTransactions({
+    //   transactionsAndSigners,
+    //   payer: owner,
+    // });
+    //
+    // const txids: TransactionSignature[] = [];
+    //
+    // if (signedTransactions) {
+    //   for (const signedTransaction of signedTransactions) {
+    //     if (signedTransaction.instructions.length == 0) {
+    //       continue;
+    //     }
+    //     const txid = await this.sendSignedTransaction({
+    //       signedTransaction,
+    //     });
+    //     txids.push(txid);
+    //   }
+    //
+    //   // update MangoAccount to have new OpenOrders pubkey
+    //   // We know this new key is in margin basket because if it was a full taker trade
+    //   // there is some leftover from fee rebate. If maker trade there's the order.
+    //   // and if it failed then we already exited before this line
+    //   mangoAccount.spotOpenOrders[spotMarketIndex] = marketOpenOrdersKey;
+    //   mangoAccount.inMarginBasket[spotMarketIndex] = true;
+    //   console.log(
+    //     spotMarketIndex,
+    //     mangoAccount.spotOpenOrders[spotMarketIndex].toBase58(),
+    //     marketOpenOrdersKey.toBase58(),
+    //   );
+    // } else {
+    //   throw new Error('Unable to sign Settle All transaction');
+    // }
+    //
+    // return txids;
   }
 
   async cancelSpotOrder(
