@@ -126,12 +126,14 @@ export function bool(property?: string) {
 }
 
 function decodeBool(value: number): boolean {
-  if (value === 0) {
-    return false;
-  } else if (value === 1) {
-    return true;
-  }
-  throw new Error('Invalid bool: ' + value);
+  // TODO - use commented lines after deprecating devnet.2
+  return value !== 0;
+  // if (value === 0) {
+  //   return false;
+  // } else if (value === 1) {
+  //   return true;
+  // }
+  // throw new Error('Invalid bool: ' + value);
 }
 
 function encodeBool(value: boolean): number {
@@ -532,6 +534,30 @@ MangoInstructionLayout.addVariant(
   'ChangeMaxMangoAccounts',
 );
 
+MangoInstructionLayout.addVariant(50, struct([]), 'CloseMangoAccount');
+MangoInstructionLayout.addVariant(51, struct([]), 'CloseSpotOpenOrders');
+MangoInstructionLayout.addVariant(52, struct([]), 'CloseAdvancedOrders');
+MangoInstructionLayout.addVariant(53, struct([]), 'CreateDustAccount');
+MangoInstructionLayout.addVariant(54, struct([]), 'ResolveDust');
+
+MangoInstructionLayout.addVariant(
+  55,
+  struct([u64('accountNum')]),
+  'CreateMangoAccount',
+);
+
+MangoInstructionLayout.addVariant(56, struct([]), 'UpgradeMangoAccountV0V1');
+
+MangoInstructionLayout.addVariant(
+  57,
+  struct([sideLayout(1, 'side'), u8('limit')]),
+  'CancelPerpOrdersSide',
+);
+
+MangoInstructionLayout.addVariant(58, struct([]), 'SetDelegate');
+
+MangoInstructionLayout.addVariant(60, struct([]), 'CreateSpotOpenOrders');
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
@@ -811,7 +837,11 @@ export const MangoGroupLayout = struct([
   publicKeyLayout('srmVault'),
   publicKeyLayout('msrmVault'),
   publicKeyLayout('feesVault'),
-  seq(u8(), 32, 'padding'),
+
+  u32('maxMangoAccounts'),
+  u32('numMangoAccounts'),
+
+  seq(u8(), 24, 'padding'),
 ]);
 /** @internal */
 export const MangoAccountLayout = struct([
@@ -836,7 +866,10 @@ export const MangoAccountLayout = struct([
   bool('isBankrupt'),
   seq(u8(), INFO_LEN, 'info'),
   publicKeyLayout('advancedOrdersKey'),
-  seq(u8(), 38, 'padding'),
+  bool('notUpgradable'),
+  publicKeyLayout('delegate'),
+
+  seq(u8(), 5, 'padding'),
 ]);
 /** @internal */
 export const RootBankLayout = struct([

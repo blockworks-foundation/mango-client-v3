@@ -67,6 +67,9 @@ export default class MangoAccount {
   advancedOrdersKey!: PublicKey;
   advancedOrders: { perpTrigger?: PerpTriggerOrder }[];
 
+  notUpgradable!: boolean;
+  delegate!: PublicKey;
+
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     this.spotOpenOrdersAccounts = new Array(MAX_PAIRS).fill(undefined);

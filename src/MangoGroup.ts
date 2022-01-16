@@ -40,6 +40,9 @@ export default class MangoGroup {
 
   rootBankAccounts: (RootBank | undefined)[];
 
+  maxMangoAccounts!: BN;
+  numMangoAccounts!: BN;
+
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
