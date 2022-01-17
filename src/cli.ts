@@ -1017,3 +1017,51 @@ yargs(hideBin(process.argv)).command(
     process.exit(0);
   },
 ).argv;
+
+yargs(hideBin(process.argv)).command(
+  'set-delegate <group> <mango_account> <delegate>',
+  'support setting a delegate as a signer for a mango account',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional('mango_account', {
+        describe: 'the public key of the mango account',
+        type: 'string',
+      })
+      .positional('delegate_pk', {
+        describe: 'the public key of the delegate',
+        type: 'string',
+      })
+      .option(...clusterDesc)
+      .option(...configDesc)
+      .option(...keypairDesc);
+  },
+  async (args) => {
+    console.log('set-delegate', args);
+
+    const account = readKeypair(args.keypair as string);
+    const mangoAccountPk = new PublicKey(args.mango_account as string);
+    const delegatePk = new PublicKey(args.delegate as string);
+    const config = readConfig(args.config as string);
+    const cluster = args.cluster as Cluster;
+
+    const connection = openConnection(config, cluster);
+    const groupConfig = config.getGroup(
+      cluster,
+      args.group as string,
+    ) as GroupConfig;
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const mangoAccount = await client.getMangoAccount(
+      mangoAccountPk,
+      groupConfig.serumProgramId,
+    );
+    await client.setDelegate(
+      mangoGroup,
+      mangoAccount,
+      account,
+      delegatePk
+    );
+    process.exit(0);
+  },
+).argv;
