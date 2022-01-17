@@ -1,12 +1,15 @@
 import IDS from './ids.json';
-import IDL from './mango_logs.json'
+import IDL from './mango_logs.json';
 import MangoAccount from './MangoAccount';
 import MangoGroup from './MangoGroup';
 import PerpMarket from './PerpMarket';
 import PerpAccount from './PerpAccount';
 import PerpEventQueue from './PerpEventQueue';
 import RootBank from './RootBank';
+import BN from 'bn.js';
+import { PublicKey } from '@solana/web3.js';
 export {
+  BN,
   IDL,
   IDS,
   MangoAccount,
@@ -14,6 +17,7 @@ export {
   PerpAccount,
   PerpEventQueue,
   PerpMarket,
+  PublicKey,
   RootBank,
 };
 
