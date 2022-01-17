@@ -158,7 +158,7 @@ export default class MangoAccount {
     connection: Connection,
     lastSlot = 0,
     dexProgramId: PublicKey | undefined = undefined,
-  ): Promise<MangoAccount> {
+  ): Promise<[MangoAccount, number]> {
     let slot = -1;
     let value: AccountInfo<Buffer> | null = null;
 
@@ -175,7 +175,7 @@ export default class MangoAccount {
     if (dexProgramId) {
       await this.loadOpenOrders(connection, dexProgramId);
     }
-    return this;
+    return [this, slot];
   }
 
   async loadSpotOrdersForMarket(
