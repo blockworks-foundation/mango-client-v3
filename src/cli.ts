@@ -1018,6 +1018,9 @@ yargs(hideBin(process.argv)).command(
   },
 ).argv;
 
+// e.g. yarn cli set-delegate mainnet.1 <mango-account-pk> <delegate-pk> \
+// --keypair ~/.config/solana/<mango-account-owner-keypair>.json \
+// --config src/ids.json --cluster mainnet
 yargs(hideBin(process.argv)).command(
   'set-delegate <group> <mango_account> <delegate>',
   'support setting a delegate as a signer for a mango account',
