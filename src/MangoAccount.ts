@@ -34,9 +34,11 @@ import {
   sleep,
   TokenConfig,
   ZERO_BN,
+  Config
 } from '.';
 import PerpMarket from './PerpMarket';
 import { Order } from '@project-serum/serum/lib/market';
+import IDS from './ids.json'
 
 export default class MangoAccount {
   publicKey: PublicKey;
@@ -318,6 +320,20 @@ export default class MangoAccount {
       ),
     );
 
+    const config = new Config(IDS);
+    const groupConfig = config.groups.find((g) =>
+      g.publicKey.equals(mangoGroup.publicKey)
+    ) as GroupConfig;
+
+    const MNGO_ORACLE_INDEX = groupConfig.oracles.findIndex(
+      (t) => t.symbol === 'MNGO'
+    )
+    const MNGO_TOKEN_INDEX = groupConfig.tokens.findIndex(
+      (t) => t.symbol === 'MNGO'
+    )
+    const mngoPrice = mangoCache.priceCache[MNGO_ORACLE_INDEX].price;
+    const mngoDecimals = mangoGroup.tokens[MNGO_TOKEN_INDEX].decimals;
+
     for (let i = 0; i < mangoGroup.numOracles; i++) {
       let assetWeight = ONE_I80F48;
       if (healthType === 'Maint') {
@@ -341,7 +357,14 @@ export default class MangoAccount {
       );
 
       assetsVal = assetsVal.add(perpsUiAssetVal);
-    }
+
+      const mgnoAccruedUiVal = nativeI80F48ToUi(
+        I80F48.fromI64(this.perpAccounts[i].mngoAccrued).mul(mngoPrice),
+        mngoDecimals
+      )
+
+      assetsVal = assetsVal.add(mgnoAccruedUiVal);
+    }    
 
     return assetsVal;
   }
