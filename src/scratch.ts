@@ -1,42 +1,54 @@
-import { Coder } from '@project-serum/anchor';
-import idl from './mango_logs.json';
-import configFile from './ids.json';
-import { Cluster, Config } from './config';
+import { Cluster, Config, GroupConfig } from './config';
+import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
+import fs from 'fs';
+import os from 'os';
+import { IDS, MangoClient, QUOTE_INDEX, RootBank } from './index';
 
 async function main() {
-  const config = new Config(configFile);
-  const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-  const groupName = process.env.GROUP || 'devnet.2';
-  const groupIds = config.getGroup(cluster, groupName);
+  const payer = new Account(
+    JSON.parse(
+      fs.readFileSync(os.homedir() + '/.config/solana/ddmm.json', 'utf-8'),
+    ),
+  );
+
+  const config = new Config(IDS);
+
+  const groupIds = config.getGroupWithName('mainnet.1') as GroupConfig;
   if (!groupIds) {
-    throw new Error(`Group ${groupName} not found`);
+    throw new Error(`Group ${'mainnet.1'} not found`);
   }
+  const cluster = groupIds.cluster as Cluster;
+  const mangoProgramId = groupIds.mangoProgramId;
+  const mangoGroupKey = groupIds.publicKey;
+  const connection = new Connection(
+    process.env.ENDPOINT_URL || config.cluster_urls[cluster],
+    'processed' as Commitment,
+  );
+  const client = new MangoClient(connection, mangoProgramId);
+  const mangoGroup = await client.getMangoGroup(mangoGroupKey);
 
-  // @ts-ignore
-  const coder = new Coder(idl);
+  const mangoAccount = await client.getMangoAccount(
+    new PublicKey('CGcrpkxyx92vjyQApsr1jTN6M5PeERKSEaH1zskzccRG'),
+    mangoGroup.dexProgramId,
+  );
+  const rootBanks = await mangoGroup.loadRootBanks(connection);
+  const quoteRootBank = rootBanks[QUOTE_INDEX] as RootBank;
+  const mangoCache = await mangoGroup.loadCache(connection);
+  const perpMarkets = await Promise.all(
+    groupIds.perpMarkets.map((pmc) =>
+      client.getPerpMarket(pmc.publicKey, pmc.baseDecimals, pmc.quoteDecimals),
+    ),
+  );
 
-  // Parse entire logs
-  // const logs = [];
-  // const parser = new EventParser(groupIds.mangoProgramId, coder);
-  // parser.parseLogs(logs, (event) => console.log(event));
-
-  // Parse a single log.
-  const logs = [
-    'cp1to4/ecqbKISAtTF7lMdQarmxDZG/wXw1EdsMrRmiMvKrmbhkiIToETXVmfU+d+lCK9lac/zeF93GcHTUpE/5m0bOeQyJmAwAAAAAAAAACAAAAkdLL//////9PSQAAAAAAAG8tNAAAAAAA2FgAAAAAAAACAAAAkdLL//////9PSQAAAAAAAG8tNAAAAAAA2FgAAAAAAAA=',
-    '9qpXciJ+y8TKISAtTF7lMdQarmxDZG/wXw1EdsMrRmiMvKrmbhkiIToETXVmfU+d+lCK9lac/zeF93GcHTUpE/5m0bOeQyJmAwAAAAAAAAAAAAAAAAAAAA==',
-  ];
-
-  for (const log of logs) {
-    const event = coder.events.decode(log);
-    // if (event && event.data.oraclePrices) {
-    //   // @ts-ignore
-    //   for (const priceBn of event.data.oraclePrices) {
-    //     const price = new I80F48(priceBn).toNumber();
-    //     console.log(price);
-    //   }
-    // }
-    console.log(event);
-  }
+  const txids = await client.settlePosPnl(
+    mangoGroup,
+    mangoCache,
+    mangoAccount,
+    perpMarkets,
+    quoteRootBank,
+    payer,
+  );
+  console.log(txids);
 }
 
 main();

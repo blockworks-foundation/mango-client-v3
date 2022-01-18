@@ -5,12 +5,24 @@ import PerpMarket from '../PerpMarket';
 import { getPerpMarketByIndex, getTokenByMint, GroupConfig } from '../config';
 import { MangoCache, QUOTE_INDEX } from '../layout';
 import { I80F48, ZERO_I80F48 } from '../fixednum';
-import { ZERO_BN, zeroKey } from '../utils';
+import { promiseUndef, ZERO_BN, zeroKey } from '../utils';
 import RootBank from '../RootBank';
 
 async function setUp(client: MangoClient, mangoGroupKey: PublicKey) {
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
-  await mangoGroup.loadRootBanks(client.connection);
+  const rootBanks = await mangoGroup.loadRootBanks(client.connection);
+  const vaults = await Promise.all(
+    rootBanks.map((rootBank) => {
+      if (rootBank === undefined) {
+        return promiseUndef();
+      } else {
+        // Assumes only one node bank; Fix if we add more node bank
+        return client.connection.getTokenAccountBalance(
+          rootBank.nodeBankAccounts[0].vault,
+        );
+      }
+    }),
+  );
 
   const mangoAccounts = await client.getAllMangoAccounts(
     mangoGroup,
@@ -31,7 +43,7 @@ async function setUp(client: MangoClient, mangoGroupKey: PublicKey) {
     ),
   );
 
-  return { mangoGroup, mangoCache, mangoAccounts, perpMarkets };
+  return { mangoGroup, mangoCache, vaults, mangoAccounts, perpMarkets };
 }
 
 function checkSumOfBasePositions(
@@ -83,6 +95,7 @@ async function checkSumOfNetDeposit(
   connection,
   mangoGroup,
   mangoCache,
+  vaults,
   mangoAccounts,
 ) {
   for (let i = 0; i < mangoGroup.tokens.length; i++) {
@@ -111,13 +124,10 @@ async function checkSumOfNetDeposit(
       sumOfNetDepositsAcrossMAs.toString(),
     );
 
-    let vaultAmount = ZERO_I80F48;
     const rootBank = mangoGroup.rootBankAccounts[i] as RootBank;
+    let vaultAmount = ZERO_I80F48;
     if (rootBank) {
       const nodeBanks = rootBank.nodeBankAccounts;
-      const vaults = await Promise.all(
-        nodeBanks.map((n) => connection.getTokenAccountBalance(n.vault)),
-      );
       const sumOfNetDepositsAcrossNodes = nodeBanks.reduce((sum, nodeBank) => {
         return sum.add(
           nodeBank.deposits.mul(mangoCache.rootBankCache[i].depositIndex),
@@ -136,11 +146,8 @@ async function checkSumOfNetDeposit(
         'sumOfNetBorrowsAcrossNodes:',
         sumOfNetBorrowsAcrossNodes.toString(),
       );
+      vaultAmount = I80F48.fromString(vaults[i].value.amount);
 
-      for (const vault of vaults) {
-        // @ts-ignore
-        vaultAmount = vaultAmount.add(I80F48.fromString(vault.value.amount));
-      }
       console.log('vaultAmount:', vaultAmount.toString());
 
       console.log(
@@ -161,16 +168,15 @@ export default async function sanityCheck(
   groupConfig: GroupConfig,
 ) {
   const client = new MangoClient(connection, groupConfig.mangoProgramId);
-  const { mangoGroup, mangoCache, mangoAccounts, perpMarkets } = await setUp(
-    client,
-    groupConfig.publicKey,
-  );
+  const { mangoGroup, mangoCache, vaults, mangoAccounts, perpMarkets } =
+    await setUp(client, groupConfig.publicKey);
   checkSumOfBasePositions(groupConfig, mangoCache, mangoAccounts, perpMarkets);
   await checkSumOfNetDeposit(
     groupConfig,
     connection,
     mangoGroup,
     mangoCache,
+    vaults,
     mangoAccounts,
   );
 }

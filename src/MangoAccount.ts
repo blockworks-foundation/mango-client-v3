@@ -769,6 +769,49 @@ export default class MangoAccount {
     return ZERO_I80F48;
   }
 
+  calcTotalPerpUnsettledPnl(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+  ): I80F48 {
+    let pnl = ZERO_I80F48;
+    for (let i = 0; i < mangoGroup.perpMarkets.length; i++) {
+      const perpMarketInfo = mangoGroup.perpMarkets[i];
+      if (perpMarketInfo.isEmpty()) continue;
+
+      const price = mangoCache.getPrice(i);
+      pnl = pnl.add(
+        this.perpAccounts[i].getPnl(
+          perpMarketInfo,
+          mangoCache.perpMarketCache[i],
+          price,
+        ),
+      );
+    }
+    return pnl;
+  }
+
+  calcTotalPerpPosUnsettledPnl(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+  ): I80F48 {
+    let pnl = ZERO_I80F48;
+    for (let i = 0; i < mangoGroup.perpMarkets.length; i++) {
+      const perpMarketInfo = mangoGroup.perpMarkets[i];
+      if (perpMarketInfo.isEmpty()) continue;
+
+      const price = mangoCache.getPrice(i);
+      if (pnl.isPos()) {
+        pnl = pnl.add(
+          this.perpAccounts[i].getPnl(
+            perpMarketInfo,
+            mangoCache.perpMarketCache[i],
+            price,
+          ),
+        );
+      }
+    }
+    return pnl;
+  }
   getMaxLeverageForMarket(
     mangoGroup: MangoGroup,
     mangoCache: MangoCache,

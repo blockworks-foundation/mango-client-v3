@@ -31,6 +31,10 @@ export const zeroKey = new PublicKey(new Uint8Array(32));
 export async function promiseUndef(): Promise<undefined> {
   return undefined;
 }
+/** @internal */
+export async function promiseNull(): Promise<null> {
+  return null;
+}
 
 export function uiToNative(amount: number, decimals: number): BN {
   return new BN(Math.round(amount * Math.pow(10, decimals)));

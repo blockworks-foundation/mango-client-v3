@@ -19,9 +19,11 @@ import {
   getFilteredProgramAccounts,
   getMultipleAccounts,
   nativeToUi,
+  promiseNull,
   promiseUndef,
   simulateTransaction,
   sleep,
+  throwUndefined,
   uiToNative,
   ZERO_BN,
   zeroKey,
@@ -2577,6 +2579,90 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
 
     // Calculate the profit or loss per market
+  }
+
+  /**
+   * Settle all perp accounts with positive pnl
+   */
+  async settlePosPnl(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    mangoAccount: MangoAccount,
+    perpMarkets: PerpMarket[],
+    quoteRootBank: RootBank,
+    owner: Account | WalletAdapter,
+    mangoAccounts?: MangoAccount[],
+  ): Promise<(TransactionSignature | null)[]> {
+    // fetch all MangoAccounts filtered for having this perp market in basket
+    if (mangoAccounts === undefined) {
+      mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+    }
+    return await Promise.all(
+      perpMarkets.map((pm) => {
+        const marketIndex = mangoGroup.getPerpMarketIndex(pm.publicKey);
+        const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
+        const price = mangoCache.getPrice(marketIndex);
+        const pnl = mangoAccount.perpAccounts[marketIndex].getPnl(
+          perpMarketInfo,
+          mangoCache.perpMarketCache[marketIndex],
+          price,
+        );
+        return pnl.isPos()
+          ? this.settlePnl(
+              mangoGroup,
+              mangoCache,
+              mangoAccount,
+              pm,
+              quoteRootBank,
+              mangoCache.getPrice(marketIndex),
+              owner,
+              mangoAccounts,
+            )
+          : promiseNull();
+      }),
+    );
+  }
+
+  /**
+   * Settle all perp accounts with any pnl
+   */
+  async settleAllPerpPnl(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    mangoAccount: MangoAccount,
+    perpMarkets: PerpMarket[],
+    quoteRootBank: RootBank,
+    owner: Account | WalletAdapter,
+    mangoAccounts?: MangoAccount[],
+  ): Promise<(TransactionSignature | null)[]> {
+    // fetch all MangoAccounts filtered for having this perp market in basket
+    if (mangoAccounts === undefined) {
+      mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+    }
+    return await Promise.all(
+      perpMarkets.map((pm) => {
+        const marketIndex = mangoGroup.getPerpMarketIndex(pm.publicKey);
+        const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
+        const price = mangoCache.getPrice(marketIndex);
+        const pnl = mangoAccount.perpAccounts[marketIndex].getPnl(
+          perpMarketInfo,
+          mangoCache.perpMarketCache[marketIndex],
+          price,
+        );
+        return !pnl.isZero()
+          ? this.settlePnl(
+              mangoGroup,
+              mangoCache,
+              mangoAccount,
+              pm,
+              quoteRootBank,
+              mangoCache.getPrice(marketIndex),
+              owner,
+              mangoAccounts,
+            )
+          : promiseNull();
+      }),
+    );
   }
 
   getMangoAccountsForOwner(

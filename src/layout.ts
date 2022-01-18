@@ -15,7 +15,7 @@ import {
   Union,
 } from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
-import { I80F48 } from './fixednum';
+import { I80F48, ONE_I80F48 } from './fixednum';
 import BN from 'bn.js';
 import { zeroKey } from './utils';
 import PerpAccount from './PerpAccount';
@@ -1223,6 +1223,11 @@ export class MangoCache {
   constructor(publicKey: PublicKey, decoded: any) {
     this.publicKey = publicKey;
     Object.assign(this, decoded);
+  }
+  getPrice(tokenIndex: number): I80F48 {
+    return tokenIndex === QUOTE_INDEX
+      ? ONE_I80F48
+      : this.priceCache[tokenIndex].price;
   }
 }
 

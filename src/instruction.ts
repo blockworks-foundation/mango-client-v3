@@ -506,7 +506,7 @@ export function makeCreateSpotOpenOrdersInstruction(
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
-    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: true, isWritable: true, pubkey: ownerPk },
     { isSigner: false, isWritable: false, pubkey: serumDexPk },
     { isSigner: false, isWritable: true, pubkey: openOrdersPk },
     { isSigner: false, isWritable: false, pubkey: spotMarketPk },
