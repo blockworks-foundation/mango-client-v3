@@ -34,9 +34,11 @@ import {
   sleep,
   TokenConfig,
   ZERO_BN,
+  Config,
 } from '.';
 import PerpMarket from './PerpMarket';
 import { Order } from '@project-serum/serum/lib/market';
+import IDS from './ids.json'
 
 export default class MangoAccount {
   publicKey: PublicKey;
@@ -724,6 +726,38 @@ export default class MangoAccount {
       this.getLiabsVal(mangoGroup, mangoCache),
     );
   }
+
+  /**
+   * Get the value of unclaimed MNGO liquidity mining rewards
+   */
+  mgnoAccruedValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
+  const config = new Config(IDS);
+  const groupConfig = config.groups.find((g) =>
+    g.publicKey.equals(mangoGroup.publicKey)
+  ) as GroupConfig;
+
+  const mngoOracleIndex = groupConfig.oracles.findIndex(
+    (t) => t.symbol === 'MNGO'
+  )
+  const mngoTokenIndex = groupConfig.tokens.findIndex(
+    (t) => t.symbol === 'MNGO'
+  )
+
+  const mngoPrice = mangoCache.priceCache[mngoOracleIndex].price;
+  const mngoDecimals = mangoGroup.tokens[mngoTokenIndex].decimals;
+
+  let val = ZERO_I80F48;
+  for (let i = 0; i < mangoGroup.numOracles; i++) {
+    const mgnoAccruedUiVal = nativeI80F48ToUi(
+      I80F48.fromI64(this.perpAccounts[i].mngoAccrued).mul(mngoPrice),
+      mngoDecimals
+    )
+
+    val = val.add(mgnoAccruedUiVal);
+  }
+
+  return val
+  } 
 
   getLeverage(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
     const liabs = this.getLiabsVal(mangoGroup, mangoCache);
