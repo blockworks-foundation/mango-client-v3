@@ -335,6 +335,15 @@ export async function getFilteredProgramAccounts(
   if (resp.error) {
     throw new Error(resp.error.message);
   }
+  if (resp.result) {
+    const nullResults = resp.result.filter((r) => r?.account === null);
+    if (nullResults.length > 0)
+      throw new Error(
+        `gpa returned ${
+          nullResults.length
+        } null results. ex: ${nullResults[0]?.pubkey.toString()}`,
+      );
+  }
   return resp.result.map(
     ({ pubkey, account: { data, executable, owner, lamports } }) => ({
       publicKey: new PublicKey(pubkey),
@@ -390,6 +399,15 @@ export async function getMultipleAccounts(
   const resp = await connection._rpcRequest('getMultipleAccounts', args);
   if (resp.error) {
     throw new Error(resp.error.message);
+  }
+  if (resp.result) {
+    const nullResults = resp.result.filter((r) => r?.account === null);
+    if (nullResults.length > 0)
+      throw new Error(
+        `gma returned ${
+          nullResults.length
+        } null results. ex: ${nullResults[0]?.pubkey.toString()}`,
+      );
   }
   return resp.result.value.map(
     ({ data, executable, lamports, owner }, i: number) => ({
