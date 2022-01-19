@@ -228,6 +228,7 @@ export class MangoClient {
         // @ts-ignore
         transaction.sign(...[payer].concat(signers));
       });
+      return transactionsAndSigners.map((t) => t.transaction);
     }
   }
 
@@ -1692,7 +1693,7 @@ export class MangoClient {
       transactionsAndSigners,
       payer: owner,
     });
-
+    console.log(signedTransactions);
     if (signedTransactions) {
       return await Promise.all(
         signedTransactions.map((signedTransaction) =>
