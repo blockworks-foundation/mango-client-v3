@@ -7,7 +7,10 @@ import { IDS, MangoClient, QUOTE_INDEX, RootBank } from './index';
 async function main() {
   const payer = new Account(
     JSON.parse(
-      fs.readFileSync(os.homedir() + '/.config/solana/ddmm.json', 'utf-8'),
+      fs.readFileSync(
+        process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
+        'utf-8',
+      ),
     ),
   );
 
@@ -28,7 +31,7 @@ async function main() {
   const mangoGroup = await client.getMangoGroup(mangoGroupKey);
 
   const mangoAccount = await client.getMangoAccount(
-    new PublicKey('CGcrpkxyx92vjyQApsr1jTN6M5PeERKSEaH1zskzccRG'),
+    new PublicKey(''),
     mangoGroup.dexProgramId,
   );
   const rootBanks = await mangoGroup.loadRootBanks(connection);
