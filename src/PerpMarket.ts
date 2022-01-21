@@ -212,6 +212,7 @@ export default class PerpMarket {
     perpMarketConfig: PerpMarketConfig,
   ): string {
     const info = group.perpMarkets[perpMarketConfig.marketIndex];
+    const oracle = group.oracles[perpMarketConfig.marketIndex];
     const lmi = this.liquidityMiningInfo;
     const now = Date.now() / 1000;
     const start = lmi.periodStart.toNumber();
@@ -223,6 +224,7 @@ export default class PerpMarket {
       `${perpMarketConfig.name}`,
       `version: ${this.metaData.version}`,
       `publicKey: ${perpMarketConfig.publicKey.toBase58()}`,
+      `oracle: ${oracle.toBase58()}`,
       `initAssetWeight: ${group.perpMarkets[
         perpMarketConfig.marketIndex
       ].initAssetWeight.toString()}`,
