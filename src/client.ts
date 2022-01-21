@@ -12,6 +12,7 @@ import {
   TransactionSignature,
 } from '@solana/web3.js';
 import BN from 'bn.js';
+import fetch from 'node-fetch';
 import {
   createAccountInstruction,
   createSignerKeyAndNonce,
@@ -132,6 +133,11 @@ import {
 
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
+};
+
+type AccountWithPnl = {
+  publicKey: PublicKey;
+  pnl: I80F48;
 };
 
 /**
@@ -2464,6 +2470,50 @@ export class MangoClient {
     return txids;
   }
 
+  async fetchTopPnlAccountsFromRPC(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    perpMarket: PerpMarket,
+    price: I80F48, // should be the MangoCache price
+    sign: number,
+    mangoAccounts?: MangoAccount[],
+  ): Promise<AccountWithPnl[]> {
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+    const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
+
+    if (mangoAccounts === undefined) {
+      mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+    }
+
+    return mangoAccounts
+      .map((m) => ({
+        publicKey: m.publicKey,
+        pnl: m.perpAccounts[marketIndex].getPnl(
+          perpMarketInfo,
+          mangoCache.perpMarketCache[marketIndex],
+          price,
+        ),
+      }))
+      .sort((a, b) => sign * a.pnl.cmp(b.pnl));
+  }
+
+  async fetchTopPnlAccountsFromDB(
+    mangoGroup: MangoGroup,
+    perpMarket: PerpMarket,
+    sign: number,
+  ): Promise<AccountWithPnl[]> {
+    const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
+    const order = sign === 1 ? "ASC" : "DESC";
+
+    const response = await fetch(`https://mango-transaction-log.herokuapp.com/v3/stats/ranked-pnl?market-index=${marketIndex}&order=${order}&limit=20`);
+    const data = await response.json();
+
+    return data.map((m) => ({
+        publicKey: new PublicKey(m.pubkey),
+        pnl: I80F48.fromNumber(m.pnl),
+    }));
+  }
+
   /**
    * Automatically fetch MangoAccounts for this PerpMarket
    * Pick enough MangoAccounts that have opposite sign and send them in to get settled
@@ -2527,24 +2577,12 @@ export class MangoClient {
       }
     }
 
-    if (mangoAccounts === undefined) {
-      mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
-    }
-
-    const accountsWithPnl = mangoAccounts
-      .map((m) => ({
-        account: m,
-        pnl: m.perpAccounts[marketIndex].getPnl(
-          perpMarketInfo,
-          mangoCache.perpMarketCache[marketIndex],
-          price,
-        ),
-      }))
-      .sort((a, b) => sign * a.pnl.cmp(b.pnl));
+    //const accountsWithPnl = await this.fetchTopPnlAccountsFromRPC(mangoGroup, mangoCache, perpMarket, price, sign, mangoAccounts);
+    const accountsWithPnl = await this.fetchTopPnlAccountsFromDB(mangoGroup, perpMarket, sign);
 
     for (const account of accountsWithPnl) {
       // ignore own account explicitly
-      if (account.account.publicKey.equals(mangoAccount.publicKey)) {
+      if (account.publicKey.equals(mangoAccount.publicKey)) {
         continue;
       }
       if (
@@ -2557,7 +2595,7 @@ export class MangoClient {
           this.programId,
           mangoGroup.publicKey,
           mangoAccount.publicKey,
-          account.account.publicKey,
+          account.publicKey,
           mangoGroup.mangoCache,
           quoteRootBank.publicKey,
           quoteRootBank.nodeBanks[0],
