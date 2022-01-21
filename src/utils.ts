@@ -401,7 +401,7 @@ export async function getMultipleAccounts(
     throw new Error(resp.error.message);
   }
   if (resp.result) {
-    const nullResults = resp.result.filter((r) => r?.account === null);
+    const nullResults = resp.result.value.filter((r) => r?.account === null);
     if (nullResults.length > 0)
       throw new Error(
         `gma returned ${

@@ -24,7 +24,6 @@ import {
   promiseUndef,
   simulateTransaction,
   sleep,
-  throwUndefined,
   uiToNative,
   ZERO_BN,
   zeroKey,
@@ -59,10 +58,16 @@ import {
   makeCacheRootBankInstruction,
   makeCancelAllPerpOrdersInstruction,
   makeCancelPerpOrderInstruction,
+  makeCancelPerpOrdersSideInstruction,
   makeCancelSpotOrderInstruction,
   makeChangePerpMarketParams2Instruction,
   makeChangePerpMarketParamsInstruction,
+  makeCloseAdvancedOrdersInstruction,
+  makeCloseMangoAccountInstruction,
+  makeCloseSpotOpenOrdersInstruction,
   makeConsumeEventsInstruction,
+  makeCreateDustAccountInstruction,
+  makeCreateMangoAccountInstruction,
   makeCreatePerpMarketInstruction,
   makeDepositInstruction,
   makeDepositMsrmInstruction,
@@ -81,8 +86,10 @@ import {
   makePlaceSpotOrderInstruction,
   makeRedeemMngoInstruction,
   makeRemoveAdvancedOrderInstruction,
+  makeResolveDustInstruction,
   makeResolvePerpBankruptcyInstruction,
   makeResolveTokenBankruptcyInstruction,
+  makeSetDelegateInstruction,
   makeSetGroupAdminInstruction,
   makeSetOracleInstruction,
   makeSettleFeesInstruction,
@@ -91,17 +98,9 @@ import {
   makeUpdateFundingInstruction,
   makeUpdateMarginBasketInstruction,
   makeUpdateRootBankInstruction,
+  makeUpgradeMangoAccountV0V1Instruction,
   makeWithdrawInstruction,
   makeWithdrawMsrmInstruction,
-  makeCloseAdvancedOrdersInstruction,
-  makeCloseMangoAccountInstruction,
-  makeCloseSpotOpenOrdersInstruction,
-  makeCreateDustAccountInstruction,
-  makeResolveDustInstruction,
-  makeCreateMangoAccountInstruction,
-  makeUpgradeMangoAccountV0V1Instruction,
-  makeCancelPerpOrdersSideInstruction,
-  makeSetDelegateInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -1699,7 +1698,6 @@ export class MangoClient {
       transactionsAndSigners,
       payer: owner,
     });
-    console.log(signedTransactions);
     if (signedTransactions) {
       return await Promise.all(
         signedTransactions.map((signedTransaction) =>
@@ -2503,14 +2501,16 @@ export class MangoClient {
     sign: number,
   ): Promise<AccountWithPnl[]> {
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
-    const order = sign === 1 ? "ASC" : "DESC";
+    const order = sign === 1 ? 'ASC' : 'DESC';
 
-    const response = await fetch(`https://mango-transaction-log.herokuapp.com/v3/stats/ranked-pnl?market-index=${marketIndex}&order=${order}&limit=20`);
+    const response = await fetch(
+      `https://mango-transaction-log.herokuapp.com/v3/stats/ranked-pnl?market-index=${marketIndex}&order=${order}&limit=20`,
+    );
     const data = await response.json();
 
     return data.map((m) => ({
-        publicKey: new PublicKey(m.pubkey),
-        pnl: I80F48.fromNumber(m.pnl),
+      publicKey: new PublicKey(m.pubkey),
+      pnl: I80F48.fromNumber(m.pnl),
     }));
   }
 
@@ -2578,7 +2578,11 @@ export class MangoClient {
     }
 
     //const accountsWithPnl = await this.fetchTopPnlAccountsFromRPC(mangoGroup, mangoCache, perpMarket, price, sign, mangoAccounts);
-    const accountsWithPnl = await this.fetchTopPnlAccountsFromDB(mangoGroup, perpMarket, sign);
+    const accountsWithPnl = await this.fetchTopPnlAccountsFromDB(
+      mangoGroup,
+      perpMarket,
+      sign,
+    );
 
     for (const account of accountsWithPnl) {
       // ignore own account explicitly

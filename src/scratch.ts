@@ -43,6 +43,8 @@ async function main() {
     ),
   );
 
+  const x = mangoAccount.calcTotalPerpPosUnsettledPnl(mangoGroup, mangoCache);
+  console.log(x.toNumber() / Math.pow(10, 6));
   const txids = await client.settlePosPnl(
     mangoGroup,
     mangoCache,
@@ -51,7 +53,7 @@ async function main() {
     quoteRootBank,
     payer,
   );
-  console.log(txids);
+  // console.log(txids);
 }
 
 main();
