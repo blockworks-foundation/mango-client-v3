@@ -55,7 +55,7 @@ export async function _sendTransaction(
   transaction: Transaction,
   signers: Account[],
 ): Promise<TransactionSignature> {
-  await sleep(1000); // why?
+  await sleep(1000);
   const signature = await connection.sendTransaction(transaction, signers);
   try {
     await connection.confirmTransaction(signature);
