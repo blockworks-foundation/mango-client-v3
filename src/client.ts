@@ -169,7 +169,7 @@ export class MangoClient {
     transactions: Transaction[],
     payer: Account | WalletAdapter,
     additionalSigners: Account[],
-    timeout = 30000,
+    timeout = 90000,
     confirmLevel: TransactionConfirmationStatus = 'confirmed',
   ): Promise<TransactionSignature[]> {
     return await Promise.all(
@@ -244,13 +244,15 @@ export class MangoClient {
    * @param transaction
    * @param payer
    * @param additionalSigners
-   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Defaults to 30000ms. Passing null will disable the transaction confirmation check and always return success.
+   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout.
+   * Defaults to 90000ms which is derived from 150 slots * 600ms block time, assuming heavy load on the cluster.
+   * Passing null will disable the transaction confirmation check and always return success.
    */
   async sendTransaction(
     transaction: Transaction,
     payer: Account | WalletAdapter | Keypair,
     additionalSigners: Account[],
-    timeout: number | null = 30000,
+    timeout: number | null = 90000,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
     await this.signTransaction({
@@ -285,20 +287,19 @@ export class MangoClient {
     );
 
     let done = false;
-
-    let retrySleep = 15000;
+    const retrySleep = 200;
+    const finalSleep = 30000;
     (async () => {
       // TODO - make sure this works well on mainnet
-      while (!done && getUnixTs() - startTime < timeout / 1000) {
+
+      while (!done && getUnixTs() - startTime < (timeout - finalSleep) / 1000) {
         await sleep(retrySleep);
         // console.log(new Date().toUTCString(), ' sending tx ', txid);
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        if (retrySleep <= 6000) {
-          retrySleep = retrySleep * 2;
-        }
       }
+      await sleep(finalSleep);
     })();
 
     try {
