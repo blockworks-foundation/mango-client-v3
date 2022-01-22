@@ -2578,12 +2578,19 @@ export class MangoClient {
       }
     }
 
-    //const accountsWithPnl = await this.fetchTopPnlAccountsFromRPC(mangoGroup, mangoCache, perpMarket, price, sign, mangoAccounts);
-    const accountsWithPnl = await this.fetchTopPnlAccountsFromDB(
+    const accountsWithPnl = await this.fetchTopPnlAccountsFromRPC(
       mangoGroup,
+      mangoCache,
       perpMarket,
+      price,
       sign,
+      mangoAccounts,
     );
+    // const accountsWithPnl = await this.fetchTopPnlAccountsFromDB(
+    //   mangoGroup,
+    //   perpMarket,
+    //   sign,
+    // );
 
     for (const account of accountsWithPnl) {
       // ignore own account explicitly
