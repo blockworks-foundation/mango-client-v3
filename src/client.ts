@@ -12,7 +12,7 @@ import {
   TransactionSignature,
 } from '@solana/web3.js';
 import BN from 'bn.js';
-import fetch from 'node-fetch';
+import fetch from 'cross-fetch';
 import {
   createAccountInstruction,
   createSignerKeyAndNonce,
