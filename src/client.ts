@@ -130,6 +130,9 @@ import {
   TimeoutError,
 } from '.';
 
+/**
+ * Get the current epoch timestamp in seconds with microsecond precision
+ */
 export const getUnixTs = () => {
   return new Date().getTime() / 1000;
 };
@@ -150,6 +153,8 @@ export class MangoClient {
   connection: Connection;
   programId: PublicKey;
   lastSlot: number;
+  recentBlockhash: string;
+  recentBlockhashTime: number;
   postSendTxCallback?: ({ txid: string }) => void;
 
   constructor(
@@ -160,6 +165,8 @@ export class MangoClient {
     this.connection = connection;
     this.programId = programId;
     this.lastSlot = 0;
+    this.recentBlockhash = '';
+    this.recentBlockhashTime = 0;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
     }
@@ -186,9 +193,15 @@ export class MangoClient {
   }
 
   async signTransaction({ transaction, payer, signers }) {
-    transaction.recentBlockhash = (
-      await this.connection.getRecentBlockhash()
-    ).blockhash;
+    const now = getUnixTs();
+    // If last requested recentBlockhash is within a second, use that instead of fetching
+    if (now > this.recentBlockhashTime + 1) {
+      this.recentBlockhash = (
+        await this.connection.getRecentBlockhash()
+      ).blockhash;
+      this.recentBlockhashTime = now;
+    }
+    transaction.recentBlockhash = this.recentBlockhash;
     transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
     if (signers.length > 0) {
       transaction.partialSign(...signers);

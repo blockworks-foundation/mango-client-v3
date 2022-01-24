@@ -22,7 +22,7 @@ async function main() {
 
   // Parse a single log.
   const logs = [
-    '9qpXciJ+y8R43ogDQe0xql0u2Ff66cc9XSGzkyyZdqoGDHUXDByC3VoBWmiMqeN6rTCF5rCtQwISKrwVwxJTEMLJwfBnQf3pAwAAAAAAAAAAAAAAAAAAAA==',
+    'cp1to4/ecqZ43ogDQe0xql0u2Ff66cc9XSGzkyyZdqoGDHUXDByC3VoBWmiMqeN6rTCF5rCtQwISKrwVwxJTEMLJwfBnQf3pAwAAAAAAAAACAAAAO+jc/v/////KNgAAAAAAAMUXIwEAAAAA7TYAAAAAAAACAAAAO+jc/v/////KNgAAAAAAAMUXIwEAAAAA7TYAAAAAAAA=',
   ];
 
   for (const log of logs) {
@@ -34,6 +34,11 @@ async function main() {
     //     console.log(price);
     //   }
     // }
+
+    // @ts-ignore
+    event.data.allOrderIds = event.data.allOrderIds.map((oid) =>
+      oid.toString(),
+    );
     console.log(event);
   }
 }
