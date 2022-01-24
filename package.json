@@ -31,6 +31,7 @@
     "scratch": "ts-node src/scratch.ts",
     "mm": "ts-node src/mm.ts",
     "dust": "ts-node src/dust.ts",
+    "example-mango-logs": "ts-node examples/mangoLogs.ts",
     "test-compute": "ts-node test/compute.test.ts",
     "test-fillbook": "ts-node test/fillbook.test.ts",
     "test-liquidator": "ts-node test/liquidator.test.ts",
