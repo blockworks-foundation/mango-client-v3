@@ -1067,6 +1067,13 @@ yargs(hideBin(process.argv)).command(
   },
 ).argv;
 
+// e.g. yarn cli change-spot-market-params devnet.3 MNGO \
+// --keypair ~/.config/solana/mango-devnet-admin.json \
+// --maint_leverage 2.5 --init_leverage 1.25 --liquidation_fee 0.2 \
+// --cluster devnet
+//
+// to view change do, SYMBOL=MNGO CLUSTER=devnet GROUP=devnet.3 yarn \
+// ts-node src/markets.ts
 yargs(hideBin(process.argv)).command(
   'change-spot-market-params <group> <symbol>',
   'change params for a spot market',
