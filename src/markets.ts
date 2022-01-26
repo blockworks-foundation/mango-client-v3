@@ -4,8 +4,10 @@ import { I80F48, PerpMarket, PerpMarketConfig, SpotMarketConfig } from '.';
 import { MangoClient } from './client';
 import { Cluster, Config } from './config';
 import { Market } from '@project-serum/serum';
+import * as Process from 'process';
 
 // e.g. CLUSTER=devnet GROUP=devnet.2 yarn ts-node src/markets.ts
+// e.g. SYMBOL=MNGO CLUSTER=devnet GROUP=devnet.3 yarn ts-node src/markets.ts
 async function main() {
   const config = Config.ids();
   const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -58,13 +60,19 @@ async function main() {
     console.log(``);
   }
 
-  for (const m of groupIds.perpMarkets) {
+  for (const m of groupIds.perpMarkets.filter((config) =>
+    process.env.SYMBOL ? config.baseSymbol === process.env.SYMBOL : true,
+  )) {
     await dumpPerpMarket(m);
   }
-  for (const m of groupIds.spotMarkets) {
+
+  for (const m of groupIds.spotMarkets.filter((config) =>
+    process.env.SYMBOL ? config.baseSymbol === process.env.SYMBOL : true,
+  )) {
     await dumpSpotMarket(m);
   }
-  process.exit(0);
+
+  process.exit();
 }
 
 main();
