@@ -5,6 +5,7 @@ import { MangoClient } from './client';
 import { Cluster, Config } from './config';
 import { Market } from '@project-serum/serum';
 
+// e.g. CLUSTER=devnet GROUP=devnet.2 yarn ts-node src/markets.ts
 async function main() {
   const config = Config.ids();
   const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
