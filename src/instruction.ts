@@ -2114,3 +2114,50 @@ export function makeSetDelegateInstruction(
     programId,
   });
 }
+
+export function makeChangeSpotMarketParamsInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  spotMarketPk: PublicKey,
+  rootBankPk: PublicKey,
+  adminPk: PublicKey,
+  maintLeverage: I80F48 | undefined,
+  initLeverage: I80F48 | undefined,
+  liquidationFee: I80F48 | undefined,
+  optimalUtil: I80F48 | undefined,
+  optimalRate: I80F48 | undefined,
+  maxRate: I80F48 | undefined,
+  version,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: true, pubkey: rootBankPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+  const data = encodeMangoInstruction({
+    ChangeSpotMarketParams: {
+      maintLeverageOption: maintLeverage !== undefined,
+      maintLeverage: maintLeverage != undefined ? maintLeverage : ZERO_I80F48,
+      initLeverageOption: initLeverage !== undefined,
+      initLeverage: initLeverage != undefined ? initLeverage : ZERO_I80F48,
+      liquidationFeeOption: liquidationFee !== undefined,
+      liquidationFee:
+        liquidationFee != undefined ? liquidationFee : ZERO_I80F48,
+      optimalUtilOption: optimalUtil !== undefined,
+      optimalUtil: optimalUtil != undefined ? optimalUtil : ZERO_I80F48,
+      optimalRateOption: optimalRate !== undefined,
+      optimalRate: optimalRate != undefined ? optimalRate : ZERO_I80F48,
+      maxRateOption: maxRate !== undefined,
+      maxRate: maxRate != undefined ? maxRate : ZERO_I80F48,
+      versionOption: version !== undefined,
+      version: version != undefined ? version : ZERO_BN,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
