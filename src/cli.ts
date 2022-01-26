@@ -23,9 +23,11 @@ import {
   Config,
   getPerpMarketByBaseSymbol,
   getPerpMarketByIndex,
+  getSpotMarketByBaseSymbol,
   getTokenBySymbol,
   GroupConfig,
   PerpMarketConfig,
+  SpotMarketConfig,
 } from './config';
 import { MangoClient } from './client';
 import { throwUndefined, uiToNative } from './utils';
@@ -33,6 +35,7 @@ import { QUOTE_INDEX } from './layout';
 import { Coder } from '@project-serum/anchor';
 import idl from './mango_logs.json';
 import { getMarketIndexBySymbol } from '.';
+import { Market } from '@project-serum/serum';
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -1059,11 +1062,94 @@ yargs(hideBin(process.argv)).command(
       mangoAccountPk,
       groupConfig.serumProgramId,
     );
-    await client.setDelegate(
+    await client.setDelegate(mangoGroup, mangoAccount, account, delegatePk);
+    process.exit(0);
+  },
+).argv;
+
+// e.g. yarn cli change-spot-market-params devnet.3 MNGO \
+// --keypair ~/.config/solana/mango-devnet-admin.json \
+// --maint_leverage 2.5 --init_leverage 1.25 --liquidation_fee 0.2 \
+// --cluster devnet
+//
+// to view change do, SYMBOL=MNGO CLUSTER=devnet GROUP=devnet.3 yarn \
+// ts-node src/markets.ts
+yargs(hideBin(process.argv)).command(
+  'change-spot-market-params <group> <symbol>',
+  'change params for a spot market',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional(...symbolDesc)
+      .option('maint_leverage', {
+        type: 'number',
+      })
+      .option('init_leverage', {
+        type: 'number',
+      })
+      .option('liquidation_fee', {
+        type: 'number',
+      })
+      .option('optimal_util', {
+        type: 'number',
+      })
+      .option('optimal_rate', {
+        type: 'number',
+      })
+      .option('max_rate', {
+        type: 'number',
+      })
+      .option(...clusterDesc)
+      .option(...configDesc)
+      .option(...keypairDesc);
+  },
+  async (args) => {
+    console.log('change-spot-market-params', args);
+    const account = readKeypair(args.keypair as string);
+    const config = readConfig(args.config as string);
+    const cluster = args.cluster as Cluster;
+    const connection = openConnection(config, cluster);
+    const groupConfig = config.getGroup(
+      cluster,
+      args.group as string,
+    ) as GroupConfig;
+
+    const client = new MangoClient(connection, groupConfig.mangoProgramId);
+
+    const symbol = args.symbol as string;
+    const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
+    const spotMarketConfig: SpotMarketConfig = throwUndefined(
+      getSpotMarketByBaseSymbol(groupConfig, symbol),
+    );
+    const spotMarket = await Market.load(
+      connection,
+      spotMarketConfig.publicKey,
+      undefined,
+      groupConfig.serumProgramId,
+    );
+
+    const rootBanks = await mangoGroup.loadRootBanks(connection);
+    const tokenBySymbol = getTokenBySymbol(groupConfig, symbol);
+    const tokenIndex = mangoGroup.getTokenIndex(tokenBySymbol.mintKey);
+    const rootBank = rootBanks[tokenIndex];
+
+    if (!rootBank) {
+      console.log('Root bank cannot be undefined!', args);
+      process.exit(1);
+    }
+
+    await client.changeSpotMarketParams(
       mangoGroup,
-      mangoAccount,
+      spotMarket,
+      rootBank,
       account,
-      delegatePk
+      getNumberOrUndef(args, 'maint_leverage'),
+      getNumberOrUndef(args, 'init_leverage'),
+      getNumberOrUndef(args, 'liquidation_fee'),
+      getNumberOrUndef(args, 'optimal_util'),
+      getNumberOrUndef(args, 'optimal_rate'),
+      getNumberOrUndef(args, 'max_rate'),
+      0,
     );
     process.exit(0);
   },

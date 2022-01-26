@@ -62,6 +62,7 @@ import {
   makeCancelSpotOrderInstruction,
   makeChangePerpMarketParams2Instruction,
   makeChangePerpMarketParamsInstruction,
+  makeChangeSpotMarketParamsInstruction,
   makeCloseAdvancedOrdersInstruction,
   makeCloseMangoAccountInstruction,
   makeCloseSpotOpenOrdersInstruction,
@@ -4682,5 +4683,41 @@ export class MangoClient {
     transaction.add(instruction);
     const additionalSigners = [];
     return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async changeSpotMarketParams(
+    mangoGroup: MangoGroup,
+    spotMarket: Market,
+    rootBank: RootBank,
+    admin: Account | WalletAdapter,
+
+    maintLeverage: number | undefined,
+    initLeverage: number | undefined,
+    liquidationFee: number | undefined,
+    optimalUtil: number | undefined,
+    optimalRate: number | undefined,
+    maxRate: number | undefined,
+    version: number | undefined,
+  ): Promise<TransactionSignature> {
+    const instruction = makeChangeSpotMarketParamsInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      spotMarket.publicKey,
+      rootBank.publicKey,
+      admin.publicKey,
+      I80F48.fromNumberOrUndef(maintLeverage),
+      I80F48.fromNumberOrUndef(initLeverage),
+      I80F48.fromNumberOrUndef(liquidationFee),
+      I80F48.fromNumberOrUndef(optimalUtil),
+      I80F48.fromNumberOrUndef(optimalRate),
+      I80F48.fromNumberOrUndef(maxRate),
+      version !== undefined ? new BN(version) : undefined,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+
+    return await this.sendTransaction(transaction, admin, additionalSigners);
   }
 }

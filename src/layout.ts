@@ -556,6 +556,27 @@ MangoInstructionLayout.addVariant(
 
 MangoInstructionLayout.addVariant(58, struct([]), 'SetDelegate');
 
+MangoInstructionLayout.addVariant(
+  59,
+  struct([
+    bool('maintLeverageOption'),
+    I80F48Layout('maintLeverage'),
+    bool('initLeverageOption'),
+    I80F48Layout('initLeverage'),
+    bool('liquidationFeeOption'),
+    I80F48Layout('liquidationFee'),
+    bool('optimalUtilOption'),
+    I80F48Layout('optimalUtil'),
+    bool('optimalRateOption'),
+    I80F48Layout('optimalRate'),
+    bool('maxRateOption'),
+    I80F48Layout('maxRate'),
+    bool('versionOption'),
+    u8('version'),
+  ]),
+  'ChangeSpotMarketParams',
+);
+
 MangoInstructionLayout.addVariant(60, struct([]), 'CreateSpotOpenOrders');
 
 const instructionMaxSpan = Math.max(
