@@ -52,19 +52,29 @@ async function main() {
       group.spotMarkets[group.getSpotMarketIndex(spotMarketConfig.publicKey)];
     console.log(`----- ${spotMarketConfig.name} SpotMarketInfo -----`);
     console.log(
-      `- maintAssetWeight: ${spotMarketInfo.maintAssetWeight.toNumber()}`,
+      `- maintAssetWeight: ${spotMarketInfo.maintAssetWeight
+        .toNumber()
+        .toFixed(2)}`,
     );
     console.log(
-      `- initAssetWeight: ${spotMarketInfo.initAssetWeight.toNumber()}`,
+      `- initAssetWeight: ${spotMarketInfo.initAssetWeight
+        .toNumber()
+        .toFixed(2)}`,
     );
     console.log(
-      `- maintLiabWeight: ${spotMarketInfo.maintLiabWeight.toNumber()}`,
+      `- maintLiabWeight: ${spotMarketInfo.maintLiabWeight
+        .toNumber()
+        .toFixed(2)}`,
     );
     console.log(
-      `- initLiabWeight: ${spotMarketInfo.initLiabWeight.toNumber()}`,
+      `- initLiabWeight: ${spotMarketInfo.initLiabWeight
+        .toNumber()
+        .toFixed(2)}`,
     );
     console.log(
-      `- liquidationFee: ${spotMarketInfo.liquidationFee.toNumber()}`,
+      `- liquidationFee: ${spotMarketInfo.liquidationFee
+        .toNumber()
+        .toFixed(2)}`,
     );
     console.log(``);
   }
@@ -77,9 +87,13 @@ async function main() {
 
   async function dumpRootBank(name: string, rootBank: RootBank) {
     console.log(`----- ${name} RootBank -----`);
-    console.log(`- optimalUtil - ${rootBank.optimalUtil.toNumber()}`);
-    console.log(`- optimalRate - ${rootBank.optimalRate.toNumber()}`);
-    console.log(`- maxRate - ${rootBank.maxRate.toNumber()}`);
+    console.log(
+      `- optimalUtil - ${rootBank.optimalUtil.toNumber().toFixed(2)}`,
+    );
+    console.log(
+      `- optimalRate - ${rootBank.optimalRate.toNumber().toFixed(2)}`,
+    );
+    console.log(`- maxRate - ${rootBank.maxRate.toNumber().toFixed(2)}`);
     console.log(`- depositIndex - ${rootBank.depositIndex.toNumber()}`);
     console.log(`- borrowIndex - ${rootBank.borrowIndex.toNumber()}`);
     const date = new Date(0);
@@ -91,6 +105,7 @@ async function main() {
     process.env.SYMBOL ? config.baseSymbol === process.env.SYMBOL : true,
   )) {
     await dumpSpotMarket(m);
+
     const tokenBySymbol = getTokenBySymbol(groupIds, m.baseSymbol);
     const tokenIndex = group.getTokenIndex(tokenBySymbol.mintKey);
     const rootBank = rootBanks[tokenIndex];

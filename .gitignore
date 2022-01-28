@@ -3,3 +3,5 @@ lib
 .env
 
 .idea
+
+.DS_Store
