@@ -99,6 +99,7 @@ async function main() {
     const date = new Date(0);
     date.setUTCSeconds(rootBank.lastUpdated.toNumber());
     console.log(`- lastUpdated - ${date.toUTCString()}`);
+    console.log(``);
   }
 
   for (const m of groupIds.spotMarkets.filter((config) =>
