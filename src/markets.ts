@@ -1,10 +1,18 @@
 import { Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { group } from 'console';
-import { I80F48, PerpMarket, PerpMarketConfig, SpotMarketConfig } from '.';
+import {
+  getTokenBySymbol,
+  I80F48,
+  PerpMarket,
+  PerpMarketConfig,
+  SpotMarketConfig,
+} from '.';
 import { MangoClient } from './client';
 import { Cluster, Config } from './config';
 import { Market } from '@project-serum/serum';
 import * as Process from 'process';
+import RootBank from './RootBank';
+import BN from 'bn.js';
 
 // e.g. CLUSTER=devnet GROUP=devnet.2 yarn ts-node src/markets.ts
 // e.g. SYMBOL=MNGO CLUSTER=devnet GROUP=devnet.3 yarn ts-node src/markets.ts
@@ -26,8 +34,10 @@ async function main() {
   const mangoGroupKey = groupIds.publicKey;
   const client = new MangoClient(connection, mangoProgramId);
 
+  const group = await client.getMangoGroup(mangoGroupKey);
+  const rootBanks = await group.loadRootBanks(connection);
+
   async function dumpPerpMarket(config: PerpMarketConfig) {
-    const group = await client.getMangoGroup(mangoGroupKey);
     const market = await client.getPerpMarket(
       config.publicKey,
       config.baseDecimals,
@@ -38,7 +48,6 @@ async function main() {
   }
 
   async function dumpSpotMarket(spotMarketConfig: SpotMarketConfig) {
-    const group = await client.getMangoGroup(mangoGroupKey);
     const spotMarketInfo =
       group.spotMarkets[group.getSpotMarketIndex(spotMarketConfig.publicKey)];
     console.log(`----- ${spotMarketConfig.name} SpotMarketInfo -----`);
@@ -66,10 +75,26 @@ async function main() {
     await dumpPerpMarket(m);
   }
 
+  async function dumpRootBank(name: string, rootBank: RootBank) {
+    console.log(`----- ${name} RootBank -----`);
+    console.log(`- optimalUtil - ${rootBank.optimalUtil.toNumber()}`);
+    console.log(`- optimalRate - ${rootBank.optimalRate.toNumber()}`);
+    console.log(`- maxRate - ${rootBank.maxRate.toNumber()}`);
+    console.log(`- depositIndex - ${rootBank.depositIndex.toNumber()}`);
+    console.log(`- borrowIndex - ${rootBank.borrowIndex.toNumber()}`);
+    const date = new Date(0);
+    date.setUTCSeconds(rootBank.lastUpdated.toNumber());
+    console.log(`- lastUpdated - ${date.toUTCString()}`);
+  }
+
   for (const m of groupIds.spotMarkets.filter((config) =>
     process.env.SYMBOL ? config.baseSymbol === process.env.SYMBOL : true,
   )) {
     await dumpSpotMarket(m);
+    const tokenBySymbol = getTokenBySymbol(groupIds, m.baseSymbol);
+    const tokenIndex = group.getTokenIndex(tokenBySymbol.mintKey);
+    const rootBank = rootBanks[tokenIndex];
+    await dumpRootBank(m.baseSymbol, rootBank!);
   }
 
   process.exit();
