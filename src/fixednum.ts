@@ -42,11 +42,11 @@ export class I80F48 {
     v.iadd(new BN((x - int_part) * I80F48.MULTIPLIER_NUMBER));
     return new I80F48(v);
   }
-  static fromNumberOrUndef(x: number | undefined): I80F48 | undefined {
+  static fromNumberOrUndef(x?: number): I80F48 | undefined {
     return x === undefined ? undefined : I80F48.fromNumber(x);
   }
 
-  static fromOptionalString(x: string): I80F48 | undefined {
+  static fromOptionalString(x?: string): I80F48 | undefined {
     return x ? I80F48.fromString(x) : undefined;
   }
 

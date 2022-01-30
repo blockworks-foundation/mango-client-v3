@@ -36,7 +36,7 @@ export async function promiseNull(): Promise<null> {
   return null;
 }
 
-export function optionalBNFromString(x: string): BN | undefined {
+export function optionalBNFromString(x?: string): BN | undefined {
   return x ? new BN(x) : undefined;
 }
 
