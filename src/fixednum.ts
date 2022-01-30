@@ -38,13 +38,18 @@ export class I80F48 {
   }
   static fromNumber(x: number): I80F48 {
     let int_part = Math.trunc(x);
-    let v = (new BN(int_part)).iushln(48);
+    let v = new BN(int_part).iushln(48);
     v.iadd(new BN((x - int_part) * I80F48.MULTIPLIER_NUMBER));
     return new I80F48(v);
   }
   static fromNumberOrUndef(x: number | undefined): I80F48 | undefined {
     return x === undefined ? undefined : I80F48.fromNumber(x);
   }
+
+  static fromOptionalString(x: string): I80F48 | undefined {
+    return x ? I80F48.fromString(x) : undefined;
+  }
+
   static fromString(x: string): I80F48 {
     const initialValue = new Big(x).times(I80F48.MULTIPLIER_BIG);
     const fixedPointValue = new BN(initialValue.round().toFixed());

@@ -36,6 +36,10 @@ export async function promiseNull(): Promise<null> {
   return null;
 }
 
+export function optionalBNFromString(x: string): BN | undefined {
+  return x ? new BN(x) : undefined;
+}
+
 export function uiToNative(amount: number, decimals: number): BN {
   return new BN(Math.round(amount * Math.pow(10, decimals)));
 }
