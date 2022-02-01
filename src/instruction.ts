@@ -235,8 +235,6 @@ export function makeCancelPerpOrderInstruction(
     },
   });
 
-  console.log(order, order.orderId.toArray(), data);
-
   return new TransactionInstruction({ keys, data, programId });
 }
 
