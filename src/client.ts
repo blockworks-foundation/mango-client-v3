@@ -129,6 +129,7 @@ import {
   makeCreateSpotOpenOrdersInstruction,
   MangoError,
   TimeoutError,
+  U64_MAX_BN,
 } from '.';
 
 /**
@@ -4516,7 +4517,7 @@ export class MangoClient {
             tokenAcc,
             mangoGroup.signerKey,
             mangoAccount.spotOpenOrders,
-            new BN('18446744073709551615'), // u64::MAX to withdraw errything
+            U64_MAX_BN,
             false,
           );
           withdrawTransaction.transaction.add(instruction);
