@@ -1140,7 +1140,7 @@ export class MangoClient {
   }
 
   /**
-   * Deposit tokens in a Mango Account
+   * Withdraw tokens from a Mango Account
    *
    * @param rootBank The RootBank for the withdrawn currency
    * @param nodeBank The NodeBank asociated with the RootBank
