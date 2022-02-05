@@ -2596,6 +2596,7 @@ export class MangoClient {
     // fallback, we don't maintain an off chain service for finding accounts for
     // devnet
     if (
+      (this.connection as any)['_rpcEndpoint'] &&
       (this.connection as any)['_rpcEndpoint'].toLowerCase().includes('devnet')
     )
       accountsWithPnl = await this.fetchTopPnlAccountsFromRPC(
