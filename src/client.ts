@@ -2592,19 +2592,27 @@ export class MangoClient {
       }
     }
 
-    // const accountsWithPnl = await this.fetchTopPnlAccountsFromRPC(
-    //   mangoGroup,
-    //   mangoCache,
-    //   perpMarket,
-    //   price,
-    //   sign,
-    //   mangoAccounts,
-    // );
-    const accountsWithPnl = await this.fetchTopPnlAccountsFromDB(
-      mangoGroup,
-      perpMarket,
-      sign,
-    );
+    let accountsWithPnl;
+    // fallback, we don't maintain an off chain service for finding accounts for
+    // devnet
+    if (
+      (this.connection as any)['_rpcEndpoint'].toLowerCase().includes('devnet')
+    )
+      accountsWithPnl = await this.fetchTopPnlAccountsFromRPC(
+        mangoGroup,
+        mangoCache,
+        perpMarket,
+        price,
+        sign,
+        mangoAccounts,
+      );
+    else {
+      accountsWithPnl = await this.fetchTopPnlAccountsFromDB(
+        mangoGroup,
+        perpMarket,
+        sign,
+      );
+    }
 
     for (const account of accountsWithPnl) {
       // ignore own account explicitly
