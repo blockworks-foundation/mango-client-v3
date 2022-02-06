@@ -1,6 +1,6 @@
 import BN from 'bn.js';
 import { PerpMarketCache, PerpMarketInfo, ZERO_BN } from '.';
-import { I80F48, ZERO_I80F48 } from './fixednum';
+import { I80F48, ZERO_I80F48 } from './utils/fixednum';
 import PerpMarket from './PerpMarket';
 import MangoAccount from './MangoAccount';
 import Big from 'big.js';

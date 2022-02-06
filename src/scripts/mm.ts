@@ -3,8 +3,8 @@ import {
   Config,
   getPerpMarketByBaseSymbol,
   PerpMarketConfig,
-} from './config';
-import configFile from './ids.json';
+} from '../config';
+import configFile from '../ids.json';
 import {
   Account,
   Commitment,
@@ -14,7 +14,7 @@ import {
 } from '@solana/web3.js';
 import fs from 'fs';
 import os from 'os';
-import { MangoClient } from './client';
+import { MangoClient } from '../client';
 import {
   BookSide,
   makeCancelAllPerpOrdersInstruction,
@@ -22,11 +22,11 @@ import {
   MangoCache,
   ONE_BN,
   sleep,
-} from './index';
+} from '../index';
 import { BN } from 'bn.js';
-import MangoAccount from './MangoAccount';
-import MangoGroup from './MangoGroup';
-import PerpMarket from './PerpMarket';
+import MangoAccount from '../MangoAccount';
+import MangoGroup from '../MangoGroup';
+import PerpMarket from '../PerpMarket';
 
 const interval = parseInt(process.env.INTERVAL || '10000');
 const control = { isRunning: true, interval: interval };

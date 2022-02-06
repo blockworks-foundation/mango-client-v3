@@ -1,9 +1,9 @@
-import configFile from './ids.json';
-import { Cluster, Config, GroupConfig } from './config';
-import { findPerpMarketParams } from './utils';
-import { MangoClient } from './client';
+import configFile from '../ids.json';
+import { Config, GroupConfig } from '../config';
+import { findPerpMarketParams } from '../utils/utils';
+import { MangoClient } from '../client';
 import { Commitment, Connection } from '@solana/web3.js';
-import { QUOTE_INDEX } from './layout';
+import { QUOTE_INDEX } from '../layout';
 
 async function main() {
   const config = new Config(configFile);

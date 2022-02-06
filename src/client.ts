@@ -27,7 +27,7 @@ import {
   uiToNative,
   ZERO_BN,
   zeroKey,
-} from './utils';
+} from './utils/utils';
 import {
   AssetType,
   BookSideLayout,
@@ -109,10 +109,10 @@ import {
   Market,
   OpenOrders,
 } from '@project-serum/serum';
-import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
+import { I80F48, ONE_I80F48, ZERO_I80F48 } from './utils/fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 
-import { PerpOrderType, WalletAdapter } from './types';
+import { PerpOrderType, WalletAdapter } from './utils/types';
 import { BookSide, PerpOrder } from './book';
 import {
   closeAccount,

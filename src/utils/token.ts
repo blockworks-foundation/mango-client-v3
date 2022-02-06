@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TokenInstructions } from '@project-serum/serum';
-import { TokenAccountLayout } from './layout';
+import { TokenAccountLayout } from '../layout';
 
 export class TokenAccount {
   publicKey!: PublicKey;

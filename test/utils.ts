@@ -7,7 +7,6 @@ import {
 import { TOKEN_PROGRAM_ID, Token, u64 } from '@solana/spl-token';
 import {
   Account,
-  Keypair,
   Commitment,
   Connection,
   PublicKey,
@@ -17,7 +16,7 @@ import {
   TransactionSignature,
 } from '@solana/web3.js';
 import { StubOracleLayout } from '../src/layout';
-import { createAccountInstruction, sleep, ZERO_BN } from '../src/utils';
+import { createAccountInstruction, sleep, ZERO_BN } from '../src/utils/utils';
 import { msrmMints, MangoClient, I80F48 } from '../src';
 import MangoGroup from '../src/MangoGroup';
 import MangoAccount from '../src/MangoAccount';
@@ -301,6 +300,7 @@ export async function listMarket(
 
   async function getVaultOwnerAndNonce() {
     const nonce = ZERO_BN;
+    // eslint-disable-next-line
     while (true) {
       try {
         const vaultOwner = await PublicKey.createProgramAddress(

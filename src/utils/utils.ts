@@ -15,8 +15,8 @@ import {
 } from '@solana/web3.js';
 import { OpenOrders, TokenInstructions } from '@project-serum/serum';
 import { I80F48, ONE_I80F48 } from './fixednum';
-import MangoGroup from './MangoGroup';
-import { HealthType } from './MangoAccount';
+import MangoGroup from '../MangoGroup';
+import { HealthType } from '../MangoAccount';
 
 /** @internal */
 export const ZERO_BN = new BN(0);

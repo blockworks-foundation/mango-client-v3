@@ -1,6 +1,6 @@
 import { PublicKey } from '@solana/web3.js';
 import IDS from './ids.json';
-import { zeroKey } from './utils';
+import { zeroKey } from './utils/utils';
 
 export type Cluster = 'devnet' | 'mainnet' | 'localnet' | 'testnet';
 

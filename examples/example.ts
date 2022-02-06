@@ -1,11 +1,15 @@
 import * as os from 'os';
 import * as fs from 'fs';
-import { MangoClient } from './client';
+import { MangoClient } from '../src/client';
 import { Account, Commitment, Connection } from '@solana/web3.js';
-import configFile from './ids.json';
-import { Config, getMarketByBaseSymbolAndKind, GroupConfig } from './config';
+import configFile from '../src/ids.json';
+import {
+  Config,
+  getMarketByBaseSymbolAndKind,
+  GroupConfig,
+} from '../src/config';
 import { Market } from '@project-serum/serum';
-import { ZERO_BN } from './utils';
+import { ZERO_BN } from '../src/utils/utils';
 
 function readKeypair() {
   return JSON.parse(

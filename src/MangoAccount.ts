@@ -1,6 +1,6 @@
 import { Market, OpenOrders, Orderbook } from '@project-serum/serum';
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
-import { I80F48, ONE_I80F48, ZERO_I80F48 } from './fixednum';
+import { I80F48, ONE_I80F48, ZERO_I80F48 } from './utils/fixednum';
 import {
   FREE_ORDER_SLOT,
   MangoAccountLayout,
@@ -16,7 +16,7 @@ import {
   nativeToUi,
   splitOpenOrders,
   zeroKey,
-} from './utils';
+} from './utils/utils';
 import RootBank from './RootBank';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';

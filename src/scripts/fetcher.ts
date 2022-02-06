@@ -1,17 +1,14 @@
-import { MangoClient } from './client';
-import {
-  Commitment,
-  Connection
-} from '@solana/web3.js';
-import { sleep } from './utils';
-import configFile from './ids.json';
+import { MangoClient } from '../client';
+import { Commitment, Connection } from '@solana/web3.js';
+import { sleep } from '../utils/utils';
+import configFile from '../ids.json';
 import {
   Cluster,
   Config,
   getPerpMarketByBaseSymbol,
-  PerpMarketConfig
-} from './config';
-import { ONE_BN, ZERO_BN } from '.';
+  PerpMarketConfig,
+} from '../config';
+import { ONE_BN, ZERO_BN } from '..';
 
 export class Fetcher {
   /**

@@ -24,9 +24,9 @@ export {
 export * from './book';
 export * from './client';
 export * from './config';
-export * from './fixednum';
+export * from './utils/fixednum';
 export * from './instruction';
 export * from './layout';
-export * from './token';
-export * from './types';
-export * from './utils';
+export * from './utils/token';
+export * from './utils/types';
+export * from './utils/utils';

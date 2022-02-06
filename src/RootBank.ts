@@ -1,7 +1,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { I80F48, ZERO_I80F48 } from './fixednum';
+import { I80F48, ZERO_I80F48 } from './utils/fixednum';
 import { NodeBank, NodeBankLayout } from './layout';
-import { getMultipleAccounts, nativeI80F48ToUi, zeroKey } from './utils';
+import { getMultipleAccounts, nativeI80F48ToUi, zeroKey } from './utils/utils';
 import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 

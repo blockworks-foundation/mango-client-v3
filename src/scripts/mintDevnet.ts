@@ -1,4 +1,4 @@
-import { createDevnetConnection } from '../test/utils';
+import { createDevnetConnection } from '../../test/utils';
 import { Account, PublicKey } from '@solana/web3.js';
 import fs from 'fs';
 import os from 'os';

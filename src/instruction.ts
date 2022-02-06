@@ -8,7 +8,7 @@ import { AssetType, encodeMangoInstruction, INFO_LEN } from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
-import { I80F48, ZERO_I80F48 } from './fixednum';
+import { I80F48, ZERO_I80F48 } from './utils/fixednum';
 import { PerpOrder, PerpOrderType, ZERO_BN } from '.';
 
 export function makeInitMangoGroupInstruction(

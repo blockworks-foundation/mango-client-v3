@@ -15,11 +15,11 @@ import {
   Union,
 } from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
-import { I80F48, ONE_I80F48 } from './fixednum';
+import { I80F48, ONE_I80F48 } from './utils/fixednum';
 import BN from 'bn.js';
-import { zeroKey } from './utils';
+import { zeroKey } from './utils/utils';
 import PerpAccount from './PerpAccount';
-import { PerpOrderType } from './types';
+import { PerpOrderType } from './utils/types';
 
 export const MAX_TOKENS = 16;
 export const MAX_PAIRS = MAX_TOKENS - 1;

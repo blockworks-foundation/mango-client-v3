@@ -12,8 +12,7 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import { MangoClient } from '../client';
-import { GroupConfig } from '../config';
-import { ZERO_BN } from '../utils';
+import { ZERO_BN } from '../utils/utils';
 
 export default async function listMarket(
   connection: Connection,
@@ -39,6 +38,7 @@ export default async function listMarket(
 
   async function getVaultOwnerAndNonce() {
     const nonce = ZERO_BN.clone();
+    // eslint-disable-next-line
     while (true) {
       try {
         const vaultOwner = await PublicKey.createProgramAddress(

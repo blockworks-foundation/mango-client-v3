@@ -2,7 +2,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { Big } from 'big.js';
 import BN from 'bn.js';
 import { NodeBank, NodeBankLayout } from '.';
-import { I80F48, ONE_I80F48 } from './fixednum';
+import { I80F48, ONE_I80F48 } from './utils/fixednum';
 import {
   MetaData,
   RootBankLayout,
@@ -17,7 +17,7 @@ import {
 } from './layout';
 import PerpMarket from './PerpMarket';
 import RootBank from './RootBank';
-import { getMultipleAccounts, zeroKey } from './utils';
+import { getMultipleAccounts, zeroKey } from './utils/utils';
 
 export default class MangoGroup {
   publicKey: PublicKey;

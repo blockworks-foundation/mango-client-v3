@@ -6,18 +6,6 @@ import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import { Options, PositionalOptions } from 'yargs';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
-
-import {
-  addPerpMarket,
-  addPythOracle,
-  addSpotMarket,
-  addStubOracle,
-  addSwitchboardOracle,
-  initGroup,
-  listMarket,
-  sanityCheck,
-  setStubOracle,
-} from './commands';
 import {
   Cluster,
   Config,
@@ -28,14 +16,35 @@ import {
   GroupConfig,
   PerpMarketConfig,
   SpotMarketConfig,
-} from './config';
-import { MangoClient } from './client';
-import { throwUndefined, uiToNative } from './utils';
-import { QUOTE_INDEX } from './layout';
+} from '../config';
+import { MangoClient } from '../client';
+import { throwUndefined, uiToNative } from '../utils/utils';
+import { QUOTE_INDEX } from '../layout';
 import { Coder } from '@project-serum/anchor';
-import idl from './mango_logs.json';
-import { getMarketIndexBySymbol } from '.';
+import idl from '../mango_logs.json';
+import { getMarketIndexBySymbol } from '../config';
 import { Market } from '@project-serum/serum';
+import initGroup from './initGroup';
+import addPerpMarket from './addPerpMarket';
+import addSpotMarket from './addSpotMarket';
+import addStubOracle from './addStubOracle';
+import addPythOracle from './addPythOracle';
+import addSwitchboardOracle from './addSwitchboardOracle';
+import setStubOracle from './setStubOracle';
+import listMarket from './listMarket';
+import sanityCheck from './sanityCheck';
+
+export {
+  addPerpMarket,
+  addSpotMarket,
+  addStubOracle,
+  addPythOracle,
+  addSwitchboardOracle,
+  initGroup,
+  setStubOracle,
+  listMarket,
+  sanityCheck,
+};
 
 const clusterDesc: [string, Options] = [
   'cluster',
@@ -50,7 +59,7 @@ const configDesc: [string, Options] = [
   'config',
   {
     describe: 'the config file to store all public keys',
-    default: __dirname + '/ids.json',
+    default: './src/ids.json',
     type: 'string',
   },
 ];

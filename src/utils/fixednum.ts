@@ -1,6 +1,5 @@
 import BN from 'bn.js';
 import Big from 'big.js';
-import { ZERO_BN } from './utils';
 
 // TODO - this whole class is inefficient; consider optimizing
 export class I80F48 {

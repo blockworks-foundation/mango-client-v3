@@ -1,7 +1,6 @@
 import { Commitment, Connection, PublicKey } from '@solana/web3.js';
-import { group } from 'console';
-import { MangoClient } from './client';
-import { Cluster, Config } from './config';
+import { MangoClient } from '../client';
+import { Cluster, Config } from '../config';
 
 const config = Config.ids();
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;

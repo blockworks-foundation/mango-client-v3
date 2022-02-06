@@ -1,8 +1,8 @@
-import { Cluster, Config, GroupConfig } from './config';
+import { Cluster, Config, GroupConfig } from '../config';
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import fs from 'fs';
 import os from 'os';
-import { IDS, MangoClient, QUOTE_INDEX, RootBank } from './index';
+import { IDS, MangoClient, QUOTE_INDEX, RootBank } from '../index';
 
 async function main() {
   const payer = new Account(
@@ -53,7 +53,7 @@ async function main() {
     quoteRootBank,
     payer,
   );
-  // console.log(txids);
+  console.log(txids);
 }
 
 main();

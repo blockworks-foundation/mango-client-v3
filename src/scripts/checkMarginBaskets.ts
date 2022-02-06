@@ -1,6 +1,6 @@
 import { Account, Commitment, Connection } from '@solana/web3.js';
-import { MangoClient } from './client';
-import { Cluster, Config } from './config';
+import { MangoClient } from '../client';
+import { Cluster, Config } from '../config';
 import * as os from 'os';
 import * as fs from 'fs';
 
@@ -21,12 +21,12 @@ const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
 const client = new MangoClient(connection, mangoProgramId);
 
-const payer = new Account(
-  JSON.parse(
-    process.env.KEYPAIR ||
-      fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
-  ),
-);
+// const payer = new Account(
+//   JSON.parse(
+//     process.env.KEYPAIR ||
+//       fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+//   ),
+// );
 
 async function check() {
   const group = await client.getMangoGroup(mangoGroupKey);

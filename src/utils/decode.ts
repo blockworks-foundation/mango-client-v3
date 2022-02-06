@@ -1,4 +1,4 @@
-import { MangoInstructionLayout } from '.';
+import { MangoInstructionLayout } from '..';
 
 const ins = process.env.INS!;
 const data = Buffer.from(ins, 'hex');

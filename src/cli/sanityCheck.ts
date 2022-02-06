@@ -4,8 +4,8 @@ import MangoAccount from '../MangoAccount';
 import PerpMarket from '../PerpMarket';
 import { getPerpMarketByIndex, getTokenByMint, GroupConfig } from '../config';
 import { MangoCache, QUOTE_INDEX } from '../layout';
-import { I80F48, ZERO_I80F48 } from '../fixednum';
-import { promiseUndef, ZERO_BN, zeroKey } from '../utils';
+import { I80F48, ZERO_I80F48 } from '../utils/fixednum';
+import { promiseUndef, ZERO_BN, zeroKey } from '../utils/utils';
 import RootBank from '../RootBank';
 
 async function setUp(client: MangoClient, mangoGroupKey: PublicKey) {

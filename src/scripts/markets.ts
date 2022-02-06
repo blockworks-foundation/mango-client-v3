@@ -1,18 +1,8 @@
-import { Commitment, Connection, PublicKey } from '@solana/web3.js';
-import { group } from 'console';
-import {
-  getTokenBySymbol,
-  I80F48,
-  PerpMarket,
-  PerpMarketConfig,
-  SpotMarketConfig,
-} from '.';
-import { MangoClient } from './client';
-import { Cluster, Config } from './config';
-import { Market } from '@project-serum/serum';
-import * as Process from 'process';
-import RootBank from './RootBank';
-import BN from 'bn.js';
+import { Commitment, Connection } from '@solana/web3.js';
+import { getTokenBySymbol, PerpMarketConfig, SpotMarketConfig } from '..';
+import { MangoClient } from '../client';
+import { Cluster, Config } from '../config';
+import RootBank from '../RootBank';
 
 // e.g. CLUSTER=devnet GROUP=devnet.2 yarn ts-node src/markets.ts
 // e.g. SYMBOL=MNGO CLUSTER=devnet GROUP=devnet.3 yarn ts-node src/markets.ts

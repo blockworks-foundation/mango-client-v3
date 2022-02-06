@@ -2,7 +2,7 @@ import BN from 'bn.js';
 import { PublicKey } from '@solana/web3.js';
 import { DataType } from './layout';
 import PerpMarket from './PerpMarket';
-import { ZERO_BN } from './utils';
+import { ZERO_BN } from './utils/utils';
 
 export interface PerpOrder {
   orderId: BN;

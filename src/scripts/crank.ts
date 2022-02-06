@@ -3,7 +3,7 @@
  */
 import * as os from 'os';
 import * as fs from 'fs';
-import { MangoClient } from './client';
+import { MangoClient } from '../client';
 import {
   Account,
   Commitment,
@@ -11,9 +11,9 @@ import {
   PublicKey,
   Transaction,
 } from '@solana/web3.js';
-import { getMultipleAccounts, sleep } from './utils';
-import configFile from './ids.json';
-import { Cluster, Config } from './config';
+import { getMultipleAccounts, sleep } from '../utils/utils';
+import configFile from '../ids.json';
+import { Cluster, Config } from '../config';
 import BN from 'bn.js';
 import {
   decodeEventQueue,

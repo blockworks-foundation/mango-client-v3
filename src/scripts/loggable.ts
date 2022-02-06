@@ -2,7 +2,7 @@ import BN from 'bn.js';
 import { PublicKey } from '@solana/web3.js';
 
 import { BinaryReader, Schema, BorshError, BinaryWriter } from 'borsh';
-import { I80F48 } from './fixednum';
+import { I80F48 } from '../utils/fixednum';
 
 (BinaryReader.prototype as any).readPubkey = function () {
   const reader = this as unknown as BinaryReader;

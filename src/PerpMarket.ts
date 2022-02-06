@@ -14,9 +14,9 @@ import {
   PerpEventQueueLayout,
   PerpMarketConfig,
 } from '.';
-import { I80F48 } from './fixednum';
-import { Modify } from './types';
-import { ZERO_BN } from './utils';
+import { I80F48 } from './utils/fixednum';
+import { Modify } from './utils/types';
+import { ZERO_BN } from './utils/utils';
 import { EOL } from 'os';
 import MangoGroup from './MangoGroup';
 

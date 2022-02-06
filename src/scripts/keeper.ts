@@ -3,7 +3,7 @@ This will probably move to its own repo at some point but easier to keep it here
  */
 import * as os from 'os';
 import * as fs from 'fs';
-import { MangoClient } from './client';
+import { MangoClient } from '../client';
 import {
   Account,
   Commitment,
@@ -11,20 +11,20 @@ import {
   PublicKey,
   Transaction,
 } from '@solana/web3.js';
-import { getMultipleAccounts, zeroKey } from './utils';
-import configFile from './ids.json';
-import { Cluster, Config } from './config';
+import { getMultipleAccounts, zeroKey } from '../utils/utils';
+import configFile from '../ids.json';
+import { Cluster, Config } from '../config';
 import {
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
   makeCacheRootBankInstruction,
   makeUpdateFundingInstruction,
   makeUpdateRootBankInstruction,
-} from './instruction';
+} from '../instruction';
 import BN from 'bn.js';
-import { PerpEventQueueLayout } from './layout';
-import { MangoGroup, PerpMarket, promiseUndef } from '.';
-import PerpEventQueue from './PerpEventQueue';
+import { PerpEventQueueLayout } from '../layout';
+import { MangoGroup, PerpMarket, promiseUndef } from '..';
+import PerpEventQueue from '../PerpEventQueue';
 
 let lastRootBankCacheUpdate = 0;
 const groupName = process.env.GROUP || 'mainnet.1';
