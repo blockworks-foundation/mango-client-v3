@@ -2592,19 +2592,38 @@ export class MangoClient {
       }
     }
 
-    // const accountsWithPnl = await this.fetchTopPnlAccountsFromRPC(
-    //   mangoGroup,
-    //   mangoCache,
-    //   perpMarket,
-    //   price,
-    //   sign,
-    //   mangoAccounts,
-    // );
-    const accountsWithPnl = await this.fetchTopPnlAccountsFromDB(
-      mangoGroup,
-      perpMarket,
-      sign,
-    );
+    // we don't maintain an off chain service for finding accounts for
+    // devnet, so use fetchTopPnlAccountsFromDB only for mainnet
+    let accountsWithPnl;
+    // note: simplistic way of checking if we are on mainnet
+    const isMainnet =
+      (this.connection as any)['_rpcEndpoint'] &&
+      !(this.connection as any)['_rpcEndpoint']
+        .toLowerCase()
+        // usually devnet rpc endpoints have devnet in them, mainnet ones don't
+        .includes('devnet');
+    if (isMainnet) {
+      try {
+        accountsWithPnl = await this.fetchTopPnlAccountsFromDB(
+          mangoGroup,
+          perpMarket,
+          sign,
+        );
+      } catch (e) {
+        console.error(`fetchTopPnlAccountsFromDB failed, ${e}`);
+      }
+    }
+    // if not set, then always fallback
+    if (!accountsWithPnl) {
+      accountsWithPnl = await this.fetchTopPnlAccountsFromRPC(
+        mangoGroup,
+        mangoCache,
+        perpMarket,
+        price,
+        sign,
+        mangoAccounts,
+      );
+    }
 
     for (const account of accountsWithPnl) {
       // ignore own account explicitly
