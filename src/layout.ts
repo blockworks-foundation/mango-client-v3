@@ -1333,3 +1333,67 @@ export interface PerpTriggerOrder {
   quantity: BN;
   triggerPrice: I80F48;
 }
+
+/** @internal */
+export class ReferrerMemory {
+  referrerMangoAccount!: PublicKey;
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+/** @internal */
+export class ReferrerMemoryLayout extends Structure {
+  constructor(property) {
+    super([publicKeyLayout('referrerMangoAccount')], property);
+  }
+
+  decode(b, offset) {
+    return new ReferrerMemory(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+/** @internal */
+export function referrerMemoryLayout(property = '') {
+  return new ReferrerMemoryLayout(property);
+}
+
+/** @internal */
+export class ReferrerIdRecord {
+  referrerMangoAccount!: PublicKey;
+  id!: number[];
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+  get referrerId(): string {
+    return this.id
+      ? String.fromCharCode(...this.id).replace(
+          new RegExp(String.fromCharCode(0), 'g'),
+          '',
+        )
+      : '';
+  }
+}
+/** @internal */
+export class ReferrerIdRecordLayout extends Structure {
+  constructor(property) {
+    super(
+      [publicKeyLayout('referrerMangoAccount'), seq(u8(), INFO_LEN, 'id')],
+      property,
+    );
+  }
+
+  decode(b, offset) {
+    return new ReferrerIdRecord(super.decode(b, offset));
+  }
+
+  encode(src, b, offset) {
+    return super.encode(src.toBuffer(), b, offset);
+  }
+}
+/** @internal */
+export function referrerIdRecordLayout(property = '') {
+  return new ReferrerIdRecordLayout(property);
+}

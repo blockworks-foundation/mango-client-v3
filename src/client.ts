@@ -133,7 +133,6 @@ import MangoGroup from './MangoGroup';
 import {
   makeCreateSpotOpenOrdersInstruction,
   MangoError,
-  mngoMints,
   TimeoutError,
   U64_MAX_BN,
 } from '.';
@@ -4810,7 +4809,6 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     referrerMangoAccount: MangoAccount,
     payer: Account | WalletAdapter, // will also owner of referrerMangoAccount
-    referrerMangoAccountPk: PublicKey,
     referrerId: string,
   ): Promise<TransactionSignature> {
     const encoded = Buffer.from(referrerId);
