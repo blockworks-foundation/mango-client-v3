@@ -4,12 +4,13 @@ import {
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { AssetType, encodeMangoInstruction, INFO_LEN } from './layout';
+import { AssetType, encodeMangoInstruction, INFO_LEN, u64 } from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
 import { I80F48, ZERO_I80F48 } from './utils/fixednum';
 import { PerpOrder, PerpOrderType, ZERO_BN } from '.';
+import { u32 } from 'buffer-layout';
 
 export function makeInitMangoGroupInstruction(
   programId: PublicKey,
@@ -999,6 +1000,7 @@ export function makePlacePerpOrderInstruction(
   side: 'buy' | 'sell',
   orderType?: PerpOrderType,
   reduceOnly?: boolean,
+  referrerMangoAccountPk?: PublicKey,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -1009,12 +1011,21 @@ export function makePlacePerpOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+  ];
+  if (referrerMangoAccountPk !== undefined) {
+    keys.push({
+      isSigner: false,
+      isWritable: true,
+      pubkey: referrerMangoAccountPk,
+    });
+  }
+  keys.push(
     ...openOrders.map((pubkey) => ({
       isSigner: false,
       isWritable: false,
       pubkey,
     })),
-  ];
+  );
   const data = encodeMangoInstruction({
     PlacePerpOrder: {
       price,
@@ -2153,6 +2164,90 @@ export function makeChangeSpotMarketParamsInstruction(
     },
   });
 
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeChangeReferralFeeParamsInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  refSurchargeCentibps: BN,
+  refShareCentibps: BN,
+  refMngoRequired: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    ChangeReferralFeeParams: {
+      refSurchargeCentibps,
+      refShareCentibps,
+      refMngoRequired,
+    },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeSetReferrerMemoryInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  referrerMemoryPk: PublicKey,
+  referrerMangoAccountPk: PublicKey,
+  payerPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: referrerMemoryPk },
+    { isSigner: false, isWritable: false, pubkey: referrerMangoAccountPk },
+    { isSigner: true, isWritable: true, pubkey: payerPk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+  ];
+
+  const data = encodeMangoInstruction({
+    SetReferrerMemory: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRegisterReferrerIdInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  referrerMangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  referrerIdRecordPk: PublicKey,
+  payerPk: PublicKey,
+  referrerId: Uint8Array,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: referrerMangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: true, pubkey: referrerIdRecordPk },
+    { isSigner: true, isWritable: true, pubkey: payerPk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+  ];
+
+  const data = encodeMangoInstruction({
+    RegisterReferrerId: { referrerId },
+  });
   return new TransactionInstruction({
     keys,
     data,

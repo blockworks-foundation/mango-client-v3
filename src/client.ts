@@ -31,7 +31,9 @@ import {
 import {
   AssetType,
   BookSideLayout,
+  CENTIBPS_PER_UNIT,
   FREE_ORDER_SLOT,
+  INFO_LEN,
   MangoAccountLayout,
   MangoCache,
   MangoCacheLayout,
@@ -62,6 +64,7 @@ import {
   makeCancelSpotOrderInstruction,
   makeChangePerpMarketParams2Instruction,
   makeChangePerpMarketParamsInstruction,
+  makeChangeReferralFeeParamsInstruction,
   makeChangeSpotMarketParamsInstruction,
   makeCloseAdvancedOrdersInstruction,
   makeCloseMangoAccountInstruction,
@@ -86,6 +89,7 @@ import {
   makePlaceSpotOrder2Instruction,
   makePlaceSpotOrderInstruction,
   makeRedeemMngoInstruction,
+  makeRegisterReferrerIdInstruction,
   makeRemoveAdvancedOrderInstruction,
   makeResolveDustInstruction,
   makeResolvePerpBankruptcyInstruction,
@@ -93,6 +97,7 @@ import {
   makeSetDelegateInstruction,
   makeSetGroupAdminInstruction,
   makeSetOracleInstruction,
+  makeSetReferrerMemoryInstruction,
   makeSettleFeesInstruction,
   makeSettleFundsInstruction,
   makeSettlePnlInstruction,
@@ -128,6 +133,7 @@ import MangoGroup from './MangoGroup';
 import {
   makeCreateSpotOpenOrdersInstruction,
   MangoError,
+  mngoMints,
   TimeoutError,
   U64_MAX_BN,
 } from '.';
@@ -1554,6 +1560,7 @@ export class MangoClient {
     clientOrderId = 0,
     bookSideInfo?: AccountInfo<Buffer>,
     reduceOnly?: boolean,
+    referrerMangoAccountPk?: PublicKey,
   ): Promise<TransactionSignature> {
     const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
       price,
@@ -1579,6 +1586,7 @@ export class MangoClient {
       side,
       orderType,
       reduceOnly,
+      referrerMangoAccountPk,
     );
     transaction.add(instruction);
 
@@ -4739,5 +4747,99 @@ export class MangoClient {
     const additionalSigners = [];
 
     return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  /**
+   * Change the referral fee params
+   * @param mangoGroup
+   * @param admin
+   * @param refSurcharge normal units 0.0001 -> 1 basis point
+   * @param refShare
+   * @param refMngoRequired ui units -> 1 -> 1_000_000 MNGO
+   */
+  async changeReferralFeeParams(
+    mangoGroup: MangoGroup,
+    admin: Account | WalletAdapter,
+    refSurcharge: number,
+    refShare: number,
+    refMngoRequired: number,
+  ): Promise<TransactionSignature> {
+    const instruction = makeChangeReferralFeeParamsInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      admin.publicKey,
+      new BN(refSurcharge * CENTIBPS_PER_UNIT),
+      new BN(refShare * CENTIBPS_PER_UNIT),
+      new BN(refMngoRequired * 1_000_000),
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async setReferrerMemory(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter, // must be also owner of mangoAccount
+    referrerMangoAccountPk: PublicKey,
+  ): Promise<TransactionSignature> {
+    // Generate the PDA pubkey
+    const [referrerMemoryPk] = await PublicKey.findProgramAddress(
+      [mangoAccount.publicKey.toBytes(), new Buffer('ReferrerMemory', 'utf-8')],
+      this.programId,
+    );
+
+    const instruction = makeSetReferrerMemoryInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      referrerMemoryPk,
+      referrerMangoAccountPk,
+      payer.publicKey,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async registerReferrerId(
+    mangoGroup: MangoGroup,
+    referrerMangoAccount: MangoAccount,
+    payer: Account | WalletAdapter, // will also owner of referrerMangoAccount
+    referrerMangoAccountPk: PublicKey,
+    referrerId: string,
+  ): Promise<TransactionSignature> {
+    const encoded = Buffer.from(referrerId);
+    if (encoded.length > INFO_LEN) {
+      throw new Error(
+        `info string too long. Must be less than or equal to ${INFO_LEN} bytes`,
+      );
+    }
+    const encodedReferrerId = new Uint8Array(encoded, 0, INFO_LEN);
+
+    // Generate the PDA pubkey
+    const [referrerIdRecordPk] = await PublicKey.findProgramAddress(
+      [mangoGroup.publicKey.toBytes(), encodedReferrerId],
+      this.programId,
+    );
+
+    const instruction = makeRegisterReferrerIdInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      referrerMangoAccount.publicKey,
+      payer.publicKey,
+      referrerIdRecordPk,
+      payer.publicKey,
+      encodedReferrerId,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
   }
 }

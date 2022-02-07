@@ -28,6 +28,7 @@
     "mm": "ts-node src/scripts/mm.ts",
     "dust": "ts-node src/scripts/dust.ts",
     "example-mango-logs": "ts-node examples/mangoLogs.ts",
+    "example-fetch-stats": "ts-node examples/fetchStats.ts",
     "test-compute": "ts-node test/compute.test.ts",
     "test-fillbook": "ts-node test/fillbook.test.ts",
     "test-liquidator": "ts-node test/liquidator.test.ts",
