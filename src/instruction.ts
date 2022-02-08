@@ -1010,6 +1010,11 @@ export function makePlacePerpOrderInstruction(
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    ...openOrders.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
   ];
   if (referrerMangoAccountPk !== undefined) {
     keys.push({
@@ -1018,13 +1023,7 @@ export function makePlacePerpOrderInstruction(
       pubkey: referrerMangoAccountPk,
     });
   }
-  keys.push(
-    ...openOrders.map((pubkey) => ({
-      isSigner: false,
-      isWritable: false,
-      pubkey,
-    })),
-  );
+
   const data = encodeMangoInstruction({
     PlacePerpOrder: {
       price,
