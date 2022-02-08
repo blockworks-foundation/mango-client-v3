@@ -8,11 +8,9 @@ import PerpEventQueue from './PerpEventQueue';
 import RootBank from './RootBank';
 import BN from 'bn.js';
 import { PublicKey } from '@solana/web3.js';
-import { I80F48 } from './utils/fixednum';
 
 export {
   BN,
-  I80F48,
   IDL,
   IDS,
   MangoAccount,
@@ -33,3 +31,4 @@ export * from './layout';
 export * from './utils/token';
 export * from './utils/types';
 export * from './utils/utils';
+export * from './utils/fixednum';
