@@ -1345,27 +1345,12 @@ export class ReferrerMemory {
     Object.assign(this, decoded);
   }
 }
-/** @internal */
-export class ReferrerMemoryLayout extends Structure {
-  constructor(property) {
-    super(
-      [metaDataLayout('metaData'), publicKeyLayout('referrerMangoAccount')],
-      property,
-    );
-  }
 
-  decode(b, offset) {
-    return new ReferrerMemory(super.decode(b, offset));
-  }
-
-  encode(src, b, offset) {
-    return super.encode(src.toBuffer(), b, offset);
-  }
-}
 /** @internal */
-export function referrerMemoryLayout(property = '') {
-  return new ReferrerMemoryLayout(property);
-}
+export const ReferrerMemoryLayout = struct([
+  metaDataLayout('metaData'),
+  publicKeyLayout('referrerMangoAccount'),
+]);
 
 /** @internal */
 export class ReferrerIdRecord {
