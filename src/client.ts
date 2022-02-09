@@ -133,6 +133,8 @@ import MangoGroup from './MangoGroup';
 import {
   makeCreateSpotOpenOrdersInstruction,
   MangoError,
+  ReferrerIdRecord,
+  ReferrerIdRecordLayout,
   TimeoutError,
   U64_MAX_BN,
 } from '.';
@@ -4827,7 +4829,10 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, additionalSigners);
   }
 
-  async getReferrerPda(mangoGroup: MangoGroup, referrerId: string) {
+  async getReferrerPda(
+    mangoGroup: MangoGroup,
+    referrerId: string,
+  ): Promise<{ referrerPda: PublicKey; encodedReferrerId: Buffer }> {
     const encoded = Buffer.from(referrerId, 'utf8');
     if (encoded.length > INFO_LEN) {
       throw new Error(
@@ -4877,5 +4882,35 @@ export class MangoClient {
     transaction.add(instruction);
     const additionalSigners = [];
     return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async getReferrerIdsForMangoAccount(mangoAccount: MangoAccount) {
+    const filters = [
+      {
+        memcmp: {
+          offset: ReferrerIdRecordLayout.offsetOf('referrerMangoAccount'),
+          bytes: mangoAccount.publicKey.toBase58(),
+        },
+      },
+      {
+        dataSize: ReferrerIdRecordLayout.span,
+      },
+    ];
+
+    const referrerIds = await getFilteredProgramAccounts(
+      this.connection,
+      this.programId,
+      filters,
+    ).then((referrerIds) => {
+      referrerIds.map(({ accountInfo }) => {
+        return new ReferrerIdRecord(
+          ReferrerIdRecordLayout.decode(
+            accountInfo == null ? undefined : accountInfo.data,
+          ),
+        );
+      });
+    });
+
+    return referrerIds;
   }
 }
