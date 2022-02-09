@@ -1340,6 +1340,7 @@ export interface PerpTriggerOrder {
 export class ReferrerMemory {
   metaData!: MetaData;
   referrerMangoAccount!: PublicKey;
+
   constructor(decoded: any) {
     Object.assign(this, decoded);
   }

@@ -955,7 +955,7 @@ export class MangoClient {
     quantity: number,
     accountNum: number,
     info?: string,
-    referrer?: string,
+    referrerPk?: PublicKey,
   ): Promise<[string, TransactionSignature]> {
     const transaction = new Transaction();
 
@@ -979,19 +979,11 @@ export class MangoClient {
 
     transaction.add(createMangoAccountInstruction);
 
-    if (referrer) {
+    if (referrerPk) {
       const [referrerMemoryPk] = await PublicKey.findProgramAddress(
         [mangoAccountPk.toBytes(), new Buffer('ReferrerMemory', 'utf-8')],
         this.programId,
       );
-
-      let referrerMangoAccountPk;
-      if (referrer.length === 44) {
-        referrerMangoAccountPk = new PublicKey(referrer);
-      } else {
-        const { referrerPda } = await this.getReferrerPda(mangoGroup, referrer);
-        referrerMangoAccountPk = referrerPda;
-      }
 
       const setReferrerInstruction = makeSetReferrerMemoryInstruction(
         this.programId,
@@ -999,10 +991,9 @@ export class MangoClient {
         mangoAccountPk,
         owner.publicKey,
         referrerMemoryPk,
-        referrerMangoAccountPk,
+        referrerPk,
         owner.publicKey,
       );
-
       transaction.add(setReferrerInstruction);
     }
 
