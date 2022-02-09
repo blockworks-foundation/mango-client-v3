@@ -1369,28 +1369,10 @@ export class ReferrerIdRecord {
       : '';
   }
 }
-/** @internal */
-export class ReferrerIdRecordLayout extends Structure {
-  constructor(property) {
-    super(
-      [
-        metaDataLayout('metaData'),
-        publicKeyLayout('referrerMangoAccount'),
-        seq(u8(), INFO_LEN, 'id'),
-      ],
-      property,
-    );
-  }
 
-  decode(b, offset) {
-    return new ReferrerIdRecord(super.decode(b, offset));
-  }
-
-  encode(src, b, offset) {
-    return super.encode(src.toBuffer(), b, offset);
-  }
-}
 /** @internal */
-export function referrerIdRecordLayout(property = '') {
-  return new ReferrerIdRecordLayout(property);
-}
+export const ReferrerIdRecordLayout = struct([
+  metaDataLayout('metaData'),
+  publicKeyLayout('referrerMangoAccount'),
+  seq(u8(), INFO_LEN, 'id'),
+]);
