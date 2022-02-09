@@ -636,6 +636,8 @@ export const DataType = {
   MangoCache: 7,
   EventQueue: 8,
   AdvancedOrders: 9,
+  ReferrerMemory: 10,
+  ReferrerIdRecord: 11,
 };
 
 export const enum AssetType {
@@ -1336,6 +1338,7 @@ export interface PerpTriggerOrder {
 
 /** @internal */
 export class ReferrerMemory {
+  metaData!: MetaData;
   referrerMangoAccount!: PublicKey;
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -1344,7 +1347,10 @@ export class ReferrerMemory {
 /** @internal */
 export class ReferrerMemoryLayout extends Structure {
   constructor(property) {
-    super([publicKeyLayout('referrerMangoAccount')], property);
+    super(
+      [metaDataLayout('metaData'), publicKeyLayout('referrerMangoAccount')],
+      property,
+    );
   }
 
   decode(b, offset) {
@@ -1362,6 +1368,7 @@ export function referrerMemoryLayout(property = '') {
 
 /** @internal */
 export class ReferrerIdRecord {
+  metaData!: MetaData;
   referrerMangoAccount!: PublicKey;
   id!: number[];
   constructor(decoded: any) {
@@ -1380,7 +1387,11 @@ export class ReferrerIdRecord {
 export class ReferrerIdRecordLayout extends Structure {
   constructor(property) {
     super(
-      [publicKeyLayout('referrerMangoAccount'), seq(u8(), INFO_LEN, 'id')],
+      [
+        metaDataLayout('metaData'),
+        publicKeyLayout('referrerMangoAccount'),
+        seq(u8(), INFO_LEN, 'id'),
+      ],
       property,
     );
   }

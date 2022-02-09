@@ -2229,7 +2229,6 @@ export function makeRegisterReferrerIdInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   referrerMangoAccountPk: PublicKey,
-  ownerPk: PublicKey,
   referrerIdRecordPk: PublicKey,
   payerPk: PublicKey,
   referrerId: Buffer,
@@ -2237,7 +2236,6 @@ export function makeRegisterReferrerIdInstruction(
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: referrerMangoAccountPk },
-    { isSigner: true, isWritable: false, pubkey: ownerPk },
     { isSigner: false, isWritable: true, pubkey: referrerIdRecordPk },
     { isSigner: true, isWritable: true, pubkey: payerPk },
     { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },

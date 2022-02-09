@@ -4825,7 +4825,11 @@ export class MangoClient {
 
     // Generate the PDA pubkey
     const [referrerIdRecordPk] = await PublicKey.findProgramAddress(
-      [mangoGroup.publicKey.toBytes(), encodedReferrerId],
+      [
+        mangoGroup.publicKey.toBytes(),
+        new Buffer('ReferrerIdRecord', 'utf-8'),
+        encodedReferrerId,
+      ],
       this.programId,
     );
 
@@ -4833,7 +4837,6 @@ export class MangoClient {
       this.programId,
       mangoGroup.publicKey,
       referrerMangoAccount.publicKey,
-      payer.publicKey,
       referrerIdRecordPk,
       payer.publicKey,
       encodedReferrerId,
