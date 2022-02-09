@@ -4002,7 +4002,6 @@ export class MangoClient {
     clientOrderId?: number,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     invalidIdOk = false, // Don't throw error if order is invalid
-    reduceOnly?: boolean,
     referrerMangoAccountPk?: PublicKey,
   ): Promise<TransactionSignature> {
     const transaction = new Transaction();
@@ -4045,7 +4044,7 @@ export class MangoClient {
         : order.clientId ?? new BN(Date.now()),
       side,
       orderType,
-      reduceOnly,
+      false,
       referrerMangoAccountPk,
     );
     transaction.add(placeInstruction);
