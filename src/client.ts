@@ -4884,7 +4884,9 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, additionalSigners);
   }
 
-  async getReferrerIdsForMangoAccount(mangoAccount: MangoAccount) {
+  async getReferrerIdsForMangoAccount(
+    mangoAccount: MangoAccount,
+  ): Promise<ReferrerIdRecord[]> {
     const filters = [
       {
         memcmp: {
@@ -4902,7 +4904,7 @@ export class MangoClient {
       this.programId,
       filters,
     ).then((referrerIds) => {
-      referrerIds.map(({ accountInfo }) => {
+      return referrerIds.map(({ accountInfo }) => {
         return new ReferrerIdRecord(
           ReferrerIdRecordLayout.decode(
             accountInfo == null ? undefined : accountInfo.data,
