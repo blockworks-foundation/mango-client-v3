@@ -4811,13 +4811,17 @@ export class MangoClient {
     payer: Account | WalletAdapter, // will also owner of referrerMangoAccount
     referrerId: string,
   ): Promise<TransactionSignature> {
-    const encoded = Buffer.from(referrerId);
+    const encoded = Buffer.from(referrerId, 'utf8');
     if (encoded.length > INFO_LEN) {
       throw new Error(
         `info string too long. Must be less than or equal to ${INFO_LEN} bytes`,
       );
     }
-    const encodedReferrerId = new Uint8Array(encoded, 0, INFO_LEN);
+
+    const encodedReferrerId = Buffer.concat([
+      encoded,
+      Buffer.alloc(INFO_LEN - encoded.length, 0),
+    ]);
 
     // Generate the PDA pubkey
     const [referrerIdRecordPk] = await PublicKey.findProgramAddress(

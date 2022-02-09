@@ -2232,11 +2232,11 @@ export function makeRegisterReferrerIdInstruction(
   ownerPk: PublicKey,
   referrerIdRecordPk: PublicKey,
   payerPk: PublicKey,
-  referrerId: Uint8Array,
+  referrerId: Buffer,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
-    { isSigner: false, isWritable: true, pubkey: referrerMangoAccountPk },
+    { isSigner: false, isWritable: false, pubkey: referrerMangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
     { isSigner: false, isWritable: true, pubkey: referrerIdRecordPk },
     { isSigner: true, isWritable: true, pubkey: payerPk },
