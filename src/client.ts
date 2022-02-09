@@ -989,21 +989,8 @@ export class MangoClient {
       if (referrer.length === 44) {
         referrerMangoAccountPk = new PublicKey(referrer);
       } else {
-        const encoded = Buffer.from(referrer, 'utf8');
-
-        const encodedReferrerId = Buffer.concat([
-          encoded,
-          Buffer.alloc(INFO_LEN - encoded.length, 0),
-        ]);
-
-        [referrerMangoAccountPk] = await PublicKey.findProgramAddress(
-          [
-            mangoGroup.publicKey.toBytes(),
-            new Buffer('ReferrerIdRecord', 'utf-8'),
-            encodedReferrerId,
-          ],
-          this.programId,
-        );
+        const { referrerPda } = await this.getReferrerPda(mangoGroup, referrer);
+        referrerMangoAccountPk = referrerPda;
       }
 
       const setReferrerInstruction = makeSetReferrerMemoryInstruction(
@@ -4846,12 +4833,7 @@ export class MangoClient {
     return await this.sendTransaction(transaction, payer, additionalSigners);
   }
 
-  async registerReferrerId(
-    mangoGroup: MangoGroup,
-    referrerMangoAccount: MangoAccount,
-    payer: Account | WalletAdapter, // will also owner of referrerMangoAccount
-    referrerId: string,
-  ): Promise<TransactionSignature> {
+  async getReferrerPda(mangoGroup: MangoGroup, referrerId: string) {
     const encoded = Buffer.from(referrerId, 'utf8');
     if (encoded.length > INFO_LEN) {
       throw new Error(
@@ -4874,11 +4856,25 @@ export class MangoClient {
       this.programId,
     );
 
+    return { referrerPda: referrerIdRecordPk, encodedReferrerId };
+  }
+
+  async registerReferrerId(
+    mangoGroup: MangoGroup,
+    referrerMangoAccount: MangoAccount,
+    payer: Account | WalletAdapter, // will also owner of referrerMangoAccount
+    referrerId: string,
+  ): Promise<TransactionSignature> {
+    const { referrerPda, encodedReferrerId } = await this.getReferrerPda(
+      mangoGroup,
+      referrerId,
+    );
+
     const instruction = makeRegisterReferrerIdInstruction(
       this.programId,
       mangoGroup.publicKey,
       referrerMangoAccount.publicKey,
-      referrerIdRecordPk,
+      referrerPda,
       payer.publicKey,
       encodedReferrerId,
     );
