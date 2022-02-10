@@ -103,6 +103,12 @@ async function main() {
     await dumpRootBank(m.baseSymbol, rootBank!);
   }
 
+  // usdc
+  const tokenBySymbol = getTokenBySymbol(groupIds, 'USDC');
+  const tokenIndex = group.getTokenIndex(tokenBySymbol.mintKey);
+  const rootBank = rootBanks[tokenIndex];
+  await dumpRootBank('USDC', rootBank!);
+
   process.exit();
 }
 
