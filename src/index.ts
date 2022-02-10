@@ -11,7 +11,6 @@ import { PublicKey } from '@solana/web3.js';
 
 export {
   BN,
-  I80F48,
   IDL,
   IDS,
   MangoAccount,
