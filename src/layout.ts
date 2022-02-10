@@ -29,6 +29,7 @@ export const QUOTE_INDEX = MAX_TOKENS - 1;
 export const MAX_NUM_IN_MARGIN_BASKET = 9;
 export const MAX_PERP_OPEN_ORDERS = 64;
 export const FREE_ORDER_SLOT = 255; // u8::MAX
+export const CENTIBPS_PER_UNIT = 1_000_000;
 
 const MAX_BOOK_NODES = 1024;
 class _I80F48Layout extends Blob {
@@ -578,6 +579,21 @@ MangoInstructionLayout.addVariant(
 );
 
 MangoInstructionLayout.addVariant(60, struct([]), 'CreateSpotOpenOrders');
+MangoInstructionLayout.addVariant(
+  61,
+  struct([
+    u32('refSurchargeCentibps'),
+    u32('refShareCentibps'),
+    u64('refMngoRequired'),
+  ]),
+  'ChangeReferralFeeParams',
+);
+MangoInstructionLayout.addVariant(62, struct([]), 'SetReferrerMemory');
+MangoInstructionLayout.addVariant(
+  63,
+  struct([seq(u8(), INFO_LEN, 'referrerId')]),
+  'RegisterReferrerId',
+);
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -620,6 +636,8 @@ export const DataType = {
   MangoCache: 7,
   EventQueue: 8,
   AdvancedOrders: 9,
+  ReferrerMemory: 10,
+  ReferrerIdRecord: 11,
 };
 
 export const enum AssetType {
@@ -861,8 +879,10 @@ export const MangoGroupLayout = struct([
 
   u32('maxMangoAccounts'),
   u32('numMangoAccounts'),
-
-  seq(u8(), 24, 'padding'),
+  u32('refSurchargeCentibps'),
+  u32('refShareCentibps'),
+  u64('refMngoRequired'),
+  seq(u8(), 8, 'padding'),
 ]);
 /** @internal */
 export const MangoAccountLayout = struct([
@@ -1315,3 +1335,44 @@ export interface PerpTriggerOrder {
   quantity: BN;
   triggerPrice: I80F48;
 }
+
+/** @internal */
+export class ReferrerMemory {
+  metaData!: MetaData;
+  referrerMangoAccount!: PublicKey;
+
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+}
+
+/** @internal */
+export const ReferrerMemoryLayout = struct([
+  metaDataLayout('metaData'),
+  publicKeyLayout('referrerMangoAccount'),
+]);
+
+/** @internal */
+export class ReferrerIdRecord {
+  metaData!: MetaData;
+  referrerMangoAccount!: PublicKey;
+  id!: number[];
+  constructor(decoded: any) {
+    Object.assign(this, decoded);
+  }
+  get referrerId(): string {
+    return this.id
+      ? String.fromCharCode(...this.id).replace(
+          new RegExp(String.fromCharCode(0), 'g'),
+          '',
+        )
+      : '';
+  }
+}
+
+/** @internal */
+export const ReferrerIdRecordLayout = struct([
+  metaDataLayout('metaData'),
+  publicKeyLayout('referrerMangoAccount'),
+  seq(u8(), INFO_LEN, 'id'),
+]);

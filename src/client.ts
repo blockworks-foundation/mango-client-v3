@@ -31,7 +31,9 @@ import {
 import {
   AssetType,
   BookSideLayout,
+  CENTIBPS_PER_UNIT,
   FREE_ORDER_SLOT,
+  INFO_LEN,
   MangoAccountLayout,
   MangoCache,
   MangoCacheLayout,
@@ -62,6 +64,7 @@ import {
   makeCancelSpotOrderInstruction,
   makeChangePerpMarketParams2Instruction,
   makeChangePerpMarketParamsInstruction,
+  makeChangeReferralFeeParamsInstruction,
   makeChangeSpotMarketParamsInstruction,
   makeCloseAdvancedOrdersInstruction,
   makeCloseMangoAccountInstruction,
@@ -86,6 +89,7 @@ import {
   makePlaceSpotOrder2Instruction,
   makePlaceSpotOrderInstruction,
   makeRedeemMngoInstruction,
+  makeRegisterReferrerIdInstruction,
   makeRemoveAdvancedOrderInstruction,
   makeResolveDustInstruction,
   makeResolvePerpBankruptcyInstruction,
@@ -93,6 +97,7 @@ import {
   makeSetDelegateInstruction,
   makeSetGroupAdminInstruction,
   makeSetOracleInstruction,
+  makeSetReferrerMemoryInstruction,
   makeSettleFeesInstruction,
   makeSettleFundsInstruction,
   makeSettlePnlInstruction,
@@ -128,6 +133,8 @@ import MangoGroup from './MangoGroup';
 import {
   makeCreateSpotOpenOrdersInstruction,
   MangoError,
+  ReferrerIdRecord,
+  ReferrerIdRecordLayout,
   TimeoutError,
   U64_MAX_BN,
 } from '.';
@@ -950,6 +957,7 @@ export class MangoClient {
     quantity: number,
     accountNum: number,
     info?: string,
+    referrerPk?: PublicKey,
   ): Promise<[string, TransactionSignature]> {
     const transaction = new Transaction();
 
@@ -972,6 +980,24 @@ export class MangoClient {
     );
 
     transaction.add(createMangoAccountInstruction);
+
+    if (referrerPk) {
+      const [referrerMemoryPk] = await PublicKey.findProgramAddress(
+        [mangoAccountPk.toBytes(), new Buffer('ReferrerMemory', 'utf-8')],
+        this.programId,
+      );
+
+      const setReferrerInstruction = makeSetReferrerMemoryInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoAccountPk,
+        owner.publicKey,
+        referrerMemoryPk,
+        referrerPk,
+        owner.publicKey,
+      );
+      transaction.add(setReferrerInstruction);
+    }
 
     const additionalSigners: Account[] = [];
 
@@ -1554,6 +1580,7 @@ export class MangoClient {
     clientOrderId = 0,
     bookSideInfo?: AccountInfo<Buffer>,
     reduceOnly?: boolean,
+    referrerMangoAccountPk?: PublicKey,
   ): Promise<TransactionSignature> {
     const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
       price,
@@ -1579,6 +1606,7 @@ export class MangoClient {
       side,
       orderType,
       reduceOnly,
+      referrerMangoAccountPk,
     );
     transaction.add(instruction);
 
@@ -3976,6 +4004,7 @@ export class MangoClient {
     clientOrderId?: number,
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     invalidIdOk = false, // Don't throw error if order is invalid
+    referrerMangoAccountPk?: PublicKey,
   ): Promise<TransactionSignature> {
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];
@@ -4017,6 +4046,8 @@ export class MangoClient {
         : order.clientId ?? new BN(Date.now()),
       side,
       orderType,
+      false,
+      referrerMangoAccountPk,
     );
     transaction.add(placeInstruction);
 
@@ -4739,5 +4770,149 @@ export class MangoClient {
     const additionalSigners = [];
 
     return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  /**
+   * Change the referral fee params
+   * @param mangoGroup
+   * @param admin
+   * @param refSurcharge normal units 0.0001 -> 1 basis point
+   * @param refShare
+   * @param refMngoRequired ui units -> 1 -> 1_000_000 MNGO
+   */
+  async changeReferralFeeParams(
+    mangoGroup: MangoGroup,
+    admin: Account | WalletAdapter,
+    refSurcharge: number,
+    refShare: number,
+    refMngoRequired: number,
+  ): Promise<TransactionSignature> {
+    const instruction = makeChangeReferralFeeParamsInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      admin.publicKey,
+      new BN(refSurcharge * CENTIBPS_PER_UNIT),
+      new BN(refShare * CENTIBPS_PER_UNIT),
+      new BN(refMngoRequired * 1_000_000),
+    );
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, admin, additionalSigners);
+  }
+
+  async setReferrerMemory(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    payer: Account | WalletAdapter, // must be also owner of mangoAccount
+    referrerMangoAccountPk: PublicKey,
+  ): Promise<TransactionSignature> {
+    // Generate the PDA pubkey
+    const [referrerMemoryPk] = await PublicKey.findProgramAddress(
+      [mangoAccount.publicKey.toBytes(), new Buffer('ReferrerMemory', 'utf-8')],
+      this.programId,
+    );
+
+    const instruction = makeSetReferrerMemoryInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      referrerMemoryPk,
+      referrerMangoAccountPk,
+      payer.publicKey,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async getReferrerPda(
+    mangoGroup: MangoGroup,
+    referrerId: string,
+  ): Promise<{ referrerPda: PublicKey; encodedReferrerId: Buffer }> {
+    const encoded = Buffer.from(referrerId, 'utf8');
+    if (encoded.length > INFO_LEN) {
+      throw new Error(
+        `info string too long. Must be less than or equal to ${INFO_LEN} bytes`,
+      );
+    }
+
+    const encodedReferrerId = Buffer.concat([
+      encoded,
+      Buffer.alloc(INFO_LEN - encoded.length, 0),
+    ]);
+
+    // Generate the PDA pubkey
+    const [referrerIdRecordPk] = await PublicKey.findProgramAddress(
+      [
+        mangoGroup.publicKey.toBytes(),
+        new Buffer('ReferrerIdRecord', 'utf-8'),
+        encodedReferrerId,
+      ],
+      this.programId,
+    );
+
+    return { referrerPda: referrerIdRecordPk, encodedReferrerId };
+  }
+
+  async registerReferrerId(
+    mangoGroup: MangoGroup,
+    referrerMangoAccount: MangoAccount,
+    payer: Account | WalletAdapter, // will also owner of referrerMangoAccount
+    referrerId: string,
+  ): Promise<TransactionSignature> {
+    const { referrerPda, encodedReferrerId } = await this.getReferrerPda(
+      mangoGroup,
+      referrerId,
+    );
+
+    const instruction = makeRegisterReferrerIdInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      referrerMangoAccount.publicKey,
+      referrerPda,
+      payer.publicKey,
+      encodedReferrerId,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+    const additionalSigners = [];
+    return await this.sendTransaction(transaction, payer, additionalSigners);
+  }
+
+  async getReferrerIdsForMangoAccount(
+    mangoAccount: MangoAccount,
+  ): Promise<ReferrerIdRecord[]> {
+    const filters = [
+      {
+        memcmp: {
+          offset: ReferrerIdRecordLayout.offsetOf('referrerMangoAccount'),
+          bytes: mangoAccount.publicKey.toBase58(),
+        },
+      },
+      {
+        dataSize: ReferrerIdRecordLayout.span,
+      },
+    ];
+
+    const referrerIds = await getFilteredProgramAccounts(
+      this.connection,
+      this.programId,
+      filters,
+    ).then((referrerIds) => {
+      return referrerIds.map(({ accountInfo }) => {
+        return new ReferrerIdRecord(
+          ReferrerIdRecordLayout.decode(
+            accountInfo == null ? undefined : accountInfo.data,
+          ),
+        );
+      });
+    });
+
+    return referrerIds;
   }
 }
