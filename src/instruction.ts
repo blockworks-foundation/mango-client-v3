@@ -2001,12 +2001,14 @@ export function makeCreateMangoAccountInstruction(
   mangoAccountPk: PublicKey,
   ownerPk: PublicKey,
   accountNum: BN,
+  payer: PublicKey
 ) {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
     { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+    { isSigner: true, isWritable: true, pubkey: payer },
   ];
   const data = encodeMangoInstruction({
     CreateMangoAccount: {
