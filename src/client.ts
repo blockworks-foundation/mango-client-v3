@@ -742,7 +742,7 @@ export class MangoClient {
     accountNum: number,
     payerPk?: PublicKey
   ): Promise<PublicKey> {
-    const payer = payerPk ? owner.publicKey : payerPk;
+    const payer = payerPk ?? owner.publicKey;
     const accountNumBN = new BN(accountNum);
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
       [
@@ -759,7 +759,7 @@ export class MangoClient {
       mangoAccountPk,
       owner.publicKey,
       accountNumBN,
-      payer!
+      payer
     );
 
     // Add all instructions to one atomic transaction
@@ -956,7 +956,6 @@ export class MangoClient {
     nodeBank: PublicKey,
     vault: PublicKey,
     tokenAcc: PublicKey,
-
     quantity: number,
     accountNum: number,
     info?: string,
@@ -964,7 +963,7 @@ export class MangoClient {
     payerPk?: PublicKey
   ): Promise<[string, TransactionSignature]> {
     const transaction = new Transaction();
-    const payer = payerPk ? owner.publicKey : payerPk;
+    const payer = payerPk ?? owner.publicKey;
     const accountNumBN = new BN(accountNum);
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
       [
@@ -981,7 +980,7 @@ export class MangoClient {
       mangoAccountPk,
       owner.publicKey,
       accountNumBN,
-      payer!
+      payer
     );
 
     transaction.add(createMangoAccountInstruction);
