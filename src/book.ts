@@ -145,6 +145,20 @@ export class BookSide {
     return this.items();
   }
 
+  getL2Ui(depth: number): [number, number][] {
+    const levels: [number, number][] = []; // (price, size)
+    //@ts-ignore
+    for (const { price, size } of this.items()) {
+      if (levels.length > 0 && levels[levels.length - 1][0] === price) {
+        levels[levels.length - 1][1] += size;
+      } else if (levels.length === depth) {
+        break;
+      } else {
+        levels.push([price, size]);
+      }
+    }
+    return levels;
+  }
   getL2(depth: number): [number, number, BN, BN][] {
     const levels: [BN, BN][] = []; // (price, size)
     //@ts-ignore
