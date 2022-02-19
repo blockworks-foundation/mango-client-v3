@@ -59,9 +59,10 @@ export class BookSide {
       if (leafNode) {
         const price = getPriceFromKey(leafNode.key);
 
-        const expiryTimestamp = leafNode.timeInForce.eq(ZERO_BN)
+        const timeInForce = new BN(leafNode.timeInForce);
+        const expiryTimestamp = timeInForce.eq(ZERO_BN)
           ? U64_MAX_BN
-          : leafNode.timestamp.add(leafNode.timeInForce);
+          : leafNode.timestamp.add(timeInForce);
 
         if (now.lte(expiryTimestamp)) {
           yield {
@@ -117,9 +118,10 @@ export class BookSide {
       if (leafNode) {
         const price = getPriceFromKey(leafNode.key);
 
-        const expiryTimestamp = leafNode.timeInForce.eq(ZERO_BN)
+        const timeInForce = new BN(leafNode.timeInForce);
+        const expiryTimestamp = timeInForce.eq(ZERO_BN)
           ? U64_MAX_BN
-          : leafNode.timestamp.add(leafNode.timeInForce);
+          : leafNode.timestamp.add(timeInForce);
 
         if (now.lte(expiryTimestamp)) {
           return {
