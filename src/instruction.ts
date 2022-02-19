@@ -1042,6 +1042,77 @@ export function makePlacePerpOrderInstruction(
   });
 }
 
+export function makePlacePerpOrder2Instruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  ownerPk: PublicKey,
+  mangoCachePk: PublicKey,
+  perpMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  eventQueuePk: PublicKey,
+  openOrders: PublicKey[], // pass in only open orders in margin basket
+  price: BN,
+  maxBaseQuantity: BN,
+  maxQuoteQuantity: BN,
+  clientOrderId: BN,
+  side: 'buy' | 'sell',
+  limit: BN, // one byte; max 255
+
+  orderType?: PerpOrderType,
+  reduceOnly?: boolean,
+  referrerMangoAccountPk?: PublicKey,
+  expiryTimestamp?: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: referrerMangoAccountPk ? referrerMangoAccountPk : mangoAccountPk,
+    },
+    ...openOrders.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+  if (referrerMangoAccountPk !== undefined) {
+    keys.push({
+      isSigner: false,
+      isWritable: true,
+      pubkey: referrerMangoAccountPk,
+    });
+  }
+
+  const data = encodeMangoInstruction({
+    PlacePerpOrder2: {
+      price,
+      maxBaseQuantity,
+      clientOrderId,
+      expiryTimestamp: expiryTimestamp ? expiryTimestamp : ZERO_BN,
+      side,
+      orderType,
+      reduceOnly: reduceOnly ? reduceOnly : false,
+      limit,
+    },
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
 export function makeUpdateFundingInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
@@ -2001,7 +2072,7 @@ export function makeCreateMangoAccountInstruction(
   mangoAccountPk: PublicKey,
   ownerPk: PublicKey,
   accountNum: BN,
-  payer: PublicKey
+  payer: PublicKey,
 ) {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },

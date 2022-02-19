@@ -57,7 +57,8 @@ export default class PerpMarket {
   };
 
   mngoVault!: PublicKey;
-
+  priceLotsToUiConvertor: number;
+  baseLotsToUiConvertor: number;
   constructor(
     publicKey: PublicKey,
     baseDecimals: number,
@@ -67,6 +68,16 @@ export default class PerpMarket {
     this.publicKey = publicKey;
     this.baseDecimals = baseDecimals;
     this.quoteDecimals = quoteDecimals;
+
+    this.priceLotsToUiConvertor = new Big(10)
+      .pow(baseDecimals - quoteDecimals)
+      .mul(new Big(this.quoteLotSize.toString()))
+      .div(new Big(this.baseLotSize.toString()))
+      .toNumber();
+
+    this.baseLotsToUiConvertor = new Big(this.baseLotSize.toString())
+      .div(new Big(10).pow(baseDecimals))
+      .toNumber();
     Object.assign(this, decoded);
   }
 
@@ -81,21 +92,11 @@ export default class PerpMarket {
   }
 
   priceLotsToNumber(price: BN): number {
-    const nativeToUi = new Big(10).pow(this.baseDecimals - this.quoteDecimals);
-    const lotsToNative = new Big(this.quoteLotSize.toString()).div(
-      new Big(this.baseLotSize.toString()),
-    );
-    return new Big(price.toString())
-      .mul(lotsToNative)
-      .mul(nativeToUi)
-      .toNumber();
+    return parseFloat(price.toString()) * this.priceLotsToUiConvertor;
   }
 
   baseLotsToNumber(quantity: BN): number {
-    return new Big(quantity.toString())
-      .mul(new Big(this.baseLotSize.toString()))
-      .div(new Big(10).pow(this.baseDecimals))
-      .toNumber();
+    return parseFloat(quantity.toString()) * this.baseLotsToUiConvertor;
   }
 
   get minOrderSize() {
@@ -207,6 +208,10 @@ export default class PerpMarket {
     return [nativePrice, nativeQuantity];
   }
 
+  uiQuoteToLots(uiQuote: number): BN {
+    const quoteUnit = Math.pow(10, this.quoteDecimals);
+    return new BN(uiQuote * quoteUnit).div(this.quoteLotSize);
+  }
   toPrettyString(
     group: MangoGroup,
     perpMarketConfig: PerpMarketConfig,

@@ -595,6 +595,22 @@ MangoInstructionLayout.addVariant(
   'RegisterReferrerId',
 );
 
+MangoInstructionLayout.addVariant(
+  64,
+  struct([
+    i64('price'),
+    i64('maxBaseQuantity'),
+    i64('maxQuoteQuantity'),
+    u64('clientOrderId'),
+    u64('expiryTimestamp'),
+    sideLayout(1, 'side'),
+    orderTypeLayout('orderType', 1),
+    bool('reduceOnly'),
+    u8('limit'),
+  ]),
+  'PlacePerpOrder2',
+);
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
@@ -1127,7 +1143,7 @@ BOOK_NODE_LAYOUT.addVariant(
     u8('ownerSlot'), // Index into OPEN_ORDERS_LAYOUT.orders
     orderTypeLayout('orderType', 1),
     u8('version'),
-    blob(1),
+    u8('timeInForce'),
     u128('key'), // (price, seqNum)
     publicKeyLayout('owner'), // Open orders account
     u64('quantity'), // In units of lot size
