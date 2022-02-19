@@ -48,7 +48,7 @@ export class BookSide {
     const now = new BN(getUnixTs());
     const stack = [this.rootNode];
     const [left, right] = this.isBids ? [1, 0] : [0, 1];
-    const side = this.isBids ? 'buy' : ('sell' as 'buy' | 'sell');
+    const side = (this.isBids ? 'buy' : 'sell') as 'buy' | 'sell';
 
     while (stack.length > 0) {
       const index = stack.pop();
@@ -58,12 +58,9 @@ export class BookSide {
 
       if (leafNode) {
         const price = getPriceFromKey(leafNode.key);
-
-        const timeInForce = new BN(leafNode.timeInForce);
-        const expiryTimestamp = timeInForce.eq(ZERO_BN)
-          ? U64_MAX_BN
-          : leafNode.timestamp.add(timeInForce);
-
+        const expiryTimestamp = leafNode.timeInForce
+          ? leafNode.timestamp.add(new BN(leafNode.timeInForce))
+          : U64_MAX_BN;
         if (now.lte(expiryTimestamp)) {
           yield {
             orderId: leafNode.key,
@@ -82,7 +79,7 @@ export class BookSide {
           };
         }
       } else if (innerNode) {
-        stack.push(innerNode.children[left], innerNode.children[right]);
+        stack.push(innerNode.children[right], innerNode.children[left]);
       }
     }
   }
@@ -118,10 +115,9 @@ export class BookSide {
       if (leafNode) {
         const price = getPriceFromKey(leafNode.key);
 
-        const timeInForce = new BN(leafNode.timeInForce);
-        const expiryTimestamp = timeInForce.eq(ZERO_BN)
-          ? U64_MAX_BN
-          : leafNode.timestamp.add(timeInForce);
+        const expiryTimestamp = leafNode.timeInForce
+          ? leafNode.timestamp.add(new BN(leafNode.timeInForce))
+          : U64_MAX_BN;
 
         if (now.lte(expiryTimestamp)) {
           return {
@@ -141,7 +137,7 @@ export class BookSide {
           };
         }
       } else if (innerNode) {
-        stack.push(innerNode.children[left], innerNode.children[right]);
+        stack.push(innerNode.children[right], innerNode.children[left]);
       }
     }
   }
