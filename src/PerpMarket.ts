@@ -68,6 +68,7 @@ export default class PerpMarket {
     this.publicKey = publicKey;
     this.baseDecimals = baseDecimals;
     this.quoteDecimals = quoteDecimals;
+    Object.assign(this, decoded);
 
     this.priceLotsToUiConvertor = new Big(10)
       .pow(baseDecimals - quoteDecimals)
@@ -78,7 +79,6 @@ export default class PerpMarket {
     this.baseLotsToUiConvertor = new Big(this.baseLotSize.toString())
       .div(new Big(10).pow(baseDecimals))
       .toNumber();
-    Object.assign(this, decoded);
   }
 
   priceLotsToNative(price: BN): I80F48 {
