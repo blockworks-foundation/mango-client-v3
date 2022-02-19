@@ -10,6 +10,7 @@ import {
   MangoCache,
   MetaData,
   nativeToUi,
+  ONE_BN,
   PerpEventQueue,
   PerpEventQueueLayout,
   PerpMarketConfig,
@@ -59,6 +60,8 @@ export default class PerpMarket {
   mngoVault!: PublicKey;
   priceLotsToUiConvertor: number;
   baseLotsToUiConvertor: number;
+  _tickSize: number | undefined;
+  _minOrderSize: number | undefined;
   constructor(
     publicKey: PublicKey,
     baseDecimals: number,
@@ -99,12 +102,18 @@ export default class PerpMarket {
     return parseFloat(quantity.toString()) * this.baseLotsToUiConvertor;
   }
 
-  get minOrderSize() {
-    return this.baseLotsToNumber(new BN(1));
+  get minOrderSize(): number {
+    if (this._minOrderSize === undefined) {
+      this._minOrderSize = this.baseLotsToNumber(ONE_BN);
+    }
+    return this._minOrderSize;
   }
 
-  get tickSize() {
-    return this.priceLotsToNumber(new BN(1));
+  get tickSize(): number {
+    if (this._tickSize === undefined) {
+      this._tickSize = this.priceLotsToNumber(ONE_BN);
+    }
+    return this._tickSize;
   }
 
   /**
