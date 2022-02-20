@@ -61,7 +61,7 @@ export class BookSide {
         const expiryTimestamp = leafNode.timeInForce
           ? leafNode.timestamp.add(new BN(leafNode.timeInForce))
           : U64_MAX_BN;
-        if (now.lte(expiryTimestamp)) {
+        if (now.lt(expiryTimestamp)) {
           yield {
             orderId: leafNode.key,
             clientId: leafNode.clientOrderId,
@@ -119,7 +119,7 @@ export class BookSide {
           ? leafNode.timestamp.add(new BN(leafNode.timeInForce))
           : U64_MAX_BN;
 
-        if (now.lte(expiryTimestamp)) {
+        if (now.lt(expiryTimestamp)) {
           return {
             orderId: leafNode.key,
             clientId: leafNode.clientOrderId,
