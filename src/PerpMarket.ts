@@ -178,22 +178,12 @@ export default class PerpMarket {
 
   async loadBids(connection: Connection): Promise<BookSide> {
     const acc = await connection.getAccountInfo(this.bids);
-    const book = new BookSide(
-      this.bids,
-      this,
-      BookSideLayout.decode(acc?.data),
-    );
-    return book;
+    return new BookSide(this.bids, this, BookSideLayout.decode(acc?.data));
   }
 
   async loadAsks(connection: Connection): Promise<BookSide> {
     const acc = await connection.getAccountInfo(this.asks);
-    const book = new BookSide(
-      this.asks,
-      this,
-      BookSideLayout.decode(acc?.data),
-    );
-    return book;
+    return new BookSide(this.asks, this, BookSideLayout.decode(acc?.data));
   }
 
   async loadOrdersForAccount(connection: Connection, account: MangoAccount) {
