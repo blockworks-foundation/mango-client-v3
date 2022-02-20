@@ -19,6 +19,7 @@ import {
   createTokenAccountInstructions,
   getFilteredProgramAccounts,
   getMultipleAccounts,
+  I64_MAX_BN,
   nativeToUi,
   promiseNull,
   promiseUndef,
@@ -85,6 +86,7 @@ import {
   makeLiquidatePerpMarketInstruction,
   makeLiquidateTokenAndPerpInstruction,
   makeLiquidateTokenAndTokenInstruction,
+  makePlacePerpOrder2Instruction,
   makePlacePerpOrderInstruction,
   makePlaceSpotOrder2Instruction,
   makePlaceSpotOrderInstruction,
@@ -1611,6 +1613,120 @@ export class MangoClient {
       orderType,
       reduceOnly,
       referrerMangoAccountPk,
+    );
+    transaction.add(instruction);
+
+    if (bookSideInfo) {
+      const bookSide = bookSideInfo.data
+        ? new BookSide(
+            side === 'buy' ? perpMarket.asks : perpMarket.bids,
+            perpMarket,
+            BookSideLayout.decode(bookSideInfo.data),
+          )
+        : [];
+      const accounts: Set<string> = new Set();
+      accounts.add(mangoAccount.publicKey.toBase58());
+
+      for (const order of bookSide) {
+        accounts.add(order.owner.toBase58());
+        if (accounts.size >= 10) {
+          break;
+        }
+      }
+
+      const consumeInstruction = makeConsumeEventsInstruction(
+        this.programId,
+        mangoGroup.publicKey,
+        mangoGroup.mangoCache,
+        perpMarket.publicKey,
+        perpMarket.eventQueue,
+        Array.from(accounts)
+          .map((s) => new PublicKey(s))
+          .sort(),
+        new BN(4),
+      );
+      transaction.add(consumeInstruction);
+    }
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
+  /**
+   * Place an order on a perp market
+   *
+   * @param clientOrderId An optional id that can be used to correlate events related to your order
+   * @param bookSideInfo Account info for asks if side === bid, bids if side === ask. If this is given, crank instruction is added
+   */
+  async placePerpOrder2(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    perpMarket: PerpMarket,
+    owner: Account | WalletAdapter,
+
+    side: 'buy' | 'sell',
+    price: number,
+    quantity: number,
+
+    options?: {
+      maxQuoteQuantity?: number;
+      limit?: number;
+      orderType?: PerpOrderType;
+      clientOrderId?: number;
+      bookSideInfo?: AccountInfo<Buffer>;
+      reduceOnly?: boolean;
+      referrerMangoAccountPk?: PublicKey;
+      expiryTimestamp?: number;
+    },
+  ): Promise<TransactionSignature> {
+    options = options ? options : {};
+    let {
+      maxQuoteQuantity,
+      limit,
+      orderType,
+      clientOrderId,
+      bookSideInfo,
+      reduceOnly,
+      referrerMangoAccountPk,
+      expiryTimestamp,
+    } = options;
+    limit = limit || 20;
+    clientOrderId = clientOrderId === undefined ? 0 : clientOrderId;
+    orderType = orderType || 'limit';
+
+    const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
+      price,
+      quantity,
+    );
+    const maxQuoteQuantityLots = maxQuoteQuantity
+      ? perpMarket.uiQuoteToLots(maxQuoteQuantity)
+      : I64_MAX_BN;
+
+    const transaction = new Transaction();
+    const additionalSigners: Account[] = [];
+
+    const instruction = makePlacePerpOrder2Instruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      mangoGroup.mangoCache,
+      perpMarket.publicKey,
+      perpMarket.bids,
+      perpMarket.asks,
+      perpMarket.eventQueue,
+      mangoAccount.spotOpenOrders.filter(
+        (pk, i) => mangoAccount.inMarginBasket[i],
+      ),
+      nativePrice,
+      nativeQuantity,
+      maxQuoteQuantityLots,
+      new BN(clientOrderId),
+      side,
+      new BN(limit),
+      orderType,
+      reduceOnly,
+      referrerMangoAccountPk,
+      expiryTimestamp ? new BN(Math.floor(expiryTimestamp)) : ZERO_BN,
     );
     transaction.add(instruction);
 

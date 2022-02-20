@@ -73,6 +73,12 @@ export class I80F48 {
   toFixed(decimals?: number): string {
     return this.toBig().round(14).toFixed(decimals);
   }
+  toLocaleString(
+    locales?: string | string[],
+    options?: Intl.NumberFormatOptions,
+  ): string {
+    return this.toNumber().toLocaleString(locales, options);
+  }
   toBig(): Big {
     return new Big(this.data.toString()).div(I80F48.MULTIPLIER_BIG);
   }

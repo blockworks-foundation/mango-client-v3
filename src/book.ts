@@ -2,7 +2,8 @@ import BN from 'bn.js';
 import { PublicKey } from '@solana/web3.js';
 import { DataType } from './layout';
 import PerpMarket from './PerpMarket';
-import { ZERO_BN } from './utils/utils';
+import { U64_MAX_BN, ZERO_BN } from './utils/utils';
+import { getUnixTs } from './client';
 
 export interface PerpOrder {
   orderId: BN;
@@ -17,6 +18,7 @@ export interface PerpOrder {
   clientId?: BN;
   bestInitial: BN;
   timestamp: BN;
+  expiryTimestamp: BN;
 }
 
 // TODO - maybe store ref inside PerpMarket class
@@ -43,35 +45,41 @@ export class BookSide {
     if (this.leafCount === 0) {
       return;
     }
+    const now = new BN(getUnixTs());
     const stack = [this.rootNode];
+    const [left, right] = this.isBids ? [1, 0] : [0, 1];
+    const side = (this.isBids ? 'buy' : 'sell') as 'buy' | 'sell';
+
     while (stack.length > 0) {
       const index = stack.pop();
 
       // @ts-ignore
-      const { leafNode, innerNode } = this.nodes[index]; // we know index is undefined
+      const { leafNode, innerNode } = this.nodes[index]; // we know index is not undefined
 
       if (leafNode) {
         const price = getPriceFromKey(leafNode.key);
-        yield {
-          orderId: leafNode.key,
-          clientId: leafNode.clientOrderId,
-          owner: leafNode.owner,
-          openOrdersSlot: leafNode.ownerSlot,
-          feeTier: 0,
-          price: this.perpMarket.priceLotsToNumber(price),
-          priceLots: price,
-          size: this.perpMarket.baseLotsToNumber(leafNode.quantity),
-          sizeLots: leafNode.quantity,
-          side: (this.isBids ? 'buy' : 'sell') as 'buy' | 'sell',
-          bestInitial: leafNode.bestInitial,
-          timestamp: leafNode.timestamp,
-        };
-      } else if (innerNode) {
-        if (this.isBids) {
-          stack.push(innerNode.children[0], innerNode.children[1]);
-        } else {
-          stack.push(innerNode.children[1], innerNode.children[0]);
+        const expiryTimestamp = leafNode.timeInForce
+          ? leafNode.timestamp.add(new BN(leafNode.timeInForce))
+          : U64_MAX_BN;
+        if (now.lt(expiryTimestamp)) {
+          yield {
+            orderId: leafNode.key,
+            clientId: leafNode.clientOrderId,
+            owner: leafNode.owner,
+            openOrdersSlot: leafNode.ownerSlot,
+            feeTier: 0,
+            price: this.perpMarket.priceLotsToNumber(price),
+            priceLots: price,
+            size: this.perpMarket.baseLotsToNumber(leafNode.quantity),
+            sizeLots: leafNode.quantity,
+            side,
+            bestInitial: leafNode.bestInitial,
+            timestamp: leafNode.timestamp,
+            expiryTimestamp,
+          };
         }
+      } else if (innerNode) {
+        stack.push(innerNode.children[right], innerNode.children[left]);
       }
     }
   }
@@ -94,31 +102,42 @@ export class BookSide {
     if (this.leafCount === 0) {
       return;
     }
-    let currNodeIndex = this.rootNode;
-    const left = this.isBids ? 1 : 0;
-    const side = this.isBids ? 'buy' : ('sell' as 'buy' | 'sell');
-    while (currNodeIndex !== undefined) {
-      const { leafNode, innerNode } = this.nodes[currNodeIndex]; // we know index is not undefined
+    const [left, right] = this.isBids ? [1, 0] : [0, 1];
+    const side = (this.isBids ? 'buy' : 'sell') as 'buy' | 'sell';
+    const stack = [this.rootNode];
+    const now = new BN(getUnixTs());
 
+    while (stack.length > 0) {
+      let index = stack.pop();
+
+      // @ts-ignore
+      const { leafNode, innerNode } = this.nodes[index]; // we know index is not undefined
       if (leafNode) {
         const price = getPriceFromKey(leafNode.key);
 
-        return {
-          orderId: leafNode.key,
-          clientId: leafNode.clientOrderId,
-          owner: leafNode.owner,
-          openOrdersSlot: leafNode.ownerSlot,
-          feeTier: 0,
-          price: this.perpMarket.priceLotsToNumber(price),
-          priceLots: price,
-          size: this.perpMarket.baseLotsToNumber(leafNode.quantity),
-          sizeLots: leafNode.quantity,
-          side,
-          bestInitial: leafNode.bestInitial,
-          timestamp: leafNode.timestamp,
-        };
+        const expiryTimestamp = leafNode.timeInForce
+          ? leafNode.timestamp.add(new BN(leafNode.timeInForce))
+          : U64_MAX_BN;
+
+        if (now.lt(expiryTimestamp)) {
+          return {
+            orderId: leafNode.key,
+            clientId: leafNode.clientOrderId,
+            owner: leafNode.owner,
+            openOrdersSlot: leafNode.ownerSlot,
+            feeTier: 0,
+            price: this.perpMarket.priceLotsToNumber(price),
+            priceLots: price,
+            size: this.perpMarket.baseLotsToNumber(leafNode.quantity),
+            sizeLots: leafNode.quantity,
+            side,
+            bestInitial: leafNode.bestInitial,
+            timestamp: leafNode.timestamp,
+            expiryTimestamp,
+          };
+        }
       } else if (innerNode) {
-        currNodeIndex = innerNode.children[left];
+        stack.push(innerNode.children[right], innerNode.children[left]);
       }
     }
   }
@@ -126,6 +145,20 @@ export class BookSide {
     return this.items();
   }
 
+  getL2Ui(depth: number): [number, number][] {
+    const levels: [number, number][] = []; // (price, size)
+    //@ts-ignore
+    for (const { price, size } of this.items()) {
+      if (levels.length > 0 && levels[levels.length - 1][0] === price) {
+        levels[levels.length - 1][1] += size;
+      } else if (levels.length === depth) {
+        break;
+      } else {
+        levels.push([price, size]);
+      }
+    }
+    return levels;
+  }
   getL2(depth: number): [number, number, BN, BN][] {
     const levels: [BN, BN][] = []; // (price, size)
     //@ts-ignore

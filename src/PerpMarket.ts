@@ -10,6 +10,7 @@ import {
   MangoCache,
   MetaData,
   nativeToUi,
+  ONE_BN,
   PerpEventQueue,
   PerpEventQueueLayout,
   PerpMarketConfig,
@@ -57,7 +58,10 @@ export default class PerpMarket {
   };
 
   mngoVault!: PublicKey;
-
+  priceLotsToUiConvertor: number;
+  baseLotsToUiConvertor: number;
+  _tickSize: number | undefined;
+  _minOrderSize: number | undefined;
   constructor(
     publicKey: PublicKey,
     baseDecimals: number,
@@ -68,6 +72,16 @@ export default class PerpMarket {
     this.baseDecimals = baseDecimals;
     this.quoteDecimals = quoteDecimals;
     Object.assign(this, decoded);
+
+    this.priceLotsToUiConvertor = new Big(10)
+      .pow(baseDecimals - quoteDecimals)
+      .mul(new Big(this.quoteLotSize.toString()))
+      .div(new Big(this.baseLotSize.toString()))
+      .toNumber();
+
+    this.baseLotsToUiConvertor = new Big(this.baseLotSize.toString())
+      .div(new Big(10).pow(baseDecimals))
+      .toNumber();
   }
 
   priceLotsToNative(price: BN): I80F48 {
@@ -81,29 +95,25 @@ export default class PerpMarket {
   }
 
   priceLotsToNumber(price: BN): number {
-    const nativeToUi = new Big(10).pow(this.baseDecimals - this.quoteDecimals);
-    const lotsToNative = new Big(this.quoteLotSize.toString()).div(
-      new Big(this.baseLotSize.toString()),
-    );
-    return new Big(price.toString())
-      .mul(lotsToNative)
-      .mul(nativeToUi)
-      .toNumber();
+    return parseFloat(price.toString()) * this.priceLotsToUiConvertor;
   }
 
   baseLotsToNumber(quantity: BN): number {
-    return new Big(quantity.toString())
-      .mul(new Big(this.baseLotSize.toString()))
-      .div(new Big(10).pow(this.baseDecimals))
-      .toNumber();
+    return parseFloat(quantity.toString()) * this.baseLotsToUiConvertor;
   }
 
-  get minOrderSize() {
-    return this.baseLotsToNumber(new BN(1));
+  get minOrderSize(): number {
+    if (this._minOrderSize === undefined) {
+      this._minOrderSize = this.baseLotsToNumber(ONE_BN);
+    }
+    return this._minOrderSize;
   }
 
-  get tickSize() {
-    return this.priceLotsToNumber(new BN(1));
+  get tickSize(): number {
+    if (this._tickSize === undefined) {
+      this._tickSize = this.priceLotsToNumber(ONE_BN);
+    }
+    return this._tickSize;
   }
 
   /**
@@ -168,22 +178,12 @@ export default class PerpMarket {
 
   async loadBids(connection: Connection): Promise<BookSide> {
     const acc = await connection.getAccountInfo(this.bids);
-    const book = new BookSide(
-      this.bids,
-      this,
-      BookSideLayout.decode(acc?.data),
-    );
-    return book;
+    return new BookSide(this.bids, this, BookSideLayout.decode(acc?.data));
   }
 
   async loadAsks(connection: Connection): Promise<BookSide> {
     const acc = await connection.getAccountInfo(this.asks);
-    const book = new BookSide(
-      this.asks,
-      this,
-      BookSideLayout.decode(acc?.data),
-    );
-    return book;
+    return new BookSide(this.asks, this, BookSideLayout.decode(acc?.data));
   }
 
   async loadOrdersForAccount(connection: Connection, account: MangoAccount) {
@@ -207,6 +207,10 @@ export default class PerpMarket {
     return [nativePrice, nativeQuantity];
   }
 
+  uiQuoteToLots(uiQuote: number): BN {
+    const quoteUnit = Math.pow(10, this.quoteDecimals);
+    return new BN(uiQuote * quoteUnit).div(this.quoteLotSize);
+  }
   toPrettyString(
     group: MangoGroup,
     perpMarketConfig: PerpMarketConfig,
