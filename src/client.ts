@@ -1714,7 +1714,9 @@ export class MangoClient {
       perpMarket.bids,
       perpMarket.asks,
       perpMarket.eventQueue,
-      mangoAccount.getOpenOrdersKeysInBasket(),
+      mangoAccount.spotOpenOrders.filter(
+        (pk, i) => mangoAccount.inMarginBasket[i],
+      ),
       nativePrice,
       nativeQuantity,
       maxQuoteQuantityLots,
