@@ -1097,6 +1097,7 @@ export function makePlacePerpOrder2Instruction(
     PlacePerpOrder2: {
       price,
       maxBaseQuantity,
+      maxQuoteQuantity,
       clientOrderId,
       expiryTimestamp: expiryTimestamp ? expiryTimestamp : ZERO_BN,
       side,
