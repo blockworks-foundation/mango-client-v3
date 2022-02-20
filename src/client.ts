@@ -19,6 +19,7 @@ import {
   createTokenAccountInstructions,
   getFilteredProgramAccounts,
   getMultipleAccounts,
+  I64_MAX_BN,
   nativeToUi,
   promiseNull,
   promiseUndef,
@@ -1665,22 +1666,40 @@ export class MangoClient {
     side: 'buy' | 'sell',
     price: number,
     quantity: number,
-    maxQuoteQuantity?: number,
-    limit = 20,
-    orderType?: PerpOrderType,
-    clientOrderId = 0,
-    bookSideInfo?: AccountInfo<Buffer>,
-    reduceOnly?: boolean,
-    referrerMangoAccountPk?: PublicKey,
-    expiryTimestamp?: number,
+
+    options?: {
+      maxQuoteQuantity?: number;
+      limit?: number;
+      orderType?: PerpOrderType;
+      clientOrderId?: number;
+      bookSideInfo?: AccountInfo<Buffer>;
+      reduceOnly?: boolean;
+      referrerMangoAccountPk?: PublicKey;
+      expiryTimestamp?: number;
+    },
   ): Promise<TransactionSignature> {
+    options = options ? options : {};
+    let {
+      maxQuoteQuantity,
+      limit,
+      orderType,
+      clientOrderId,
+      bookSideInfo,
+      reduceOnly,
+      referrerMangoAccountPk,
+      expiryTimestamp,
+    } = options;
+    limit = limit || 20;
+    clientOrderId = clientOrderId === undefined ? 0 : clientOrderId;
+    orderType = orderType || 'limit';
+
     const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
       price,
       quantity,
     );
     const maxQuoteQuantityLots = maxQuoteQuantity
       ? perpMarket.uiQuoteToLots(maxQuoteQuantity)
-      : U64_MAX_BN;
+      : I64_MAX_BN;
 
     const transaction = new Transaction();
     const additionalSigners: Account[] = [];

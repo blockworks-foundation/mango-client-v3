@@ -1,15 +1,16 @@
 import * as os from 'os';
 import * as fs from 'fs';
-import { MangoClient } from '../src/client';
-import { Account, Commitment, Connection } from '@solana/web3.js';
-import configFile from '../src/ids.json';
 import {
   Config,
   getMarketByBaseSymbolAndKind,
+  getUnixTs,
   GroupConfig,
-} from '../src/config';
+  MangoClient,
+  ZERO_BN,
+} from '../src';
+import { Account, Commitment, Connection } from '@solana/web3.js';
+import configFile from '../src/ids.json';
 import { Market } from '@project-serum/serum';
-import { ZERO_BN } from '../src/utils/utils';
 
 function readKeypair() {
   return JSON.parse(
@@ -21,12 +22,9 @@ function readKeypair() {
 async function examplePerp() {
   // setup client
   const config = new Config(configFile);
-  const groupConfig = config.getGroup(
-    'devnet',
-    'mango_test_v2.2',
-  ) as GroupConfig;
+  const groupConfig = config.getGroupWithName('devnet.2') as GroupConfig;
   const connection = new Connection(
-    'https://api.devnet.solana.com',
+    config.cluster_urls[groupConfig.cluster],
     'processed' as Commitment,
   );
   const client = new MangoClient(connection, groupConfig.mangoProgramId);
@@ -70,16 +68,17 @@ async function examplePerp() {
   const mangoAccount = (
     await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
-  await client.placePerpOrder(
+
+  // Place an order that is guaranteed to go on the book and let it auto expire in 5 seconds
+  await client.placePerpOrder2(
     mangoGroup,
     mangoAccount,
-    mangoGroup.mangoCache,
     perpMarket,
     owner,
     'buy', // or 'sell'
     39000,
     0.0001,
-    'limit',
+    { orderType: 'postOnlySlide', expiryTimestamp: getUnixTs() + 5 },
   ); // or 'ioc' or 'postOnly'
 
   // retrieve open orders for account

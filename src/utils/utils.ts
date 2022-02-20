@@ -28,6 +28,9 @@ export const ONE_BN = new BN(1);
 export const U64_MAX_BN = new BN('18446744073709551615');
 
 /** @internal */
+export const I64_MAX_BN = new BN('9223372036854775807');
+
+/** @internal */
 export const zeroKey = new PublicKey(new Uint8Array(32));
 
 /** @internal */
