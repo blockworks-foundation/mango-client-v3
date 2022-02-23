@@ -176,20 +176,20 @@ export default class PerpMarket {
     };
   }
 
-  async loadBids(connection: Connection): Promise<BookSide> {
+  async loadBids(connection: Connection, includeExpired: boolean = false): Promise<BookSide> {
     const acc = await connection.getAccountInfo(this.bids);
-    return new BookSide(this.bids, this, BookSideLayout.decode(acc?.data));
+    return new BookSide(this.bids, this, BookSideLayout.decode(acc?.data), includeExpired);
   }
 
-  async loadAsks(connection: Connection): Promise<BookSide> {
+  async loadAsks(connection: Connection, includeExpired: boolean = false): Promise<BookSide> {
     const acc = await connection.getAccountInfo(this.asks);
-    return new BookSide(this.asks, this, BookSideLayout.decode(acc?.data));
+    return new BookSide(this.asks, this, BookSideLayout.decode(acc?.data), includeExpired);
   }
 
-  async loadOrdersForAccount(connection: Connection, account: MangoAccount) {
+  async loadOrdersForAccount(connection: Connection, account: MangoAccount, includeExpired: boolean = false) {
     const [bids, asks] = await Promise.all([
-      this.loadBids(connection),
-      this.loadAsks(connection),
+      this.loadBids(connection, includeExpired),
+      this.loadAsks(connection, includeExpired),
     ]);
     // @ts-ignore
     return [...bids, ...asks].filter((order) =>
