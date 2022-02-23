@@ -36,7 +36,12 @@ export class BookSide {
 
   includeExpired: boolean;
 
-  constructor(publicKey: PublicKey, perpMarket: PerpMarket, decoded: any, includeExpired: boolean = false) {
+  constructor(
+    publicKey: PublicKey,
+    perpMarket: PerpMarket,
+    decoded: any,
+    includeExpired: boolean = false,
+  ) {
     this.publicKey = publicKey;
     this.isBids = decoded.metaData.dataType === DataType.Bids;
     this.perpMarket = perpMarket;
