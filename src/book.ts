@@ -34,10 +34,18 @@ export class BookSide {
   leafCount!: number;
   nodes!: any[]; // This is either AnyNode, FreeNode, InnerNode...
 
-  constructor(publicKey: PublicKey, perpMarket: PerpMarket, decoded: any) {
+  includeExpired: boolean;
+
+  constructor(
+    publicKey: PublicKey,
+    perpMarket: PerpMarket,
+    decoded: any,
+    includeExpired: boolean = false,
+  ) {
     this.publicKey = publicKey;
     this.isBids = decoded.metaData.dataType === DataType.Bids;
     this.perpMarket = perpMarket;
+    this.includeExpired = includeExpired;
     Object.assign(this, decoded);
   }
 
@@ -61,7 +69,7 @@ export class BookSide {
         const expiryTimestamp = leafNode.timeInForce
           ? leafNode.timestamp.add(new BN(leafNode.timeInForce))
           : U64_MAX_BN;
-        if (now.lt(expiryTimestamp)) {
+        if (now.lt(expiryTimestamp) || this.includeExpired) {
           yield {
             orderId: leafNode.key,
             clientId: leafNode.clientOrderId,
@@ -119,7 +127,7 @@ export class BookSide {
           ? leafNode.timestamp.add(new BN(leafNode.timeInForce))
           : U64_MAX_BN;
 
-        if (now.lt(expiryTimestamp)) {
+        if (now.lt(expiryTimestamp) || this.includeExpired) {
           return {
             orderId: leafNode.key,
             clientId: leafNode.clientOrderId,
