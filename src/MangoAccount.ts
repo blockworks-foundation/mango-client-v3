@@ -1071,6 +1071,12 @@ export default class MangoAccount {
       this.inMarginBasket[i] ? pk : zeroKey,
     );
   }
+  /**
+   * Return the open orders keys in basket; no zero keys; useful for PlaceSpotOrder2 and PlacePerpOrder2
+   */
+  getOpenOrdersKeysInBasketPacked(): PublicKey[] {
+    return this.spotOpenOrders.filter((pk, i) => this.inMarginBasket[i]);
+  }
 
   /**
    *  Return the current position for the market at `marketIndex` in UI units
