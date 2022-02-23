@@ -1714,9 +1714,7 @@ export class MangoClient {
       perpMarket.bids,
       perpMarket.asks,
       perpMarket.eventQueue,
-      mangoAccount.spotOpenOrders.filter(
-        (pk, i) => mangoAccount.inMarginBasket[i],
-      ),
+      mangoAccount.getOpenOrdersKeysInBasketPacked(),
       nativePrice,
       nativeQuantity,
       maxQuoteQuantityLots,
@@ -2911,6 +2909,25 @@ export class MangoClient {
       },
     ];
 
+    return this.getAllMangoAccounts(mangoGroup, filters, includeOpenOrders);
+  }
+
+  /**
+   * Get all MangoAccounts where `delegate` pubkey has authority
+   */
+  getMangoAccountsForDelegate(
+    mangoGroup: MangoGroup,
+    delegate: PublicKey,
+    includeOpenOrders = false,
+  ): Promise<MangoAccount[]> {
+    const filters = [
+      {
+        memcmp: {
+          offset: MangoAccountLayout.offsetOf('delegate'),
+          bytes: delegate.toBase58(),
+        },
+      },
+    ];
     return this.getAllMangoAccounts(mangoGroup, filters, includeOpenOrders);
   }
 
