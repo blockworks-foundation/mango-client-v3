@@ -166,6 +166,7 @@ export class MangoClient {
   lastSlot: number;
   recentBlockhash: string;
   recentBlockhashTime: number;
+  timeout: number | null;
   postSendTxCallback?: ({ txid: string }) => void;
 
   constructor(
@@ -178,6 +179,7 @@ export class MangoClient {
     this.lastSlot = 0;
     this.recentBlockhash = '';
     this.recentBlockhashTime = 0;
+    this.timeout = null;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
     }
@@ -187,7 +189,7 @@ export class MangoClient {
     transactions: Transaction[],
     payer: Account | WalletAdapter,
     additionalSigners: Account[],
-    timeout = 30000,
+    timeout: number | null = null,
     confirmLevel: TransactionConfirmationStatus = 'confirmed',
   ): Promise<TransactionSignature[]> {
     return await Promise.all(
@@ -205,14 +207,13 @@ export class MangoClient {
 
   async signTransaction({ transaction, payer, signers }) {
     const now = getUnixTs();
-    // If last requested recentBlockhash is within a second, use that instead of fetching
-    if (now > this.recentBlockhashTime + 1) {
-      this.recentBlockhash = (
-        await this.connection.getRecentBlockhash()
-      ).blockhash;
-      this.recentBlockhashTime = now;
+    let blockhash;
+    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 80) {
+      blockhash = this.recentBlockhash;
+    } else {
+      blockhash = (await this.connection.getRecentBlockhash()).blockhash;
     }
-    transaction.recentBlockhash = this.recentBlockhash;
+    transaction.recentBlockhash = blockhash;
     transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
     if (signers.length > 0) {
       transaction.partialSign(...signers);
@@ -236,8 +237,13 @@ export class MangoClient {
     }[];
     payer: Account | WalletAdapter;
   }) {
-    const blockhash = (await this.connection.getRecentBlockhash('max'))
-      .blockhash;
+    const now = getUnixTs();
+    let blockhash;
+    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 80) {
+      blockhash = this.recentBlockhash;
+    } else {
+      blockhash = (await this.connection.getRecentBlockhash()).blockhash;
+    }
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
       transaction.recentBlockhash = blockhash;
       transaction.setSigners(
@@ -299,6 +305,7 @@ export class MangoClient {
       }
     }
 
+    timeout = timeout || this.timeout;
     if (!timeout) return txid;
 
     console.log(
@@ -559,6 +566,29 @@ export class MangoClient {
 
     done = true;
     return result;
+  }
+
+  /**
+   * Maintain a timeout of 30 seconds
+   * @param client
+   */
+  async maintainTimeouts() {
+    const blockhashTimes: { blockhash: string; timestamp: number }[] = [];
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const now = getUnixTs();
+      const blockhash = (await this.connection.getRecentBlockhash()).blockhash;
+      blockhashTimes.push({ blockhash, timestamp: now });
+
+      const blockhashTime = (
+        blockhashTimes.length >= 7 ? blockhashTimes.shift() : blockhashTimes[0]
+      ) as { blockhash: string; timestamp: number };
+
+      this.timeout = 90 - (now - blockhashTime.timestamp);
+      this.recentBlockhash = blockhashTime.blockhash;
+      this.recentBlockhashTime = blockhashTime.timestamp;
+      await sleep(10);
+    }
   }
 
   /**
