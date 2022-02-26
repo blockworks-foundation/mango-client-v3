@@ -119,7 +119,7 @@ import {
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './utils/fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 
-import { PerpOrderType, WalletAdapter } from './utils/types';
+import { PerpOrderType, WalletAdapter, BlockhashTimes } from './utils/types';
 import { BookSide, PerpOrder } from './book';
 import {
   closeAccount,
@@ -305,7 +305,7 @@ export class MangoClient {
       }
     }
 
-    timeout = timeout || this.timeout;
+    timeout = this.timeout || timeout;
     if (!timeout) return txid;
 
     console.log(
@@ -568,25 +568,29 @@ export class MangoClient {
     return result;
   }
 
+  async updateRecentBlockhash(blockhashTimes: BlockhashTimes[]) {
+    const now = getUnixTs();
+    const blockhash = (await this.connection.getRecentBlockhash()).blockhash;
+    blockhashTimes.push({ blockhash, timestamp: now });
+
+    const blockhashTime = (
+      blockhashTimes.length >= 7 ? blockhashTimes.shift() : blockhashTimes[0]
+    ) as { blockhash: string; timestamp: number };
+
+    this.timeout = 90 - (now - blockhashTime.timestamp);
+    this.recentBlockhash = blockhashTime.blockhash;
+    this.recentBlockhashTime = blockhashTime.timestamp;
+  }
+
   /**
    * Maintain a timeout of 30 seconds
    * @param client
    */
   async maintainTimeouts() {
-    const blockhashTimes: { blockhash: string; timestamp: number }[] = [];
+    const blockhashTimes: BlockhashTimes[] = [];
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const now = getUnixTs();
-      const blockhash = (await this.connection.getRecentBlockhash()).blockhash;
-      blockhashTimes.push({ blockhash, timestamp: now });
-
-      const blockhashTime = (
-        blockhashTimes.length >= 7 ? blockhashTimes.shift() : blockhashTimes[0]
-      ) as { blockhash: string; timestamp: number };
-
-      this.timeout = 90 - (now - blockhashTime.timestamp);
-      this.recentBlockhash = blockhashTime.blockhash;
-      this.recentBlockhashTime = blockhashTime.timestamp;
+      await this.updateRecentBlockhash(blockhashTimes);
       await sleep(10);
     }
   }

@@ -19,3 +19,5 @@ export type PerpOrderType =
   | 'postOnly'
   | 'market'
   | 'postOnlySlide';
+
+export type BlockhashTimes = { blockhash: string; timestamp: number };
