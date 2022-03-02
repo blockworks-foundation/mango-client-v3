@@ -1,2 +1,2 @@
-crank: node lib/src/crank.js
-keeper: node lib/src/keeper.js
+crank: node lib/src/scripts/crank.js
+keeper: node lib/src/scripts/keeper.js
