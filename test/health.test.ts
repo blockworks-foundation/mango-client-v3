@@ -351,4 +351,43 @@ describe('Health', async () => {
       expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.false
     });
   });
+
+  describe('account10', async () => {
+    it('Health calculations should return the correct results', async () => {
+      const prefix = "./testdata/account10"
+      const mangoGroup: MangoGroup = loadTestMangoGroup(`${prefix}/group.json`)
+      const mangoAccount: MangoAccount = loadTestMangoAccount(`${prefix}/account.json`)
+      mangoAccount.spotOpenOrdersAccounts[1] = loadTestOpenOrders(`${prefix}/openorders0.json`)
+      mangoAccount.spotOpenOrdersAccounts[1] = loadTestOpenOrders(`${prefix}/openorders1.json`)
+      mangoAccount.spotOpenOrdersAccounts[1] = loadTestOpenOrders(`${prefix}/openorders3.json`)
+      mangoAccount.spotOpenOrdersAccounts[1] = loadTestOpenOrders(`${prefix}/openorders5.json`)
+      mangoAccount.spotOpenOrdersAccounts[1] = loadTestOpenOrders(`${prefix}/openorders6.json`)
+      mangoAccount.spotOpenOrdersAccounts[5] = loadTestOpenOrders(`${prefix}/openorders8.json`)
+      mangoAccount.spotOpenOrdersAccounts[10] = loadTestOpenOrders(`${prefix}/openorders10.json`)
+      mangoAccount.spotOpenOrdersAccounts[11] = loadTestOpenOrders(`${prefix}/openorders11.json`)
+      mangoAccount.spotOpenOrdersAccounts[12] = loadTestOpenOrders(`${prefix}/openorders12.json`)
+      mangoAccount.spotOpenOrdersAccounts[13] = loadTestOpenOrders(`${prefix}/openorders13.json`)
+      const mangoCache: MangoCache = loadTestMangoCache(`${prefix}/cache.json`)
+
+      expect(
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("835447528.00765534142685098118");
+      expect(
+        mangoAccount.getHealth(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("1104560586.65938873999447622509");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Init').toString()
+      ).to.equal("72.79490618339146124072");
+      expect(
+        mangoAccount.getHealthRatio(mangoGroup, mangoCache, 'Maint').toString()
+      ).to.equal("103.85025532240703682874");
+      expect(
+        mangoAccount.computeValue(mangoGroup, mangoCache).toString()
+      ).to.equal("1373.66979736174514670211");
+      expect(
+        mangoAccount.getLeverage(mangoGroup, mangoCache).toString()
+      ).to.equal("2.22052732148808473767");
+      expect(mangoAccount.isLiquidatable(mangoGroup, mangoCache)).to.be.false
+    });
+  });
 });
