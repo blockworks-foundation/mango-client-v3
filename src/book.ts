@@ -35,25 +35,34 @@ export class BookSide {
   nodes!: any[]; // This is either AnyNode, FreeNode, InnerNode...
 
   includeExpired: boolean;
-
+  now: BN; // this is the max timestamp on the book
   constructor(
     publicKey: PublicKey,
     perpMarket: PerpMarket,
     decoded: any,
-    includeExpired: boolean = false,
+    includeExpired = false,
   ) {
     this.publicKey = publicKey;
     this.isBids = decoded.metaData.dataType === DataType.Bids;
     this.perpMarket = perpMarket;
     this.includeExpired = includeExpired;
     Object.assign(this, decoded);
+
+    // Determine the maxTimestamp found on the book to use for tif
+    let maxTimestamp = new BN(getUnixTs() - 10);
+    for (const { leafNode } of this.nodes) {
+      if (leafNode && leafNode.timestamp.gt(maxTimestamp)) {
+        maxTimestamp = leafNode.timestamp;
+      }
+    }
+    this.now = maxTimestamp;
   }
 
   *items(): Generator<PerpOrder> {
     if (this.leafCount === 0) {
       return;
     }
-    const now = new BN(getUnixTs());
+    const now = this.now;
     const stack = [this.rootNode];
     const [left, right] = this.isBids ? [1, 0] : [0, 1];
     const side = (this.isBids ? 'buy' : 'sell') as 'buy' | 'sell';
@@ -113,7 +122,7 @@ export class BookSide {
     const [left, right] = this.isBids ? [1, 0] : [0, 1];
     const side = (this.isBids ? 'buy' : 'sell') as 'buy' | 'sell';
     const stack = [this.rootNode];
-    const now = new BN(getUnixTs());
+    const now = this.now;
 
     while (stack.length > 0) {
       let index = stack.pop();
