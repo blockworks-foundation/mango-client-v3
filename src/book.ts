@@ -40,7 +40,7 @@ export class BookSide {
     publicKey: PublicKey,
     perpMarket: PerpMarket,
     decoded: any,
-    includeExpired: boolean = false,
+    includeExpired = false,
   ) {
     this.publicKey = publicKey;
     this.isBids = decoded.metaData.dataType === DataType.Bids;

@@ -1651,13 +1651,17 @@ export class MangoClient {
     transaction.add(instruction);
 
     if (bookSideInfo) {
-      const bookSide = bookSideInfo.data
-        ? new BookSide(
-            side === 'buy' ? perpMarket.asks : perpMarket.bids,
-            perpMarket,
-            BookSideLayout.decode(bookSideInfo.data),
-          )
-        : [];
+      // If this data is already parsed as BookSide, use that instead of decoding again
+      let bookSide = bookSideInfo['parsed'];
+      if (bookSide === undefined) {
+        bookSide = bookSideInfo.data
+          ? new BookSide(
+              side === 'buy' ? perpMarket.asks : perpMarket.bids,
+              perpMarket,
+              BookSideLayout.decode(bookSideInfo.data),
+            )
+          : [];
+      }
       const accounts: Set<string> = new Set();
       accounts.add(mangoAccount.publicKey.toBase58());
 
@@ -1763,13 +1767,17 @@ export class MangoClient {
     transaction.add(instruction);
 
     if (bookSideInfo) {
-      const bookSide = bookSideInfo.data
-        ? new BookSide(
-            side === 'buy' ? perpMarket.asks : perpMarket.bids,
-            perpMarket,
-            BookSideLayout.decode(bookSideInfo.data),
-          )
-        : [];
+      // If this data is already parsed as BookSide, use that instead of decoding again
+      let bookSide = bookSideInfo['parsed'];
+      if (bookSide === undefined) {
+        bookSide = bookSideInfo.data
+          ? new BookSide(
+              side === 'buy' ? perpMarket.asks : perpMarket.bids,
+              perpMarket,
+              BookSideLayout.decode(bookSideInfo.data),
+            )
+          : [];
+      }
       const accounts: Set<string> = new Set();
       accounts.add(mangoAccount.publicKey.toBase58());
 
