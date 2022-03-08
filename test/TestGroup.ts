@@ -22,7 +22,7 @@ import {
   PerpEventQueueLayout,
   zeroKey,
 } from '../src';
-import listMarket from '../src/commands/listMarket';
+import listMarket from '../src/cli/listMarket';
 import configFile from '../src/ids.json';
 import BN from 'bn.js';
 import {
