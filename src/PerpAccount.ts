@@ -165,10 +165,14 @@ export default class PerpAccount {
       totalQuoteChange = totalQuoteChange.sub(baseChange.mul(price));
       currBase = currBase.sub(baseChange);
 
-      if (currBase.eq(ZERO)) {
+      if (
+        currBase.lte(new Big(0.000_000_001)) &&
+        currBase.gte(new Big(-0.000_000_001))
+      ) {
         return totalQuoteChange.mul(NEG_ONE).div(basePos);
       }
     }
+    console.log('currBase:', currBase.toFixed());
 
     // If we haven't returned yet, there was an error or missing data
     // TODO - consider failing silently
