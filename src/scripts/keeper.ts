@@ -315,4 +315,14 @@ async function processKeeperTransactions(
   }
 }
 
+process.on('unhandledRejection', function (err, promise) {
+  console.error(
+    'Unhandled rejection (promise: ',
+    promise,
+    ', reason: ',
+    err,
+    ').',
+  );
+});
+
 main();
