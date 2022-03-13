@@ -211,7 +211,8 @@ export class MangoClient {
     if (this.recentBlockhashTime && now < this.recentBlockhashTime + 80) {
       blockhash = this.recentBlockhash;
     } else {
-      blockhash = (await this.connection.getRecentBlockhash()).blockhash;
+      blockhash = (await this.connection.getRecentBlockhash('confirmed'))
+        .blockhash;
     }
     transaction.recentBlockhash = blockhash;
     transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
@@ -317,7 +318,7 @@ export class MangoClient {
 
     let done = false;
 
-    let retrySleep = 15000;
+    let retrySleep = 8000;
     (async () => {
       // TODO - make sure this works well on mainnet
       while (!done && getUnixTs() - startTime < timeout / 1000) {
@@ -326,9 +327,6 @@ export class MangoClient {
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        if (retrySleep <= 6000) {
-          retrySleep = retrySleep * 2;
-        }
       }
     })();
 
