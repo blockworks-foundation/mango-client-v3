@@ -306,7 +306,7 @@ export class MangoClient {
       }
     }
 
-    timeout = this.timeout || timeout;
+    timeout = this.timeout ? this.timeout * 1000 : timeout;
     if (!timeout) return txid;
 
     console.log(
