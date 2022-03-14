@@ -568,7 +568,8 @@ export class MangoClient {
 
   async updateRecentBlockhash(blockhashTimes: BlockhashTimes[]) {
     const now = getUnixTs();
-    const blockhash = (await this.connection.getRecentBlockhash()).blockhash;
+    const blockhash = (await this.connection.getRecentBlockhash('confirmed'))
+      .blockhash;
     blockhashTimes.push({ blockhash, timestamp: now });
 
     const blockhashTime = (
