@@ -172,7 +172,6 @@ export default class PerpAccount {
         return totalQuoteChange.mul(NEG_ONE).div(basePos);
       }
     }
-    console.log('currBase:', currBase.toFixed());
 
     // If we haven't returned yet, there was an error or missing data
     // TODO - consider failing silently
