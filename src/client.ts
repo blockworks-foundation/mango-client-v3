@@ -166,19 +166,24 @@ export class MangoClient {
   lastSlot: number;
   recentBlockhash: string;
   recentBlockhashTime: number;
+  maxStoredBlockhashes: number;
   timeout: number | null;
   postSendTxCallback?: ({ txid: string }) => void;
 
   constructor(
     connection: Connection,
     programId: PublicKey,
-    opts: { postSendTxCallback?: ({ txid }: { txid: string }) => void } = {},
+    opts: {
+      postSendTxCallback?: ({ txid }: { txid: string }) => void;
+      maxStoredBlockhashes?: number;
+    } = {},
   ) {
     this.connection = connection;
     this.programId = programId;
     this.lastSlot = 0;
     this.recentBlockhash = '';
     this.recentBlockhashTime = 0;
+    this.maxStoredBlockhashes = 7;
     this.timeout = null;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
@@ -575,7 +580,9 @@ export class MangoClient {
     blockhashTimes.push({ blockhash, timestamp: now });
 
     const blockhashTime = (
-      blockhashTimes.length >= 7 ? blockhashTimes.shift() : blockhashTimes[0]
+      blockhashTimes.length >= this.maxStoredBlockhashes
+        ? blockhashTimes.shift()
+        : blockhashTimes[0]
     ) as { blockhash: string; timestamp: number };
 
     this.timeout = 90 - (now - blockhashTime.timestamp);
