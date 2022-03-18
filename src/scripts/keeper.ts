@@ -149,6 +149,8 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
     Promise.all(promises).catch((err) => {
       console.error('Error updating cache', err);
     });
+  } catch (err) {
+    console.error('Error in processUpdateCache', err);
   } finally {
     console.time('processUpdateCache');
     setTimeout(processUpdateCache, updateCacheInterval, mangoGroup);
@@ -230,7 +232,11 @@ async function processConsumeEvents(
       },
     );
 
-    Promise.all(promises);
+    Promise.all(promises).catch((err) => {
+      console.error('Error consuming events', err);
+    });
+  } catch (err) {
+    console.error('Error in processConsumeEvents', err);
   } finally {
     setTimeout(
       processConsumeEvents,
@@ -305,6 +311,8 @@ async function processKeeperTransactions(
     Promise.all(promises).catch((err) => {
       console.error('Error processing keeper instructions', err);
     });
+  } catch (err) {
+    console.error('Error in processKeeperTransactions', err);
   } finally {
     setTimeout(
       processKeeperTransactions,
@@ -314,5 +322,9 @@ async function processKeeperTransactions(
     );
   }
 }
+
+process.on('unhandledRejection', (err: any, p: any) => {
+  console.error(`Unhandled rejection: ${err} promise: ${p})`);
+});
 
 main();
