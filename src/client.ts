@@ -1,6 +1,7 @@
 import {
   Account,
   AccountInfo,
+  Commitment,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
@@ -168,6 +169,8 @@ export class MangoClient {
   recentBlockhashTime: number;
   maxStoredBlockhashes: number;
   timeout: number | null;
+  // The commitment level used when fetching recentBlockHash
+  blockhashCommitment: Commitment;
   postSendTxCallback?: ({ txid: string }) => void;
 
   constructor(
@@ -176,6 +179,7 @@ export class MangoClient {
     opts: {
       postSendTxCallback?: ({ txid }: { txid: string }) => void;
       maxStoredBlockhashes?: number;
+      blockhashCommitment?: Commitment;
     } = {},
   ) {
     this.connection = connection;
@@ -184,6 +188,7 @@ export class MangoClient {
     this.recentBlockhash = '';
     this.recentBlockhashTime = 0;
     this.maxStoredBlockhashes = opts?.maxStoredBlockhashes || 7;
+    this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
     this.timeout = null;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
@@ -213,11 +218,13 @@ export class MangoClient {
   async signTransaction({ transaction, payer, signers }) {
     const now = getUnixTs();
     let blockhash;
-    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 80) {
+    // Get new blockhash if stored blockhash more than 70 seconds old
+    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
       blockhash = this.recentBlockhash;
     } else {
-      blockhash = (await this.connection.getRecentBlockhash('confirmed'))
-        .blockhash;
+      blockhash = (
+        await this.connection.getRecentBlockhash(this.blockhashCommitment)
+      ).blockhash;
     }
     transaction.recentBlockhash = blockhash;
     transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
@@ -245,10 +252,13 @@ export class MangoClient {
   }) {
     const now = getUnixTs();
     let blockhash;
-    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 80) {
+    // Get new blockhash if stored blockhash more than 70 seconds old
+    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
       blockhash = this.recentBlockhash;
     } else {
-      blockhash = (await this.connection.getRecentBlockhash()).blockhash;
+      blockhash = (
+        await this.connection.getRecentBlockhash(this.blockhashCommitment)
+      ).blockhash;
     }
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
       transaction.recentBlockhash = blockhash;
@@ -578,8 +588,9 @@ export class MangoClient {
 
   async updateRecentBlockhash(blockhashTimes: BlockhashTimes[]) {
     const now = getUnixTs();
-    const blockhash = (await this.connection.getRecentBlockhash('confirmed'))
-      .blockhash;
+    const blockhash = (
+      await this.connection.getRecentBlockhash(this.blockhashCommitment)
+    ).blockhash;
     blockhashTimes.push({ blockhash, timestamp: now });
 
     const blockhashTime = (
