@@ -1,5 +1,8 @@
 import BN from 'bn.js';
 import Big from 'big.js';
+import toFormat from 'toformat';
+
+toFormat(Big);
 
 // TODO - this whole class is inefficient; consider optimizing
 export class I80F48 {
@@ -78,6 +81,10 @@ export class I80F48 {
     options?: Intl.NumberFormatOptions,
   ): string {
     return this.toNumber().toLocaleString(locales, options);
+  }
+  toFormat(decimals: number): string {
+    // @ts-ignore
+    return this.toBig().toFormat(decimals);
   }
   toBig(): Big {
     return new Big(this.data.toString()).div(I80F48.MULTIPLIER_BIG);
