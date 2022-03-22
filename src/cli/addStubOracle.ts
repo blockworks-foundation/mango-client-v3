@@ -1,10 +1,10 @@
-import { Account, Connection } from '@solana/web3.js';
+import { Keypair, Connection } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import { getOracleBySymbol, GroupConfig } from '../config';
 
 export default async function addStubOracle(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   groupConfig: GroupConfig,
   symbol: string,
 ): Promise<GroupConfig> {

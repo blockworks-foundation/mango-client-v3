@@ -4,6 +4,7 @@ import {
   AccountInfo,
   Commitment,
   Connection,
+  Keypair,
   PublicKey,
   RpcResponseAndContext,
   SimulatedTransactionResponse,
@@ -262,8 +263,8 @@ export async function createAccountInstruction(
   space: number,
   owner: PublicKey,
   lamports?: number,
-): Promise<{ account: Account; instruction: TransactionInstruction }> {
-  const account = new Account();
+): Promise<{ account: Keypair; instruction: TransactionInstruction }> {
+  const account = new Keypair();
   const instruction = SystemProgram.createAccount({
     fromPubkey: payer,
     newAccountPubkey: account.publicKey,

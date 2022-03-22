@@ -5,7 +5,7 @@ import {
   TokenInstructions,
 } from '@project-serum/serum';
 import {
-  Account,
+  Keypair,
   Connection,
   PublicKey,
   SystemProgram,
@@ -16,7 +16,7 @@ import { ZERO_BN } from '../utils/utils';
 
 export default async function listMarket(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   mangoProgramId: PublicKey,
   baseMint: PublicKey,
   quoteMint: PublicKey,
@@ -26,13 +26,13 @@ export default async function listMarket(
 ): Promise<PublicKey> {
   const client = new MangoClient(connection, mangoProgramId);
 
-  const market = new Account();
-  const requestQueue = new Account();
-  const eventQueue = new Account();
-  const bids = new Account();
-  const asks = new Account();
-  const baseVault = new Account();
-  const quoteVault = new Account();
+  const market = new Keypair();
+  const requestQueue = new Keypair();
+  const eventQueue = new Keypair();
+  const bids = new Keypair();
+  const asks = new Keypair();
+  const baseVault = new Keypair();
+  const quoteVault = new Keypair();
   const feeRateBps = 0;
   const quoteDustThreshold = new BN(100);
 

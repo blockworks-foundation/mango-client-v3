@@ -1,4 +1,4 @@
-import { Account, Connection, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import { getOracleBySymbol, GroupConfig } from '../config';
 
@@ -27,7 +27,7 @@ const PYTH_ORACLES_MAINNET = {
 
 export default async function addPythOracle(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   groupConfig: GroupConfig,
   symbol: string,
 ): Promise<GroupConfig> {

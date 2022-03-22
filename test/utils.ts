@@ -6,9 +6,9 @@ import {
 } from '@project-serum/serum';
 import { TOKEN_PROGRAM_ID, Token, u64 } from '@solana/spl-token';
 import {
-  Account,
   Commitment,
   Connection,
+  Keypair,
   PublicKey,
   SystemProgram,
   Transaction,
@@ -20,6 +20,7 @@ import { createAccountInstruction, sleep, ZERO_BN } from '../src/utils/utils';
 import { msrmMints, MangoClient, I80F48 } from '../src';
 import MangoGroup from '../src/MangoGroup';
 import MangoAccount from '../src/MangoAccount';
+import { Payer } from '../src/utils/types';
 
 export const MangoProgramId = new PublicKey(
   '5fP7Z7a87ZEVsKr2tQPApdtq83GcTW4kz919R6ou5h5E',
@@ -52,7 +53,7 @@ const getPDA = () => {
 export async function _sendTransaction(
   connection: Connection,
   transaction: Transaction,
-  signers: Account[],
+  signers: Keypair[],
 ): Promise<TransactionSignature> {
   await sleep(1000);
   const signature = await connection.sendTransaction(transaction, signers);
@@ -74,18 +75,18 @@ export function createDevnetConnection() {
 
 export async function airdropSol(
   connection: Connection,
-  account: Account,
+  account: Keypair,
   amount: number,
 ): Promise<void> {
   const roundedSolAmount = Math.round(amount);
   console.info(`Requesting ${roundedSolAmount} SOL`);
-  const generousAccount = [
+  const generousAccount = Uint8Array.from([
     115, 98, 128, 18, 66, 112, 147, 244, 46, 244, 118, 106, 91, 202, 56, 83, 58,
     71, 89, 226, 32, 177, 177, 240, 189, 23, 209, 176, 138, 119, 130, 140, 6,
     149, 55, 70, 215, 34, 108, 133, 225, 117, 38, 141, 74, 246, 232, 76, 176,
     10, 207, 221, 68, 179, 115, 158, 106, 133, 35, 30, 4, 177, 124, 5,
-  ];
-  const backupAcc = new Account(generousAccount);
+  ]);
+  const backupAcc = Keypair.fromSeed(generousAccount);
   const tx = new Transaction();
   tx.add(
     SystemProgram.transfer({
@@ -103,7 +104,7 @@ export async function airdropSol(
 export async function createOracle(
   connection: Connection,
   programId: PublicKey,
-  payer: Account,
+  payer: Keypair,
 ): Promise<PublicKey> {
   const createOracleIns = await createAccountInstruction(
     connection,
@@ -124,8 +125,8 @@ export async function createOracle(
 export async function createAccount(
   connection: Connection,
   solBalance = 5,
-): Promise<Account> {
-  const account = new Account();
+): Promise<Keypair> {
+  const account = new Keypair();
   if (solBalance >= 1) {
     await airdropSol(connection, account, solBalance);
   }
@@ -134,7 +135,7 @@ export async function createAccount(
 
 export async function createTokenAccountWithBalance(
   connection: Connection,
-  owner: Account,
+  owner: Keypair,
   tokenMint: PublicKey,
   tokenDecimals: number,
   faucetId: PublicKey,
@@ -159,7 +160,7 @@ export async function createTokenAccountWithBalance(
 
 export async function airdropTokens(
   connection: Connection,
-  feePayerAccount: Account,
+  feePayerAccount: Keypair,
   faucetPubkey: PublicKey,
   tokenDestinationPublicKey: PublicKey,
   mint: PublicKey,
@@ -206,9 +207,9 @@ export async function buildAirdropTokensIx(
 export async function createTokenAccount(
   connection: Connection,
   mint: PublicKey,
-  owner: Account,
+  owner: Keypair,
 ): Promise<PublicKey> {
-  const newAccount = new Account();
+  const newAccount = new Keypair();
   const tx = new Transaction();
   const signers = [owner, newAccount];
   const signerPks = signers.map((x) => x.publicKey);
@@ -252,7 +253,7 @@ export async function createTokenAccountInstrs(
 
 export async function createMint(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   decimals: number,
 ): Promise<Token> {
   // const mintAuthority = Keypair.generate().publicKey; If needed can use a diff mint auth
@@ -268,7 +269,7 @@ export async function createMint(
 
 export async function createMints(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   quantity: number,
 ): Promise<Token[]> {
   const mints: Token[] = [];
@@ -281,20 +282,20 @@ export async function createMints(
 
 export async function listMarket(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   baseMint: PublicKey,
   quoteMint: PublicKey,
   baseLotSize: number,
   quoteLotSize: number,
   dexProgramId: PublicKey,
 ): Promise<PublicKey> {
-  const market = new Account();
-  const requestQueue = new Account();
-  const eventQueue = new Account();
-  const bids = new Account();
-  const asks = new Account();
-  const baseVault = new Account();
-  const quoteVault = new Account();
+  const market = new Keypair();
+  const requestQueue = new Keypair();
+  const eventQueue = new Keypair();
+  const bids = new Keypair();
+  const asks = new Keypair();
+  const baseVault = new Keypair();
+  const quoteVault = new Keypair();
   const feeRateBps = 0;
   const quoteDustThreshold = new BN(100);
 
@@ -415,7 +416,7 @@ export async function listMarket(
 
 export async function listMarkets(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   dexProgramId: PublicKey,
   mints: Token[],
   quoteMintPK: PublicKey,
@@ -438,7 +439,7 @@ export async function listMarkets(
 }
 
 export async function mintToTokenAccount(
-  payer: Account,
+  payer: Keypair,
   mint: Token,
   tokenAccountPk: PublicKey,
   balance: number,
@@ -453,7 +454,7 @@ export async function mintToTokenAccount(
 }
 
 export async function createUserTokenAccount(
-  payer: Account,
+  payer: Keypair,
   mint: Token,
   balance: number,
 ): Promise<PublicKey> {
@@ -467,7 +468,7 @@ export async function createUserTokenAccount(
 }
 
 export async function createUserTokenAccounts(
-  payer: Account,
+  payer: Keypair,
   mints: Token[],
   balances: number[] | null,
 ): Promise<PublicKey[]> {
@@ -485,7 +486,7 @@ export async function createUserTokenAccounts(
 
 export async function addSpotMarketToMangoGroup(
   client: MangoClient,
-  payer: Account,
+  payer: Keypair,
   mangoGroup: MangoGroup,
   mint: Token,
   spotMarketPk: PublicKey,
@@ -520,7 +521,7 @@ export async function addSpotMarketToMangoGroup(
 
 export async function addSpotMarketsToMangoGroup(
   client: MangoClient,
-  payer: Account,
+  payer: Keypair,
   mangoGroupPk: PublicKey,
   mints: Token[],
   spotMarketPks: PublicKey[],
@@ -555,7 +556,7 @@ export async function getNodeBank(
 
 export async function cachePrices(
   client: MangoClient,
-  payer: Account,
+  payer: Keypair,
   mangoGroup: MangoGroup,
   oracleIndices: number[],
 ): Promise<void> {
@@ -573,7 +574,7 @@ export async function cachePrices(
 
 export async function cacheRootBanks(
   client: MangoClient,
-  payer: Account,
+  payer: Payer,
   mangoGroup: MangoGroup,
   rootBankIndices: number[],
 ): Promise<void> {
@@ -591,7 +592,7 @@ export async function cacheRootBanks(
 
 export async function performDeposit(
   client: MangoClient,
-  payer: Account,
+  payer: Payer,
   mangoGroup: MangoGroup,
   mangoAccount: MangoAccount,
   nodeBank: any, //Todo: Can make explicit NodeBank maybe
@@ -630,7 +631,7 @@ export async function getMarket(
 
 export async function placeSpotOrder(
   client: MangoClient,
-  payer: Account,
+  payer: Payer,
   mangoGroup: MangoGroup,
   mangoAccount: MangoAccount,
   market: Market,

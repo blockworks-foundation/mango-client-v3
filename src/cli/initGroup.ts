@@ -1,10 +1,10 @@
-import { Account, Connection, PublicKey } from '@solana/web3.js';
+import { Keypair, Connection, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import { Cluster, GroupConfig, msrmMints } from '../config';
 
 export default async function initGroup(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   cluster: Cluster,
   groupName: string,
   mangoProgramId: PublicKey,

@@ -6,7 +6,7 @@ import {
 } from '../config';
 import configFile from '../ids.json';
 import {
-  Account,
+  Keypair,
   Commitment,
   Connection,
   PublicKey,
@@ -45,7 +45,7 @@ async function mm() {
   const mangoProgramId = groupIds.mangoProgramId;
   const mangoGroupKey = groupIds.publicKey;
 
-  const payer = new Account(
+  const payer = new Keypair(
     JSON.parse(
       fs.readFileSync(
         process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
@@ -345,7 +345,7 @@ async function mm() {
 
 async function onExit(
   client: MangoClient,
-  payer: Account,
+  payer: Keypair,
   mangoProgramId: PublicKey,
   mangoGroup: MangoGroup,
   perpMarket: PerpMarket,

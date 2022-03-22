@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import {
-  Account,
+  Keypair,
   Cluster,
   Commitment,
   Connection,
@@ -133,7 +133,7 @@ export default class TestGroup {
   oraclePks: PublicKey[] = [];
   mangoGroupKey: PublicKey = zeroKey;
   client: MangoClient;
-  payer: Account;
+  payer: Keypair;
   connection: Connection;
   log: boolean;
   logger: any;
@@ -147,7 +147,7 @@ export default class TestGroup {
       this.logger = console.log;
     }
 
-    this.payer = new Account(
+    this.payer = new Keypair(
       JSON.parse(
         process.env.KEYPAIR ||
           fs.readFileSync(
