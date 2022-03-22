@@ -1,6 +1,7 @@
 import {
   Account,
   AccountInfo,
+  Commitment,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
@@ -166,19 +167,28 @@ export class MangoClient {
   lastSlot: number;
   recentBlockhash: string;
   recentBlockhashTime: number;
+  maxStoredBlockhashes: number;
   timeout: number | null;
+  // The commitment level used when fetching recentBlockHash
+  blockhashCommitment: Commitment;
   postSendTxCallback?: ({ txid: string }) => void;
 
   constructor(
     connection: Connection,
     programId: PublicKey,
-    opts: { postSendTxCallback?: ({ txid }: { txid: string }) => void } = {},
+    opts: {
+      postSendTxCallback?: ({ txid }: { txid: string }) => void;
+      maxStoredBlockhashes?: number;
+      blockhashCommitment?: Commitment;
+    } = {},
   ) {
     this.connection = connection;
     this.programId = programId;
     this.lastSlot = 0;
     this.recentBlockhash = '';
     this.recentBlockhashTime = 0;
+    this.maxStoredBlockhashes = opts?.maxStoredBlockhashes || 7;
+    this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
     this.timeout = null;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
@@ -208,10 +218,13 @@ export class MangoClient {
   async signTransaction({ transaction, payer, signers }) {
     const now = getUnixTs();
     let blockhash;
-    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 80) {
+    // Get new blockhash if stored blockhash more than 70 seconds old
+    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
       blockhash = this.recentBlockhash;
     } else {
-      blockhash = (await this.connection.getRecentBlockhash()).blockhash;
+      blockhash = (
+        await this.connection.getRecentBlockhash(this.blockhashCommitment)
+      ).blockhash;
     }
     transaction.recentBlockhash = blockhash;
     transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
@@ -239,10 +252,13 @@ export class MangoClient {
   }) {
     const now = getUnixTs();
     let blockhash;
-    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 80) {
+    // Get new blockhash if stored blockhash more than 70 seconds old
+    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
       blockhash = this.recentBlockhash;
     } else {
-      blockhash = (await this.connection.getRecentBlockhash()).blockhash;
+      blockhash = (
+        await this.connection.getRecentBlockhash(this.blockhashCommitment)
+      ).blockhash;
     }
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
       transaction.recentBlockhash = blockhash;
@@ -305,7 +321,9 @@ export class MangoClient {
       }
     }
 
-    timeout = this.timeout || timeout;
+    if (this.timeout) {
+      timeout = this.timeout < 0 ? timeout : this.timeout * 1000;
+    }
     if (!timeout) return txid;
 
     console.log(
@@ -317,7 +335,7 @@ export class MangoClient {
 
     let done = false;
 
-    let retrySleep = 15000;
+    let retrySleep = 2000;
     (async () => {
       // TODO - make sure this works well on mainnet
       while (!done && getUnixTs() - startTime < timeout / 1000) {
@@ -326,9 +344,9 @@ export class MangoClient {
         this.connection.sendRawTransaction(rawTransaction, {
           skipPreflight: true,
         });
-        if (retrySleep <= 6000) {
-          retrySleep = retrySleep * 2;
-        }
+      }
+      if (retrySleep <= 8000) {
+        retrySleep = retrySleep * 2;
       }
     })();
 
@@ -570,11 +588,15 @@ export class MangoClient {
 
   async updateRecentBlockhash(blockhashTimes: BlockhashTimes[]) {
     const now = getUnixTs();
-    const blockhash = (await this.connection.getRecentBlockhash()).blockhash;
+    const blockhash = (
+      await this.connection.getRecentBlockhash(this.blockhashCommitment)
+    ).blockhash;
     blockhashTimes.push({ blockhash, timestamp: now });
 
     const blockhashTime = (
-      blockhashTimes.length >= 7 ? blockhashTimes.shift() : blockhashTimes[0]
+      blockhashTimes.length >= this.maxStoredBlockhashes
+        ? blockhashTimes.shift()
+        : blockhashTimes[0]
     ) as { blockhash: string; timestamp: number };
 
     this.timeout = 90 - (now - blockhashTime.timestamp);
