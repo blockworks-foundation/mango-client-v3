@@ -90,7 +90,10 @@ export default class PerpAccount {
 
       openingQuote = openingQuote.sub(baseChange.mul(price));
       currBase = currBase.sub(baseChange);
-      if (currBase.eq(ZERO)) {
+      if (
+        currBase.lte(new Big(0.000_000_001)) &&
+        currBase.gte(new Big(-0.000_000_001))
+      ) {
         return openingQuote.div(basePos).abs();
       }
     }
