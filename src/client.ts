@@ -120,7 +120,7 @@ import { I80F48, ONE_I80F48, ZERO_I80F48 } from './utils/fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 
 import { PerpOrderType, BlockhashTimes, Payer } from './utils/types';
-import { Adapter, adapterHasSignAllTransactions } from './utils/adapterTypes';
+import { adapterHasSignAllTransactions } from './utils/adapterTypes';
 import { BookSide, PerpOrder } from './book';
 import {
   closeAccount,
@@ -3723,7 +3723,7 @@ export class MangoClient {
     mngoRootBank: PublicKey,
     mngoNodeBank: PublicKey,
     mngoVault: PublicKey,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature[]> {
     const transactions: Transaction[] = [];
     let transaction = new Transaction();
 
@@ -3791,7 +3791,7 @@ export class MangoClient {
           this.sendSignedTransaction({ signedTransaction }),
         ),
       );
-      return txSigs[0];
+      return txSigs;
     } else {
       throw new Error('Unable to sign all RedeemMngo transactions');
     }
