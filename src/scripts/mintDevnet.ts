@@ -1,5 +1,5 @@
 import { createDevnetConnection } from '../../test/utils';
-import { Account, PublicKey } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 import fs from 'fs';
 import os from 'os';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
@@ -176,7 +176,7 @@ const connection = createDevnetConnection();
 
 const authorityFp =
   process.env.AUTHORITY || os.homedir() + '/.config/solana/devnet.json';
-const authority = new Account(
+const authority = new Keypair(
   JSON.parse(fs.readFileSync(authorityFp, 'utf-8')),
 );
 

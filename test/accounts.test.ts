@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import { Cluster, Config, MangoClient, sleep } from '../src';
 import configFile from '../src/ids.json';
-import { Account, Commitment, Connection } from '@solana/web3.js';
+import { Keypair, Commitment, Connection } from '@solana/web3.js';
 
 async function testAccounts() {
   // Load all the details for mango group
@@ -18,7 +18,7 @@ async function testAccounts() {
   }
   const mangoProgramId = groupIds.mangoProgramId;
   const mangoGroupKey = groupIds.publicKey;
-  const payer = new Account(
+  const payer = new Keypair(
     JSON.parse(
       process.env.KEYPAIR ||
         fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),

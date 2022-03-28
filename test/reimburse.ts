@@ -2,7 +2,7 @@
  * This script was used to reimburse accounts affected by Dec 4 MSOL oracle incident
  */
 
-import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
+import { Keypair, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import fs from 'fs';
 import os from 'os';
 import {
@@ -17,7 +17,7 @@ import {
 
 const config = new Config(IDS);
 
-const payer = new Account(
+const payer = new Keypair(
   JSON.parse(
     fs.readFileSync(
       process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',

@@ -1,11 +1,11 @@
 import { Cluster, Config, GroupConfig } from '../config';
-import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
+import { Keypair, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import fs from 'fs';
 import os from 'os';
 import { IDS, MangoClient, QUOTE_INDEX, RootBank } from '../index';
 
 async function main() {
-  const payer = new Account(
+  const payer = new Keypair(
     JSON.parse(
       fs.readFileSync(
         process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',

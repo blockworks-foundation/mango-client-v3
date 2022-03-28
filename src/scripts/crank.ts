@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { MangoClient } from '../client';
 import {
-  Account,
+  Keypair,
   Commitment,
   Connection,
   PublicKey,
@@ -37,7 +37,7 @@ if (!groupIds) {
 }
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
-const payer = new Account(
+const payer = new Keypair(
   JSON.parse(
     process.env.KEYPAIR ||
       fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),

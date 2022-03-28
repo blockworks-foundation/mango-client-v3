@@ -1,5 +1,5 @@
 import { Market } from '@project-serum/serum';
-import { Account, Connection, PublicKey } from '@solana/web3.js';
+import { Keypair, Connection, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import {
   getOracleBySymbol,
@@ -11,7 +11,7 @@ import {
 
 export default async function addSpotMarket(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   groupConfig: GroupConfig,
   symbol: string,
   spotMarket: PublicKey,

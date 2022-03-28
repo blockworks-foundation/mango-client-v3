@@ -3,7 +3,7 @@ import os from 'os';
 import { Cluster, Config, QUOTE_INDEX, sleep } from '../src';
 import configFile from '../src/ids.json';
 import {
-  Account,
+  Keypair,
   Commitment,
   Connection,
   LAMPORTS_PER_SOL,
@@ -20,7 +20,7 @@ async function testCloseAccount() {
   const sleepTime = 2000;
   const config = new Config(configFile);
 
-  const payer = new Account(
+  const payer = new Keypair(
     JSON.parse(
       process.env.KEYPAIR ||
         fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
@@ -49,7 +49,11 @@ async function testCloseAccount() {
   const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
 
   //const accountPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
-  const accountPk = await testGroup.client.createMangoAccount(mangoGroup, payer, 1);
+  const accountPk = await testGroup.client.createMangoAccount(
+    mangoGroup,
+    payer,
+    1,
+  );
   //const accountPk2 = await testGroup.client.createMangoAccount(mangoGroup, payer, 1);
   console.log('Created Account:', accountPk.toBase58());
   //console.log('Created Account:', accountPk2.toBase58());

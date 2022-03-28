@@ -5,7 +5,13 @@ import * as os from 'os';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import { Options, PositionalOptions } from 'yargs';
-import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
+import {
+  Account,
+  Commitment,
+  Connection,
+  Keypair,
+  PublicKey,
+} from '@solana/web3.js';
 import {
   Cluster,
   Config,
@@ -88,7 +94,7 @@ function openConnection(config: Config, cluster: Cluster) {
 }
 
 function readKeypair(keypairPath: string) {
-  return new Account(JSON.parse(fs.readFileSync(keypairPath, 'utf-8')));
+  return new Keypair(JSON.parse(fs.readFileSync(keypairPath, 'utf-8')));
 }
 
 export function readConfig(configPath: string) {

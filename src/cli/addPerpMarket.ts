@@ -1,4 +1,4 @@
-import { Account, Connection } from '@solana/web3.js';
+import { Keypair, Connection } from '@solana/web3.js';
 import { uiToNative } from '..';
 import { MangoClient } from '../client';
 import {
@@ -12,7 +12,7 @@ import {
 
 export default async function addPerpMarket(
   connection: Connection,
-  payer: Account,
+  payer: Keypair,
   groupConfig: GroupConfig,
   symbol: string,
   maintLeverage: number,

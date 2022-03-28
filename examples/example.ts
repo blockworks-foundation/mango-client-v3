@@ -8,7 +8,7 @@ import {
   MangoClient,
   ZERO_BN,
 } from '../src';
-import { Account, Commitment, Connection } from '@solana/web3.js';
+import { Keypair, Commitment, Connection } from '@solana/web3.js';
 import configFile from '../src/ids.json';
 import { Market } from '@project-serum/serum';
 
@@ -64,7 +64,7 @@ async function examplePerp() {
   }
 
   // Place order
-  const owner = new Account(readKeypair());
+  const owner = new Keypair(readKeypair());
   const mangoAccount = (
     await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
@@ -157,7 +157,7 @@ async function exampleSpot() {
   }
 
   // Place order
-  const owner = new Account(readKeypair());
+  const owner = new Keypair(readKeypair());
   const mangoAccount = (
     await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
