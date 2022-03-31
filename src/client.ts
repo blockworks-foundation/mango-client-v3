@@ -2947,12 +2947,12 @@ export class MangoClient {
     quoteRootBank: RootBank,
     owner: Payer,
     mangoAccounts?: MangoAccount[],
-  ): Promise<(TransactionSignature | null)[]> {
+  ): Promise<TransactionSignature[] | undefined> {
     // fetch all MangoAccounts filtered for having this perp market in basket
     if (mangoAccounts === undefined) {
       mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
     }
-    return await Promise.all(
+    const signatures: (TransactionSignature | null)[] = await Promise.all(
       perpMarkets.map((pm) => {
         const marketIndex = mangoGroup.getPerpMarketIndex(pm.publicKey);
         const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
@@ -2976,6 +2976,17 @@ export class MangoClient {
           : promiseNull();
       }),
     );
+
+    function filterNulls<TransactionSignature>(
+      value: TransactionSignature | null,
+    ): value is TransactionSignature {
+      if (value === null) return false;
+      return true;
+    }
+
+    const filtered = signatures?.filter(filterNulls)
+
+    return filtered?.length ? filtered : undefined;
   }
 
   /**
