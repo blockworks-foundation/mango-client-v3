@@ -54,10 +54,12 @@ if (!groupIds) {
 }
 const mangoProgramId = groupIds.mangoProgramId;
 const mangoGroupKey = groupIds.publicKey;
-const payer = new Keypair(
-  JSON.parse(
-    process.env.KEYPAIR ||
-      fs.readFileSync(os.homedir() + '/.config/solana/blw.json', 'utf-8'),
+const payer = Keypair.fromSecretKey(
+  Uint8Array.from(
+    JSON.parse(
+      process.env.KEYPAIR ||
+        fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+    ),
   ),
 );
 const connection = new Connection(
