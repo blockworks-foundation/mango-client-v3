@@ -340,7 +340,7 @@ export class MangoClient {
 
     let done = false;
 
-    let retrySleep = 2000;
+    let retrySleep = 1000;
     (async () => {
       // TODO - make sure this works well on mainnet
       while (!done && getUnixTs() - startTime < timeout / 1000) {
@@ -2984,7 +2984,7 @@ export class MangoClient {
       return true;
     }
 
-    const filtered = signatures?.filter(filterNulls)
+    const filtered = signatures?.filter(filterNulls);
 
     return filtered?.length ? filtered : undefined;
   }
