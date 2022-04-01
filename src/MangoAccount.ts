@@ -833,7 +833,9 @@ export default class MangoAccount {
 
     let uiDepositVal = ZERO_I80F48;
     let uiBorrowVal = ZERO_I80F48;
-    let initLiabWeight, initAssetWeight, deposits, borrows;
+    let deposits = ZERO_I80F48;
+    let borrows = ZERO_I80F48;
+    let initLiabWeight, initAssetWeight;
 
     if (market instanceof PerpMarket) {
       ({ initLiabWeight, initAssetWeight } =
@@ -867,7 +869,7 @@ export default class MangoAccount {
       uiBorrowVal = borrows.mul(price);
     }
 
-    let max;
+    let max = ZERO_I80F48;
     if (side === 'buy') {
       const uiHealthAtZero = uiInitHealth.add(
         uiBorrowVal.mul(initLiabWeight.sub(ONE_I80F48)),

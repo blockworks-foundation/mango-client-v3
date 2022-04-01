@@ -41,7 +41,7 @@ interface WalletAdapterProps {
   url: string;
   icon: string;
   readyState: WalletReadyState;
-  publicKey: PublicKey;
+  publicKey: PublicKey | null;
   connecting: boolean;
   connected: boolean;
   connect(): Promise<void>;

@@ -157,7 +157,7 @@ async function exampleSpot() {
   }
 
   // Place order
-  const owner = new Keypair(readKeypair());
+  const owner = readKeypair();
   const mangoAccount = (
     await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];

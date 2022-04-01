@@ -250,6 +250,9 @@ export class MangoClient {
     }[];
     payer: Payer;
   }) {
+    if (!payer.publicKey) {
+      return;
+    }
     const now = getUnixTs();
     let blockhash;
     // Get new blockhash if stored blockhash more than 70 seconds old
@@ -262,10 +265,12 @@ export class MangoClient {
     }
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
       transaction.recentBlockhash = blockhash;
-      transaction.setSigners(
-        payer.publicKey,
-        ...signers.map((s) => s.publicKey),
-      );
+      if (payer.publicKey) {
+        transaction.setSigners(
+          payer.publicKey,
+          ...signers.map((s) => s.publicKey),
+        );
+      }
       if (signers?.length > 0) {
         transaction.partialSign(...signers);
       }
@@ -630,7 +635,10 @@ export class MangoClient {
     quoteOptimalRate: number,
     quoteMaxRate: number,
     payer: Payer,
-  ): Promise<PublicKey> {
+  ): Promise<PublicKey | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const accountInstruction = await createAccountInstruction(
       this.connection,
       payer.publicKey,
@@ -765,7 +773,10 @@ export class MangoClient {
   async initMangoAccount(
     mangoGroup: MangoGroup,
     owner: Payer,
-  ): Promise<PublicKey> {
+  ): Promise<PublicKey | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const accountInstruction = await createAccountInstruction(
       this.connection,
       owner.publicKey,
@@ -799,7 +810,10 @@ export class MangoClient {
     owner: Payer,
     accountNum: number,
     payerPk?: PublicKey,
-  ): Promise<PublicKey> {
+  ): Promise<PublicKey | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const payer = payerPk ?? owner.publicKey;
     const accountNumBN = new BN(accountNum);
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
@@ -836,7 +850,10 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     owner: Payer,
     accountNum: number,
-  ): Promise<PublicKey> {
+  ): Promise<PublicKey | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const accountNumBN = new BN(accountNum);
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
       [
@@ -901,7 +918,11 @@ export class MangoClient {
 
     quantity: number,
     info?: string,
-  ): Promise<string> {
+  ): Promise<string | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
+
     const transaction = new Transaction();
     const accountInstruction = await createAccountInstruction(
       this.connection,
@@ -1019,9 +1040,13 @@ export class MangoClient {
     info?: string,
     referrerPk?: PublicKey,
     payerPk?: PublicKey,
-  ): Promise<[string, TransactionSignature]> {
+  ): Promise<[string, TransactionSignature] | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const payer = payerPk ?? owner.publicKey;
+
     const accountNumBN = new BN(accountNum);
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
       [
@@ -1161,7 +1186,10 @@ export class MangoClient {
     tokenAcc: PublicKey,
 
     quantity: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const additionalSigners: Array<Keypair> = [];
     const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
@@ -1246,7 +1274,11 @@ export class MangoClient {
 
     quantity: number,
     allowBorrow: boolean,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
+
     const transaction = new Transaction();
     const additionalSigners: Keypair[] = [];
     const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
@@ -1341,6 +1373,9 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     owner: Payer,
   ) {
+    if (!owner.publicKey) {
+      return;
+    }
     const transactionsAndSigners: {
       transaction: Transaction;
       signers: Keypair[];
@@ -1634,7 +1669,6 @@ export class MangoClient {
     mangoCache: PublicKey, // TODO - remove; already in MangoGroup
     perpMarket: PerpMarket,
     owner: Payer,
-
     side: 'buy' | 'sell',
     price: number,
     quantity: number,
@@ -1643,7 +1677,10 @@ export class MangoClient {
     bookSideInfo?: AccountInfo<Buffer>,
     reduceOnly?: boolean,
     referrerMangoAccountPk?: PublicKey,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
       price,
       quantity,
@@ -1737,7 +1774,10 @@ export class MangoClient {
       referrerMangoAccountPk?: PublicKey;
       expiryTimestamp?: number;
     },
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     options = options ? options : {};
     let {
       maxQuoteQuantity,
@@ -1839,7 +1879,10 @@ export class MangoClient {
     perpMarket: PerpMarket,
     order: PerpOrder,
     invalidIdOk = false,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -1867,7 +1910,10 @@ export class MangoClient {
     perpMarkets: PerpMarket[],
     mangoAccount: MangoAccount,
     owner: Payer,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     let tx = new Transaction();
     const transactions: Transaction[] = [];
 
@@ -2083,7 +2129,10 @@ export class MangoClient {
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientId?: BN,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
 
@@ -2269,7 +2318,10 @@ export class MangoClient {
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId?: BN,
     useMsrmVault?: boolean | undefined,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
     const allTransactions: Transaction[] = [];
@@ -2468,7 +2520,10 @@ export class MangoClient {
     owner: Payer,
     spotMarket: Market,
     order: Order,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const instruction = makeCancelSpotOrderInstruction(
       this.programId,
@@ -2538,7 +2593,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     owner: Payer,
     spotMarket: Market,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
     const dexSigner = await PublicKey.createProgramAddress(
       [
@@ -2596,7 +2654,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     spotMarkets: Market[],
     owner: Payer,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transactions: Transaction[] = [];
 
     let j = 0;
@@ -2886,12 +2947,12 @@ export class MangoClient {
     quoteRootBank: RootBank,
     owner: Payer,
     mangoAccounts?: MangoAccount[],
-  ): Promise<(TransactionSignature | null)[]> {
+  ): Promise<TransactionSignature[] | undefined> {
     // fetch all MangoAccounts filtered for having this perp market in basket
     if (mangoAccounts === undefined) {
       mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
     }
-    return await Promise.all(
+    const signatures: (TransactionSignature | null)[] = await Promise.all(
       perpMarkets.map((pm) => {
         const marketIndex = mangoGroup.getPerpMarketIndex(pm.publicKey);
         const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
@@ -2915,6 +2976,17 @@ export class MangoClient {
           : promiseNull();
       }),
     );
+
+    function filterNulls<TransactionSignature>(
+      value: TransactionSignature | null,
+    ): value is TransactionSignature {
+      if (value === null) return false;
+      return true;
+    }
+
+    const filtered = signatures?.filter(filterNulls)
+
+    return filtered?.length ? filtered : undefined;
   }
 
   /**
@@ -3238,6 +3310,9 @@ export class MangoClient {
     lmSizeShift: number,
     baseDecimals: number,
   ) {
+    if (!admin.publicKey) {
+      return;
+    }
     const [perpMarketPk] = await PublicKey.findProgramAddress(
       [
         mangoGroup.publicKey.toBytes(),
@@ -3696,7 +3771,10 @@ export class MangoClient {
     mngoRootBank: PublicKey,
     mngoNodeBank: PublicKey,
     mngoVault: PublicKey,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeRedeemMngoInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3723,7 +3801,10 @@ export class MangoClient {
     mngoRootBank: PublicKey,
     mngoNodeBank: PublicKey,
     mngoVault: PublicKey,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const transactions: Transaction[] = [];
     let transaction = new Transaction();
 
@@ -3802,7 +3883,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     owner: Payer,
     info: string,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeAddMangoAccountInfoInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3823,7 +3907,10 @@ export class MangoClient {
     owner: Payer,
     msrmAccount: PublicKey,
     quantity: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeDepositMsrmInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3845,7 +3932,10 @@ export class MangoClient {
     owner: Payer,
     msrmAccount: PublicKey,
     quantity: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeWithdrawMsrmInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3878,7 +3968,10 @@ export class MangoClient {
     targetPeriodLength: number | undefined,
     mngoPerPeriod: number | undefined,
     exp: number | undefined,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeChangePerpMarketParamsInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3920,7 +4013,10 @@ export class MangoClient {
     exp: number | undefined,
     version: number | undefined,
     lmSizeShift: number | undefined,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeChangePerpMarketParams2Instruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3951,7 +4047,10 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     newAdmin: PublicKey,
     admin: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeSetGroupAdminInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3979,7 +4078,10 @@ export class MangoClient {
     price: number,
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
 
     const instruction = makeCancelSpotOrderInstruction(
@@ -4206,7 +4308,10 @@ export class MangoClient {
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     invalidIdOk = false, // Don't throw error if order is invalid
     referrerMangoAccountPk?: PublicKey,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const additionalSigners: Keypair[] = [];
 
@@ -4300,7 +4405,10 @@ export class MangoClient {
     triggerPrice: number,
     reduceOnly: boolean,
     clientOrderId?: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const additionalSigners: Keypair[] = [];
 
@@ -4380,7 +4488,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     owner: Payer,
     orderIndex: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeRemoveAdvancedOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4402,7 +4513,10 @@ export class MangoClient {
     perpMarket: PerpMarket,
     payer: Payer,
     orderIndex: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const openOrders = mangoAccount.spotOpenOrders.filter(
       (pk, i) => mangoAccount.inMarginBasket[i],
     );
@@ -4431,7 +4545,10 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     payer: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeCloseAdvancedOrdersInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4450,7 +4567,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     payer: Payer,
     marketIndex: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeCloseSpotOpenOrdersInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4471,7 +4591,10 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     payer: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeCloseMangoAccountInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4487,7 +4610,10 @@ export class MangoClient {
   async createDustAccount(
     mangoGroup: MangoGroup,
     payer: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
       [mangoGroup.publicKey.toBytes(), new Buffer('DustAccount', 'utf-8')],
       this.programId,
@@ -4510,7 +4636,10 @@ export class MangoClient {
     rootBank: RootBank,
     mangoCache: MangoCache,
     payer: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const [dustAccountPk] = await PublicKey.findProgramAddress(
       [mangoGroup.publicKey.toBytes(), new Buffer('DustAccount', 'utf-8')],
       this.programId,
@@ -4554,6 +4683,9 @@ export class MangoClient {
     mangoCache: MangoCache,
     payer: Payer,
   ) {
+    if (!payer.publicKey) {
+      return;
+    }
     const transactionsAndSigners: {
       transaction: Transaction;
       signers: Keypair[];
@@ -4627,7 +4759,10 @@ export class MangoClient {
     mangoCache: MangoCache,
     mngoIndex: number,
     payer: Payer,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const transactionsAndSigners: {
       transaction: Transaction;
       signers: Keypair[];
@@ -4899,6 +5034,9 @@ export class MangoClient {
     side: 'buy' | 'sell',
     limit: number,
   ) {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeCancelPerpOrdersSideInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4923,6 +5061,9 @@ export class MangoClient {
     payer: Payer,
     delegate: PublicKey,
   ) {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeSetDelegateInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4950,7 +5091,10 @@ export class MangoClient {
     optimalRate: number | undefined,
     maxRate: number | undefined,
     version: number | undefined,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeChangeSpotMarketParamsInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4987,7 +5131,10 @@ export class MangoClient {
     refSurcharge: number,
     refShare: number,
     refMngoRequired: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeChangeReferralFeeParamsInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -5007,7 +5154,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     payer: Payer, // must be also owner of mangoAccount
     referrerMangoAccountPk: PublicKey,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     // Generate the PDA pubkey
     const [referrerMemoryPk] = await PublicKey.findProgramAddress(
       [mangoAccount.publicKey.toBytes(), new Buffer('ReferrerMemory', 'utf-8')],
@@ -5064,7 +5214,10 @@ export class MangoClient {
     referrerMangoAccount: MangoAccount,
     payer: Payer, // will also owner of referrerMangoAccount
     referrerId: string,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const { referrerPda, encodedReferrerId } = await this.getReferrerPda(
       mangoGroup,
       referrerId,

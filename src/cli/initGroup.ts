@@ -16,7 +16,7 @@ export default async function initGroup(
   quoteOptimalUtil: number,
   quoteOptimalRate: number,
   quoteMaxRate: number,
-): Promise<GroupConfig> {
+): Promise<GroupConfig | undefined> {
   console.log({
     connection,
     payer,
@@ -41,6 +41,9 @@ export default async function initGroup(
     quoteMaxRate,
     payer,
   );
+  if (!groupKey) {
+    return;
+  }
   const group = await client.getMangoGroup(groupKey);
   const banks = await group.loadRootBanks(connection);
   const tokenIndex = group.getTokenIndex(quoteMint);
