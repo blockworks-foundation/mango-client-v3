@@ -109,6 +109,7 @@ import {
   makeUpgradeMangoAccountV0V1Instruction,
   makeWithdrawInstruction,
   makeWithdrawMsrmInstruction,
+  makeCancelAllSpotOrdersInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -5115,5 +5116,57 @@ export class MangoClient {
     });
 
     return referrerIds;
+  }
+
+  async cancelAllSpotOrders(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    spotMarket: Market,
+    baseRootBank: RootBank,
+    quoteRootBank: RootBank,
+    owner: Payer,
+    limit: BN,
+  ) {
+    const baseNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
+    const quoteNodeBanks = await quoteRootBank.loadNodeBanks(this.connection);
+    const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
+
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
+    const instruction = makeCancelAllSpotOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      baseRootBank.publicKey,
+      baseNodeBanks[0].publicKey,
+      baseNodeBanks[0].vault,
+      quoteRootBank.publicKey,
+      quoteNodeBanks[0].publicKey,
+      quoteNodeBanks[0].vault,
+      spotMarket.publicKey,
+      spotMarket.bidsAddress,
+      spotMarket.asksAddress,
+      mangoAccount.spotOpenOrders[spotMarketIndex],
+      mangoGroup.signerKey,
+      spotMarket['_decoded'].eventQueue,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      dexSigner,
+      mangoGroup.dexProgramId,
+      limit,
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, owner, []);
   }
 }

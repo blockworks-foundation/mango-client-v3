@@ -2324,3 +2324,62 @@ export function makeRegisterReferrerIdInstruction(
     programId,
   });
 }
+
+export function makeCancelAllSpotOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
+  mangoAccountPk: PublicKey,
+  owner: PublicKey,
+  baseRootBankPk: PublicKey,
+  baseNodeBankPk: PublicKey,
+  baseVaultPk: PublicKey,
+  quoteRootBankPk: PublicKey,
+  quoteNodeBankPk: PublicKey,
+  quoteVaultPk: PublicKey,
+  spotMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  openOrders: PublicKey,
+  signerPk: PublicKey,
+  dexEventQueuePk: PublicKey,
+  dexBasePk: PublicKey,
+  dexQuotePk: PublicKey,
+  dexSignerPk: PublicKey,
+  dexProgramPk: PublicKey,
+  limit: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: owner },
+    { isSigner: false, isWritable: false, pubkey: baseRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseVaultPk },
+    { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
+    { isSigner: false, isWritable: true, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: openOrders },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: true, pubkey: dexEventQueuePk },
+    { isSigner: false, isWritable: true, pubkey: dexBasePk },
+    { isSigner: false, isWritable: true, pubkey: dexQuotePk },
+    { isSigner: false, isWritable: false, pubkey: dexSignerPk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    CancelAllSpotOrders: {
+      limit,
+    },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
