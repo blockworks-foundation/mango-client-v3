@@ -1,19 +1,27 @@
 {
-  "extends": "@tsconfig/recommended/tsconfig.json",
-
-  "compilerOptions": {
-    "outDir": "./lib",
-    "target": "es6",
-    "lib": ["es2019"],
-    "allowJs": true,
-    "checkJs": true,
-    "declaration": true,
-    "declarationMap": true,
-    "noImplicitAny": false,
-    "resolveJsonModule": true,
-    "sourceMap": true,
-    "esModuleInterop": true
-  },
-  "include": ["./src/**/*", "examples/example.ts"],
-  "exclude": ["./src/**/*.test.js", "node_modules", "**/node_modules"]
+	"extends": "@tsconfig/recommended/tsconfig.json",
+	"compilerOptions": {
+		"outDir": "./lib",
+		"target": "es6",
+		"lib": [
+			"es2019"
+		],
+		"allowJs": true,
+		"checkJs": true,
+		"declaration": true,
+		"declarationMap": true,
+		"noImplicitAny": false,
+		"resolveJsonModule": true,
+		"sourceMap": true,
+		"esModuleInterop": true
+	},
+	"include": [
+		"./src/**/*",
+		"examples/example.ts"
+	],
+	"exclude": [
+		"./src/**/*.test.js",
+		"node_modules",
+		"**/node_modules"
+	]
 }
