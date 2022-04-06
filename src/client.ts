@@ -180,6 +180,7 @@ export class MangoClient {
       postSendTxCallback?: ({ txid }: { txid: string }) => void;
       maxStoredBlockhashes?: number;
       blockhashCommitment?: Commitment;
+      timeout?: number;
     } = {},
   ) {
     this.connection = connection;
@@ -189,7 +190,7 @@ export class MangoClient {
     this.recentBlockhashTime = 0;
     this.maxStoredBlockhashes = opts?.maxStoredBlockhashes || 7;
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
-    this.timeout = null;
+    this.timeout = opts?.timeout || 60000;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
     }
@@ -199,7 +200,7 @@ export class MangoClient {
     transactions: Transaction[],
     payer: Payer,
     additionalSigners: Keypair[],
-    timeout: number | null = null,
+    timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'confirmed',
   ): Promise<TransactionSignature[]> {
     return await Promise.all(
@@ -288,20 +289,19 @@ export class MangoClient {
     }
   }
 
-  // TODO - switch Account to Keypair and switch off setSigners due to deprecated
   /**
    * Send a transaction using the Solana Web3.js connection on the mango client
    *
    * @param transaction
    * @param payer
    * @param additionalSigners
-   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Defaults to 30000ms. Passing null will disable the transaction confirmation check and always return success.
+   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Passing null will disable the transaction confirmation check and always return success.
    */
   async sendTransaction(
     transaction: Transaction,
     payer: Payer,
     additionalSigners: Keypair[],
-    timeout: number | null = 30000,
+    timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
     await this.signTransaction({
@@ -403,11 +403,11 @@ export class MangoClient {
 
   async sendSignedTransaction({
     signedTransaction,
-    timeout = 30000,
+    timeout = this.timeout,
     confirmLevel = 'processed',
   }: {
     signedTransaction: Transaction;
-    timeout?: number;
+    timeout?: number | null;
     confirmLevel?: TransactionConfirmationStatus;
   }): Promise<TransactionSignature> {
     const rawTransaction = signedTransaction.serialize();
@@ -427,6 +427,7 @@ export class MangoClient {
         console.log(`postSendTxCallback error ${e}`);
       }
     }
+    if (!timeout) return txid;
 
     // console.log('Started awaiting confirmation for', txid);
 
