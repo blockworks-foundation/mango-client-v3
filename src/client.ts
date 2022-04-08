@@ -537,7 +537,7 @@ export class MangoClient {
           done = true;
           console.log('WS error in setup', txid, e);
         }
-        let retrySleep = 200;
+        let retrySleep = 400;
         while (!done) {
           // eslint-disable-next-line no-loop-func
           await sleep(retrySleep);
