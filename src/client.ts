@@ -138,6 +138,7 @@ import {
 import MangoGroup from './MangoGroup';
 import { makeCreateSpotOpenOrdersInstruction } from './instruction';
 import { ReferrerIdRecord, ReferrerIdRecordLayout } from './layout';
+import * as bs58 from 'bs58';
 
 /**
  * Get the current epoch timestamp in seconds with microsecond precision
@@ -160,6 +161,7 @@ type AccountWithPnl = {
  */
 export class MangoClient {
   connection: Connection;
+  sendConnection?: Connection;
   programId: PublicKey;
   lastSlot: number;
   recentBlockhash: string;
@@ -177,6 +179,8 @@ export class MangoClient {
       postSendTxCallback?: ({ txid }: { txid: string }) => void;
       maxStoredBlockhashes?: number;
       blockhashCommitment?: Commitment;
+      timeout?: number;
+      sendConnection?: Connection;
     } = {},
   ) {
     this.connection = connection;
@@ -186,7 +190,8 @@ export class MangoClient {
     this.recentBlockhashTime = 0;
     this.maxStoredBlockhashes = opts?.maxStoredBlockhashes || 7;
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
-    this.timeout = null;
+    this.timeout = opts?.timeout || 60000;
+    this.sendConnection = opts.sendConnection;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
     }
@@ -196,7 +201,7 @@ export class MangoClient {
     transactions: Transaction[],
     payer: Payer,
     additionalSigners: Keypair[],
-    timeout: number | null = null,
+    timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'confirmed',
   ): Promise<TransactionSignature[]> {
     return await Promise.all(
@@ -285,20 +290,19 @@ export class MangoClient {
     }
   }
 
-  // TODO - switch Account to Keypair and switch off setSigners due to deprecated
   /**
    * Send a transaction using the Solana Web3.js connection on the mango client
    *
    * @param transaction
    * @param payer
    * @param additionalSigners
-   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Defaults to 30000ms. Passing null will disable the transaction confirmation check and always return success.
+   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Passing null will disable the transaction confirmation check and always return success.
    */
   async sendTransaction(
     transaction: Transaction,
     payer: Payer,
     additionalSigners: Keypair[],
-    timeout: number | null = 30000,
+    timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
     await this.signTransaction({
@@ -308,90 +312,107 @@ export class MangoClient {
     });
 
     const rawTransaction = transaction.serialize();
+    let txid = bs58.encode(transaction.signatures[0].signature);
     const startTime = getUnixTs();
 
-    const txid: TransactionSignature = await this.connection.sendRawTransaction(
-      rawTransaction,
-      { skipPreflight: true },
-    );
-
-    if (this.postSendTxCallback) {
+    if (this.sendConnection) {
+      const promise = this.sendConnection.sendRawTransaction(rawTransaction);
+      if (this.postSendTxCallback) {
+        try {
+          this.postSendTxCallback({ txid });
+        } catch (e) {
+          console.warn(`postSendTxCallback error ${e}`);
+        }
+      }
       try {
-        this.postSendTxCallback({ txid });
+        return await promise;
       } catch (e) {
-        console.log(`postSendTxCallback error ${e}`);
+        console.error(e);
+        throw new MangoError({ message: 'Transaction failed', txid });
       }
-    }
+    } else {
+      txid = await this.connection.sendRawTransaction(rawTransaction, {
+        skipPreflight: true,
+      });
 
-    if (this.timeout) {
-      timeout = this.timeout < 0 ? timeout : this.timeout * 1000;
-    }
-    if (!timeout) return txid;
-
-    console.log(
-      'Started awaiting confirmation for',
-      txid,
-      'size:',
-      rawTransaction.length,
-    );
-
-    let done = false;
-
-    let retrySleep = 1000;
-    (async () => {
-      // TODO - make sure this works well on mainnet
-      while (!done && getUnixTs() - startTime < timeout / 1000) {
-        await sleep(retrySleep);
-        // console.log(new Date().toUTCString(), ' sending tx ', txid);
-        this.connection.sendRawTransaction(rawTransaction, {
-          skipPreflight: true,
-        });
+      if (this.postSendTxCallback) {
+        try {
+          this.postSendTxCallback({ txid });
+        } catch (e) {
+          console.warn(`postSendTxCallback error ${e}`);
+        }
       }
-      if (retrySleep <= 8000) {
-        retrySleep = retrySleep * 2;
-      }
-    })();
 
-    try {
-      await this.awaitTransactionSignatureConfirmation(
+      if (this.timeout) {
+        timeout = this.timeout < 0 ? timeout : this.timeout * 1000;
+      }
+      if (!timeout) return txid;
+
+      console.log(
+        'Started awaiting confirmation for',
         txid,
-        timeout,
-        confirmLevel,
+        'size:',
+        rawTransaction.length,
       );
-    } catch (err: any) {
-      if (err.timeout) {
-        throw new TimeoutError({ txid });
-      }
-      let simulateResult: SimulatedTransactionResponse | null = null;
-      try {
-        simulateResult = (
-          await simulateTransaction(this.connection, transaction, 'processed')
-        ).value;
-      } catch (e) {
-        console.warn('Simulate transaction failed');
-      }
 
-      if (simulateResult && simulateResult.err) {
-        if (simulateResult.logs) {
-          for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
-            const line = simulateResult.logs[i];
-            if (line.startsWith('Program log: ')) {
-              throw new MangoError({
-                message:
-                  'Transaction failed: ' + line.slice('Program log: '.length),
-                txid,
-              });
+      let done = false;
+
+      let retrySleep = 1000;
+      (async () => {
+        // TODO - make sure this works well on mainnet
+        while (!done && getUnixTs() - startTime < timeout / 1000) {
+          await sleep(retrySleep);
+          // console.log(new Date().toUTCString(), ' sending tx ', txid);
+          this.connection.sendRawTransaction(rawTransaction, {
+            skipPreflight: true,
+          });
+        }
+        if (retrySleep <= 8000) {
+          retrySleep = retrySleep * 2;
+        }
+      })();
+
+      try {
+        await this.awaitTransactionSignatureConfirmation(
+          txid,
+          timeout,
+          confirmLevel,
+        );
+      } catch (err: any) {
+        if (err.timeout) {
+          throw new TimeoutError({ txid });
+        }
+        let simulateResult: SimulatedTransactionResponse | null = null;
+        try {
+          simulateResult = (
+            await simulateTransaction(this.connection, transaction, 'processed')
+          ).value;
+        } catch (e) {
+          console.warn('Simulate transaction failed');
+        }
+
+        if (simulateResult && simulateResult.err) {
+          if (simulateResult.logs) {
+            for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
+              const line = simulateResult.logs[i];
+              if (line.startsWith('Program log: ')) {
+                throw new MangoError({
+                  message:
+                    'Transaction failed: ' + line.slice('Program log: '.length),
+                  txid,
+                });
+              }
             }
           }
+          throw new MangoError({
+            message: JSON.stringify(simulateResult.err),
+            txid,
+          });
         }
-        throw new MangoError({
-          message: JSON.stringify(simulateResult.err),
-          txid,
-        });
+        throw new MangoError({ message: 'Transaction failed', txid });
+      } finally {
+        done = true;
       }
-      throw new MangoError({ message: 'Transaction failed', txid });
-    } finally {
-      done = true;
     }
 
     console.log('Latency', txid, getUnixTs() - startTime);
@@ -400,90 +421,106 @@ export class MangoClient {
 
   async sendSignedTransaction({
     signedTransaction,
-    timeout = 30000,
+    timeout = this.timeout,
     confirmLevel = 'processed',
   }: {
     signedTransaction: Transaction;
-    timeout?: number;
+    timeout?: number | null;
     confirmLevel?: TransactionConfirmationStatus;
   }): Promise<TransactionSignature> {
     const rawTransaction = signedTransaction.serialize();
+    let txid = bs58.encode(signedTransaction.signatures[0].signature);
     const startTime = getUnixTs();
 
-    const txid: TransactionSignature = await this.connection.sendRawTransaction(
-      rawTransaction,
-      {
+    if (this.sendConnection) {
+      const promise = this.sendConnection.sendRawTransaction(rawTransaction);
+      if (this.postSendTxCallback) {
+        try {
+          this.postSendTxCallback({ txid });
+        } catch (e) {
+          console.warn(`postSendTxCallback error ${e}`);
+        }
+      }
+      try {
+        return await promise;
+      } catch (e) {
+        console.error(e);
+        throw new MangoError({ message: 'Transaction failed', txid });
+      }
+    } else {
+      txid = await this.connection.sendRawTransaction(rawTransaction, {
         skipPreflight: true,
-      },
-    );
+      });
 
-    if (this.postSendTxCallback) {
+      if (this.postSendTxCallback) {
+        try {
+          this.postSendTxCallback({ txid });
+        } catch (e) {
+          console.log(`postSendTxCallback error ${e}`);
+        }
+      }
+      if (!timeout) return txid;
+
+      // console.log('Started awaiting confirmation for', txid);
+
+      let done = false;
+      (async () => {
+        await sleep(500);
+        while (!done && getUnixTs() - startTime < timeout) {
+          this.connection.sendRawTransaction(rawTransaction, {
+            skipPreflight: true,
+          });
+          await sleep(1000);
+        }
+      })();
       try {
-        this.postSendTxCallback({ txid });
-      } catch (e) {
-        console.log(`postSendTxCallback error ${e}`);
-      }
-    }
-
-    // console.log('Started awaiting confirmation for', txid);
-
-    let done = false;
-    (async () => {
-      await sleep(500);
-      while (!done && getUnixTs() - startTime < timeout) {
-        this.connection.sendRawTransaction(rawTransaction, {
-          skipPreflight: true,
-        });
-        await sleep(1000);
-      }
-    })();
-    try {
-      await this.awaitTransactionSignatureConfirmation(
-        txid,
-        timeout,
-        confirmLevel,
-      );
-    } catch (err: any) {
-      if (err.timeout) {
-        throw new TimeoutError({ txid });
-      }
-      let simulateResult: SimulatedTransactionResponse | null = null;
-      try {
-        simulateResult = (
-          await simulateTransaction(
-            this.connection,
-            signedTransaction,
-            'single',
-          )
-        ).value;
-      } catch (e) {
-        console.log('Simulate tx failed');
-      }
-      if (simulateResult && simulateResult.err) {
-        if (simulateResult.logs) {
-          for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
-            const line = simulateResult.logs[i];
-            if (line.startsWith('Program log: ')) {
-              throw new MangoError({
-                message:
-                  'Transaction failed: ' + line.slice('Program log: '.length),
-                txid,
-              });
+        await this.awaitTransactionSignatureConfirmation(
+          txid,
+          timeout,
+          confirmLevel,
+        );
+      } catch (err: any) {
+        if (err.timeout) {
+          throw new TimeoutError({ txid });
+        }
+        let simulateResult: SimulatedTransactionResponse | null = null;
+        try {
+          simulateResult = (
+            await simulateTransaction(
+              this.connection,
+              signedTransaction,
+              'single',
+            )
+          ).value;
+        } catch (e) {
+          console.log('Simulate tx failed');
+        }
+        if (simulateResult && simulateResult.err) {
+          if (simulateResult.logs) {
+            for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
+              const line = simulateResult.logs[i];
+              if (line.startsWith('Program log: ')) {
+                throw new MangoError({
+                  message:
+                    'Transaction failed: ' + line.slice('Program log: '.length),
+                  txid,
+                });
+              }
             }
           }
+          throw new MangoError({
+            message: JSON.stringify(simulateResult.err),
+            txid,
+          });
         }
-        throw new MangoError({
-          message: JSON.stringify(simulateResult.err),
-          txid,
-        });
+        throw new MangoError({ message: 'Transaction failed', txid });
+      } finally {
+        done = true;
       }
-      throw new MangoError({ message: 'Transaction failed', txid });
-    } finally {
-      done = true;
-    }
 
-    // console.log('Latency', txid, getUnixTs() - startTime);
-    return txid;
+      // console.log('Latency', txid, getUnixTs() - startTime);
+      return txid;
+    }
   }
 
   async awaitTransactionSignatureConfirmation(
@@ -533,7 +570,7 @@ export class MangoClient {
           done = true;
           console.log('WS error in setup', txid, e);
         }
-        let retrySleep = 200;
+        let retrySleep = 400;
         while (!done) {
           // eslint-disable-next-line no-loop-func
           await sleep(retrySleep);

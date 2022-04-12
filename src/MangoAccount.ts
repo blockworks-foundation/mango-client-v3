@@ -952,7 +952,9 @@ export default class MangoAccount {
     lines.push('beingLiquidated: ' + this.beingLiquidated);
 
     lines.push('Spot:');
-    lines.push('Token: Net Balance / Base In Orders / Quote In Orders');
+    lines.push(
+      'Token: Net Balance / Base In Orders / Quote In Orders / Liq. Price',
+    );
 
     const quoteAdj = new BN(10).pow(
       new BN(mangoGroup.tokens[QUOTE_INDEX].decimals),
@@ -992,16 +994,24 @@ export default class MangoAccount {
       ) {
         continue;
       }
-
+      const liqPrice =
+        i !== QUOTE_INDEX
+          ? this.getLiquidationPrice(mangoGroup, cache, i)
+          : undefined;
+      const liqPriceStr = liqPrice !== undefined ? liqPrice.toFixed(4) : 'N/A';
       lines.push(
         `${token.symbol}: ${net.toFixed(4)} / ${baseInOrders
           .toNumber()
-          .toFixed(4)} / ${quoteInOrders.toNumber().toFixed(4)}`,
+          .toFixed(4)} / ${quoteInOrders
+          .toNumber()
+          .toFixed(4)} / ${liqPriceStr}`,
       );
     }
 
     lines.push('Perps:');
-    lines.push('Market: Base Pos / Quote Pos / Unsettled Funding / Health');
+    lines.push(
+      'Market: Base Pos / Quote Pos / Unsettled Funding / Health / Liq. Price',
+    );
 
     for (let i = 0; i < this.perpAccounts.length; i++) {
       if (mangoGroup.perpMarkets[i].perpMarket.equals(zeroKey)) {
@@ -1014,6 +1024,10 @@ export default class MangoAccount {
       if (market === undefined) {
         continue;
       }
+
+      const liqPrice = this.getLiquidationPrice(mangoGroup, cache, i);
+      const liqPriceStr = liqPrice !== undefined ? liqPrice.toFixed(4) : 'N/A';
+
       const perpAccount = this.perpAccounts[i];
       const perpMarketInfo = mangoGroup.perpMarkets[i];
       lines.push(
@@ -1035,7 +1049,7 @@ export default class MangoAccount {
             cache.perpMarketCache[i].longFunding,
             cache.perpMarketCache[i].shortFunding,
           )
-          .toFixed(4)}`,
+          .toFixed(4)} / ${liqPriceStr}`,
       );
     }
     return lines.join(EOL);

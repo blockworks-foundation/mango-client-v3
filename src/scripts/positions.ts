@@ -1,6 +1,6 @@
 import { Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
-import { Cluster, Config } from '../config';
+import { Cluster, Config, getPerpMarketByBaseSymbol } from '../config';
 
 const config = Config.ids();
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -49,8 +49,32 @@ async function watchHighestLiabilities(n: number) {
   }
 }
 
+async function watchHighestOI(mkt: string, n: number) {
+  const cfg = getPerpMarketByBaseSymbol(groupIds!, mkt)!;
+
+  console.log('getMangoGroup');
+  const group = await client.getMangoGroup(mangoGroupKey);
+  console.log('getAllMangoAccounts');
+  const mangoAccounts = await client.getAllMangoAccounts(group);
+  console.log('loadCache');
+  const cache = await group.loadCache(connection);
+
+  mangoAccounts.sort((a, b) => {
+    const aOI = a.perpAccounts[cfg.marketIndex].basePosition.abs();
+    const bOA = b.perpAccounts[cfg.marketIndex].basePosition.abs();
+    return bOA.sub(aOI).toNumber();
+  });
+
+  for (let i = 0; i < Math.min(n, mangoAccounts.length); i++) {
+    console.log(i);
+    console.log(mangoAccounts[i].toPrettyString(groupIds!, group, cache));
+  }
+}
+
 if (process.env.ACC) {
   watchAccount(new PublicKey(process.env.ACC));
+} else if (process.env.PERP) {
+  watchHighestOI(process.env.PERP, 5);
 } else {
   watchHighestLiabilities(30);
 }
