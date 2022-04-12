@@ -9,7 +9,9 @@ import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
 import { I80F48, ZERO_I80F48 } from './utils/fixednum';
-import { PerpOrder, PerpOrderType, ZERO_BN } from '.';
+import { PerpOrder } from './book';
+import { PerpOrderType } from './utils/types';
+import { ZERO_BN } from './utils/utils';
 
 export function makeInitMangoGroupInstruction(
   programId: PublicKey,

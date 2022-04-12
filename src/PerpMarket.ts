@@ -1,20 +1,18 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import Big from 'big.js';
 import BN from 'bn.js';
+import { clamp, nativeToUi, ONE_BN } from './utils/utils';
+import PerpEventQueue from './PerpEventQueue';
 import {
-  BookSide,
-  BookSideLayout,
-  clamp,
-  FillEvent,
-  MangoAccount,
-  MangoCache,
-  MetaData,
-  nativeToUi,
-  ONE_BN,
-  PerpEventQueue,
   PerpEventQueueLayout,
-  PerpMarketConfig,
-} from '.';
+  MangoCache,
+  BookSideLayout,
+  MetaData,
+  FillEvent,
+} from './layout';
+import { PerpMarketConfig } from './config';
+import MangoAccount from './MangoAccount';
+import { BookSide } from './book';
 import { I80F48 } from './utils/fixednum';
 import { Modify } from './utils/types';
 import { ZERO_BN } from './utils/utils';

@@ -22,20 +22,17 @@ import BN from 'bn.js';
 import MangoGroup from './MangoGroup';
 import PerpAccount from './PerpAccount';
 import { EOL } from 'os';
+import { getPriceFromKey } from './book';
 import {
-  AdvancedOrdersLayout,
   getMarketByPublicKey,
-  getMultipleAccounts,
-  getPriceFromKey,
   getTokenByMint,
   GroupConfig,
   PerpMarketConfig,
-  PerpTriggerOrder,
-  sleep,
-  TokenConfig,
-  ZERO_BN,
   Config,
-} from '.';
+  TokenConfig,
+} from './config';
+import { getMultipleAccounts, sleep, ZERO_BN } from './utils/utils';
+import { AdvancedOrdersLayout, PerpTriggerOrder } from './layout';
 import PerpMarket from './PerpMarket';
 import { Order } from '@project-serum/serum/lib/market';
 import IDS from './ids.json';
