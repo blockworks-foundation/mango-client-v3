@@ -346,9 +346,6 @@ export class MangoClient {
         }
       }
 
-      if (this.timeout) {
-        timeout = this.timeout < 0 ? timeout : this.timeout * 1000;
-      }
       if (!timeout) return txid;
 
       console.log(
@@ -641,7 +638,7 @@ export class MangoClient {
         : blockhashTimes[0]
     ) as { blockhash: string; timestamp: number };
 
-    this.timeout = 90 - (now - blockhashTime.timestamp);
+    this.timeout = 90000 - (now - blockhashTime.timestamp);
     this.recentBlockhash = blockhashTime.blockhash;
     this.recentBlockhashTime = blockhashTime.timestamp;
   }
