@@ -212,7 +212,7 @@ async function processConsumeEvents(
             break;
           }
         }
-
+        const start = Date.now();
         return client
           .consumeEvents(
             mangoGroup,
@@ -224,6 +224,7 @@ async function processConsumeEvents(
             consumeEventsLimit,
           )
           .then(() => {
+            console.log(`metricName=ConsumeEventsSuccess durationMs=${Date.now() - start}`);
             console.log(
               `Consumed up to ${
                 events.length
@@ -236,18 +237,13 @@ async function processConsumeEvents(
           })
           .catch((err) => {
             console.error('Error consuming events', err);
+            console.log(`metricName=ConsumeEventsFailure durationMs=${Date.now() - start} errorCode=${err.name}`);
           });
       },
     );
 
-    promises.forEach((promise, i) => {
-      const start = Date.now();
-      promise.then(() => {
-        console.log(`metricName=ConsumeEventsSuccess durationMs=${Date.now() - start}`);
-      }).catch((err) => {
-        console.log(`metricName=ConsumeEventsFailure durationMs=${Date.now() - start} errorCode=${err.name}`);
-        console.error(`Error updating cache (${i+1}/${promises.length})`, err);
-      });
+    Promise.all(promises).catch((err) => {
+      console.error('Error consuming events', err);
     });
   } catch (err) {
     console.error('Error in processConsumeEvents', err);
