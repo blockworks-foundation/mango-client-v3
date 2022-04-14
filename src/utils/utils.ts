@@ -62,9 +62,11 @@ export function nativeI80F48ToUi(amount: I80F48, decimals: number): I80F48 {
 export class TimeoutError extends Error {
   message: string;
   txid: string;
+  name: string;
 
   constructor({ txid }) {
     super();
+    this.name = 'TimeoutError';
     this.message = `Timed out awaiting confirmation. Please confirm in the explorer: `;
     this.txid = txid;
   }
@@ -73,9 +75,11 @@ export class TimeoutError extends Error {
 export class MangoError extends Error {
   message: string;
   txid: string;
+  name: string;
 
   constructor({ txid, message }) {
     super();
+    this.name = 'MangoError';
     this.message = message;
     this.txid = txid;
   }

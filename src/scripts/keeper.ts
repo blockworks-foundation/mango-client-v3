@@ -148,8 +148,14 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
       }
     }
 
-    Promise.all(promises).catch((err) => {
-      console.error('Error updating cache', err);
+    promises.forEach((promise, i) => {
+      const start = Date.now();
+      promise.then(() => {
+        console.log(`metricName=UpdateCacheSuccess durationMs=${Date.now() - start}`);
+      }).catch((err) => {
+        console.log(`metricName=UpdateCacheFailure durationMs=${Date.now() - start} errorCode=${err.name}`);
+        console.error(`Error updating cache (${i+1}/${promises.length})`, err);
+      });
     });
   } catch (err) {
     console.error('Error in processUpdateCache', err);
@@ -234,8 +240,14 @@ async function processConsumeEvents(
       },
     );
 
-    Promise.all(promises).catch((err) => {
-      console.error('Error consuming events', err);
+    promises.forEach((promise, i) => {
+      const start = Date.now();
+      promise.then(() => {
+        console.log(`metricName=ConsumeEventsSuccess durationMs=${Date.now() - start}`);
+      }).catch((err) => {
+        console.log(`metricName=ConsumeEventsFailure durationMs=${Date.now() - start} errorCode=${err.name}`);
+        console.error(`Error updating cache (${i+1}/${promises.length})`, err);
+      });
     });
   } catch (err) {
     console.error('Error in processConsumeEvents', err);
@@ -310,8 +322,14 @@ async function processKeeperTransactions(
       }
     }
 
-    Promise.all(promises).catch((err) => {
-      console.error('Error processing keeper instructions', err);
+    promises.forEach((promise, i) => {
+      const start = Date.now();
+      promise.then(() => {
+        console.log(`metricName=UpdateKeeperSuccess durationMs=${Date.now() - start}`);
+      }).catch((err) => {
+        console.log(`metricName=UpdateKeeperFailure durationMs=${Date.now() - start} errorCode=${err.name}`);
+        console.error(`Error updating cache (${i+1}/${promises.length})`, err);
+      });
     });
   } catch (err) {
     console.error('Error in processKeeperTransactions', err);
