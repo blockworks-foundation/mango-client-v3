@@ -1644,7 +1644,7 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(consumeEventsInstruction);
 
-    return await this.sendTransaction(transaction, payer, [], null);
+    return await this.sendTransaction(transaction, payer, []);
   }
 
   /**
