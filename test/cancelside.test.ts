@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import { Cluster, Config, QUOTE_INDEX, sleep } from '../src';
 import configFile from '../src/ids.json';
-import { Account, Commitment, Connection } from '@solana/web3.js';
+import { Commitment, Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import TestGroup from './TestGroup';
 
@@ -10,19 +10,21 @@ async function testCancelSide() {
   const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
   const sleepTime = 2000;
   const config = new Config(configFile);
-
-  const payer = new Account(
-    JSON.parse(
-      process.env.KEYPAIR ||
-        fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
-    ),
+  const mangoProgramId = config.getGroup(cluster, 'devnet.2')!.mangoProgramId;
+  const payer = Keypair.fromSecretKey(
+    new Uint8Array(
+      JSON.parse(
+        process.env.KEYPAIR ||
+          fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+      ),
+    )
   );
   const connection = new Connection(
     config.cluster_urls[cluster],
     'processed' as Commitment,
   );
 
-  const testGroup = new TestGroup();
+  const testGroup = new TestGroup(connection, payer, mangoProgramId);
   const mangoGroupKey = await testGroup.init();
   const mangoGroup = await testGroup.client.getMangoGroup(mangoGroupKey);
   const perpMarkets = await Promise.all(
@@ -39,11 +41,11 @@ async function testCancelSide() {
   }
   const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
 
-  const accountPk = await testGroup.client.createMangoAccount(
+  const accountPk: PublicKey = (await testGroup.client.createMangoAccount(
     mangoGroup,
     payer,
     1,
-  );
+  ))!;
   console.log('Created Account:', accountPk.toBase58());
 
   await sleep(sleepTime);
