@@ -4847,8 +4847,10 @@ export class MangoClient {
       );
       redeemMngoTransaction.transaction.add(instruction);
     }
-    transactionsAndSigners.push(redeemMngoTransaction);
-
+    if (redeemMngoTransaction.transaction.instructions.length > 0){
+      transactionsAndSigners.push(redeemMngoTransaction);
+    }
+    
     const resolveAllDustTransaction = {
       transaction: new Transaction(),
       signers: [],
