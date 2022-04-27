@@ -25,6 +25,9 @@ import {
   promiseUndef,
   simulateTransaction,
   sleep,
+  MangoError,
+  U64_MAX_BN,
+  TimeoutError,
   uiToNative,
   ZERO_BN,
   zeroKey,
@@ -133,14 +136,8 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import {
-  makeCreateSpotOpenOrdersInstruction,
-  MangoError,
-  ReferrerIdRecord,
-  ReferrerIdRecordLayout,
-  TimeoutError,
-  U64_MAX_BN,
-} from '.';
+import { makeCreateSpotOpenOrdersInstruction } from './instruction';
+import { ReferrerIdRecord, ReferrerIdRecordLayout } from './layout';
 import * as bs58 from 'bs58';
 
 /**

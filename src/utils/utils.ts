@@ -1,6 +1,5 @@
 import BN from 'bn.js';
 import {
-  Account,
   AccountInfo,
   Commitment,
   Connection,
