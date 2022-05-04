@@ -39,7 +39,7 @@ spec:
           command:
             - keeper
             - --pulse-interval
-            - "1"
+            - "5"
             - --log-level
             - DEBUG
           livenessProbe:
