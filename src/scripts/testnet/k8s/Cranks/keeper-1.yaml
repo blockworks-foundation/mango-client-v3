@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: keeper
-          image: opinionatedgeek/mango-explorer-v3:latest
+          image: gcr.io/robotic-tide-349212/mango-explorer:latest
           imagePullPolicy: Always
           terminationMessagePolicy: FallbackToLogsOnError
           resources:
