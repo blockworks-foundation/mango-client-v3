@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+namespace: mango
+name: marketmaker-bnb-perp
+labels:
+    app: marketmaker
+    cluster: testnet
+    marketType: perp
+    market: BNB_USDC
+spec:
+replicas: 1
+selector:
+    matchLabels:
+    app: marketmaker-bnb-perp
+template:
+    metadata:
+    labels:
+        app: marketmaker-bnb-perp
+    spec:
+    containers:
+        - name: marketmaker-bnb-perp
+        image: gcr.io/robotic-tide-349212/mango-explorer:latest
+        imagePullPolicy: Always
+        terminationMessagePolicy: FallbackToLogsOnError
+        resources:
+            limits:
+            memory: 256Mi
+            requests:
+            memory: 64Mi
+        env:
+            - name: NODE_NAME
+            valueFrom:
+                fieldRef:
+                fieldPath: spec.nodeName
+        envFrom:
+            - secretRef:
+                name: marketmaker
+            - configMapRef:
+                name: cluster
+        command:
+            - marketmaker
+            - --account-address
+            - FxAVgbTBaWniRehfSfPVPmaPVT3xctkgjCtUubj9vJ1g
+            - --name
+            - "BNB-PERP Marketmaker ($(NODE_NAME))"
+            - --market
+            - perp:BNB-PERP
+            - --update-mode
+            - POLL
+            - --oracle-provider
+            - ftx
+            - --hedging-market
+            - "BNB/USDC"
+            - --hedging-target-balance
+            - "BNB:10"
+            - --chain
+            - ratios
+            - --ratios-spread
+            - "0.005"
+            - --ratios-spread
+            - "0.010"
+            - --ratios-spread
+            - "0.015"
+            - --ratios-position-size
+            - "0.05"
+            - --ratios-position-size
+            - "0.07"
+            - --ratios-position-size
+            - "0.09"
+            - --chain
+            - minimumcharge
+            - --minimumcharge-ratio
+            - "0.001"
+            - --chain
+            - biasquoteonposition
+            - --biasquoteonposition-bias
+            - "0.00005"
+            - --chain
+            - roundtolotsize
+            - --redeem-threshold
+            - "1"
+            - --existing-order-tolerance
+            - "0.0001"
+            - --minimumcharge-ratio
+            - "0.0001"
+            - --pulse-interval
+            - "10"
+            - --order-type
+            - POST_ONLY_SLIDE
+            - --expire-seconds
+            - "15"
+            - --match-limit
+            - "10"
+            - --blockhash-cache-duration
+            - "30"
+            - --log-level
+            - DEBUG
+            - --log-suppress-timestamp
+        # - --notify-errors
+        # - $(ERRORS_TELEGRAM)
+        livenessProbe:
+            exec:
+            command:
+                - file-age-check
+                - "180"
+                - /var/tmp/mango_healthcheck_marketmaker_pulse
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            successThreshold: 1
+            failureThreshold: 3
+        readinessProbe:
+            exec:
+            command:
+                - cat
+                - /var/tmp/mango_healthcheck_marketmaker_pulse
+            initialDelaySeconds: 30
+            failureThreshold: 12
+            periodSeconds: 5
+    restartPolicy: Always
