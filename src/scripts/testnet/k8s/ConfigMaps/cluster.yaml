@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster
+  namespace: mango
+  labels:
+    cluster: testnet
+data:
+  CLUSTER_NAME: testnet
+  CLUSTER_URL: https://api.testnet.solana.com
+  GROUP_NAME: testnet.0
