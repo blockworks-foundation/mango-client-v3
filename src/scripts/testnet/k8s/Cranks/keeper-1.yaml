@@ -40,8 +40,6 @@ spec:
             - keeper
             - --pulse-interval
             - "1"
-            - --skip-interval
-            - "5"
             - --log-level
             - DEBUG
           livenessProbe:
