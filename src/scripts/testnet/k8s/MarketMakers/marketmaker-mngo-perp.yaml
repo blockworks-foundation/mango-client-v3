@@ -1,44 +1,44 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-namespace: mango
-name: marketmaker-mngo-perp
-labels:
-    app: marketmaker
-    cluster: testnet
-    marketType: perp
-    market: MNGO_USDC
+  namespace: mango
+  name: marketmaker-mngo-perp
+  labels:
+      app: marketmaker
+      cluster: testnet
+      marketType: perp
+      market: MNGO_USDC
 spec:
-replicas: 1
-selector:
-    matchLabels:
-    app: marketmaker-mngo-perp
-template:
+  replicas: 1
+  selector:
+      matchLabels:
+        app: marketmaker-mngo-perp
+  template:
     metadata:
-    labels:
+      labels:
         app: marketmaker-mngo-perp
     spec:
-    containers:
+      containers:
         - name: marketmaker-mngo-perp
-        image: gcr.io/robotic-tide-349212/mango-explorer:latest
-        imagePullPolicy: Always
-        terminationMessagePolicy: FallbackToLogsOnError
-        resources:
+          image: gcr.io/robotic-tide-349212/mango-explorer:latest
+          imagePullPolicy: Always
+          terminationMessagePolicy: FallbackToLogsOnError
+          resources:
             limits:
             memory: 256Mi
             requests:
-            memory: 64Mi
-        env:
+              memory: 64Mi
+          env:
             - name: NODE_NAME
-            valueFrom:
+              valueFrom:
                 fieldRef:
                 fieldPath: spec.nodeName
-        envFrom:
+          envFrom:
             - secretRef:
-                name: marketmaker
+              name: marketmaker
             - configMapRef:
-                name: cluster
-        command:
+              name: cluster
+          command:
             - marketmaker
             - --account-address
             - FxAVgbTBaWniRehfSfPVPmaPVT3xctkgjCtUubj9vJ1g
@@ -97,24 +97,22 @@ template:
             - --log-level
             - DEBUG
             - --log-suppress-timestamp
-        # - --notify-errors
-        # - $(ERRORS_TELEGRAM)
-        livenessProbe:
-            exec:
-            command:
-                - file-age-check
-                - "180"
-                - /var/tmp/mango_healthcheck_marketmaker_pulse
-            initialDelaySeconds: 30
-            periodSeconds: 60
-            successThreshold: 1
-            failureThreshold: 3
-        readinessProbe:
-            exec:
-            command:
-                - cat
-                - /var/tmp/mango_healthcheck_marketmaker_pulse
-            initialDelaySeconds: 30
-            failureThreshold: 12
-            periodSeconds: 5
-    restartPolicy: Always
+          livenessProbe:
+              exec:
+              command:
+                  - file-age-check
+                  - "180"
+                  - /var/tmp/mango_healthcheck_marketmaker_pulse
+              initialDelaySeconds: 30
+              periodSeconds: 60
+              successThreshold: 1
+              failureThreshold: 3
+          readinessProbe:
+              exec:
+              command:
+                  - cat
+                  - /var/tmp/mango_healthcheck_marketmaker_pulse
+              initialDelaySeconds: 30
+              failureThreshold: 12
+              periodSeconds: 5
+      restartPolicy: Always
