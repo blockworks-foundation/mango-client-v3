@@ -116,3 +116,21 @@ spec:
             failureThreshold: 12
             periodSeconds: 5
       restartPolicy: Always
+      initContainers:
+        - name: ensure-openorders
+          image: gcr.io/robotic-tide-349212/mango-explorer:latest
+          imagePullPolicy: Always
+          terminationMessagePolicy: FallbackToLogsOnError
+          envFrom:
+            - secretRef:
+                name: marketmaker
+            - configMapRef:
+                name: cluster
+          command:
+            - ensure-open-orders
+            - --account-address
+            - 5Jetb3ZoZVXwCEAoNGbaGgBpdqT7Sq5ZAf1ZK5wp51vZ
+            - --market
+            - perp:SRM-PERP
+            - --log-level
+            - DEBUG
