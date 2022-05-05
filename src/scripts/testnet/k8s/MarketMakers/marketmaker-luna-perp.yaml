@@ -41,7 +41,7 @@ spec:
           command:
             - marketmaker
             - --account-address
-            - FxAVgbTBaWniRehfSfPVPmaPVT3xctkgjCtUubj9vJ1g
+            - 5Jetb3ZoZVXwCEAoNGbaGgBpdqT7Sq5ZAf1ZK5wp51vZ
             - --name
             - "LUNA-PERP Marketmaker ($(NODE_NAME))"
             - --market
