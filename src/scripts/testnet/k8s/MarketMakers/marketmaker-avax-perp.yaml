@@ -4,15 +4,15 @@ metadata:
   namespace: mango
   name: marketmaker-avax-perp
   labels:
-      app: marketmaker
-      cluster: testnet
-      marketType: perp
-      market: AVAX_USDC
+    app: marketmaker
+    cluster: testnet
+    marketType: perp
+    market: AVAX_USDC
 spec:
   replicas: 1
   selector:
-      matchLabels:
-        app: marketmaker-avax-perp
+    matchLabels:
+      app: marketmaker-avax-perp
   template:
     metadata:
       labels:
@@ -25,7 +25,7 @@ spec:
           terminationMessagePolicy: FallbackToLogsOnError
           resources:
             limits:
-            memory: 256Mi
+              memory: 256Mi
             requests:
               memory: 64Mi
           env:
@@ -35,9 +35,9 @@ spec:
                   fieldPath: spec.nodeName
           envFrom:
             - secretRef:
-              name: marketmaker
+                name: marketmaker
             - configMapRef:
-              name: cluster
+                name: cluster
           command:
             - marketmaker
             - --account-address
@@ -98,21 +98,21 @@ spec:
             - DEBUG
             - --log-suppress-timestamp
           livenessProbe:
-              exec:
+            exec:
               command:
-                  - file-age-check
-                  - "180"
-                  - /var/tmp/mango_healthcheck_marketmaker_pulse
-              initialDelaySeconds: 30
-              periodSeconds: 60
-              successThreshold: 1
-              failureThreshold: 3
+                - file-age-check
+                - "180"
+                - /var/tmp/mango_healthcheck_marketmaker_pulse
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            successThreshold: 1
+            failureThreshold: 3
           readinessProbe:
-              exec:
+            exec:
               command:
-                  - cat
-                  - /var/tmp/mango_healthcheck_marketmaker_pulse
-              initialDelaySeconds: 30
-              failureThreshold: 12
-              periodSeconds: 5
+                - cat
+                - /var/tmp/mango_healthcheck_marketmaker_pulse
+            initialDelaySeconds: 30
+            failureThreshold: 12
+            periodSeconds: 5
       restartPolicy: Always
