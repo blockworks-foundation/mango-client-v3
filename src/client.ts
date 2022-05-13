@@ -3621,8 +3621,8 @@ export class MangoClient {
       assetRootBank.nodeBanks[0],
       liabRootBank.publicKey,
       liabRootBank.nodeBanks[0],
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       maxLiabTransfer,
     );
 
@@ -3653,8 +3653,8 @@ export class MangoClient {
       payer.publicKey,
       rootBank.publicKey,
       rootBank.nodeBanks[0],
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       assetType,
       new BN(assetIndex),
       liabType,
@@ -3685,8 +3685,8 @@ export class MangoClient {
       liqeeMangoAccount.publicKey,
       liqorMangoAccount.publicKey,
       payer.publicKey,
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       baseTransferRequest,
     );
 
