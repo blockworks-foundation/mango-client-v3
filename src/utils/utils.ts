@@ -6,6 +6,7 @@ import {
   Keypair,
   PublicKey,
   RpcResponseAndContext,
+  SignatureStatus,
   SimulatedTransactionResponse,
   SystemProgram,
   Transaction,
@@ -17,6 +18,27 @@ import { OpenOrders, TokenInstructions } from '@project-serum/serum';
 import { I80F48, ONE_I80F48 } from './fixednum';
 import MangoGroup from '../MangoGroup';
 import { HealthType } from '../MangoAccount';
+
+export interface Block {
+  blockhash: string;
+  lastValidBlockHeight: number;
+}
+
+export const tryGetLatestBlockhash = async (
+  connection: Connection | undefined,
+  commitment: Commitment = 'confirmed',
+) => {
+  if (!connection) {
+    return;
+  }
+  try {
+    const block = await connection?.getLatestBlockhash(commitment);
+    return block;
+  } catch (e) {
+    console.log('Error getting blockhash');
+    return;
+  }
+};
 
 /** @internal */
 export const ZERO_BN = new BN(0);
@@ -141,9 +163,15 @@ export async function awaitTransactionSignatureConfirmation(
   timeout: number,
   connection: Connection,
   confirmLevel: TransactionConfirmationStatus,
+  signedAtBlock?: Block,
 ) {
+  const blocksToPass = 152;
+  const timeoutBlockHeight = signedAtBlock
+    ? signedAtBlock.lastValidBlockHeight + blocksToPass
+    : 0;
   let done = false;
-
+  let startTimeoutCheck = false;
+  let timeoutOccurred = false;
   const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] = [
     'finalized',
   ];
@@ -160,9 +188,14 @@ export async function awaitTransactionSignatureConfirmation(
         if (done) {
           return;
         }
-        done = true;
-        console.log('Timed out for txid', txid);
-        reject({ timeout: true });
+        if (timeoutBlockHeight !== 0) {
+          startTimeoutCheck = true;
+        } else {
+          done = true;
+          timeoutOccurred = true;
+          console.log('Timed out for txid: ', txid);
+          reject({ timeout: true });
+        }
       }, timeout);
       try {
         connection.onSignature(
@@ -187,9 +220,26 @@ export async function awaitTransactionSignatureConfirmation(
         // eslint-disable-next-line no-loop-func
         (async () => {
           try {
-            const signatureStatuses = await connection.getSignatureStatuses([
-              txid,
-            ]);
+            const promises: [
+              Promise<RpcResponseAndContext<(SignatureStatus | null)[]>>,
+              Promise<number>?,
+            ] = [connection.getSignatureStatuses([txid])];
+            //if startTimeoutThreshold passed we start to check if
+            //current blocks are did not passed timeoutBlockHeight threshold
+            if (startTimeoutCheck) {
+              promises.push(connection.getBlockHeight('confirmed'));
+            }
+            const [signatureStatuses, blockHeight] = await Promise.all(
+              promises,
+            );
+            if (
+              typeof blockHeight !== undefined &&
+              timeoutBlockHeight <= blockHeight!
+            ) {
+              timeoutOccurred = true;
+              done = true;
+              reject({ timeout: true });
+            }
             const result = signatureStatuses && signatureStatuses.value[0];
             if (!done) {
               if (!result) {
@@ -212,6 +262,9 @@ export async function awaitTransactionSignatureConfirmation(
               }
             }
           } catch (e) {
+            if (timeoutOccurred) {
+              console.log('REST timeout: txid', txid, e);
+            }
             if (!done) {
               console.log('REST connection error: txid', txid, e);
             }
