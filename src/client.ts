@@ -309,7 +309,7 @@ export class MangoClient {
     timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
-    const block = await tryGetLatestBlockhash(this.sendConnection);
+    const signedAtBlock = await tryGetLatestBlockhash(this.sendConnection);
     await this.signTransaction({
       transaction,
       payer,
@@ -379,7 +379,7 @@ export class MangoClient {
           txid,
           timeout,
           confirmLevel,
-          block,
+          signedAtBlock,
         );
       } catch (err: any) {
         if (err.timeout) {
@@ -1542,7 +1542,7 @@ export class MangoClient {
       }
       transactionsAndSigners.push(transactionAndSigners);
     }
-    const block = await tryGetLatestBlockhash(this.connection);
+    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
@@ -1555,7 +1555,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
-          signedAtBlock: block,
+          signedAtBlock,
         });
         console.log(txid);
       }
@@ -2032,7 +2032,7 @@ export class MangoClient {
     }
 
     // Sign multiple transactions at once for better UX
-    const block = await tryGetLatestBlockhash(this.connection);
+    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
@@ -2042,7 +2042,7 @@ export class MangoClient {
         signedTransactions.map((signedTransaction) =>
           this.sendSignedTransaction({
             signedTransaction,
-            signedAtBlock: block,
+            signedAtBlock,
           }),
         ),
       );
@@ -2549,7 +2549,7 @@ export class MangoClient {
       signers,
     }));
 
-    const block = await tryGetLatestBlockhash(this.connection);
+    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
@@ -2564,7 +2564,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
-          signedAtBlock: block,
+          signedAtBlock,
         });
         txids.push(txid);
       }
@@ -2803,7 +2803,7 @@ export class MangoClient {
       signers,
     }));
 
-    const block = await tryGetLatestBlockhash(this.connection);
+    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
@@ -2818,7 +2818,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
-          signedAtBlock: block,
+          signedAtBlock,
         });
         txids.push(txid);
       }
@@ -3935,7 +3935,7 @@ export class MangoClient {
       throw new Error('No MNGO rewards to redeem');
     }
 
-    const block = await tryGetLatestBlockhash(this.connection);
+    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
     // Sign multiple transactions at once for better UX
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
@@ -3947,7 +3947,7 @@ export class MangoClient {
         signedTransactions.map((signedTransaction) =>
           this.sendSignedTransaction({
             signedTransaction,
-            signedAtBlock: block,
+            signedAtBlock,
           }),
         ),
       );
@@ -4812,7 +4812,7 @@ export class MangoClient {
       transactionsAndSigners.push(transactionAndSigners);
     }
 
-    const block = await tryGetLatestBlockhash(this.connection);
+    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: payer,
@@ -4825,7 +4825,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
-          signedAtBlock: block,
+          signedAtBlock,
         });
         console.log(txid);
       }
@@ -5082,7 +5082,7 @@ export class MangoClient {
       ),
     );
     transactionsAndSigners.push(closeAccountsTransaction);
-    const block = await tryGetLatestBlockhash(this.connection);
+    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: payer,
@@ -5096,7 +5096,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
-          signedAtBlock: block,
+          signedAtBlock: signedAtBlock,
         });
         txids.push(txid);
         console.log(txid);
