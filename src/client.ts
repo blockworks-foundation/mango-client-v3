@@ -309,12 +309,14 @@ export class MangoClient {
     timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
-    const signedAtBlock = await tryGetLatestBlockhash(this.sendConnection);
-    await this.signTransaction({
-      transaction,
-      payer,
-      signers: additionalSigners,
-    });
+    const [signedAtBlock] = await Promise.all([
+      tryGetLatestBlockhash(this.sendConnection),
+      this.signTransaction({
+        transaction,
+        payer,
+        signers: additionalSigners,
+      }),
+    ]);
 
     const rawTransaction = transaction.serialize();
     let txid = bs58.encode(transaction.signatures[0].signature);
@@ -1542,11 +1544,13 @@ export class MangoClient {
       }
       transactionsAndSigners.push(transactionAndSigners);
     }
-    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
-    const signedTransactions = await this.signTransactions({
-      transactionsAndSigners,
-      payer: owner,
-    });
+    const [signedAtBlock, signedTransactions] = await Promise.all([
+      tryGetLatestBlockhash(this.connection),
+      this.signTransactions({
+        transactionsAndSigners,
+        payer: owner,
+      }),
+    ]);
 
     if (signedTransactions) {
       for (const signedTransaction of signedTransactions) {
@@ -2032,11 +2036,13 @@ export class MangoClient {
     }
 
     // Sign multiple transactions at once for better UX
-    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
-    const signedTransactions = await this.signTransactions({
-      transactionsAndSigners,
-      payer: owner,
-    });
+    const [signedAtBlock, signedTransactions] = await Promise.all([
+      tryGetLatestBlockhash(this.connection),
+      this.signTransactions({
+        transactionsAndSigners,
+        payer: owner,
+      }),
+    ]);
     if (signedTransactions) {
       return await Promise.all(
         signedTransactions.map((signedTransaction) =>
@@ -2549,11 +2555,13 @@ export class MangoClient {
       signers,
     }));
 
-    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
-    const signedTransactions = await this.signTransactions({
-      transactionsAndSigners,
-      payer: owner,
-    });
+    const [signedAtBlock, signedTransactions] = await Promise.all([
+      tryGetLatestBlockhash(this.connection),
+      this.signTransactions({
+        transactionsAndSigners,
+        payer: owner,
+      }),
+    ]);
 
     const txids: TransactionSignature[] = [];
 
@@ -2803,11 +2811,13 @@ export class MangoClient {
       signers,
     }));
 
-    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
-    const signedTransactions = await this.signTransactions({
-      transactionsAndSigners,
-      payer: owner,
-    });
+    const [signedAtBlock, signedTransactions] = await Promise.all([
+      tryGetLatestBlockhash(this.connection),
+      this.signTransactions({
+        transactionsAndSigners,
+        payer: owner,
+      }),
+    ]);
 
     const txids: TransactionSignature[] = [];
 
@@ -3935,12 +3945,13 @@ export class MangoClient {
       throw new Error('No MNGO rewards to redeem');
     }
 
-    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
-    // Sign multiple transactions at once for better UX
-    const signedTransactions = await this.signTransactions({
-      transactionsAndSigners,
-      payer,
-    });
+    const [signedAtBlock, signedTransactions] = await Promise.all([
+      tryGetLatestBlockhash(this.connection),
+      this.signTransactions({
+        transactionsAndSigners,
+        payer,
+      }),
+    ]);
 
     if (signedTransactions) {
       const txSigs = await Promise.all(
@@ -4812,11 +4823,13 @@ export class MangoClient {
       transactionsAndSigners.push(transactionAndSigners);
     }
 
-    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
-    const signedTransactions = await this.signTransactions({
-      transactionsAndSigners,
-      payer: payer,
-    });
+    const [signedAtBlock, signedTransactions] = await Promise.all([
+      tryGetLatestBlockhash(this.connection),
+      this.signTransactions({
+        transactionsAndSigners,
+        payer,
+      }),
+    ]);
 
     if (signedTransactions) {
       for (const signedTransaction of signedTransactions) {
@@ -5082,11 +5095,13 @@ export class MangoClient {
       ),
     );
     transactionsAndSigners.push(closeAccountsTransaction);
-    const signedAtBlock = await tryGetLatestBlockhash(this.connection);
-    const signedTransactions = await this.signTransactions({
-      transactionsAndSigners,
-      payer: payer,
-    });
+    const [signedAtBlock, signedTransactions] = await Promise.all([
+      tryGetLatestBlockhash(this.connection),
+      this.signTransactions({
+        transactionsAndSigners,
+        payer,
+      }),
+    ]);
 
     const txids: TransactionSignature[] = [];
     if (signedTransactions) {
