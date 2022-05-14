@@ -541,7 +541,6 @@ export class MangoClient {
       : 0;
     let startTimeoutCheck = false;
     let done = false;
-    let timeoutOccurred = false;
     const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] =
       ['finalized'];
 
@@ -563,7 +562,6 @@ export class MangoClient {
             startTimeoutCheck = true;
           } else {
             done = true;
-            timeoutOccurred = true;
             console.log('Timed out for txid: ', txid);
             reject({ timeout: true });
           }
@@ -609,7 +607,7 @@ export class MangoClient {
                 typeof blockHeight !== undefined &&
                 timeoutBlockHeight <= blockHeight!
               ) {
-                timeoutOccurred = true;
+                console.log('Timed out for txid: ', txid);
                 done = true;
                 reject({ timeout: true });
               }
@@ -637,9 +635,6 @@ export class MangoClient {
                 }
               }
             } catch (e) {
-              if (timeoutOccurred) {
-                console.log('REST timeout: txid', txid, e);
-              }
               if (!done) {
                 console.log('REST connection error: txid', txid, e);
               }

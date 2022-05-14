@@ -171,7 +171,6 @@ export async function awaitTransactionSignatureConfirmation(
     : 0;
   let done = false;
   let startTimeoutCheck = false;
-  let timeoutOccurred = false;
   const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] = [
     'finalized',
   ];
@@ -192,7 +191,6 @@ export async function awaitTransactionSignatureConfirmation(
           startTimeoutCheck = true;
         } else {
           done = true;
-          timeoutOccurred = true;
           console.log('Timed out for txid: ', txid);
           reject({ timeout: true });
         }
@@ -236,8 +234,8 @@ export async function awaitTransactionSignatureConfirmation(
               typeof blockHeight !== undefined &&
               timeoutBlockHeight <= blockHeight!
             ) {
-              timeoutOccurred = true;
               done = true;
+              console.log('Timed out for txid: ', txid);
               reject({ timeout: true });
             }
             const result = signatureStatuses && signatureStatuses.value[0];
@@ -262,9 +260,6 @@ export async function awaitTransactionSignatureConfirmation(
               }
             }
           } catch (e) {
-            if (timeoutOccurred) {
-              console.log('REST timeout: txid', txid, e);
-            }
             if (!done) {
               console.log('REST connection error: txid', txid, e);
             }
