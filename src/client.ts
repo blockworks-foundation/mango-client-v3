@@ -603,12 +603,12 @@ export class MangoClient {
               if (startTimeoutCheck) {
                 promises.push(this.connection.getBlockHeight('confirmed'));
               }
-              const [signatureStatuses, blockHeight] = await Promise.all(
+              const [signatureStatuses, currentBlockHeight] = await Promise.all(
                 promises,
               );
               if (
-                typeof blockHeight !== undefined &&
-                timeoutBlockHeight <= blockHeight!
+                typeof currentBlockHeight !== undefined &&
+                timeoutBlockHeight <= currentBlockHeight!
               ) {
                 console.log('Timed out for txid: ', txid);
                 done = true;

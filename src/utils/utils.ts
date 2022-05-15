@@ -234,12 +234,12 @@ export async function awaitTransactionSignatureConfirmation(
             if (startTimeoutCheck) {
               promises.push(connection.getBlockHeight('confirmed'));
             }
-            const [signatureStatuses, blockHeight] = await Promise.all(
+            const [signatureStatuses, currentBlockHeight] = await Promise.all(
               promises,
             );
             if (
-              typeof blockHeight !== undefined &&
-              timeoutBlockHeight <= blockHeight!
+              typeof currentBlockHeight !== undefined &&
+              timeoutBlockHeight <= currentBlockHeight!
             ) {
               done = true;
               console.log('Timed out for txid: ', txid);
