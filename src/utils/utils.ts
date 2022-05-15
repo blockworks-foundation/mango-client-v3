@@ -19,7 +19,17 @@ import { I80F48, ONE_I80F48 } from './fixednum';
 import MangoGroup from '../MangoGroup';
 import { HealthType } from '../MangoAccount';
 
-export interface Block {
+/**
+ * If transaction is not confirmed by validators in 152 blocks
+ * from signing by the wallet
+ * it will never reach blockchain and is considered a timeout
+ *
+ * (e.g. transaction is signed at 121398019 block
+ * if its not confirmed by the time blockchain reach 121398171 (121398019 + 152)
+ * it will never reach blockchain)
+ */
+export const MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION = 152;
+export interface GetLatestBlockhashType {
   blockhash: string;
   lastValidBlockHeight: number;
 }
@@ -27,15 +37,12 @@ export interface Block {
 export const tryGetLatestBlockhash = async (
   connection: Connection | undefined,
   commitment: Commitment = 'confirmed',
-) => {
-  if (!connection) {
-    return;
-  }
+): Promise<GetLatestBlockhashType | undefined> => {
   try {
     const block = await connection?.getLatestBlockhash(commitment);
     return block;
   } catch (e) {
-    console.log('Error getting blockhash');
+    console.log('Error getting blockhash', e);
     return;
   }
 };
@@ -163,11 +170,11 @@ export async function awaitTransactionSignatureConfirmation(
   timeout: number,
   connection: Connection,
   confirmLevel: TransactionConfirmationStatus,
-  signedAtBlock?: Block,
+  signedAtBlock?: GetLatestBlockhashType,
 ) {
-  const blocksToPass = 152;
   const timeoutBlockHeight = signedAtBlock
-    ? signedAtBlock.lastValidBlockHeight + blocksToPass
+    ? signedAtBlock.lastValidBlockHeight +
+      MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION
     : 0;
   let done = false;
   let startTimeoutCheck = false;
