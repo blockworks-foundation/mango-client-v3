@@ -39,7 +39,7 @@ export const tryGetLatestBlockhash = async (
   commitment: Commitment = 'confirmed',
 ): Promise<LatestBlockhash | undefined> => {
   try {
-    const block = await connection?.getLatestBlockhash(commitment);
+    const block = await connection.getLatestBlockhash(commitment);
     return block;
   } catch (e) {
     console.log('Error getting blockhash', e);
