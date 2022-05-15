@@ -35,6 +35,7 @@ import {
   zeroKey,
   tryGetLatestBlockhash,
   GetLatestBlockhashType,
+  MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION,
 } from './utils/utils';
 import {
   AssetType,
@@ -537,9 +538,9 @@ export class MangoClient {
     confirmLevel: TransactionConfirmationStatus,
     signedAtBlock?: GetLatestBlockhashType,
   ) {
-    const blocksToPass = 152;
     const timeoutBlockHeight = signedAtBlock
-      ? signedAtBlock.lastValidBlockHeight + blocksToPass
+      ? signedAtBlock.lastValidBlockHeight +
+        MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION
       : 0;
     let startTimeoutCheck = false;
     let done = false;

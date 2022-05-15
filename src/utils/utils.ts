@@ -28,7 +28,7 @@ import { HealthType } from '../MangoAccount';
  * if its not confirmed by the time blockchain reach 121398171 (121398019 + 152)
  * it will never reach blockchain)
  */
-const MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION = 152;
+export const MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION = 152;
 export interface GetLatestBlockhashType {
   blockhash: string;
   lastValidBlockHeight: number;
