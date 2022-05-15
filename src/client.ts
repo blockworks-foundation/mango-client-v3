@@ -311,14 +311,13 @@ export class MangoClient {
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
     const [signedAtBlock] = await Promise.all([
-      tryGetLatestBlockhash(this.sendConnection),
+      tryGetLatestBlockhash(this.sendConnection || this.connection),
       this.signTransaction({
         transaction,
         payer,
         signers: additionalSigners,
       }),
     ]);
-
     const rawTransaction = transaction.serialize();
     let txid = bs58.encode(transaction.signatures[0].signature);
     const startTime = getUnixTs();

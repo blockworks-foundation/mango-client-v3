@@ -35,7 +35,7 @@ export interface LatestBlockhash {
 }
 
 export const tryGetLatestBlockhash = async (
-  connection: Connection | undefined,
+  connection: Connection,
   commitment: Commitment = 'confirmed',
 ): Promise<LatestBlockhash | undefined> => {
   try {
