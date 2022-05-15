@@ -29,7 +29,7 @@ import { HealthType } from '../MangoAccount';
  * it will never reach blockchain)
  */
 export const MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION = 152;
-export interface GetLatestBlockhashType {
+export interface LatestBlockhash {
   blockhash: string;
   lastValidBlockHeight: number;
 }
@@ -37,7 +37,7 @@ export interface GetLatestBlockhashType {
 export const tryGetLatestBlockhash = async (
   connection: Connection | undefined,
   commitment: Commitment = 'confirmed',
-): Promise<GetLatestBlockhashType | undefined> => {
+): Promise<LatestBlockhash | undefined> => {
   try {
     const block = await connection?.getLatestBlockhash(commitment);
     return block;
@@ -170,7 +170,7 @@ export async function awaitTransactionSignatureConfirmation(
   timeout: number,
   connection: Connection,
   confirmLevel: TransactionConfirmationStatus,
-  signedAtBlock?: GetLatestBlockhashType,
+  signedAtBlock?: LatestBlockhash,
 ) {
   const timeoutBlockHeight = signedAtBlock
     ? signedAtBlock.lastValidBlockHeight +

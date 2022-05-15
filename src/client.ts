@@ -34,7 +34,7 @@ import {
   ZERO_BN,
   zeroKey,
   tryGetLatestBlockhash,
-  GetLatestBlockhashType,
+  LatestBlockhash,
   MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION,
 } from './utils/utils';
 import {
@@ -434,7 +434,7 @@ export class MangoClient {
     signedTransaction: Transaction;
     timeout?: number | null;
     confirmLevel?: TransactionConfirmationStatus;
-    signedAtBlock?: GetLatestBlockhashType;
+    signedAtBlock?: LatestBlockhash;
   }): Promise<TransactionSignature> {
     const rawTransaction = signedTransaction.serialize();
     let txid = bs58.encode(signedTransaction.signatures[0].signature);
@@ -536,7 +536,7 @@ export class MangoClient {
     txid: TransactionSignature,
     timeout: number,
     confirmLevel: TransactionConfirmationStatus,
-    signedAtBlock?: GetLatestBlockhashType,
+    signedAtBlock?: LatestBlockhash,
   ) {
     const timeoutBlockHeight = signedAtBlock
       ? signedAtBlock.lastValidBlockHeight +
