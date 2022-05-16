@@ -6,6 +6,7 @@ import {
   Keypair,
   PublicKey,
   RpcResponseAndContext,
+  SignatureStatus,
   SimulatedTransactionResponse,
   SystemProgram,
   Transaction,
@@ -17,6 +18,34 @@ import { OpenOrders, TokenInstructions } from '@project-serum/serum';
 import { I80F48, ONE_I80F48 } from './fixednum';
 import MangoGroup from '../MangoGroup';
 import { HealthType } from '../MangoAccount';
+
+/**
+ * If transaction is not confirmed by validators in 152 blocks
+ * from signing by the wallet
+ * it will never reach blockchain and is considered a timeout
+ *
+ * (e.g. transaction is signed at 121398019 block
+ * if its not confirmed by the time blockchain reach 121398171 (121398019 + 152)
+ * it will never reach blockchain)
+ */
+export const MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION = 152;
+export interface LatestBlockhash {
+  blockhash: string;
+  lastValidBlockHeight: number;
+}
+
+export const tryGetLatestBlockhash = async (
+  connection: Connection,
+  commitment: Commitment = 'confirmed',
+): Promise<LatestBlockhash | undefined> => {
+  try {
+    const block = await connection.getLatestBlockhash(commitment);
+    return block;
+  } catch (e) {
+    console.log('Error getting blockhash', e);
+    return;
+  }
+};
 
 /** @internal */
 export const ZERO_BN = new BN(0);
@@ -141,9 +170,14 @@ export async function awaitTransactionSignatureConfirmation(
   timeout: number,
   connection: Connection,
   confirmLevel: TransactionConfirmationStatus,
+  signedAtBlock?: LatestBlockhash,
 ) {
+  const timeoutBlockHeight = signedAtBlock
+    ? signedAtBlock.lastValidBlockHeight +
+      MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION
+    : 0;
   let done = false;
-
+  let startTimeoutCheck = false;
   const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] = [
     'finalized',
   ];
@@ -160,9 +194,13 @@ export async function awaitTransactionSignatureConfirmation(
         if (done) {
           return;
         }
-        done = true;
-        console.log('Timed out for txid', txid);
-        reject({ timeout: true });
+        if (timeoutBlockHeight !== 0) {
+          startTimeoutCheck = true;
+        } else {
+          done = true;
+          console.log('Timed out for txid: ', txid);
+          reject({ timeout: true });
+        }
       }, timeout);
       try {
         connection.onSignature(
@@ -187,9 +225,26 @@ export async function awaitTransactionSignatureConfirmation(
         // eslint-disable-next-line no-loop-func
         (async () => {
           try {
-            const signatureStatuses = await connection.getSignatureStatuses([
-              txid,
-            ]);
+            const promises: [
+              Promise<RpcResponseAndContext<(SignatureStatus | null)[]>>,
+              Promise<number>?,
+            ] = [connection.getSignatureStatuses([txid])];
+            //if startTimeoutThreshold passed we start to check if
+            //current blocks are did not passed timeoutBlockHeight threshold
+            if (startTimeoutCheck) {
+              promises.push(connection.getBlockHeight('confirmed'));
+            }
+            const [signatureStatuses, currentBlockHeight] = await Promise.all(
+              promises,
+            );
+            if (
+              typeof currentBlockHeight !== undefined &&
+              timeoutBlockHeight <= currentBlockHeight!
+            ) {
+              done = true;
+              console.log('Timed out for txid: ', txid);
+              reject({ timeout: true });
+            }
             const result = signatureStatuses && signatureStatuses.value[0];
             if (!done) {
               if (!result) {
