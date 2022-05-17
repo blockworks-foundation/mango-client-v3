@@ -1,6 +1,7 @@
 import BN from 'bn.js';
 import {
   AccountInfo,
+  BlockhashWithExpiryBlockHeight,
   Commitment,
   Connection,
   Keypair,
@@ -29,23 +30,6 @@ import { HealthType } from '../MangoAccount';
  * it will never reach blockchain)
  */
 export const MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION = 152;
-export interface LatestBlockhash {
-  blockhash: string;
-  lastValidBlockHeight: number;
-}
-
-export const tryGetLatestBlockhash = async (
-  connection: Connection,
-  commitment: Commitment = 'confirmed',
-): Promise<LatestBlockhash | undefined> => {
-  try {
-    const block = await connection.getLatestBlockhash(commitment);
-    return block;
-  } catch (e) {
-    console.log('Error getting blockhash', e);
-    return;
-  }
-};
 
 /** @internal */
 export const ZERO_BN = new BN(0);
@@ -170,7 +154,7 @@ export async function awaitTransactionSignatureConfirmation(
   timeout: number,
   connection: Connection,
   confirmLevel: TransactionConfirmationStatus,
-  signedAtBlock?: LatestBlockhash,
+  signedAtBlock?: BlockhashWithExpiryBlockHeight,
 ) {
   const timeoutBlockHeight = signedAtBlock
     ? signedAtBlock.lastValidBlockHeight +
