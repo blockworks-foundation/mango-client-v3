@@ -251,11 +251,10 @@ export class MangoClient {
     signers: Array<Keypair>;
     currentBlockhash?: BlockhashWithExpiryBlockHeight;
   }) {
-    let blockhash: BlockhashWithExpiryBlockHeight = currentBlockhash
-      ? currentBlockhash
-      : await this.getCurrentBlockhash();
+    let blockhashWithExpiryBlockHeight: BlockhashWithExpiryBlockHeight =
+      currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
 
-    transaction.recentBlockhash = blockhash.blockhash;
+    transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
     transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
     if (signers.length > 0) {
       transaction.partialSign(...signers);
@@ -284,11 +283,10 @@ export class MangoClient {
     if (!payer.publicKey) {
       return;
     }
-    let blockhash: BlockhashWithExpiryBlockHeight = currentBlockhash
-      ? currentBlockhash
-      : await this.getCurrentBlockhash();
+    let blockhashWithExpiryBlockHeight: BlockhashWithExpiryBlockHeight =
+      currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
-      transaction.recentBlockhash = blockhash.blockhash;
+      transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
       if (payer.publicKey) {
         transaction.setSigners(
           payer.publicKey,
