@@ -19,19 +19,21 @@ async function testCloseAccount() {
   const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
   const sleepTime = 2000;
   const config = new Config(configFile);
-
-  const payer = new Keypair(
-    JSON.parse(
-      process.env.KEYPAIR ||
-        fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
-    ),
+  const mangoProgramId = config.getGroup(cluster, 'devnet.2')!.mangoProgramId;
+  const payer = Keypair.fromSecretKey(
+    new Uint8Array(
+      JSON.parse(
+        process.env.KEYPAIR ||
+          fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+      ),
+    )
   );
   const connection = new Connection(
     config.cluster_urls[cluster],
     'processed' as Commitment,
   );
 
-  const testGroup = new TestGroup();
+  const testGroup = new TestGroup(connection, payer, mangoProgramId);
   const mangoGroupKey = await testGroup.init();
   const mangoGroup = await testGroup.client.getMangoGroup(mangoGroupKey);
   const perpMarkets = await Promise.all(
@@ -40,7 +42,6 @@ async function testCloseAccount() {
     }),
   );
 
-  const cache = await mangoGroup.loadCache(connection);
   const rootBanks = await mangoGroup.loadRootBanks(connection);
   const quoteRootBank = rootBanks[QUOTE_INDEX];
   if (!quoteRootBank) {

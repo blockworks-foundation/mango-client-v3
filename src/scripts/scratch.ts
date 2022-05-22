@@ -5,11 +5,14 @@ import os from 'os';
 import { IDS, MangoClient, QUOTE_INDEX, RootBank } from '../index';
 
 async function main() {
-  const payer = new Keypair(
-    JSON.parse(
-      fs.readFileSync(
-        process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
-        'utf-8',
+  const payer = Keypair.fromSecretKey(
+    Uint8Array.from(
+      JSON.parse(
+        process.env.KEYPAIR ||
+          fs.readFileSync(
+            os.homedir() + '/.config/solana/devnet.json',
+            'utf-8',
+          ),
       ),
     ),
   );

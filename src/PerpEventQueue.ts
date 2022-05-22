@@ -1,5 +1,6 @@
 import BN from 'bn.js';
-import { FillEvent, LiquidateEvent, OutEvent, ZERO_BN } from '.';
+import { ZERO_BN } from './utils/utils';
+import { FillEvent, OutEvent, LiquidateEvent } from './layout';
 
 export default class PerpEventQueue {
   head!: BN;

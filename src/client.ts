@@ -1,10 +1,13 @@
 import {
   AccountInfo,
+  BlockhashWithExpiryBlockHeight,
   Commitment,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
+  RpcResponseAndContext,
+  SignatureStatus,
   SimulatedTransactionResponse,
   SystemProgram,
   Transaction,
@@ -25,9 +28,13 @@ import {
   promiseUndef,
   simulateTransaction,
   sleep,
+  MangoError,
+  U64_MAX_BN,
+  TimeoutError,
   uiToNative,
   ZERO_BN,
   zeroKey,
+  MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION,
 } from './utils/utils';
 import {
   AssetType,
@@ -134,14 +141,9 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import {
-  makeCreateSpotOpenOrdersInstruction,
-  MangoError,
-  ReferrerIdRecord,
-  ReferrerIdRecordLayout,
-  TimeoutError,
-  U64_MAX_BN,
-} from '.';
+import { makeCreateSpotOpenOrdersInstruction } from './instruction';
+import { ReferrerIdRecord, ReferrerIdRecordLayout } from './layout';
+import * as bs58 from 'bs58';
 
 /**
  * Get the current epoch timestamp in seconds with microsecond precision
@@ -164,9 +166,11 @@ type AccountWithPnl = {
  */
 export class MangoClient {
   connection: Connection;
+  sendConnection?: Connection;
   programId: PublicKey;
   lastSlot: number;
   recentBlockhash: string;
+  lastValidBlockHeight: number;
   recentBlockhashTime: number;
   maxStoredBlockhashes: number;
   timeout: number | null;
@@ -181,6 +185,8 @@ export class MangoClient {
       postSendTxCallback?: ({ txid }: { txid: string }) => void;
       maxStoredBlockhashes?: number;
       blockhashCommitment?: Commitment;
+      timeout?: number;
+      sendConnection?: Connection;
     } = {},
   ) {
     this.connection = connection;
@@ -188,9 +194,11 @@ export class MangoClient {
     this.lastSlot = 0;
     this.recentBlockhash = '';
     this.recentBlockhashTime = 0;
+    this.lastValidBlockHeight = 0;
     this.maxStoredBlockhashes = opts?.maxStoredBlockhashes || 7;
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
-    this.timeout = null;
+    this.timeout = opts?.timeout || 60000;
+    this.sendConnection = opts.sendConnection;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
     }
@@ -200,7 +208,7 @@ export class MangoClient {
     transactions: Transaction[],
     payer: Payer,
     additionalSigners: Keypair[],
-    timeout: number | null = null,
+    timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'confirmed',
   ): Promise<TransactionSignature[]> {
     return await Promise.all(
@@ -216,18 +224,38 @@ export class MangoClient {
     );
   }
 
-  async signTransaction({ transaction, payer, signers }) {
+  async getCurrentBlockhash(): Promise<BlockhashWithExpiryBlockHeight> {
     const now = getUnixTs();
-    let blockhash;
+    let currentBlockhash: BlockhashWithExpiryBlockHeight;
     // Get new blockhash if stored blockhash more than 70 seconds old
     if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
-      blockhash = this.recentBlockhash;
+      currentBlockhash = {
+        blockhash: this.recentBlockhash,
+        lastValidBlockHeight: this.lastValidBlockHeight,
+      };
     } else {
-      blockhash = (
-        await this.connection.getRecentBlockhash(this.blockhashCommitment)
-      ).blockhash;
+      currentBlockhash = await this.connection.getLatestBlockhash(
+        this.blockhashCommitment,
+      );
     }
-    transaction.recentBlockhash = blockhash;
+    return currentBlockhash;
+  }
+
+  async signTransaction({
+    transaction,
+    payer,
+    signers,
+    currentBlockhash,
+  }: {
+    transaction: Transaction;
+    payer: any;
+    signers: Array<Keypair>;
+    currentBlockhash?: BlockhashWithExpiryBlockHeight;
+  }) {
+    let blockhashWithExpiryBlockHeight: BlockhashWithExpiryBlockHeight =
+      currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
+
+    transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
     transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
     if (signers.length > 0) {
       transaction.partialSign(...signers);
@@ -244,29 +272,28 @@ export class MangoClient {
   async signTransactions({
     transactionsAndSigners,
     payer,
+    currentBlockhash,
   }: {
     transactionsAndSigners: {
       transaction: Transaction;
       signers?: Array<Keypair>;
     }[];
     payer: Payer;
+    currentBlockhash?: BlockhashWithExpiryBlockHeight;
   }) {
-    const now = getUnixTs();
-    let blockhash;
-    // Get new blockhash if stored blockhash more than 70 seconds old
-    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
-      blockhash = this.recentBlockhash;
-    } else {
-      blockhash = (
-        await this.connection.getRecentBlockhash(this.blockhashCommitment)
-      ).blockhash;
+    if (!payer.publicKey) {
+      return;
     }
+    let blockhashWithExpiryBlockHeight: BlockhashWithExpiryBlockHeight =
+      currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
-      transaction.recentBlockhash = blockhash;
-      transaction.setSigners(
-        payer.publicKey,
-        ...signers.map((s) => s.publicKey),
-      );
+      transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
+      if (payer.publicKey) {
+        transaction.setSigners(
+          payer.publicKey,
+          ...signers.map((s) => s.publicKey),
+        );
+      }
       if (signers?.length > 0) {
         transaction.partialSign(...signers);
       }
@@ -283,114 +310,128 @@ export class MangoClient {
       return transactionsAndSigners.map((t) => t.transaction);
     }
   }
-
-  // TODO - switch Account to Keypair and switch off setSigners due to deprecated
   /**
    * Send a transaction using the Solana Web3.js connection on the mango client
    *
    * @param transaction
    * @param payer
    * @param additionalSigners
-   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Defaults to 30000ms. Passing null will disable the transaction confirmation check and always return success.
+   * @param timeout Retries sending the transaction and trying to confirm it until the given timeout. Passing null will disable the transaction confirmation check and always return success.
    */
   async sendTransaction(
     transaction: Transaction,
     payer: Payer,
     additionalSigners: Keypair[],
-    timeout: number | null = 30000,
+    timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
+    const currentBlockhash = await this.getCurrentBlockhash();
     await this.signTransaction({
       transaction,
       payer,
       signers: additionalSigners,
+      currentBlockhash,
     });
-
     const rawTransaction = transaction.serialize();
+    let txid = bs58.encode(transaction.signatures[0].signature);
     const startTime = getUnixTs();
 
-    const txid: TransactionSignature = await this.connection.sendRawTransaction(
-      rawTransaction,
-      { skipPreflight: true },
-    );
-
-    if (this.postSendTxCallback) {
+    if (this.sendConnection) {
+      const promise = this.sendConnection.sendRawTransaction(rawTransaction);
+      if (this.postSendTxCallback) {
+        try {
+          this.postSendTxCallback({ txid });
+        } catch (e) {
+          console.warn(`postSendTxCallback error ${e}`);
+        }
+      }
       try {
-        this.postSendTxCallback({ txid });
+        return await promise;
       } catch (e) {
-        console.log(`postSendTxCallback error ${e}`);
+        console.error(e);
+        throw new MangoError({ message: 'Transaction failed', txid });
       }
-    }
+    } else {
+      txid = await this.connection.sendRawTransaction(rawTransaction, {
+        skipPreflight: true,
+      });
 
-    if (this.timeout) {
-      timeout = this.timeout < 0 ? timeout : this.timeout * 1000;
-    }
-    if (!timeout) return txid;
-
-    console.log(
-      'Started awaiting confirmation for',
-      txid,
-      'size:',
-      rawTransaction.length,
-    );
-
-    let done = false;
-
-    let retrySleep = 2000;
-    (async () => {
-      // TODO - make sure this works well on mainnet
-      while (!done && getUnixTs() - startTime < timeout / 1000) {
-        await sleep(retrySleep);
-        // console.log(new Date().toUTCString(), ' sending tx ', txid);
-        this.connection.sendRawTransaction(rawTransaction, {
-          skipPreflight: true,
-        });
+      if (this.postSendTxCallback) {
+        try {
+          this.postSendTxCallback({ txid });
+        } catch (e) {
+          console.warn(`postSendTxCallback error ${e}`);
+        }
       }
-      if (retrySleep <= 8000) {
-        retrySleep = retrySleep * 2;
-      }
-    })();
 
-    try {
-      await this.awaitTransactionSignatureConfirmation(
+      if (!timeout) return txid;
+
+      console.log(
+        'Started awaiting confirmation for',
         txid,
-        timeout,
-        confirmLevel,
+        'size:',
+        rawTransaction.length,
       );
-    } catch (err: any) {
-      if (err.timeout) {
-        throw new TimeoutError({ txid });
-      }
-      let simulateResult: SimulatedTransactionResponse | null = null;
-      try {
-        simulateResult = (
-          await simulateTransaction(this.connection, transaction, 'processed')
-        ).value;
-      } catch (e) {
-        console.warn('Simulate transaction failed');
-      }
 
-      if (simulateResult && simulateResult.err) {
-        if (simulateResult.logs) {
-          for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
-            const line = simulateResult.logs[i];
-            if (line.startsWith('Program log: ')) {
-              throw new MangoError({
-                message:
-                  'Transaction failed: ' + line.slice('Program log: '.length),
-                txid,
-              });
+      let done = false;
+
+      let retrySleep = 1000;
+      (async () => {
+        // TODO - make sure this works well on mainnet
+        while (!done && getUnixTs() - startTime < timeout / 1000) {
+          await sleep(retrySleep);
+          // console.log(new Date().toUTCString(), ' sending tx ', txid);
+          this.connection.sendRawTransaction(rawTransaction, {
+            skipPreflight: true,
+          });
+        }
+        if (retrySleep <= 8000) {
+          retrySleep = retrySleep * 2;
+        }
+      })();
+
+      try {
+        await this.awaitTransactionSignatureConfirmation(
+          txid,
+          timeout,
+          confirmLevel,
+          currentBlockhash,
+        );
+      } catch (err: any) {
+        if (err.timeout) {
+          throw new TimeoutError({ txid });
+        }
+        let simulateResult: SimulatedTransactionResponse | null = null;
+        try {
+          simulateResult = (
+            await simulateTransaction(this.connection, transaction, 'processed')
+          ).value;
+        } catch (e) {
+          console.warn('Simulate transaction failed');
+        }
+
+        if (simulateResult && simulateResult.err) {
+          if (simulateResult.logs) {
+            for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
+              const line = simulateResult.logs[i];
+              if (line.startsWith('Program log: ')) {
+                throw new MangoError({
+                  message:
+                    'Transaction failed: ' + line.slice('Program log: '.length),
+                  txid,
+                });
+              }
             }
           }
+          throw new MangoError({
+            message: JSON.stringify(simulateResult.err),
+            txid,
+          });
         }
-        throw new MangoError({
-          message: JSON.stringify(simulateResult.err),
-          txid,
-        });
+        throw new MangoError({ message: 'Transaction failed', txid });
+      } finally {
+        done = true;
       }
-      throw new MangoError({ message: 'Transaction failed', txid });
-    } finally {
-      done = true;
     }
 
     console.log('Latency', txid, getUnixTs() - startTime);
@@ -399,99 +440,123 @@ export class MangoClient {
 
   async sendSignedTransaction({
     signedTransaction,
-    timeout = 30000,
+    timeout = this.timeout,
     confirmLevel = 'processed',
+    signedAtBlock,
   }: {
     signedTransaction: Transaction;
-    timeout?: number;
+    timeout?: number | null;
     confirmLevel?: TransactionConfirmationStatus;
+    signedAtBlock?: BlockhashWithExpiryBlockHeight;
   }): Promise<TransactionSignature> {
     const rawTransaction = signedTransaction.serialize();
+    let txid = bs58.encode(signedTransaction.signatures[0].signature);
     const startTime = getUnixTs();
 
-    const txid: TransactionSignature = await this.connection.sendRawTransaction(
-      rawTransaction,
-      {
+    if (this.sendConnection) {
+      const promise = this.sendConnection.sendRawTransaction(rawTransaction);
+      if (this.postSendTxCallback) {
+        try {
+          this.postSendTxCallback({ txid });
+        } catch (e) {
+          console.warn(`postSendTxCallback error ${e}`);
+        }
+      }
+      try {
+        return await promise;
+      } catch (e) {
+        console.error(e);
+        throw new MangoError({ message: 'Transaction failed', txid });
+      }
+    } else {
+      txid = await this.connection.sendRawTransaction(rawTransaction, {
         skipPreflight: true,
-      },
-    );
+      });
 
-    if (this.postSendTxCallback) {
+      if (this.postSendTxCallback) {
+        try {
+          this.postSendTxCallback({ txid });
+        } catch (e) {
+          console.log(`postSendTxCallback error ${e}`);
+        }
+      }
+      if (!timeout) return txid;
+
+      // console.log('Started awaiting confirmation for', txid);
+
+      let done = false;
+      (async () => {
+        await sleep(500);
+        while (!done && getUnixTs() - startTime < timeout) {
+          this.connection.sendRawTransaction(rawTransaction, {
+            skipPreflight: true,
+          });
+          await sleep(1000);
+        }
+      })();
       try {
-        this.postSendTxCallback({ txid });
-      } catch (e) {
-        console.log(`postSendTxCallback error ${e}`);
-      }
-    }
-
-    // console.log('Started awaiting confirmation for', txid);
-
-    let done = false;
-    (async () => {
-      await sleep(500);
-      while (!done && getUnixTs() - startTime < timeout) {
-        this.connection.sendRawTransaction(rawTransaction, {
-          skipPreflight: true,
-        });
-        await sleep(1000);
-      }
-    })();
-    try {
-      await this.awaitTransactionSignatureConfirmation(
-        txid,
-        timeout,
-        confirmLevel,
-      );
-    } catch (err: any) {
-      if (err.timeout) {
-        throw new TimeoutError({ txid });
-      }
-      let simulateResult: SimulatedTransactionResponse | null = null;
-      try {
-        simulateResult = (
-          await simulateTransaction(
-            this.connection,
-            signedTransaction,
-            'single',
-          )
-        ).value;
-      } catch (e) {
-        console.log('Simulate tx failed');
-      }
-      if (simulateResult && simulateResult.err) {
-        if (simulateResult.logs) {
-          for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
-            const line = simulateResult.logs[i];
-            if (line.startsWith('Program log: ')) {
-              throw new MangoError({
-                message:
-                  'Transaction failed: ' + line.slice('Program log: '.length),
-                txid,
-              });
+        await this.awaitTransactionSignatureConfirmation(
+          txid,
+          timeout,
+          confirmLevel,
+          signedAtBlock,
+        );
+      } catch (err: any) {
+        if (err.timeout) {
+          throw new TimeoutError({ txid });
+        }
+        let simulateResult: SimulatedTransactionResponse | null = null;
+        try {
+          simulateResult = (
+            await simulateTransaction(
+              this.connection,
+              signedTransaction,
+              'single',
+            )
+          ).value;
+        } catch (e) {
+          console.log('Simulate tx failed');
+        }
+        if (simulateResult && simulateResult.err) {
+          if (simulateResult.logs) {
+            for (let i = simulateResult.logs.length - 1; i >= 0; --i) {
+              const line = simulateResult.logs[i];
+              if (line.startsWith('Program log: ')) {
+                throw new MangoError({
+                  message:
+                    'Transaction failed: ' + line.slice('Program log: '.length),
+                  txid,
+                });
+              }
             }
           }
+          throw new MangoError({
+            message: JSON.stringify(simulateResult.err),
+            txid,
+          });
         }
-        throw new MangoError({
-          message: JSON.stringify(simulateResult.err),
-          txid,
-        });
+        throw new MangoError({ message: 'Transaction failed', txid });
+      } finally {
+        done = true;
       }
-      throw new MangoError({ message: 'Transaction failed', txid });
-    } finally {
-      done = true;
-    }
 
-    // console.log('Latency', txid, getUnixTs() - startTime);
-    return txid;
+      // console.log('Latency', txid, getUnixTs() - startTime);
+      return txid;
+    }
   }
 
   async awaitTransactionSignatureConfirmation(
     txid: TransactionSignature,
     timeout: number,
     confirmLevel: TransactionConfirmationStatus,
+    signedAtBlock?: BlockhashWithExpiryBlockHeight,
   ) {
+    const timeoutBlockHeight = signedAtBlock
+      ? signedAtBlock.lastValidBlockHeight +
+        MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION
+      : 0;
+    let startTimeoutCheck = false;
     let done = false;
-
     const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] =
       ['finalized'];
 
@@ -509,9 +574,13 @@ export class MangoClient {
           if (done) {
             return;
           }
-          done = true;
-          console.log('Timed out for txid: ', txid);
-          reject({ timeout: true });
+          if (timeoutBlockHeight !== 0) {
+            startTimeoutCheck = true;
+          } else {
+            done = true;
+            console.log('Timed out for txid: ', txid);
+            reject({ timeout: true });
+          }
         }, timeout);
         try {
           subscriptionId = this.connection.onSignature(
@@ -532,17 +601,34 @@ export class MangoClient {
           done = true;
           console.log('WS error in setup', txid, e);
         }
-        let retrySleep = 200;
+        let retrySleep = 400;
         while (!done) {
           // eslint-disable-next-line no-loop-func
           await sleep(retrySleep);
           (async () => {
             try {
-              const response = await this.connection.getSignatureStatuses([
-                txid,
-              ]);
+              const promises: [
+                Promise<RpcResponseAndContext<(SignatureStatus | null)[]>>,
+                Promise<number>?,
+              ] = [this.connection.getSignatureStatuses([txid])];
+              //if startTimeoutThreshold passed we start to check if
+              //current blocks are did not passed timeoutBlockHeight threshold
+              if (startTimeoutCheck) {
+                promises.push(this.connection.getBlockHeight('confirmed'));
+              }
+              const [signatureStatuses, currentBlockHeight] = await Promise.all(
+                promises,
+              );
+              if (
+                typeof currentBlockHeight !== undefined &&
+                timeoutBlockHeight <= currentBlockHeight!
+              ) {
+                console.log('Timed out for txid: ', txid);
+                done = true;
+                reject({ timeout: true });
+              }
 
-              const result = response && response.value[0];
+              const result = signatureStatuses && signatureStatuses.value[0];
               if (!done) {
                 if (!result) {
                   // console.log('REST null result for', txid, result);
@@ -558,7 +644,7 @@ export class MangoClient {
                 ) {
                   console.log('REST not confirmed', txid, result);
                 } else {
-                  this.lastSlot = response?.context?.slot;
+                  this.lastSlot = signatureStatuses?.context?.slot;
                   console.log('REST confirmed', txid, result);
                   done = true;
                   resolve(result);
@@ -589,10 +675,13 @@ export class MangoClient {
 
   async updateRecentBlockhash(blockhashTimes: BlockhashTimes[]) {
     const now = getUnixTs();
-    const blockhash = (
-      await this.connection.getRecentBlockhash(this.blockhashCommitment)
-    ).blockhash;
-    blockhashTimes.push({ blockhash, timestamp: now });
+    const latestBlockhash = await this.connection.getLatestBlockhash(
+      this.blockhashCommitment,
+    );
+    blockhashTimes.push({
+      blockhash: latestBlockhash.blockhash,
+      timestamp: now,
+    });
 
     const blockhashTime = (
       blockhashTimes.length >= this.maxStoredBlockhashes
@@ -600,8 +689,9 @@ export class MangoClient {
         : blockhashTimes[0]
     ) as { blockhash: string; timestamp: number };
 
-    this.timeout = 90 - (now - blockhashTime.timestamp);
+    this.timeout = 90000 - (now - blockhashTime.timestamp);
     this.recentBlockhash = blockhashTime.blockhash;
+    this.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
     this.recentBlockhashTime = blockhashTime.timestamp;
   }
 
@@ -631,7 +721,10 @@ export class MangoClient {
     quoteOptimalRate: number,
     quoteMaxRate: number,
     payer: Payer,
-  ): Promise<PublicKey> {
+  ): Promise<PublicKey | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const accountInstruction = await createAccountInstruction(
       this.connection,
       payer.publicKey,
@@ -766,7 +859,10 @@ export class MangoClient {
   async initMangoAccount(
     mangoGroup: MangoGroup,
     owner: Payer,
-  ): Promise<PublicKey> {
+  ): Promise<PublicKey | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const accountInstruction = await createAccountInstruction(
       this.connection,
       owner.publicKey,
@@ -800,7 +896,10 @@ export class MangoClient {
     owner: Payer,
     accountNum: number,
     payerPk?: PublicKey,
-  ): Promise<PublicKey> {
+  ): Promise<PublicKey | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const payer = payerPk ?? owner.publicKey;
     const accountNumBN = new BN(accountNum);
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
@@ -837,7 +936,10 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     owner: Payer,
     accountNum: number,
-  ): Promise<PublicKey> {
+  ): Promise<PublicKey | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const accountNumBN = new BN(accountNum);
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
       [
@@ -902,7 +1004,11 @@ export class MangoClient {
 
     quantity: number,
     info?: string,
-  ): Promise<string> {
+  ): Promise<string | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
+
     const transaction = new Transaction();
     const accountInstruction = await createAccountInstruction(
       this.connection,
@@ -1020,9 +1126,13 @@ export class MangoClient {
     info?: string,
     referrerPk?: PublicKey,
     payerPk?: PublicKey,
-  ): Promise<[string, TransactionSignature]> {
+  ): Promise<[string, TransactionSignature] | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const payer = payerPk ?? owner.publicKey;
+
     const accountNumBN = new BN(accountNum);
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
       [
@@ -1162,7 +1272,10 @@ export class MangoClient {
     tokenAcc: PublicKey,
 
     quantity: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const additionalSigners: Array<Keypair> = [];
     const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
@@ -1247,7 +1360,11 @@ export class MangoClient {
 
     quantity: number,
     allowBorrow: boolean,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
+
     const transaction = new Transaction();
     const additionalSigners: Keypair[] = [];
     const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
@@ -1342,6 +1459,9 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     owner: Payer,
   ) {
+    if (!owner.publicKey) {
+      return;
+    }
     const transactionsAndSigners: {
       transaction: Transaction;
       signers: Keypair[];
@@ -1442,10 +1562,11 @@ export class MangoClient {
       }
       transactionsAndSigners.push(transactionAndSigners);
     }
-
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
 
     if (signedTransactions) {
@@ -1455,6 +1576,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         console.log(txid);
       }
@@ -1635,7 +1757,6 @@ export class MangoClient {
     mangoCache: PublicKey, // TODO - remove; already in MangoGroup
     perpMarket: PerpMarket,
     owner: Payer,
-
     side: 'buy' | 'sell',
     price: number,
     quantity: number,
@@ -1644,7 +1765,10 @@ export class MangoClient {
     bookSideInfo?: AccountInfo<Buffer>,
     reduceOnly?: boolean,
     referrerMangoAccountPk?: PublicKey,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const [nativePrice, nativeQuantity] = perpMarket.uiToNativePriceQuantity(
       price,
       quantity,
@@ -1738,7 +1862,10 @@ export class MangoClient {
       referrerMangoAccountPk?: PublicKey;
       expiryTimestamp?: number;
     },
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     options = options ? options : {};
     let {
       maxQuoteQuantity,
@@ -1840,7 +1967,10 @@ export class MangoClient {
     perpMarket: PerpMarket,
     order: PerpOrder,
     invalidIdOk = false,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeCancelPerpOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -1868,7 +1998,10 @@ export class MangoClient {
     perpMarkets: PerpMarket[],
     mangoAccount: MangoAccount,
     owner: Payer,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     let tx = new Transaction();
     const transactions: Transaction[] = [];
 
@@ -1920,14 +2053,19 @@ export class MangoClient {
     }
 
     // Sign multiple transactions at once for better UX
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
     if (signedTransactions) {
       return await Promise.all(
         signedTransactions.map((signedTransaction) =>
-          this.sendSignedTransaction({ signedTransaction }),
+          this.sendSignedTransaction({
+            signedTransaction,
+            signedAtBlock: currentBlockhash,
+          }),
         ),
       );
     } else {
@@ -2084,7 +2222,10 @@ export class MangoClient {
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientId?: BN,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
 
@@ -2270,7 +2411,10 @@ export class MangoClient {
     orderType?: 'limit' | 'ioc' | 'postOnly',
     clientOrderId?: BN,
     useMsrmVault?: boolean | undefined,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const limitPrice = spotMarket.priceNumberToLots(price);
     const maxBaseQuantity = spotMarket.baseSizeNumberToLots(size);
     const allTransactions: Transaction[] = [];
@@ -2427,9 +2571,11 @@ export class MangoClient {
       signers,
     }));
 
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
 
     const txids: TransactionSignature[] = [];
@@ -2441,6 +2587,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         txids.push(txid);
       }
@@ -2469,7 +2616,10 @@ export class MangoClient {
     owner: Payer,
     spotMarket: Market,
     order: Order,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const instruction = makeCancelSpotOrderInstruction(
       this.programId,
@@ -2539,7 +2689,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     owner: Payer,
     spotMarket: Market,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
     const dexSigner = await PublicKey.createProgramAddress(
       [
@@ -2597,7 +2750,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     spotMarkets: Market[],
     owner: Payer,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transactions: Transaction[] = [];
 
     let j = 0;
@@ -2669,10 +2825,11 @@ export class MangoClient {
       transaction: tx,
       signers,
     }));
-
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
 
     const txids: TransactionSignature[] = [];
@@ -2684,6 +2841,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         txids.push(txid);
       }
@@ -2887,12 +3045,12 @@ export class MangoClient {
     quoteRootBank: RootBank,
     owner: Payer,
     mangoAccounts?: MangoAccount[],
-  ): Promise<(TransactionSignature | null)[]> {
+  ): Promise<TransactionSignature[] | undefined> {
     // fetch all MangoAccounts filtered for having this perp market in basket
     if (mangoAccounts === undefined) {
       mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
     }
-    return await Promise.all(
+    const signatures: (TransactionSignature | null)[] = await Promise.all(
       perpMarkets.map((pm) => {
         const marketIndex = mangoGroup.getPerpMarketIndex(pm.publicKey);
         const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
@@ -2916,6 +3074,17 @@ export class MangoClient {
           : promiseNull();
       }),
     );
+
+    function filterNulls<TransactionSignature>(
+      value: TransactionSignature | null,
+    ): value is TransactionSignature {
+      if (value === null) return false;
+      return true;
+    }
+
+    const filtered = signatures?.filter(filterNulls);
+
+    return filtered?.length ? filtered : undefined;
   }
 
   /**
@@ -3239,6 +3408,9 @@ export class MangoClient {
     lmSizeShift: number,
     baseDecimals: number,
   ) {
+    if (!admin.publicKey) {
+      return;
+    }
     const [perpMarketPk] = await PublicKey.findProgramAddress(
       [
         mangoGroup.publicKey.toBytes(),
@@ -3516,8 +3688,8 @@ export class MangoClient {
       assetRootBank.nodeBanks[0],
       liabRootBank.publicKey,
       liabRootBank.nodeBanks[0],
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       maxLiabTransfer,
     );
 
@@ -3548,8 +3720,8 @@ export class MangoClient {
       payer.publicKey,
       rootBank.publicKey,
       rootBank.nodeBanks[0],
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       assetType,
       new BN(assetIndex),
       liabType,
@@ -3580,8 +3752,8 @@ export class MangoClient {
       liqeeMangoAccount.publicKey,
       liqorMangoAccount.publicKey,
       payer.publicKey,
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       baseTransferRequest,
     );
 
@@ -3697,7 +3869,10 @@ export class MangoClient {
     mngoRootBank: PublicKey,
     mngoNodeBank: PublicKey,
     mngoVault: PublicKey,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeRedeemMngoInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3724,7 +3899,10 @@ export class MangoClient {
     mngoRootBank: PublicKey,
     mngoNodeBank: PublicKey,
     mngoVault: PublicKey,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const transactions: Transaction[] = [];
     let transaction = new Transaction();
 
@@ -3780,16 +3958,20 @@ export class MangoClient {
       throw new Error('No MNGO rewards to redeem');
     }
 
-    // Sign multiple transactions at once for better UX
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer,
+      currentBlockhash,
     });
 
     if (signedTransactions) {
       const txSigs = await Promise.all(
         signedTransactions.map((signedTransaction) =>
-          this.sendSignedTransaction({ signedTransaction }),
+          this.sendSignedTransaction({
+            signedTransaction,
+            signedAtBlock: currentBlockhash,
+          }),
         ),
       );
       return txSigs;
@@ -3803,7 +3985,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     owner: Payer,
     info: string,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeAddMangoAccountInfoInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3824,7 +4009,10 @@ export class MangoClient {
     owner: Payer,
     msrmAccount: PublicKey,
     quantity: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeDepositMsrmInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3846,7 +4034,10 @@ export class MangoClient {
     owner: Payer,
     msrmAccount: PublicKey,
     quantity: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeWithdrawMsrmInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3879,7 +4070,10 @@ export class MangoClient {
     targetPeriodLength: number | undefined,
     mngoPerPeriod: number | undefined,
     exp: number | undefined,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeChangePerpMarketParamsInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3921,7 +4115,10 @@ export class MangoClient {
     exp: number | undefined,
     version: number | undefined,
     lmSizeShift: number | undefined,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeChangePerpMarketParams2Instruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3952,7 +4149,10 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     newAdmin: PublicKey,
     admin: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeSetGroupAdminInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -3980,7 +4180,10 @@ export class MangoClient {
     price: number,
     size: number,
     orderType?: 'limit' | 'ioc' | 'postOnly',
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
 
     const instruction = makeCancelSpotOrderInstruction(
@@ -4207,7 +4410,10 @@ export class MangoClient {
     bookSideInfo?: AccountInfo<Buffer>, // ask if side === bid, bids if side === ask; if this is given; crank instruction is added
     invalidIdOk = false, // Don't throw error if order is invalid
     referrerMangoAccountPk?: PublicKey,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const additionalSigners: Keypair[] = [];
 
@@ -4301,7 +4507,10 @@ export class MangoClient {
     triggerPrice: number,
     reduceOnly: boolean,
     clientOrderId?: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const transaction = new Transaction();
     const additionalSigners: Keypair[] = [];
 
@@ -4381,7 +4590,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     owner: Payer,
     orderIndex: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
     const instruction = makeRemoveAdvancedOrderInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4403,7 +4615,10 @@ export class MangoClient {
     perpMarket: PerpMarket,
     payer: Payer,
     orderIndex: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const openOrders = mangoAccount.spotOpenOrders.filter(
       (pk, i) => mangoAccount.inMarginBasket[i],
     );
@@ -4432,7 +4647,10 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     payer: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeCloseAdvancedOrdersInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4451,7 +4669,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     payer: Payer,
     marketIndex: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeCloseSpotOpenOrdersInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4472,7 +4693,10 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     payer: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeCloseMangoAccountInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4488,7 +4712,10 @@ export class MangoClient {
   async createDustAccount(
     mangoGroup: MangoGroup,
     payer: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const [mangoAccountPk] = await PublicKey.findProgramAddress(
       [mangoGroup.publicKey.toBytes(), new Buffer('DustAccount', 'utf-8')],
       this.programId,
@@ -4511,7 +4738,10 @@ export class MangoClient {
     rootBank: RootBank,
     mangoCache: MangoCache,
     payer: Payer,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const [dustAccountPk] = await PublicKey.findProgramAddress(
       [mangoGroup.publicKey.toBytes(), new Buffer('DustAccount', 'utf-8')],
       this.programId,
@@ -4555,6 +4785,9 @@ export class MangoClient {
     mangoCache: MangoCache,
     payer: Payer,
   ) {
+    if (!payer.publicKey) {
+      return;
+    }
     const transactionsAndSigners: {
       transaction: Transaction;
       signers: Keypair[];
@@ -4602,9 +4835,11 @@ export class MangoClient {
       transactionsAndSigners.push(transactionAndSigners);
     }
 
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
-      payer: payer,
+      payer,
+      currentBlockhash,
     });
 
     if (signedTransactions) {
@@ -4614,6 +4849,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         console.log(txid);
       }
@@ -4628,7 +4864,10 @@ export class MangoClient {
     mangoCache: MangoCache,
     mngoIndex: number,
     payer: Payer,
-  ): Promise<TransactionSignature[]> {
+  ): Promise<TransactionSignature[] | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const transactionsAndSigners: {
       transaction: Transaction;
       signers: Keypair[];
@@ -4679,8 +4918,10 @@ export class MangoClient {
       );
       redeemMngoTransaction.transaction.add(instruction);
     }
-    transactionsAndSigners.push(redeemMngoTransaction);
-
+    if (redeemMngoTransaction.transaction.instructions.length > 0){
+      transactionsAndSigners.push(redeemMngoTransaction);
+    }
+    
     const resolveAllDustTransaction = {
       transaction: new Transaction(),
       signers: [],
@@ -4867,10 +5108,11 @@ export class MangoClient {
       ),
     );
     transactionsAndSigners.push(closeAccountsTransaction);
-
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
-      payer: payer,
+      payer,
+      currentBlockhash,
     });
 
     const txids: TransactionSignature[] = [];
@@ -4881,6 +5123,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         txids.push(txid);
         console.log(txid);
@@ -4900,6 +5143,9 @@ export class MangoClient {
     side: 'buy' | 'sell',
     limit: number,
   ) {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeCancelPerpOrdersSideInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4924,6 +5170,9 @@ export class MangoClient {
     payer: Payer,
     delegate: PublicKey,
   ) {
+    if (!payer.publicKey) {
+      return;
+    }
     const instruction = makeSetDelegateInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4951,7 +5200,10 @@ export class MangoClient {
     optimalRate: number | undefined,
     maxRate: number | undefined,
     version: number | undefined,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeChangeSpotMarketParamsInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -4988,7 +5240,10 @@ export class MangoClient {
     refSurcharge: number,
     refShare: number,
     refMngoRequired: number,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!admin.publicKey) {
+      return;
+    }
     const instruction = makeChangeReferralFeeParamsInstruction(
       this.programId,
       mangoGroup.publicKey,
@@ -5008,7 +5263,10 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     payer: Payer, // must be also owner of mangoAccount
     referrerMangoAccountPk: PublicKey,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     // Generate the PDA pubkey
     const [referrerMemoryPk] = await PublicKey.findProgramAddress(
       [mangoAccount.publicKey.toBytes(), new Buffer('ReferrerMemory', 'utf-8')],
@@ -5065,7 +5323,10 @@ export class MangoClient {
     referrerMangoAccount: MangoAccount,
     payer: Payer, // will also owner of referrerMangoAccount
     referrerId: string,
-  ): Promise<TransactionSignature> {
+  ): Promise<TransactionSignature | undefined> {
+    if (!payer.publicKey) {
+      return;
+    }
     const { referrerPda, encodedReferrerId } = await this.getReferrerPda(
       mangoGroup,
       referrerId,
