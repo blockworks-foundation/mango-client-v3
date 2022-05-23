@@ -26,6 +26,8 @@
     "crank": "ts-node src/scripts/crank.ts",
     "scratch": "ts-node src/scripts/scratch.ts",
     "mm": "ts-node src/scripts/mm.ts",
+    "create-accounts": "ts-node src/scripts/testnet/createAccounts.ts",
+    "clone-group": "ts-node src/scripts/testnet/cloneGroup.ts",
     "dust": "ts-node src/scripts/dust.ts",
     "example-mango-logs": "ts-node examples/mangoLogs.ts",
     "example-fetch-stats": "ts-node examples/fetchStats.ts",

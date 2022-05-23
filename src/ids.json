@@ -3,9 +3,29 @@
     "devnet": "https://mango.devnet.rpcpool.com",
     "localnet": "http://127.0.0.1:8899",
     "mainnet": "https://mango.rpcpool.com/946ef7337da3f5b8d3e4a34e7f88",
-    "testnet": "https://api.testnet.solana.com"
+    "testnet": "http://api.testnet.rpcpool.com"
   },
   "groups": [
+    {
+      "cluster": "testnet",
+      "name": "testnet.1",
+      "publicKey": "FgKjrdkcCbprKvgdqsWwbmu249cb7gShLCcGFYcZM6co",
+      "quoteSymbol": "USDC",
+      "mangoProgramId": "BXhdkETgbHrr5QmVBT1xbz3JrMM28u5djbVtmTUfmFTH",
+      "serumProgramId": "3qx9WcNPw4jj3v1kJbWoxSN2ZAakwUXFu9HDr2QjQ6xq",
+      "tokens": [
+        {
+          "symbol": "USDC",
+          "mintKey": "HL4ZFMUcS5uoPe4cwbRk1xNfYMRTwoahVmf69VkDPJGS",
+          "decimals": 6,
+          "rootKey": "EjWWkFYp2huGfuuftrJ8ZceA4yCaHHBUZw5xeSvm5Ry6",
+          "nodeKeys": ["5FwQNZJdR8CnXcngqmoe1mzFZFFyzaGKU1ac1FBQSuzV"]
+        }
+      ],
+      "oracles": [],
+      "perpMarkets": [],
+      "spotMarkets": []
+    },
     {
       "cluster": "mainnet",
       "name": "mainnet.1",
