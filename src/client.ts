@@ -5388,6 +5388,8 @@ export class MangoClient {
     owner: Payer,
     limit: BN,
   ) {
+    if(!owner.publicKey)
+      return;
     const baseNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
     const quoteNodeBanks = await quoteRootBank.loadNodeBanks(this.connection);
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
