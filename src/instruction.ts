@@ -2343,11 +2343,121 @@ export function makeSetMarketMode(
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
     { isSigner: true, isWritable: false, pubkey: adminPk },
-    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
   ];
 
   const data = encodeMangoInstruction({
     SetMarketMode: { marketIndex, marketMode, marketType },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRemovePerpMarket(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  perpMarketPk: PublicKey,
+  eventQueuePk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  mngoVaultPk: PublicKey,
+  mngoDaoVaultPk: PublicKey,
+  signerPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: true, pubkey: adminPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: mngoVaultPk },
+    { isSigner: false, isWritable: true, pubkey: mngoDaoVaultPk },
+    { isSigner: false, isWritable: true, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+  const data = encodeMangoInstruction({
+    RemovePerpMarket: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRemoveSpotMarket(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  oraclePk: PublicKey,
+  nodeBanks: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: true, pubkey: adminPk },
+    { isSigner: false, isWritable: true, pubkey: oraclePk },
+    ...nodeBanks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMangoInstruction({
+    RemoveSpotMarket: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRemoveOracle(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  oraclePk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+    { isSigner: false, isWritable: false, pubkey: oraclePk },
+  ];
+
+  const data = encodeMangoInstruction({
+    RemoveOracle: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeForceSettlePerpPosition(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountAPk: PublicKey,
+  mangoAccountBPk: PublicKey,
+  mangoCachePk: PublicKey,
+  perpMarketPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountAPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountBPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    ForceSettlePerpPosition: {},
   });
   return new TransactionInstruction({
     keys,
