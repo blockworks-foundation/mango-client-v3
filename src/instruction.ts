@@ -4,7 +4,12 @@ import {
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { AssetType, encodeMangoInstruction, INFO_LEN } from './layout';
+import {
+  AssetType,
+  encodeMangoInstruction,
+  INFO_LEN,
+  MarketMode,
+} from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
@@ -2319,6 +2324,30 @@ export function makeRegisterReferrerIdInstruction(
 
   const data = encodeMangoInstruction({
     RegisterReferrerId: { referrerId },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeSetMarketMode(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  marketIndex: BN,
+  marketMode: MarketMode,
+  marketType: AssetType,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+    { isSigner: false, isWritable: false, pubkey: SystemProgram.programId },
+  ];
+
+  const data = encodeMangoInstruction({
+    SetMarketMode: { marketIndex, marketMode, marketType },
   });
   return new TransactionInstruction({
     keys,

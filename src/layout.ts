@@ -661,6 +661,15 @@ export const enum AssetType {
   Perp = 1,
 }
 
+export const enum MarketMode {
+  Default = 0,
+  Active = 1,
+  CloseOnly = 2,
+  ForceCloseOnly = 3,
+  Inactive = 4,
+  SwappingSpotMarket = 5,
+}
+
 export const enum AdvancedOrderType {
   PerpTrigger = 0,
   SpotTrigger = 1,
