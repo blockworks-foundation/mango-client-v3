@@ -2332,7 +2332,7 @@ export function makeRegisterReferrerIdInstruction(
   });
 }
 
-export function makeSetMarketMode(
+export function makeSetMarketModeInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   adminPk: PublicKey,
@@ -2355,7 +2355,7 @@ export function makeSetMarketMode(
   });
 }
 
-export function makeRemovePerpMarket(
+export function makeRemovePerpMarketInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   adminPk: PublicKey,
@@ -2390,7 +2390,7 @@ export function makeRemovePerpMarket(
   });
 }
 
-export function makeRemoveSpotMarket(
+export function makeRemoveSpotMarketInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   adminPk: PublicKey,
@@ -2418,7 +2418,7 @@ export function makeRemoveSpotMarket(
   });
 }
 
-export function makeRemoveOracle(
+export function makeRemoveOracleInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   adminPk: PublicKey,
@@ -2440,7 +2440,7 @@ export function makeRemoveOracle(
   });
 }
 
-export function makeForceSettlePerpPosition(
+export function makeForceSettlePerpPositionInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   mangoAccountAPk: PublicKey,

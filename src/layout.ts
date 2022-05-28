@@ -611,6 +611,16 @@ MangoInstructionLayout.addVariant(
   'PlacePerpOrder2',
 );
 
+MangoInstructionLayout.addVariant(
+  66,
+  struct([u8('marketIndex'), u8('marketMode'), u8('marketType')]),
+  'SetMarketMode',
+);
+MangoInstructionLayout.addVariant(67, struct([]), 'RemovePerpMarket');
+MangoInstructionLayout.addVariant(69, struct([]), 'RemoveSpotMarket');
+MangoInstructionLayout.addVariant(70, struct([]), 'RemoveOracle');
+MangoInstructionLayout.addVariant(72, struct([]), 'ForceSettlePerpPosition');
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
