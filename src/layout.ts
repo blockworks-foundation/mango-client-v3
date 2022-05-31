@@ -178,6 +178,14 @@ export function orderTypeLayout(property, span) {
   );
 }
 /** @internal */
+export function expiryTypeLayout(property, span) {
+  return new EnumLayout(
+    { absolute: 0, relative: 1 },
+    span,
+    property,
+  );
+}
+/** @internal */
 export function selfTradeBehaviorLayout(property, span) {
   return new EnumLayout(
     { decrementTake: 0, cancelProvide: 1, abortTransaction: 2 },
@@ -607,6 +615,7 @@ MangoInstructionLayout.addVariant(
     orderTypeLayout('orderType', 1),
     bool('reduceOnly'),
     u8('limit'),
+    expiryTypeLayout('expiryType', 1),
   ]),
   'PlacePerpOrder2',
 );

@@ -1066,6 +1066,7 @@ export function makePlacePerpOrder2Instruction(
   reduceOnly?: boolean,
   referrerMangoAccountPk?: PublicKey,
   expiryTimestamp?: BN,
+  expiryType?: ExpiryType,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -1106,6 +1107,7 @@ export function makePlacePerpOrder2Instruction(
       orderType,
       reduceOnly: reduceOnly ? reduceOnly : false,
       limit,
+      expiryType: expiryType ? expiryType : 'absolute',
     },
   });
 

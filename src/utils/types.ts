@@ -22,6 +22,10 @@ export type PerpOrderType =
   | 'market'
   | 'postOnlySlide';
 
+export type ExpiryType =
+  | 'absolute'
+  | 'relative';
+
 export type BlockhashTimes = { blockhash: string; timestamp: number };
 
 export type Payer = Adapter | Keypair | WalletAdapter;
