@@ -2372,6 +2372,7 @@ export function makeCancelAllSpotOrdersInstruction(
     { isSigner: false, isWritable: true, pubkey: dexQuotePk },
     { isSigner: false, isWritable: false, pubkey: dexSignerPk },
     { isSigner: false, isWritable: false, pubkey: dexProgramPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
   ];
 
   const data = encodeMangoInstruction({

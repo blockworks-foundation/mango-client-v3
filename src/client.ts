@@ -5383,13 +5383,19 @@ export class MangoClient {
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     spotMarket: Market,
-    baseRootBank: RootBank,
-    quoteRootBank: RootBank,
     owner: Payer,
-    limit: BN,
+    limit: number,
   ) {
     if(!owner.publicKey)
       return;
+    const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.address);
+    const baseRootBank = mangoGroup.rootBankAccounts[marketIndex];
+    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
+    if(baseRootBank == null || quoteRootBank == null)
+    {
+      console.log("A root bank is null")
+      return;
+    }
     const baseNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
     const quoteNodeBanks = await quoteRootBank.loadNodeBanks(this.connection);
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
@@ -5424,7 +5430,7 @@ export class MangoClient {
       spotMarket['_decoded'].quoteVault,
       dexSigner,
       mangoGroup.dexProgramId,
-      limit,
+      new BN(limit),
     );
 
     const transaction = new Transaction();
