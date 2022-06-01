@@ -37,6 +37,7 @@
     "test-stoploss": "ts-node test/stoploss.test.ts",
     "test-closeaccount": "ts-node test/closeaccount.test.ts",
     "test-cancelside": "ts-node test/cancelside.test.ts",
+    "test-cancelallspotorders": "ts-node test/cancelallspotorders.test.ts",
     "mint-devnet": "ts-node src/mintDevnet.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
     "test:build": "yarn build && yarn",
