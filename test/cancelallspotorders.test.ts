@@ -1,21 +1,21 @@
 import fs from 'fs';
 import os from 'os';
-import { Cluster, Config, QUOTE_INDEX, sleep } from '../src';
+import { Cluster, Config, MangoClient, QUOTE_INDEX, sleep } from '../src';
 import configFile from '../src/ids.json';
-import { Commitment, Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { Commitment, Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import TestGroup from './TestGroup';
 import * as serum from '@project-serum/serum';
 import * as pyth from "@pythnetwork/client";
 import { expect } from 'chai';
-import BN from 'bn.js';
 
 async function testCancelAllSpotOrders() {
   const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
   const sleepTime = 2000;
   const config = new Config(configFile);
-  const mangoProgramId = config.getGroup(cluster, 'devnet.2')!.mangoProgramId;
-  const serumProgramId = config.getGroup(cluster, 'devnet.2')!.serumProgramId;
+  const groupConfig = config.getGroup(cluster, 'devnet.2')!;
+  const mangoProgramId = groupConfig.mangoProgramId;
+  const mangoGroupKey = groupConfig.publicKey;
   const payer = Keypair.fromSecretKey(
     new Uint8Array(
       JSON.parse(
@@ -29,10 +29,9 @@ async function testCancelAllSpotOrders() {
     'processed' as Commitment,
   );
   // init
-  const testGroup = new TestGroup(connection, payer, mangoProgramId);
-  const mangoGroupKey = await testGroup.init();
-``
-  const mangoGroup = await testGroup.client.getMangoGroup(mangoGroupKey);
+  //const testGroup = new TestGroup(connection, payer, mangoProgramId);
+  const client = new MangoClient(connection, mangoProgramId);
+  const mangoGroup = await client.getMangoGroup(mangoGroupKey);
 
   const cache = await mangoGroup.loadCache(connection);
   const rootBanks = await mangoGroup.loadRootBanks(connection);
@@ -42,7 +41,7 @@ async function testCancelAllSpotOrders() {
   }
   const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
 
-  const accountPk: PublicKey = (await testGroup.client.createMangoAccount(
+  const accountPk: PublicKey = (await client.createMangoAccount(
     mangoGroup,
     payer,
     1,
@@ -50,7 +49,7 @@ async function testCancelAllSpotOrders() {
   console.log('Created Account:', accountPk.toBase58());
 
   await sleep(sleepTime);
-  const mangoAccount = await testGroup.client.getMangoAccount(
+  const mangoAccount = await client.getMangoAccount(
     accountPk,
     mangoGroup.dexProgramId,
   );
@@ -66,8 +65,7 @@ async function testCancelAllSpotOrders() {
     payer.publicKey,
   );
 
-  await testGroup.runKeeper();
-  await testGroup.client.deposit(
+  await client.deposit(
     mangoGroup,
     mangoAccount,
     payer,
@@ -77,27 +75,38 @@ async function testCancelAllSpotOrders() {
     quoteWallet.address,
     10000,
   );
-  await testGroup.runKeeper();
-  await testGroup.updateCache();
-  
+
   await sleep(sleepTime);
 
-  const market = testGroup.spotMarkets[3];
-  const oracle = testGroup.oraclePks[3];
+  const marketPk = mangoGroup.spotMarkets[3].spotMarket;
+  const market = await serum.Market.load(connection, marketPk, undefined, groupConfig.serumProgramId);
+  const oracle = mangoGroup.oracles[3];
   
   await mangoAccount.reload(connection);
   const oracleData = await connection.getAccountInfo(oracle);
   if(oracleData == null)
     return;
-  // placing orders
+  // determine asset price
   const price = pyth.parsePriceData(oracleData?.data);
-  const assetPrice = price?.price;
+  const assetPrice = price!.price;
   console.log('asset price is ' + assetPrice)
+
+  // Buy some spot to create sell instructions later
+  {
+    await client.placeSpotOrder(mangoGroup, mangoAccount, mangoGroup.mangoCache, market, payer, "buy", assetPrice ?? 0 * 1.05, 1, 'limit');
+    const consumeItx = market.makeConsumeEventsInstruction(mangoAccount.spotOpenOrders, 10);
+    const trx = new Transaction();
+    trx.add(consumeItx);
+    await client.sendTransaction(trx, payer, []);
+    await mangoAccount.reload(connection);
+  }
+  
+  // placing orders
   console.log('place order 1')
-  await testGroup.client.placeSpotOrder(mangoGroup, mangoAccount, mangoGroup.mangoCache, market, payer, "buy", assetPrice ?? 0 * 0.99, 1, 'limit');
+  await client.placeSpotOrder(mangoGroup, mangoAccount, mangoGroup.mangoCache, market, payer, "buy", assetPrice ?? 0 * 0.99, 1, 'limit');
   await mangoAccount.reload(connection);
   console.log('place order 2')
-  await testGroup.client.placeSpotOrder(mangoGroup, mangoAccount, mangoGroup.mangoCache, market, payer, "buy", assetPrice ?? 0 * 0.98, 1, 'limit');
+  await client.placeSpotOrder(mangoGroup, mangoAccount, mangoGroup.mangoCache, market, payer, "sell", assetPrice ?? 0 * 1.02, 1, 'limit');
   // checking open orders length
   {
     const orders = await mangoAccount.loadSpotOrdersForMarket(connection, market, 3)
@@ -106,12 +115,10 @@ async function testCancelAllSpotOrders() {
   }
   // canceling all spot orders for a market
   console.log("Cancel All Spot Orders");
-  const signature = await testGroup.client.cancelAllSpotOrders(mangoGroup, mangoAccount, market, payer, 255);
+  const signature = await client.cancelAllSpotOrders(mangoGroup, mangoAccount, market, payer, 255);
   console.log("cancel all spot orders signature " + signature)
   
-  await testGroup.runKeeper();
   await sleep(sleepTime);
-  
   {
     const orders = await mangoAccount.loadSpotOrdersForMarket(connection, market, 3)
     expect( orders.length === 0 );
