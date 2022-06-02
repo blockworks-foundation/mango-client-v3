@@ -1,10 +1,13 @@
 import {
   AccountInfo,
+  BlockhashWithExpiryBlockHeight,
   Commitment,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
+  RpcResponseAndContext,
+  SignatureStatus,
   SimulatedTransactionResponse,
   SystemProgram,
   Transaction,
@@ -25,9 +28,13 @@ import {
   promiseUndef,
   simulateTransaction,
   sleep,
+  MangoError,
+  U64_MAX_BN,
+  TimeoutError,
   uiToNative,
   ZERO_BN,
   zeroKey,
+  MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION,
 } from './utils/utils';
 import {
   AssetType,
@@ -133,14 +140,8 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import {
-  makeCreateSpotOpenOrdersInstruction,
-  MangoError,
-  ReferrerIdRecord,
-  ReferrerIdRecordLayout,
-  TimeoutError,
-  U64_MAX_BN,
-} from '.';
+import { makeCreateSpotOpenOrdersInstruction } from './instruction';
+import { ReferrerIdRecord, ReferrerIdRecordLayout } from './layout';
 import * as bs58 from 'bs58';
 
 /**
@@ -168,6 +169,7 @@ export class MangoClient {
   programId: PublicKey;
   lastSlot: number;
   recentBlockhash: string;
+  lastValidBlockHeight: number;
   recentBlockhashTime: number;
   maxStoredBlockhashes: number;
   timeout: number | null;
@@ -191,6 +193,7 @@ export class MangoClient {
     this.lastSlot = 0;
     this.recentBlockhash = '';
     this.recentBlockhashTime = 0;
+    this.lastValidBlockHeight = 0;
     this.maxStoredBlockhashes = opts?.maxStoredBlockhashes || 7;
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
     this.timeout = opts?.timeout || 60000;
@@ -220,18 +223,38 @@ export class MangoClient {
     );
   }
 
-  async signTransaction({ transaction, payer, signers }) {
+  async getCurrentBlockhash(): Promise<BlockhashWithExpiryBlockHeight> {
     const now = getUnixTs();
-    let blockhash;
+    let currentBlockhash: BlockhashWithExpiryBlockHeight;
     // Get new blockhash if stored blockhash more than 70 seconds old
     if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
-      blockhash = this.recentBlockhash;
+      currentBlockhash = {
+        blockhash: this.recentBlockhash,
+        lastValidBlockHeight: this.lastValidBlockHeight,
+      };
     } else {
-      blockhash = (
-        await this.connection.getRecentBlockhash(this.blockhashCommitment)
-      ).blockhash;
+      currentBlockhash = await this.connection.getLatestBlockhash(
+        this.blockhashCommitment,
+      );
     }
-    transaction.recentBlockhash = blockhash;
+    return currentBlockhash;
+  }
+
+  async signTransaction({
+    transaction,
+    payer,
+    signers,
+    currentBlockhash,
+  }: {
+    transaction: Transaction;
+    payer: any;
+    signers: Array<Keypair>;
+    currentBlockhash?: BlockhashWithExpiryBlockHeight;
+  }) {
+    let blockhashWithExpiryBlockHeight: BlockhashWithExpiryBlockHeight =
+      currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
+
+    transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
     transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
     if (signers.length > 0) {
       transaction.partialSign(...signers);
@@ -248,28 +271,22 @@ export class MangoClient {
   async signTransactions({
     transactionsAndSigners,
     payer,
+    currentBlockhash,
   }: {
     transactionsAndSigners: {
       transaction: Transaction;
       signers?: Array<Keypair>;
     }[];
     payer: Payer;
+    currentBlockhash?: BlockhashWithExpiryBlockHeight;
   }) {
     if (!payer.publicKey) {
       return;
     }
-    const now = getUnixTs();
-    let blockhash;
-    // Get new blockhash if stored blockhash more than 70 seconds old
-    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
-      blockhash = this.recentBlockhash;
-    } else {
-      blockhash = (
-        await this.connection.getRecentBlockhash(this.blockhashCommitment)
-      ).blockhash;
-    }
+    let blockhashWithExpiryBlockHeight: BlockhashWithExpiryBlockHeight =
+      currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
-      transaction.recentBlockhash = blockhash;
+      transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
       if (payer.publicKey) {
         transaction.setSigners(
           payer.publicKey,
@@ -292,7 +309,6 @@ export class MangoClient {
       return transactionsAndSigners.map((t) => t.transaction);
     }
   }
-
   /**
    * Send a transaction using the Solana Web3.js connection on the mango client
    *
@@ -308,12 +324,13 @@ export class MangoClient {
     timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
+    const currentBlockhash = await this.getCurrentBlockhash();
     await this.signTransaction({
       transaction,
       payer,
       signers: additionalSigners,
+      currentBlockhash,
     });
-
     const rawTransaction = transaction.serialize();
     let txid = bs58.encode(transaction.signatures[0].signature);
     const startTime = getUnixTs();
@@ -377,6 +394,7 @@ export class MangoClient {
           txid,
           timeout,
           confirmLevel,
+          currentBlockhash,
         );
       } catch (err: any) {
         if (err.timeout) {
@@ -423,10 +441,12 @@ export class MangoClient {
     signedTransaction,
     timeout = this.timeout,
     confirmLevel = 'processed',
+    signedAtBlock,
   }: {
     signedTransaction: Transaction;
     timeout?: number | null;
     confirmLevel?: TransactionConfirmationStatus;
+    signedAtBlock?: BlockhashWithExpiryBlockHeight;
   }): Promise<TransactionSignature> {
     const rawTransaction = signedTransaction.serialize();
     let txid = bs58.encode(signedTransaction.signatures[0].signature);
@@ -478,6 +498,7 @@ export class MangoClient {
           txid,
           timeout,
           confirmLevel,
+          signedAtBlock,
         );
       } catch (err: any) {
         if (err.timeout) {
@@ -527,9 +548,14 @@ export class MangoClient {
     txid: TransactionSignature,
     timeout: number,
     confirmLevel: TransactionConfirmationStatus,
+    signedAtBlock?: BlockhashWithExpiryBlockHeight,
   ) {
+    const timeoutBlockHeight = signedAtBlock
+      ? signedAtBlock.lastValidBlockHeight +
+        MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION
+      : 0;
+    let startTimeoutCheck = false;
     let done = false;
-
     const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] =
       ['finalized'];
 
@@ -547,9 +573,13 @@ export class MangoClient {
           if (done) {
             return;
           }
-          done = true;
-          console.log('Timed out for txid: ', txid);
-          reject({ timeout: true });
+          if (timeoutBlockHeight !== 0) {
+            startTimeoutCheck = true;
+          } else {
+            done = true;
+            console.log('Timed out for txid: ', txid);
+            reject({ timeout: true });
+          }
         }, timeout);
         try {
           subscriptionId = this.connection.onSignature(
@@ -576,11 +606,28 @@ export class MangoClient {
           await sleep(retrySleep);
           (async () => {
             try {
-              const response = await this.connection.getSignatureStatuses([
-                txid,
-              ]);
+              const promises: [
+                Promise<RpcResponseAndContext<(SignatureStatus | null)[]>>,
+                Promise<number>?,
+              ] = [this.connection.getSignatureStatuses([txid])];
+              //if startTimeoutThreshold passed we start to check if
+              //current blocks are did not passed timeoutBlockHeight threshold
+              if (startTimeoutCheck) {
+                promises.push(this.connection.getBlockHeight('confirmed'));
+              }
+              const [signatureStatuses, currentBlockHeight] = await Promise.all(
+                promises,
+              );
+              if (
+                typeof currentBlockHeight !== undefined &&
+                timeoutBlockHeight <= currentBlockHeight!
+              ) {
+                console.log('Timed out for txid: ', txid);
+                done = true;
+                reject({ timeout: true });
+              }
 
-              const result = response && response.value[0];
+              const result = signatureStatuses && signatureStatuses.value[0];
               if (!done) {
                 if (!result) {
                   // console.log('REST null result for', txid, result);
@@ -596,7 +643,7 @@ export class MangoClient {
                 ) {
                   console.log('REST not confirmed', txid, result);
                 } else {
-                  this.lastSlot = response?.context?.slot;
+                  this.lastSlot = signatureStatuses?.context?.slot;
                   console.log('REST confirmed', txid, result);
                   done = true;
                   resolve(result);
@@ -627,10 +674,13 @@ export class MangoClient {
 
   async updateRecentBlockhash(blockhashTimes: BlockhashTimes[]) {
     const now = getUnixTs();
-    const blockhash = (
-      await this.connection.getRecentBlockhash(this.blockhashCommitment)
-    ).blockhash;
-    blockhashTimes.push({ blockhash, timestamp: now });
+    const latestBlockhash = await this.connection.getLatestBlockhash(
+      this.blockhashCommitment,
+    );
+    blockhashTimes.push({
+      blockhash: latestBlockhash.blockhash,
+      timestamp: now,
+    });
 
     const blockhashTime = (
       blockhashTimes.length >= this.maxStoredBlockhashes
@@ -640,6 +690,7 @@ export class MangoClient {
 
     this.timeout = 90000 - (now - blockhashTime.timestamp);
     this.recentBlockhash = blockhashTime.blockhash;
+    this.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
     this.recentBlockhashTime = blockhashTime.timestamp;
   }
 
@@ -1510,10 +1561,11 @@ export class MangoClient {
       }
       transactionsAndSigners.push(transactionAndSigners);
     }
-
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
 
     if (signedTransactions) {
@@ -1523,6 +1575,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         console.log(txid);
       }
@@ -1999,14 +2052,19 @@ export class MangoClient {
     }
 
     // Sign multiple transactions at once for better UX
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
     if (signedTransactions) {
       return await Promise.all(
         signedTransactions.map((signedTransaction) =>
-          this.sendSignedTransaction({ signedTransaction }),
+          this.sendSignedTransaction({
+            signedTransaction,
+            signedAtBlock: currentBlockhash,
+          }),
         ),
       );
     } else {
@@ -2512,9 +2570,11 @@ export class MangoClient {
       signers,
     }));
 
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
 
     const txids: TransactionSignature[] = [];
@@ -2526,6 +2586,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         txids.push(txid);
       }
@@ -2763,10 +2824,11 @@ export class MangoClient {
       transaction: tx,
       signers,
     }));
-
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
 
     const txids: TransactionSignature[] = [];
@@ -2778,6 +2840,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         txids.push(txid);
       }
@@ -3624,8 +3687,8 @@ export class MangoClient {
       assetRootBank.nodeBanks[0],
       liabRootBank.publicKey,
       liabRootBank.nodeBanks[0],
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       maxLiabTransfer,
     );
 
@@ -3656,8 +3719,8 @@ export class MangoClient {
       payer.publicKey,
       rootBank.publicKey,
       rootBank.nodeBanks[0],
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       assetType,
       new BN(assetIndex),
       liabType,
@@ -3688,8 +3751,8 @@ export class MangoClient {
       liqeeMangoAccount.publicKey,
       liqorMangoAccount.publicKey,
       payer.publicKey,
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       baseTransferRequest,
     );
 
@@ -3894,16 +3957,20 @@ export class MangoClient {
       throw new Error('No MNGO rewards to redeem');
     }
 
-    // Sign multiple transactions at once for better UX
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer,
+      currentBlockhash,
     });
 
     if (signedTransactions) {
       const txSigs = await Promise.all(
         signedTransactions.map((signedTransaction) =>
-          this.sendSignedTransaction({ signedTransaction }),
+          this.sendSignedTransaction({
+            signedTransaction,
+            signedAtBlock: currentBlockhash,
+          }),
         ),
       );
       return txSigs;
@@ -4767,9 +4834,11 @@ export class MangoClient {
       transactionsAndSigners.push(transactionAndSigners);
     }
 
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
-      payer: payer,
+      payer,
+      currentBlockhash,
     });
 
     if (signedTransactions) {
@@ -4779,6 +4848,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         console.log(txid);
       }
@@ -4847,8 +4917,10 @@ export class MangoClient {
       );
       redeemMngoTransaction.transaction.add(instruction);
     }
-    transactionsAndSigners.push(redeemMngoTransaction);
-
+    if (redeemMngoTransaction.transaction.instructions.length > 0){
+      transactionsAndSigners.push(redeemMngoTransaction);
+    }
+    
     const resolveAllDustTransaction = {
       transaction: new Transaction(),
       signers: [],
@@ -5035,10 +5107,11 @@ export class MangoClient {
       ),
     );
     transactionsAndSigners.push(closeAccountsTransaction);
-
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
-      payer: payer,
+      payer,
+      currentBlockhash,
     });
 
     const txids: TransactionSignature[] = [];
@@ -5049,6 +5122,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         txids.push(txid);
         console.log(txid);

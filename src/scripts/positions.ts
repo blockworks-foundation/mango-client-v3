@@ -1,6 +1,11 @@
 import { Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
-import { Cluster, Config, getPerpMarketByBaseSymbol } from '../config';
+import {
+  Cluster,
+  Config,
+  getPerpMarketByBaseSymbol,
+  getSpotMarketByBaseSymbol,
+} from '../config';
 
 const config = Config.ids();
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
@@ -71,10 +76,42 @@ async function watchHighestOI(mkt: string, n: number) {
   }
 }
 
+async function watchHighestSpotBalance(mkt: string, n: number) {
+  const cfg = getSpotMarketByBaseSymbol(groupIds!, mkt)!;
+
+  console.log('getMangoGroup');
+  const group = await client.getMangoGroup(mangoGroupKey);
+  console.log('getAllMangoAccounts');
+  const mangoAccounts = await client.getAllMangoAccounts(group);
+  console.log('loadCache');
+  const cache = await group.loadCache(connection);
+
+  mangoAccounts.sort((a, b) => {
+    const aBalance = a.getUiDeposit(
+      cache.rootBankCache[cfg.marketIndex],
+      group,
+      cfg.marketIndex,
+    );
+    const bBalance = b.getUiDeposit(
+      cache.rootBankCache[cfg.marketIndex],
+      group,
+      cfg.marketIndex,
+    );
+    return bBalance.sub(aBalance).toNumber();
+  });
+
+  for (let i = 0; i < Math.min(n, mangoAccounts.length); i++) {
+    console.log(i);
+    console.log(mangoAccounts[i].toPrettyString(groupIds!, group, cache));
+  }
+}
+
 if (process.env.ACC) {
   watchAccount(new PublicKey(process.env.ACC));
 } else if (process.env.PERP) {
-  watchHighestOI(process.env.PERP, 5);
+  watchHighestOI(process.env.PERP, 10);
+} else if (process.env.SPOT) {
+  watchHighestSpotBalance(process.env.SPOT, 10);
 } else {
   watchHighestLiabilities(30);
 }

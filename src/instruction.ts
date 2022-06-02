@@ -9,7 +9,9 @@ import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
 import { I80F48, ZERO_I80F48 } from './utils/fixednum';
-import { PerpOrder, PerpOrderType, ZERO_BN } from '.';
+import { PerpOrder } from './book';
+import { PerpOrderType } from './utils/types';
+import { ZERO_BN } from './utils/utils';
 
 export function makeInitMangoGroupInstruction(
   programId: PublicKey,
@@ -311,8 +313,8 @@ export function makeDepositInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
-    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: true, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
     { isSigner: false, isWritable: true, pubkey: vaultPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
