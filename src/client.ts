@@ -167,6 +167,7 @@ export class MangoClient {
   connection: Connection;
   sendConnection?: Connection;
   programId: PublicKey;
+  lastSlot: number;
   lastValidBlockHeight: number;
   timeout: number | null;
   // The commitment level used when fetching recentBlockHash
@@ -186,6 +187,7 @@ export class MangoClient {
   ) {
     this.connection = connection;
     this.programId = programId;
+    this.lastSlot = 0;
     this.lastValidBlockHeight = 0;
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
     this.timeout = opts?.timeout || 60000;
@@ -564,12 +566,13 @@ export class MangoClient {
         try {
           subscriptionId = this.connection.onSignature(
             txid,
-            (result) => {
+            (result, context) => {
               subscriptionId = undefined;
               done = true;
               if (result.err) {
                 reject(result.err);
               } else {
+                this.lastSlot = context?.slot;
                 resolve(result);
               }
             },
@@ -621,7 +624,8 @@ export class MangoClient {
                 ) {
                   console.log('REST not confirmed', txid, result);
                 } else {
-                  console.log('-REST confirmed-', txid, result);
+                  this.lastSlot = signatureStatuses?.context?.slot;
+                  console.log('REST confirmed', txid, result);
                   done = true;
                   resolve(result);
                 }
