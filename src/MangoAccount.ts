@@ -153,6 +153,9 @@ export default class MangoAccount {
     return this;
   }
 
+  /**
+   * DEPRECATED
+   */
   async reloadFromSlot(
     connection: Connection,
     lastSlot = 0,
