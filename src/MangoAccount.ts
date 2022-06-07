@@ -6,7 +6,6 @@ import {
   MangoAccountLayout,
   MangoCache,
   MAX_PAIRS,
-  MAX_TOKENS,
   MetaData,
   QUOTE_INDEX,
   RootBankCache,
