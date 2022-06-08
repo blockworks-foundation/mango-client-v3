@@ -1154,11 +1154,11 @@ export default class MangoAccount {
     symbol: string;
     value: number;
   }> {
-    const quoteBalance = this.getNet(
-      cache.rootBankCache[0],
-      QUOTE_INDEX,
-    ).toNumber();
-
+    // calculate quote balance first
+    const quoteBalance = nativeToUi(
+      this.getNet(cache.rootBankCache[QUOTE_INDEX], QUOTE_INDEX).toNumber(),
+      group.tokens[QUOTE_INDEX].decimals,
+    );
     let result = [
       {
         asset: 'USDC',
@@ -1169,26 +1169,31 @@ export default class MangoAccount {
     ];
     const quote = result[0];
 
+    // then for each oracle
     for (let index = 0; index < group.numOracles; ++index) {
       const oracle = groupConfig.oracles[index];
-      const price = group.getPrice(index, cache);
+      const price = group.getPrice(index, cache).toNumber();
 
+      // calculate spot margin balance
       if (!group.spotMarkets[index].isEmpty()) {
-        const amount = this.getNet(cache.rootBankCache[index], index);
-        const value = amount.mul(price);
+        let amount = nativeToUi(
+          this.getNet(cache.rootBankCache[index], index).toNumber(),
+          group.tokens[index].decimals,
+        );
+        let value = amount * price;
 
         const openOrdersAccount = this.spotOpenOrdersAccounts[index];
         if (openOrdersAccount !== undefined) {
-          const baseAmount = I80F48.fromNumber(
-            nativeToUi(
-              openOrdersAccount.baseTokenTotal.toNumber(),
-              group.tokens[index].decimals,
-            ),
+          // include open orders unsettled base
+          const baseAmount = nativeToUi(
+            openOrdersAccount.baseTokenTotal.toNumber(),
+            group.tokens[index].decimals,
           );
 
-          amount.iadd(baseAmount);
-          value.iadd(baseAmount.mul(price));
+          amount += baseAmount;
+          value += baseAmount * price;
 
+          // adjust quote with open orders unsettled quote
           const quoteAmount = nativeToUi(
             openOrdersAccount.quoteTokenTotal.toNumber() +
               openOrdersAccount['referrerRebatesAccrued'].toNumber(),
@@ -1201,11 +1206,12 @@ export default class MangoAccount {
         result.push({
           asset: oracle.symbol,
           symbol: oracle.symbol,
-          amount: amount.toNumber(),
-          value: value.toNumber(),
+          amount,
+          value,
         });
       }
 
+      // calculate perp balance
       if (!group.perpMarkets[index].isEmpty()) {
         const marketConfig = groupConfig.perpMarkets.find(
           (p) => p.marketIndex == index,
@@ -1215,7 +1221,7 @@ export default class MangoAccount {
         )!;
 
         const amount = this.perpAccounts[index].getBasePositionUi(market);
-        const value = price.toNumber() * amount;
+        const value = price * amount;
 
         result.push({
           asset: marketConfig.name,
@@ -1224,9 +1230,17 @@ export default class MangoAccount {
           value,
         });
 
-        const unsettledAmount = this.perpAccounts[index]
-          .getPnl(group.perpMarkets[index], cache.perpMarketCache[index], price)
-          .toNumber();
+        // adjust quote w/ unsettled amount
+        const unsettledAmount = nativeToUi(
+          this.perpAccounts[index]
+            .getPnl(
+              group.perpMarkets[index],
+              cache.perpMarketCache[index],
+              I80F48.fromNumber(price),
+            )
+            .toNumber(),
+          group.tokens[QUOTE_INDEX].decimals,
+        );
         quote.amount += unsettledAmount;
         quote.value += unsettledAmount;
       }
