@@ -1136,6 +1136,121 @@ export default class MangoAccount {
       Math.pow(10, mangoGroup.tokens[QUOTE_INDEX].decimals)
     );
   }
+
+  /**
+   * Calculates the exposure for each spot asset and perp contract
+   * in standard UI numbers. E.g. if a user has net borrowed $100,
+   * and is long 10,000 MNGO contracts this would return:
+   * [{asset: "USDC", symbol: "USDC", amount: -100, value: -100},
+   *  {asset: "MNGO-PERP", symbol: "MNGO", amount: 10000, value: 2000}]
+   * All perp markets that are active for the mango group need to be
+   * loaded before calling this method and can passed in arbitrary order.
+   */
+  getNetExposureByAsset(
+    groupConfig: GroupConfig,
+    group: MangoGroup,
+    perpMarkets: Array<PerpMarket>,
+    cache: MangoCache,
+  ): Array<{
+    asset: string;
+    amount: number;
+    symbol: string;
+    value: number;
+  }> {
+    // calculate quote balance first
+    const quoteBalance = nativeToUi(
+      this.getNet(cache.rootBankCache[QUOTE_INDEX], QUOTE_INDEX).toNumber(),
+      group.tokens[QUOTE_INDEX].decimals,
+    );
+    let result = [
+      {
+        asset: 'USDC',
+        amount: quoteBalance,
+        symbol: 'USDC',
+        value: quoteBalance,
+      },
+    ];
+    const quote = result[0];
+
+    // then for each oracle
+    for (let index = 0; index < group.numOracles; ++index) {
+      const oracle = groupConfig.oracles[index];
+      const price = group.getPrice(index, cache).toNumber();
+
+      // calculate spot margin balance
+      if (!group.spotMarkets[index].isEmpty()) {
+        let amount = nativeToUi(
+          this.getNet(cache.rootBankCache[index], index).toNumber(),
+          group.tokens[index].decimals,
+        );
+        let value = amount * price;
+
+        const openOrdersAccount = this.spotOpenOrdersAccounts[index];
+        if (openOrdersAccount !== undefined) {
+          // include open orders unsettled base
+          const baseAmount = nativeToUi(
+            openOrdersAccount.baseTokenTotal.toNumber(),
+            group.tokens[index].decimals,
+          );
+
+          amount += baseAmount;
+          value += baseAmount * price;
+
+          // adjust quote with open orders unsettled quote
+          const quoteAmount = nativeToUi(
+            openOrdersAccount.quoteTokenTotal.toNumber() +
+              openOrdersAccount['referrerRebatesAccrued'].toNumber(),
+            group.tokens[QUOTE_INDEX].decimals,
+          );
+          quote.amount += quoteAmount;
+          quote.value += quoteAmount;
+        }
+
+        result.push({
+          asset: oracle.symbol,
+          symbol: oracle.symbol,
+          amount,
+          value,
+        });
+      }
+
+      // calculate perp balance
+      if (!group.perpMarkets[index].isEmpty()) {
+        const marketConfig = groupConfig.perpMarkets.find(
+          (p) => p.marketIndex == index,
+        )!;
+        const market = perpMarkets.find(
+          (p) => p?.publicKey == marketConfig?.publicKey,
+        )!;
+
+        const amount = this.perpAccounts[index].getBasePositionUi(market);
+        const value = price * amount;
+
+        result.push({
+          asset: marketConfig.name,
+          symbol: oracle.symbol,
+          amount,
+          value,
+        });
+
+        // adjust quote w/ unsettled amount
+        const unsettledAmount = nativeToUi(
+          this.perpAccounts[index]
+            .getPnl(
+              group.perpMarkets[index],
+              cache.perpMarketCache[index],
+              I80F48.fromNumber(price),
+            )
+            .toNumber(),
+          group.tokens[QUOTE_INDEX].decimals,
+        );
+        quote.amount += unsettledAmount;
+        quote.value += unsettledAmount;
+      }
+    }
+
+    return result;
+  }
 }
 
 export type HealthType = 'Init' | 'Maint';
