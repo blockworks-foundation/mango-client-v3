@@ -360,7 +360,7 @@ export class MangoClient {
       let done = false;
       let retryAttempts = 0;
       const retrySleep = 2000;
-      const maxRetries = 10;
+      const maxRetries = 30;
       (async () => {
         while (!done && getUnixTs() - startTime < timeout / 1000) {
           await sleep(retrySleep);
