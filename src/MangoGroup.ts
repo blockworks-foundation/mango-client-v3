@@ -1,7 +1,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Big } from 'big.js';
 import BN from 'bn.js';
-import { NodeBank, NodeBankLayout } from '.';
+import { NodeBank, NodeBankLayout } from './layout';
 import { I80F48, ONE_I80F48 } from './utils/fixednum';
 import {
   MetaData,

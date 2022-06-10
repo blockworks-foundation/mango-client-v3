@@ -9,121 +9,33 @@
     {
       "cluster": "localnet",
       "name": "localnet.1",
-      "publicKey": "5oWRkDXU15yU8qFjsqazMDWHqPsY1JxMJDgBy7KXzYGN",
+      "publicKey": "5X4Ege9chThPyjsEt9ug5YwAU9BVm66p15MBuQuGKndc",
       "quoteSymbol": "USDC",
       "mangoProgramId": "95vVcA2MzfMGfnH7vUA32VUau3Z9uQ9DCuA2F6gnYGT5",
       "serumProgramId": "DouSNP811YocCyMf3dnJhkrZR44vQQaRQRQLW6iFnXze",
       "tokens": [
         {
           "symbol": "USDC",
-          "mintKey": "7hEpCx4edjdTFPsqGM4tutZi5QsenGjyetbYP4AuSaz2",
+          "mintKey": "DAn3oek7MJVqDdJ6HDAG12BJvwVXZ1VZ65tTUmPWfyqk",
           "decimals": 9,
-          "rootKey": "6vEwYXFWP3HSvEPy2mBJvFndaxywn4zmXBuDG2iTmEgE",
+          "rootKey": "95oMJzwP2U8ycitk4BF9x2s8L2raM9qUH1kbXTXCuZJX",
           "nodeKeys": [
-            "BpvK2sajnuzQfLB1qSoSitniSu4XAkNzT5YnyBoxYnr9"
-          ]
-        },
-        {
-          "symbol": "BTC",
-          "mintKey": "Hqpyw9LQ7vnrHG5iWPdqso2W8iM9A75sPQvp5RL2xCaP",
-          "decimals": 9,
-          "rootKey": "JAsG1CA754zxnfiXTpDFne6vAEpraZE15fngPFdSqfe8",
-          "nodeKeys": [
-            "EnDWf3UEbZAHNzi211u4r2jHUw313ebTbhMAHuxWR7bR"
-          ]
-        },
-        {
-          "symbol": "MNGO",
-          "mintKey": "Hs1nURtyebVBTDRJmTYB8G4nEs6462DMYg4Gk3De4uUF",
-          "decimals": 9,
-          "rootKey": "FWX7CR1S4H1hFFRWqydoCthtyXwTFsoPUDSfBkYMAkrc",
-          "nodeKeys": [
-            "CakBzKQMTYDyhfk4xdA6v1fuyykRAYCtp1PWngVUyE31"
-          ]
-        },
-        {
-          "symbol": "AVAX",
-          "mintKey": "Fqw9s2AMXYDfvyhtD7VHYB2EjfrvtZPCoh9JRVq7JmDL",
-          "decimals": 9,
-          "rootKey": "6PoEb35uH3wtjuSmXatxBpakRtKxaPSVjdjepeDGUwko",
-          "nodeKeys": [
-            "9R6gs9hnyr4u9rhpUevvtFB93xD8AzHuiGtwetM4y3Sh"
+            "EYp4SPLEV6w5o1b9ybDxzaVBGcdxsQUJduCU1Gyp2fw5"
           ]
         }
       ],
       "oracles": [
         {
           "symbol": "BTC",
-          "publicKey": "E4UTStn6BRHsk1QPbhi1CL31iKbQTidvnZEowwyUec7Q"
+          "publicKey": "315mf8917q34fsstB6XVKuUmHTX9yMwEUbYh2usxtXfS"
         },
         {
           "symbol": "MNGO",
-          "publicKey": "2J4mWE2HXQ2XM9stcppZxfuovw5NV82QDzFjBXonHMkT"
-        },
-        {
-          "symbol": "AVAX",
-          "publicKey": "BvrJKA3CmC1QNTzFR8FArBCdJ5yC6s1YTopuhKChoH85"
+          "publicKey": "FCXJUZ59AvAaVaPaBuTqEMWgyUQuWrstodFD71DkQGwQ"
         }
       ],
-      "perpMarkets": [
-        {
-          "name": "BTC-PERP",
-          "publicKey": "6BLNJBMarSZftkBWQxefpZmVxSdrNri2dKcMaBDhohCC",
-          "baseSymbol": "BTC",
-          "baseDecimals": 9,
-          "quoteDecimals": 9,
-          "marketIndex": 0,
-          "bidsKey": "8bvqzCVtVq2kuNK3AKdEDJoK4XcVhMuaj5S8fMHJUeQd",
-          "asksKey": "BtVWYAvJYcTifJ8uoXGk25Evr9idHKZhHidEAyEhfcUa",
-          "eventsKey": "c4EMqsNFki7NSkMPPvNVcWQkKZ56wWGAAxmkXQthsKL"
-        },
-        {
-          "name": "MNGO-PERP",
-          "publicKey": "3EGaAURkVzmtmVKTkJHRL62hzBms3D9NAK2eErSPz1vS",
-          "baseSymbol": "MNGO",
-          "baseDecimals": 9,
-          "quoteDecimals": 9,
-          "marketIndex": 1,
-          "bidsKey": "5NvriQUTbxzNjqaawcN4rLwyf7VUBdBXgCMvxvzkXp9V",
-          "asksKey": "8PyA1trVJ1aXe3y6LdPptMXYT5D16C4V3v3ev8RxayJX",
-          "eventsKey": "4j4SyHeDC59GmtyXoCKHFkzVVDjZYN4vnMQcEodDReUJ"
-        }
-      ],
-      "spotMarkets": [
-        {
-          "name": "BTC/USDC",
-          "publicKey": "H4mr6ykU9JBv3WrAajRGNxD3QgLAjxWZ5mJDHAeQF2kJ",
-          "baseSymbol": "BTC",
-          "baseDecimals": 9,
-          "quoteDecimals": 9,
-          "marketIndex": 0,
-          "bidsKey": "Hm6g2BtCZ8zofAhhQf8FbMSizXKDqbGuVsjJLymyUcV1",
-          "asksKey": "2xMEQBpgNzdDGN8yPttvmpsnMu1LwaVHjQ2kgjhnKG4J",
-          "eventsKey": "3zJAQ8bATEqFqd6cF5imKK8Lei6BZKCEod9jU7dWum3c"
-        },
-        {
-          "name": "MNGO/USDC",
-          "publicKey": "F3Qbn95hhChhtgwgd3RNrYFTfmeMHYLEVXJEVsACSSin",
-          "baseSymbol": "MNGO",
-          "baseDecimals": 9,
-          "quoteDecimals": 9,
-          "marketIndex": 1,
-          "bidsKey": "DriR4EiyLpmjsEd8sZP2LaL4TZuASYWJpXoDRtr3zjie",
-          "asksKey": "EybmoLCqqbENu96QoUjWD7SL2qCrBd6yZPbpU86ubWvx",
-          "eventsKey": "Gsn3HSPZu99a1N5fqz5tyFHBJhbjKDTTNZEATPggSVRC"
-        },
-        {
-          "name": "AVAX/USDC",
-          "publicKey": "ELoYMA4WVr3aBBnkkFVR4Dd1P1ywmcLDckoCAmaZwP3k",
-          "baseSymbol": "AVAX",
-          "baseDecimals": 9,
-          "quoteDecimals": 9,
-          "marketIndex": 2,
-          "bidsKey": "HyiyjXZUA6MHPNx1R6ZBHsKqxice4kjchzDzAoshqfG1",
-          "asksKey": "3qLnEDGMv8PrUsfn8y8wfGbV6m32XFxZQfYTVpuzN8aK",
-          "eventsKey": "9a9Un3yMzEUT8LUUNgokPywCyDzzerHu9Vb9hJnoZtAq"
-        }
-      ]
+      "perpMarkets": [],
+      "spotMarkets": []
     },
     {
       "cluster": "mainnet",
@@ -258,6 +170,15 @@
           "nodeKeys": [
             "BNpfdZZC8NP1PabGATRHH2ABh94U47zm1kjvneRSMSBE"
           ]
+        },
+        {
+          "symbol": "GMT",
+          "mintKey": "7i5KKsX2weiTkry7jA4ZwSuXGhs5eJBEjY8vVxR4pfRx",
+          "decimals": 9,
+          "rootKey": "HdFSXT8HSooTByieyKhuujBsvHkXR9zA4ZFmiToQhqEg",
+          "nodeKeys": [
+            "BsyDMxu87YHUJXYHundMGp5YmpD2J3xm62TdaQyryp8f"
+          ]
         }
       ],
       "oracles": [
@@ -316,6 +237,10 @@
         {
           "symbol": "LUNA",
           "publicKey": "5bmWuR1dgP4avtGYMNKLuxumZTVKGgoN2BCMXWDNL9nY"
+        },
+        {
+          "symbol": "GMT",
+          "publicKey": "DZYZkJcFJThN9nZy4nK3hrHra1LaWeiyoZ9SMdLFEFpY"
         }
       ],
       "perpMarkets": [
@@ -439,6 +364,17 @@
           "bidsKey": "AiBurBkETJHHujZxNHm6UPvBQ1LLLkNkckPoZLeuLnS1",
           "asksKey": "7Vcbxj2M8fqaNGfRDsau47uXumfCBhCTA97D6PNDPWfe",
           "eventsKey": "HDJ43o9Dxxu6yWRWPEce44gtCHauRGLXJwwtvD7GwEBx"
+        },
+        {
+          "name": "GMT-PERP",
+          "publicKey": "3hBYgfMHogR8X2JkpxvT8HMtUSbrE2PE61q64gZkWArr",
+          "baseSymbol": "GMT",
+          "baseDecimals": 9,
+          "quoteDecimals": "6",
+          "marketIndex": 14,
+          "bidsKey": "67jnTtxDdDqz6R18Do3AUUjBbZT3yysprGLhaucyKd93",
+          "asksKey": "DstVrGA3CBcq1r7op4yU7dX3sirzSgz1uicn63aYBMGz",
+          "eventsKey": "J2WYiw67VeGkPvmM3fi65H9KxDgCf79fNwspcD3ycubK"
         }
       ],
       "spotMarkets": [
@@ -584,6 +520,17 @@
           "bidsKey": "2qZyNiiupG9c3dZkmgPJ53XLMyb3uYnfmPrUfLBisEBn",
           "asksKey": "2oVNv7BTvvRUuHmbPvMjafBVQhoAFVdWPCuKiDAPNsbD",
           "eventsKey": "8fGeJPZGsW3kjnfGkGNU3dXWXkuDFEUK7RXeiMW2rmGm"
+        },
+        {
+          "name": "GMT/USDC",
+          "publicKey": "9KLmeRBpT4chsxkJatfDdzrtTBvBastYp9wMe712ASCg",
+          "baseSymbol": "GMT",
+          "baseDecimals": 9,
+          "quoteDecimals": 6,
+          "marketIndex": 14,
+          "bidsKey": "EzVutiMEE8gyeyaiQ4jUrSn4LXwrDmRkuNK4wcRctJxW",
+          "asksKey": "Eg2PKQ3BHWsRCMLZQaJrAXMCEWoEsNXPY8BLLk5AHsrM",
+          "eventsKey": "92AfWEUqA2RQjD46otvaXEA3CQ4qBFi2K8AmCBwwghHG"
         }
       ]
     },

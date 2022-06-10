@@ -41,6 +41,7 @@ export class BookSide {
     perpMarket: PerpMarket,
     decoded: any,
     includeExpired = false,
+    maxBookDelay?: number,
   ) {
     this.publicKey = publicKey;
     this.isBids = decoded.metaData.dataType === DataType.Bids;
@@ -49,7 +50,9 @@ export class BookSide {
     Object.assign(this, decoded);
 
     // Determine the maxTimestamp found on the book to use for tif
-    let maxTimestamp = new BN(getUnixTs() - 10);
+    // If maxBookDelay is not provided, use 3600 as a very large number
+    maxBookDelay = maxBookDelay === undefined ? 3600 : maxBookDelay;
+    let maxTimestamp = new BN(getUnixTs() - maxBookDelay);
     for (const { leafNode } of this.nodes) {
       if (leafNode && leafNode.timestamp.gt(maxTimestamp)) {
         maxTimestamp = leafNode.timestamp;

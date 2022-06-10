@@ -64,7 +64,7 @@ async function examplePerp() {
   }
 
   // Place order
-  const owner = new Keypair(readKeypair());
+  const owner = Keypair.fromSecretKey(Uint8Array.from(readKeypair()));
   const mangoAccount = (
     await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];
@@ -157,7 +157,7 @@ async function exampleSpot() {
   }
 
   // Place order
-  const owner = new Keypair(readKeypair());
+  const owner = Keypair.fromSecretKey(Uint8Array.from(readKeypair()));
   const mangoAccount = (
     await client.getMangoAccountsForOwner(mangoGroup, owner.publicKey)
   )[0];

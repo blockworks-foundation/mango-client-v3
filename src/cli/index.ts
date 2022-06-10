@@ -3,15 +3,9 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import yargs from 'yargs/yargs';
-import {hideBin} from 'yargs/helpers';
-import {Options, PositionalOptions} from 'yargs';
-import {
-	Account,
-	Commitment,
-	Connection,
-	Keypair,
-	PublicKey,
-} from '@solana/web3.js';
+import { hideBin } from 'yargs/helpers';
+import { Options, PositionalOptions } from 'yargs';
+import { Commitment, Connection, Keypair, PublicKey } from '@solana/web3.js';
 import {
 	Cluster,
 	Config,
@@ -94,14 +88,9 @@ function openConnection(config: Config, cluster: Cluster) {
 }
 
 function readKeypair(keypairPath: string) {
-	return Keypair.fromSecretKey(
-		Uint8Array.from(
-			JSON.parse(
-				fs.readFileSync(
-					keypairPath, 'utf-8')
-			)
-		)
-	);
+  return Keypair.fromSecretKey(
+    Uint8Array.from(JSON.parse(fs.readFileSync(keypairPath, 'utf-8'))),
+  );
 }
 
 export function readConfig(configPath: string) {
@@ -113,87 +102,90 @@ export function writeConfig(configPath: string, config: Config) {
 }
 
 yargs(hideBin(process.argv)).command(
-	'init-group <group> <mangoProgramId> <serumProgramId> <quote_mint> <fees_vault>',
-	'initialize a new group',
-	(y) => {
-		return y
-			.positional(...groupDesc)
-			.positional('mangoProgramId', {
-				describe: 'the program id of the mango smart contract',
-				type: 'string',
-			})
-			.positional('serumProgramId', {
-				describe: 'the program id of the serum dex smart contract',
-				type: 'string',
-			})
-			.positional('quote_mint', {
-				describe: 'the mint of the quote currency 💵',
-				type: 'string',
-			})
-			.positional('fees_vault', {
-				describe:
-					'the quote currency vault owned by Mango DAO token governance',
-				type: 'string',
-			})
-			.option('quote_optimal_util', {
-				describe: 'optimal utilization interest rate param for quote currency',
-				default: 0.7,
-				type: 'number',
-			})
-			.option('quote_optimal_rate', {
-				describe: 'optimal interest rate param for quote currency',
-				default: 0.06,
-				type: 'number',
-			})
-			.option('quote_max_rate', {
-				describe: 'max interest rate param for quote currency',
-				default: 1.5,
-				type: 'number',
-			})
-			.option('valid_interval', {
-				describe: 'the interval where caches are no longer valid',
-				default: 10,
-				type: 'number',
-			})
-			.option('symbol', {
-				describe: 'the quote symbol',
-				default: 'USDC',
-				type: 'string',
-			})
-			.option(...clusterDesc)
-			.option(...configDesc)
-			.option(...keypairDesc);
-	},
-	async (args) => {
-		console.log('init_group', args);
-		const mangoProgramId = new PublicKey(args.mangoProgramId as string);
-		const serumProgramId = new PublicKey(args.serumProgramId as string);
-		const quoteMint = new PublicKey(args.quote_mint as string);
-		const feesVault = new PublicKey(args.fees_vault as string);
-		const account = readKeypair(args.keypair as string);
-		const config = readConfig(args.config as string);
-		const cluster = args.cluster as Cluster;
-		const connection = openConnection(config, cluster);
-		const result = await initGroup(
-			connection,
-			account,
-			cluster,
-			args.group as string,
-			mangoProgramId,
-			serumProgramId,
-			args.symbol as string,
-			quoteMint,
-			feesVault,
-			args.valid_interval as number,
-			args.quote_optimal_util as number,
-			args.quote_optimal_rate as number,
-			args.quote_max_rate as number,
-		);
-		console.log(result);
-		config.storeGroup(result);
-		writeConfig(args.config as string, config);
-		process.exit(0);
-	},
+  'init-group <group> <mangoProgramId> <serumProgramId> <quote_mint> <fees_vault>',
+  'initialize a new group',
+  (y) => {
+    return y
+      .positional(...groupDesc)
+      .positional('mangoProgramId', {
+        describe: 'the program id of the mango smart contract',
+        type: 'string',
+      })
+      .positional('serumProgramId', {
+        describe: 'the program id of the serum dex smart contract',
+        type: 'string',
+      })
+      .positional('quote_mint', {
+        describe: 'the mint of the quote currency 💵',
+        type: 'string',
+      })
+      .positional('fees_vault', {
+        describe:
+          'the quote currency vault owned by Mango DAO token governance',
+        type: 'string',
+      })
+      .option('quote_optimal_util', {
+        describe: 'optimal utilization interest rate param for quote currency',
+        default: 0.7,
+        type: 'number',
+      })
+      .option('quote_optimal_rate', {
+        describe: 'optimal interest rate param for quote currency',
+        default: 0.06,
+        type: 'number',
+      })
+      .option('quote_max_rate', {
+        describe: 'max interest rate param for quote currency',
+        default: 1.5,
+        type: 'number',
+      })
+      .option('valid_interval', {
+        describe: 'the interval where caches are no longer valid',
+        default: 10,
+        type: 'number',
+      })
+      .option('symbol', {
+        describe: 'the quote symbol',
+        default: 'USDC',
+        type: 'string',
+      })
+      .option(...clusterDesc)
+      .option(...configDesc)
+      .option(...keypairDesc);
+  },
+  async (args) => {
+    console.log('init_group', args);
+    const mangoProgramId = new PublicKey(args.mangoProgramId as string);
+    const serumProgramId = new PublicKey(args.serumProgramId as string);
+    const quoteMint = new PublicKey(args.quote_mint as string);
+    const feesVault = new PublicKey(args.fees_vault as string);
+    const account = readKeypair(args.keypair as string);
+    const config = readConfig(args.config as string);
+    const cluster = args.cluster as Cluster;
+    const connection = openConnection(config, cluster);
+    const result = await initGroup(
+      connection,
+      account,
+      cluster,
+      args.group as string,
+      mangoProgramId,
+      serumProgramId,
+      args.symbol as string,
+      quoteMint,
+      feesVault,
+      args.valid_interval as number,
+      args.quote_optimal_util as number,
+      args.quote_optimal_rate as number,
+      args.quote_max_rate as number,
+    );
+    if (!result) {
+      return;
+    }
+    console.log(result);
+    config.storeGroup(result);
+    writeConfig(args.config as string, config);
+    process.exit(0);
+  },
 ).argv;
 
 yargs(hideBin(process.argv)).command(

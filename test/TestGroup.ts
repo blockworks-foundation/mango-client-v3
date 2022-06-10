@@ -1,15 +1,10 @@
-import fs from 'fs';
-import os from 'os';
 import {
   Keypair,
-  Cluster,
-  Commitment,
   Connection,
   PublicKey,
   Transaction,
 } from '@solana/web3.js';
 import {
-  Config,
   getMultipleAccounts,
   makeCachePerpMarketsInstruction,
   makeCachePricesInstruction,
@@ -23,7 +18,6 @@ import {
   zeroKey,
 } from '../src';
 import listMarket from '../src/cli/listMarket';
-import configFile from '../src/ids.json';
 import BN from 'bn.js';
 import {
   decodeEventQueue,
@@ -139,27 +133,15 @@ export default class TestGroup {
   logger: any;
   spotMarkets: Market[] = [];
 
-  constructor(log: boolean = false) {
-    const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-    const config = new Config(configFile);
+  constructor(connection: Connection, payer: Keypair, mangoProgramId: PublicKey, log: boolean = false) {
     this.log = log;
     if (!this.log) {
       this.logger = console.log;
     }
-
-    this.payer = new Keypair(
-      JSON.parse(
-        process.env.KEYPAIR ||
-          fs.readFileSync(
-            os.homedir() + '/.config/solana/devnet.json',
-            'utf-8',
-          ),
-      ),
-    );
-    this.connection = new Connection(
-      config.cluster_urls[cluster],
-      'processed' as Commitment,
-    );
+    this.connection = connection;
+    this.payer = payer;
+    this.mangoProgramId = mangoProgramId;
+    
 
     this.client = new MangoClient(this.connection, this.mangoProgramId);
   }
@@ -170,7 +152,7 @@ export default class TestGroup {
       console.log = function () {};
     }
 
-    this.mangoGroupKey = await this.client.initMangoGroup(
+    this.mangoGroupKey = (await this.client.initMangoGroup(
       this.quoteMint,
       msrmMints['devnet'],
       this.serumProgramId,
@@ -180,7 +162,7 @@ export default class TestGroup {
       0.06,
       1.5,
       this.payer,
-    );
+    ))!;
 
     let group = await this.client.getMangoGroup(this.mangoGroupKey);
     for (let i = 0; i < this.FIXED_IDS.length; i++) {

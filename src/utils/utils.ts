@@ -1,23 +1,35 @@
 import BN from 'bn.js';
 import {
-	Account,
-	AccountInfo,
-	Commitment,
-	Connection,
-	Keypair,
-	PublicKey,
-	RpcResponseAndContext,
-	SimulatedTransactionResponse,
-	SystemProgram,
-	Transaction,
-	TransactionConfirmationStatus,
-	TransactionInstruction,
-	TransactionSignature,
+  AccountInfo,
+  BlockhashWithExpiryBlockHeight,
+  Commitment,
+  Connection,
+  Keypair,
+  PublicKey,
+  RpcResponseAndContext,
+  SignatureStatus,
+  SimulatedTransactionResponse,
+  SystemProgram,
+  Transaction,
+  TransactionConfirmationStatus,
+  TransactionInstruction,
+  TransactionSignature,
 } from '@solana/web3.js';
 import {OpenOrders, TokenInstructions} from '@project-serum/serum';
 import {I80F48, ONE_I80F48} from './fixednum';
 import MangoGroup from '../MangoGroup';
 import {HealthType} from '../MangoAccount';
+
+/**
+ * If transaction is not confirmed by validators in 152 blocks
+ * from signing by the wallet
+ * it will never reach blockchain and is considered a timeout
+ *
+ * (e.g. transaction is signed at 121398019 block
+ * if its not confirmed by the time blockchain reach 121398171 (121398019 + 152)
+ * it will never reach blockchain)
+ */
+export const MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION = 152;
 
 /** @internal */
 export const ZERO_BN = new BN(0);
@@ -138,93 +150,119 @@ export function splitOpenOrders(openOrders: OpenOrders): {
 	return {quoteFree, quoteLocked, baseFree, baseLocked};
 }
 export async function awaitTransactionSignatureConfirmation(
-	txid: TransactionSignature,
-	timeout: number,
-	connection: Connection,
-	confirmLevel: TransactionConfirmationStatus,
+  txid: TransactionSignature,
+  timeout: number,
+  connection: Connection,
+  confirmLevel: TransactionConfirmationStatus,
+  signedAtBlock?: BlockhashWithExpiryBlockHeight,
 ) {
-	let done = false;
+  const timeoutBlockHeight = signedAtBlock
+    ? signedAtBlock.lastValidBlockHeight +
+      MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION
+    : 0;
+  let done = false;
+  let startTimeoutCheck = false;
+  const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] = [
+    'finalized',
+  ];
 
-	const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] = [
-		'finalized',
-	];
+  if (confirmLevel === 'confirmed') {
+    confirmLevels.push('confirmed');
+  } else if (confirmLevel === 'processed') {
+    confirmLevels.push('confirmed');
+    confirmLevels.push('processed');
+  }
+  const result = await new Promise((resolve, reject) => {
+    (async () => {
+      setTimeout(() => {
+        if (done) {
+          return;
+        }
+        if (timeoutBlockHeight !== 0) {
+          startTimeoutCheck = true;
+        } else {
+          done = true;
+          console.log('Timed out for txid: ', txid);
+          reject({ timeout: true });
+        }
+      }, timeout);
+      try {
+        connection.onSignature(
+          txid,
+          (result) => {
+            // console.log('WS confirmed', txid, result);
+            done = true;
+            if (result.err) {
+              reject(result.err);
+            } else {
+              resolve(result);
+            }
+          },
+          'processed',
+        );
+        // console.log('Set up WS connection', txid);
+      } catch (e) {
+        done = true;
+        console.log('WS error in setup', txid, e);
+      }
+      while (!done) {
+        // eslint-disable-next-line no-loop-func
+        (async () => {
+          try {
+            const promises: [
+              Promise<RpcResponseAndContext<(SignatureStatus | null)[]>>,
+              Promise<number>?,
+            ] = [connection.getSignatureStatuses([txid])];
+            //if startTimeoutThreshold passed we start to check if
+            //current blocks are did not passed timeoutBlockHeight threshold
+            if (startTimeoutCheck) {
+              promises.push(connection.getBlockHeight('confirmed'));
+            }
+            const [signatureStatuses, currentBlockHeight] = await Promise.all(
+              promises,
+            );
+            if (
+              typeof currentBlockHeight !== undefined &&
+              timeoutBlockHeight <= currentBlockHeight!
+            ) {
+              done = true;
+              console.log('Timed out for txid: ', txid);
+              reject({ timeout: true });
+            }
+            const result = signatureStatuses && signatureStatuses.value[0];
+            if (!done) {
+              if (!result) {
+                // console.log('REST null result for', txid, result);
+              } else if (result.err) {
+                console.log('REST error for', txid, result);
+                done = true;
+                reject(result.err);
+              } else if (
+                !(
+                  result.confirmations ||
+                  confirmLevels.includes(result.confirmationStatus)
+                )
+              ) {
+                console.log('REST not confirmed', txid, result);
+              } else {
+                console.log('REST confirmed', txid, result);
+                done = true;
+                resolve(result);
+              }
+            }
+          } catch (e) {
+            if (!done) {
+              console.log('REST connection error: txid', txid, e);
+            }
+          }
+        })();
+        await sleep(300);
+      }
+    })();
+  });
 
-	if (confirmLevel === 'confirmed') {
-		confirmLevels.push('confirmed');
-	} else if (confirmLevel === 'processed') {
-		confirmLevels.push('confirmed');
-		confirmLevels.push('processed');
-	}
-	const result = await new Promise((resolve, reject) => {
-		(async () => {
-			setTimeout(() => {
-				if (done) {
-					return;
-				}
-				done = true;
-				console.log('Timed out for txid', txid);
-				reject({timeout: true});
-			}, timeout);
-			try {
-				connection.onSignature(
-					txid,
-					(result) => {
-						// console.log('WS confirmed', txid, result);
-						done = true;
-						if (result.err) {
-							reject(result.err);
-						} else {
-							resolve(result);
-						}
-					},
-					'processed',
-				);
-				// console.log('Set up WS connection', txid);
-			} catch (e) {
-				done = true;
-				console.log('WS error in setup', txid, e);
-			}
-			while (!done) {
-				// eslint-disable-next-line no-loop-func
-				(async () => {
-					try {
-						const signatureStatuses = await connection.getSignatureStatuses([
-							txid,
-						]);
-						const result = signatureStatuses && signatureStatuses.value[0];
-						if (!done) {
-							if (!result) {
-								// console.log('REST null result for', txid, result);
-							} else if (result.err) {
-								console.log('REST error for', txid, result);
-								done = true;
-								reject(result.err);
-							} else if (
-								!(
-									result.confirmations ||
-									confirmLevels.includes(result.confirmationStatus)
-								)
-							) {
-								console.log('REST not confirmed', txid, result);
-							} else {
-								console.log('REST confirmed', txid, result);
-								done = true;
-								resolve(result);
-							}
-						}
-					} catch (e) {
-						if (!done) {
-							console.log('REST connection error: txid', txid, e);
-						}
-					}
-				})();
-				await sleep(300);
-			}
-		})();
-	});
-
-	done = true;
-	return result;
+  done = true;
+  return result;
 }
 
 export async function sleep(ms) {
