@@ -7,6 +7,10 @@ const SWITCHBOARD_ORACLES_DEVNET = {
   MNGO: '8k7F9Xb36oFJsjpCKpsXvg4cgBRoZtwNTc3EzG5Ttd2o',
 };
 
+// testnet
+const SWITCHBOARD_ORACLES_TESTNET = {
+};
+
 // mainnet
 const SWITCHBOARD_ORACLES_MAINNET = {
   RAY: 'AS2yMpqPY16tY5hQmpdkomaqSckMuDvR6K9P9tk9FA4d',
@@ -31,6 +35,8 @@ export default async function addSwitchboardOracle(
   let oraclePk;
   if (groupConfig.cluster === 'mainnet') {
     oraclePk = new PublicKey(SWITCHBOARD_ORACLES_MAINNET[symbol]);
+  } else if (groupConfig.cluster === 'testnet') {
+    oraclePk = new PublicKey(SWITCHBOARD_ORACLES_TESTNET[symbol]);
   } else {
     oraclePk = new PublicKey(SWITCHBOARD_ORACLES_DEVNET[symbol]);
   }

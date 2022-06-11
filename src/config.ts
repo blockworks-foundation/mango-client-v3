@@ -8,12 +8,13 @@ export const msrmMints = {
   devnet: new PublicKey('8DJBo4bF4mHNxobjdax3BL9RMh5o71Jf8UiKsf5C5eVH'),
   mainnet: new PublicKey('MSRMcoVyrFxnSgo5uXwone5SKcGhT1KEJMFEkMEWf9L'),
   localnet: zeroKey,
-  testnet: zeroKey,
+  testnet: new PublicKey('3Ho7PN3bYv9bp1JDErBD2FxsRepPkL88vju3oDX9c3Ez'),
 };
 
 export const mngoMints = {
   devnet: new PublicKey('Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC'),
   mainnet: new PublicKey('MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac'),
+  testnet: new PublicKey('2hvukwp4UR9tqmCQhRzcsW9S2QBuU5Xcv5JJ5fUMmfvQ'),
 };
 
 export interface OracleConfig {
