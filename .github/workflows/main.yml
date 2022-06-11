@@ -18,7 +18,7 @@ jobs:
         id: node-cache
         with:
           path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('yarn-lock.json') }}
+          key: node-modules-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
 
       - name: Install dependencies
         if: steps.node-cache.outputs.cache-hit != 'true'

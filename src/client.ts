@@ -1,10 +1,13 @@
 import {
   AccountInfo,
+  BlockhashWithExpiryBlockHeight,
   Commitment,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
+  RpcResponseAndContext,
+  SignatureStatus,
   SimulatedTransactionResponse,
   SystemProgram,
   Transaction,
@@ -25,9 +28,13 @@ import {
   promiseUndef,
   simulateTransaction,
   sleep,
+  MangoError,
+  U64_MAX_BN,
+  TimeoutError,
   uiToNative,
   ZERO_BN,
   zeroKey,
+  MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION,
 } from './utils/utils';
 import {
   AssetType,
@@ -109,6 +116,7 @@ import {
   makeUpgradeMangoAccountV0V1Instruction,
   makeWithdrawInstruction,
   makeWithdrawMsrmInstruction,
+  makeCancelAllSpotOrdersInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -119,7 +127,7 @@ import {
 import { I80F48, ONE_I80F48, ZERO_I80F48 } from './utils/fixednum';
 import { Order } from '@project-serum/serum/lib/market';
 
-import { PerpOrderType, BlockhashTimes, Payer } from './utils/types';
+import { PerpOrderType, Payer } from './utils/types';
 import { adapterHasSignAllTransactions } from './utils/adapterTypes';
 import { BookSide, PerpOrder } from './book';
 import {
@@ -133,14 +141,8 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import MangoGroup from './MangoGroup';
-import {
-  makeCreateSpotOpenOrdersInstruction,
-  MangoError,
-  ReferrerIdRecord,
-  ReferrerIdRecordLayout,
-  TimeoutError,
-  U64_MAX_BN,
-} from '.';
+import { makeCreateSpotOpenOrdersInstruction } from './instruction';
+import { ReferrerIdRecord, ReferrerIdRecordLayout } from './layout';
 import * as bs58 from 'bs58';
 
 /**
@@ -167,9 +169,7 @@ export class MangoClient {
   sendConnection?: Connection;
   programId: PublicKey;
   lastSlot: number;
-  recentBlockhash: string;
-  recentBlockhashTime: number;
-  maxStoredBlockhashes: number;
+  lastValidBlockHeight: number;
   timeout: number | null;
   // The commitment level used when fetching recentBlockHash
   blockhashCommitment: Commitment;
@@ -189,9 +189,7 @@ export class MangoClient {
     this.connection = connection;
     this.programId = programId;
     this.lastSlot = 0;
-    this.recentBlockhash = '';
-    this.recentBlockhashTime = 0;
-    this.maxStoredBlockhashes = opts?.maxStoredBlockhashes || 7;
+    this.lastValidBlockHeight = 0;
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
     this.timeout = opts?.timeout || 60000;
     this.sendConnection = opts.sendConnection;
@@ -205,7 +203,7 @@ export class MangoClient {
     payer: Payer,
     additionalSigners: Keypair[],
     timeout: number | null = this.timeout,
-    confirmLevel: TransactionConfirmationStatus = 'confirmed',
+    confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature[]> {
     return await Promise.all(
       transactions.map((tx) =>
@@ -220,18 +218,29 @@ export class MangoClient {
     );
   }
 
-  async signTransaction({ transaction, payer, signers }) {
-    const now = getUnixTs();
-    let blockhash;
-    // Get new blockhash if stored blockhash more than 70 seconds old
-    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
-      blockhash = this.recentBlockhash;
-    } else {
-      blockhash = (
-        await this.connection.getRecentBlockhash(this.blockhashCommitment)
-      ).blockhash;
-    }
-    transaction.recentBlockhash = blockhash;
+  async getCurrentBlockhash(): Promise<BlockhashWithExpiryBlockHeight> {
+    let currentBlockhash = await this.connection.getLatestBlockhash(
+      this.blockhashCommitment,
+    );
+
+    return currentBlockhash;
+  }
+
+  async signTransaction({
+    transaction,
+    payer,
+    signers,
+    currentBlockhash,
+  }: {
+    transaction: Transaction;
+    payer: any;
+    signers: Array<Keypair>;
+    currentBlockhash?: BlockhashWithExpiryBlockHeight;
+  }) {
+    let blockhashWithExpiryBlockHeight: BlockhashWithExpiryBlockHeight =
+      currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
+
+    transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
     transaction.setSigners(payer.publicKey, ...signers.map((s) => s.publicKey));
     if (signers.length > 0) {
       transaction.partialSign(...signers);
@@ -248,28 +257,22 @@ export class MangoClient {
   async signTransactions({
     transactionsAndSigners,
     payer,
+    currentBlockhash,
   }: {
     transactionsAndSigners: {
       transaction: Transaction;
       signers?: Array<Keypair>;
     }[];
     payer: Payer;
+    currentBlockhash?: BlockhashWithExpiryBlockHeight;
   }) {
     if (!payer.publicKey) {
       return;
     }
-    const now = getUnixTs();
-    let blockhash;
-    // Get new blockhash if stored blockhash more than 70 seconds old
-    if (this.recentBlockhashTime && now < this.recentBlockhashTime + 70) {
-      blockhash = this.recentBlockhash;
-    } else {
-      blockhash = (
-        await this.connection.getRecentBlockhash(this.blockhashCommitment)
-      ).blockhash;
-    }
+    let blockhashWithExpiryBlockHeight: BlockhashWithExpiryBlockHeight =
+      currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
-      transaction.recentBlockhash = blockhash;
+      transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
       if (payer.publicKey) {
         transaction.setSigners(
           payer.publicKey,
@@ -292,7 +295,6 @@ export class MangoClient {
       return transactionsAndSigners.map((t) => t.transaction);
     }
   }
-
   /**
    * Send a transaction using the Solana Web3.js connection on the mango client
    *
@@ -308,12 +310,13 @@ export class MangoClient {
     timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
+    const currentBlockhash = await this.getCurrentBlockhash();
     await this.signTransaction({
       transaction,
       payer,
       signers: additionalSigners,
+      currentBlockhash,
     });
-
     const rawTransaction = transaction.serialize();
     let txid = bs58.encode(transaction.signatures[0].signature);
     const startTime = getUnixTs();
@@ -356,19 +359,21 @@ export class MangoClient {
       );
 
       let done = false;
-
-      let retrySleep = 1000;
+      let retryAttempts = 0;
+      const retrySleep = 2000;
+      const maxRetries = 30;
       (async () => {
-        // TODO - make sure this works well on mainnet
         while (!done && getUnixTs() - startTime < timeout / 1000) {
           await sleep(retrySleep);
           // console.log(new Date().toUTCString(), ' sending tx ', txid);
           this.connection.sendRawTransaction(rawTransaction, {
             skipPreflight: true,
           });
-        }
-        if (retrySleep <= 8000) {
-          retrySleep = retrySleep * 2;
+          if (retryAttempts <= maxRetries) {
+            retryAttempts = retryAttempts++;
+          } else {
+            break;
+          }
         }
       })();
 
@@ -377,6 +382,7 @@ export class MangoClient {
           txid,
           timeout,
           confirmLevel,
+          currentBlockhash,
         );
       } catch (err: any) {
         if (err.timeout) {
@@ -415,7 +421,7 @@ export class MangoClient {
       }
     }
 
-    console.log('Latency', txid, getUnixTs() - startTime);
+    console.log('Latency', getUnixTs() - startTime, txid);
     return txid;
   }
 
@@ -423,10 +429,12 @@ export class MangoClient {
     signedTransaction,
     timeout = this.timeout,
     confirmLevel = 'processed',
+    signedAtBlock,
   }: {
     signedTransaction: Transaction;
     timeout?: number | null;
     confirmLevel?: TransactionConfirmationStatus;
+    signedAtBlock?: BlockhashWithExpiryBlockHeight;
   }): Promise<TransactionSignature> {
     const rawTransaction = signedTransaction.serialize();
     let txid = bs58.encode(signedTransaction.signatures[0].signature);
@@ -461,16 +469,13 @@ export class MangoClient {
       }
       if (!timeout) return txid;
 
-      // console.log('Started awaiting confirmation for', txid);
-
       let done = false;
       (async () => {
-        await sleep(500);
         while (!done && getUnixTs() - startTime < timeout) {
+          await sleep(2000);
           this.connection.sendRawTransaction(rawTransaction, {
             skipPreflight: true,
           });
-          await sleep(1000);
         }
       })();
       try {
@@ -478,6 +483,7 @@ export class MangoClient {
           txid,
           timeout,
           confirmLevel,
+          signedAtBlock,
         );
       } catch (err: any) {
         if (err.timeout) {
@@ -517,8 +523,6 @@ export class MangoClient {
       } finally {
         done = true;
       }
-
-      // console.log('Latency', txid, getUnixTs() - startTime);
       return txid;
     }
   }
@@ -527,9 +531,14 @@ export class MangoClient {
     txid: TransactionSignature,
     timeout: number,
     confirmLevel: TransactionConfirmationStatus,
+    signedAtBlock?: BlockhashWithExpiryBlockHeight,
   ) {
+    const timeoutBlockHeight = signedAtBlock
+      ? signedAtBlock.lastValidBlockHeight +
+        MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION
+      : 0;
+    let startTimeoutCheck = false;
     let done = false;
-
     const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] =
       ['finalized'];
 
@@ -539,7 +548,7 @@ export class MangoClient {
       confirmLevels.push('confirmed');
       confirmLevels.push('processed');
     }
-    let subscriptionId;
+    let subscriptionId: number | undefined;
 
     const result = await new Promise((resolve, reject) => {
       (async () => {
@@ -547,9 +556,13 @@ export class MangoClient {
           if (done) {
             return;
           }
-          done = true;
-          console.log('Timed out for txid: ', txid);
-          reject({ timeout: true });
+          if (timeoutBlockHeight !== 0) {
+            startTimeoutCheck = true;
+          } else {
+            done = true;
+            console.log('Timed out for txid: ', txid);
+            reject({ timeout: true });
+          }
         }, timeout);
         try {
           subscriptionId = this.connection.onSignature(
@@ -570,21 +583,37 @@ export class MangoClient {
           done = true;
           console.log('WS error in setup', txid, e);
         }
-        let retrySleep = 400;
+        let retrySleep = 2000;
         while (!done) {
           // eslint-disable-next-line no-loop-func
           await sleep(retrySleep);
           (async () => {
             try {
-              const response = await this.connection.getSignatureStatuses([
-                txid,
-              ]);
+              const promises: [
+                Promise<RpcResponseAndContext<(SignatureStatus | null)[]>>,
+                Promise<number>?,
+              ] = [this.connection.getSignatureStatuses([txid])];
+              //if startTimeoutThreshold passed we start to check if
+              //current blocks are did not passed timeoutBlockHeight threshold
+              if (startTimeoutCheck) {
+                promises.push(this.connection.getBlockHeight('confirmed'));
+              }
+              const [signatureStatuses, currentBlockHeight] = await Promise.all(
+                promises,
+              );
+              if (
+                typeof currentBlockHeight !== undefined &&
+                timeoutBlockHeight <= currentBlockHeight!
+              ) {
+                console.log('Timed out for txid: ', txid);
+                done = true;
+                reject({ timeout: true });
+              }
 
-              const result = response && response.value[0];
+              const result = signatureStatuses && signatureStatuses.value[0];
               if (!done) {
-                if (!result) {
-                  // console.log('REST null result for', txid, result);
-                } else if (result.err) {
+                if (!result) return;
+                if (result.err) {
                   console.log('REST error for', txid, result);
                   done = true;
                   reject(result.err);
@@ -596,7 +625,7 @@ export class MangoClient {
                 ) {
                   console.log('REST not confirmed', txid, result);
                 } else {
-                  this.lastSlot = response?.context?.slot;
+                  this.lastSlot = signatureStatuses?.context?.slot;
                   console.log('REST confirmed', txid, result);
                   done = true;
                   resolve(result);
@@ -608,9 +637,6 @@ export class MangoClient {
               }
             }
           })();
-          if (retrySleep <= 1600) {
-            retrySleep = retrySleep * 2;
-          }
         }
       })();
     });
@@ -623,37 +649,6 @@ export class MangoClient {
 
     done = true;
     return result;
-  }
-
-  async updateRecentBlockhash(blockhashTimes: BlockhashTimes[]) {
-    const now = getUnixTs();
-    const blockhash = (
-      await this.connection.getRecentBlockhash(this.blockhashCommitment)
-    ).blockhash;
-    blockhashTimes.push({ blockhash, timestamp: now });
-
-    const blockhashTime = (
-      blockhashTimes.length >= this.maxStoredBlockhashes
-        ? blockhashTimes.shift()
-        : blockhashTimes[0]
-    ) as { blockhash: string; timestamp: number };
-
-    this.timeout = 90000 - (now - blockhashTime.timestamp);
-    this.recentBlockhash = blockhashTime.blockhash;
-    this.recentBlockhashTime = blockhashTime.timestamp;
-  }
-
-  /**
-   * Maintain a timeout of 30 seconds
-   * @param client
-   */
-  async maintainTimeouts() {
-    const blockhashTimes: BlockhashTimes[] = [];
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      await this.updateRecentBlockhash(blockhashTimes);
-      await sleep(10);
-    }
   }
 
   /**
@@ -1510,10 +1505,11 @@ export class MangoClient {
       }
       transactionsAndSigners.push(transactionAndSigners);
     }
-
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
 
     if (signedTransactions) {
@@ -1523,6 +1519,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         console.log(txid);
       }
@@ -1999,39 +1996,25 @@ export class MangoClient {
     }
 
     // Sign multiple transactions at once for better UX
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
     if (signedTransactions) {
       return await Promise.all(
         signedTransactions.map((signedTransaction) =>
-          this.sendSignedTransaction({ signedTransaction }),
+          this.sendSignedTransaction({
+            signedTransaction,
+            signedAtBlock: currentBlockhash,
+          }),
         ),
       );
     } else {
       throw new Error('Unable to sign all CancelAllPerpOrders transactions');
     }
   }
-  /*
-  async loadPerpMarkets(perpMarkets: PublicKey[]): Promise<PerpMarket[]> {
-    const accounts = await Promise.all(
-      perpMarkets.map((pk) => this.connection.getAccountInfo(pk)),
-    );
-
-    const parsedPerpMarkets: PerpMarket[] = [];
-
-    for (let i = 0; i < accounts.length; i++) {
-      const acc = accounts[i];
-      if (acc) {
-        const decoded = PerpMarketLayout.decode(acc.data);
-        parsedPerpMarkets.push(new PerpMarket(perpMarkets[i], decoded));
-      }
-    }
-
-    return parsedPerpMarkets;
-  }
-  */
 
   /**
    * Add a new oracle to a group
@@ -2512,9 +2495,11 @@ export class MangoClient {
       signers,
     }));
 
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
 
     const txids: TransactionSignature[] = [];
@@ -2526,6 +2511,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         txids.push(txid);
       }
@@ -2536,11 +2522,6 @@ export class MangoClient {
       // and if it failed then we already exited before this line
       mangoAccount.spotOpenOrders[spotMarketIndex] = marketOpenOrdersKey;
       mangoAccount.inMarginBasket[spotMarketIndex] = true;
-      console.log(
-        spotMarketIndex,
-        mangoAccount.spotOpenOrders[spotMarketIndex].toBase58(),
-        marketOpenOrdersKey.toBase58(),
-      );
     } else {
       throw new Error('Unable to sign Settle All transaction');
     }
@@ -2763,10 +2744,11 @@ export class MangoClient {
       transaction: tx,
       signers,
     }));
-
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer: owner,
+      currentBlockhash,
     });
 
     const txids: TransactionSignature[] = [];
@@ -2778,6 +2760,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         txids.push(txid);
       }
@@ -3624,8 +3607,8 @@ export class MangoClient {
       assetRootBank.nodeBanks[0],
       liabRootBank.publicKey,
       liabRootBank.nodeBanks[0],
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       maxLiabTransfer,
     );
 
@@ -3656,8 +3639,8 @@ export class MangoClient {
       payer.publicKey,
       rootBank.publicKey,
       rootBank.nodeBanks[0],
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       assetType,
       new BN(assetIndex),
       liabType,
@@ -3688,8 +3671,8 @@ export class MangoClient {
       liqeeMangoAccount.publicKey,
       liqorMangoAccount.publicKey,
       payer.publicKey,
-      liqeeMangoAccount.spotOpenOrders,
-      liqorMangoAccount.spotOpenOrders,
+      liqeeMangoAccount.getOpenOrdersKeysInBasket(),
+      liqorMangoAccount.getOpenOrdersKeysInBasket(),
       baseTransferRequest,
     );
 
@@ -3894,16 +3877,20 @@ export class MangoClient {
       throw new Error('No MNGO rewards to redeem');
     }
 
-    // Sign multiple transactions at once for better UX
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
       payer,
+      currentBlockhash,
     });
 
     if (signedTransactions) {
       const txSigs = await Promise.all(
         signedTransactions.map((signedTransaction) =>
-          this.sendSignedTransaction({ signedTransaction }),
+          this.sendSignedTransaction({
+            signedTransaction,
+            signedAtBlock: currentBlockhash,
+          }),
         ),
       );
       return txSigs;
@@ -4767,9 +4754,11 @@ export class MangoClient {
       transactionsAndSigners.push(transactionAndSigners);
     }
 
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
-      payer: payer,
+      payer,
+      currentBlockhash,
     });
 
     if (signedTransactions) {
@@ -4779,6 +4768,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         console.log(txid);
       }
@@ -4847,7 +4837,9 @@ export class MangoClient {
       );
       redeemMngoTransaction.transaction.add(instruction);
     }
-    transactionsAndSigners.push(redeemMngoTransaction);
+    if (redeemMngoTransaction.transaction.instructions.length > 0) {
+      transactionsAndSigners.push(redeemMngoTransaction);
+    }
 
     const resolveAllDustTransaction = {
       transaction: new Transaction(),
@@ -5035,10 +5027,11 @@ export class MangoClient {
       ),
     );
     transactionsAndSigners.push(closeAccountsTransaction);
-
+    const currentBlockhash = await this.getCurrentBlockhash();
     const signedTransactions = await this.signTransactions({
       transactionsAndSigners,
-      payer: payer,
+      payer,
+      currentBlockhash,
     });
 
     const txids: TransactionSignature[] = [];
@@ -5049,6 +5042,7 @@ export class MangoClient {
         }
         const txid = await this.sendSignedTransaction({
           signedTransaction,
+          signedAtBlock: currentBlockhash,
         });
         txids.push(txid);
         console.log(txid);
@@ -5302,5 +5296,65 @@ export class MangoClient {
     });
 
     return referrerIds;
+  }
+
+  async cancelAllSpotOrders(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    spotMarket: Market,
+    owner: Payer,
+    limit: number,
+  ) {
+    if(!owner.publicKey)
+      return;
+    const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.address);
+    const baseRootBank = mangoGroup.rootBankAccounts[marketIndex];
+    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
+    if(baseRootBank == null || quoteRootBank == null)
+    {
+      console.log("A root bank is null")
+      return;
+    }
+    const baseNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
+    const quoteNodeBanks = await quoteRootBank.loadNodeBanks(this.connection);
+    const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
+
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
+    const instruction = makeCancelAllSpotOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      baseRootBank.publicKey,
+      baseNodeBanks[0].publicKey,
+      baseNodeBanks[0].vault,
+      quoteRootBank.publicKey,
+      quoteNodeBanks[0].publicKey,
+      quoteNodeBanks[0].vault,
+      spotMarket.publicKey,
+      spotMarket.bidsAddress,
+      spotMarket.asksAddress,
+      mangoAccount.spotOpenOrders[spotMarketIndex],
+      mangoGroup.signerKey,
+      spotMarket['_decoded'].eventQueue,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      dexSigner,
+      mangoGroup.dexProgramId,
+      new BN(limit),
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, owner, []);
   }
 }

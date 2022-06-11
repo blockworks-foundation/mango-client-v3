@@ -9,7 +9,9 @@ import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
 import { I80F48, ZERO_I80F48 } from './utils/fixednum';
-import { PerpOrder, PerpOrderType, ZERO_BN } from '.';
+import { PerpOrder } from './book';
+import { PerpOrderType } from './utils/types';
+import { ZERO_BN } from './utils/utils';
 
 export function makeInitMangoGroupInstruction(
   programId: PublicKey,
@@ -311,8 +313,8 @@ export function makeDepositInstruction(
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: ownerPk },
-    { isSigner: false, isWritable: false, pubkey: merpsCachePk },
-    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: merpsCachePk },
+    { isSigner: false, isWritable: true, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: nodeBankPk },
     { isSigner: false, isWritable: true, pubkey: vaultPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
@@ -2317,6 +2319,66 @@ export function makeRegisterReferrerIdInstruction(
 
   const data = encodeMangoInstruction({
     RegisterReferrerId: { referrerId },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeCancelAllSpotOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
+  mangoAccountPk: PublicKey,
+  owner: PublicKey,
+  baseRootBankPk: PublicKey,
+  baseNodeBankPk: PublicKey,
+  baseVaultPk: PublicKey,
+  quoteRootBankPk: PublicKey,
+  quoteNodeBankPk: PublicKey,
+  quoteVaultPk: PublicKey,
+  spotMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  openOrders: PublicKey,
+  signerPk: PublicKey,
+  dexEventQueuePk: PublicKey,
+  dexBasePk: PublicKey,
+  dexQuotePk: PublicKey,
+  dexSignerPk: PublicKey,
+  dexProgramPk: PublicKey,
+  limit: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: owner },
+    { isSigner: false, isWritable: false, pubkey: baseRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseVaultPk },
+    { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
+    { isSigner: false, isWritable: true, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: openOrders },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: true, pubkey: dexEventQueuePk },
+    { isSigner: false, isWritable: true, pubkey: dexBasePk },
+    { isSigner: false, isWritable: true, pubkey: dexQuotePk },
+    { isSigner: false, isWritable: false, pubkey: dexSignerPk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+  const data = encodeMangoInstruction({
+    CancelAllSpotOrders: {
+      limit,
+    },
   });
   return new TransactionInstruction({
     keys,

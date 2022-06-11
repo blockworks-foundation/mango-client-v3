@@ -611,6 +611,14 @@ MangoInstructionLayout.addVariant(
   'PlacePerpOrder2',
 );
 
+MangoInstructionLayout.addVariant(
+  65,
+  struct([
+    u8('limit'),
+  ]),
+  'CancelAllSpotOrders',
+);
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
