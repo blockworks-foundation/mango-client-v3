@@ -40,6 +40,7 @@
     "test-closeaccount": "ts-node test/closeaccount.test.ts",
     "test-cancelside": "ts-node test/cancelside.test.ts",
     "mint-devnet": "ts-node src/mintDevnet.ts",
+    "create-group": "ts-node src/scripts/testnet/createGroup.ts",
     "test": "mocha -r ts-node/register test/**/*.test.ts --timeout 0",
     "test:build": "yarn build && yarn",
     "test:lint": "eslint src",

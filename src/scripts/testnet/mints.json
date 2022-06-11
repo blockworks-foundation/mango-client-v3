@@ -1,0 +1,267 @@
+{
+  "devnet": [
+    {
+      "symbol": "MNGO",
+      "decimals": 6,
+      "baseLot": 1000000,
+      "quoteLot": 100,
+      "initLeverage": 1.25,
+      "maintLeverage": 2.5,
+      "liquidationFee": 0.2,
+      "oracleProvider": "switchboard",
+      "mint": "Bb9bsTQa1bGEtQ5KagGkvSHyuLqDWumFUcRqFusFNJWC"
+    },
+    {
+      "symbol": "USDC",
+      "decimals": 6,
+      "mint": "8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN"
+    },
+    {
+      "symbol": "BTC",
+      "decimals": 6,
+      "baseLot": 100,
+      "quoteLot": 10,
+      "oracleProvider": "pyth",
+      "mint": "3UNBZ6o52WTWwjac2kPUb4FyodhU1vFkRJheu1Sh2TvU"
+    },
+    {
+      "symbol": "ETH",
+      "decimals": 6,
+      "baseLot": 1000,
+      "quoteLot": 10,
+      "oracleProvider": "pyth",
+      "mint": "Cu84KB3tDL6SbFgToHMLYVDJJXdJjenNzSKikeAvzmkA"
+    },
+    {
+      "symbol": "SOL",
+      "decimals": 9,
+      "baseLot": 100000000,
+      "quoteLot": 100,
+      "oracleProvider": "pyth",
+      "mint": "So11111111111111111111111111111111111111112"
+    },
+    {
+      "symbol": "SRM",
+      "decimals": 6,
+      "baseLot": 100000,
+      "quoteLot": 100,
+      "oracleProvider": "pyth",
+      "mint": "AvtB6w9xboLwA145E221vhof5TddhqsChYcx7Fy3xVMH"
+    },
+    {
+      "symbol": "RAY",
+      "decimals": 6,
+      "baseLot": 100000,
+      "quoteLot": 100,
+      "price": 8,
+      "mint": "3YFQ7UYJ7sNGpXTKBxM3bYLVxKpzVudXAe4gLExh5b3n",
+      "initLeverage": 3,
+      "maintLeverage": 6,
+      "liquidationFee": 0.0833
+    },
+    {
+      "symbol": "USDT",
+      "decimals": 6,
+      "baseLot": 1000000,
+      "quoteLot": 100,
+      "oracleProvider": "pyth",
+      "mint": "DAwBSXe6w9g37wdE2tCrFbho3QHKZi4PjuBytQCULap2",
+      "initLeverage": 10,
+      "maintLeverage": 20,
+      "liquidationFee": 0.025
+    }
+  ],
+  "testnet": [
+    {
+      "symbol": "USDC",
+      "mint": "HL4ZFMUcS5uoPe4cwbRk1xNfYMRTwoahVmf69VkDPJGS",
+      "decimals": 6
+    },
+    {
+      "symbol": "MNGO",
+      "mint": "2hvukwp4UR9tqmCQhRzcsW9S2QBuU5Xcv5JJ5fUMmfvQ",
+      "decimals": 6,
+      "baseLot": 1000000,
+      "quoteLot": 100,
+      "initLeverage": 1.25,
+      "maintLeverage": 2.5,
+      "liquidationFee": 0.2,
+      "initLeveragePerp": 4,
+      "maintLeveragePerp": 8,
+      "liquidationFeePerp": 0.0625,
+      "oracleProvider": "pyth"
+    },
+    {
+      "symbol": "BTC",
+      "mint": "ConQTBPzFgVCQp6FvXufs5ZpyWG1r6wLYf5EYzzaGX3U",
+      "decimals": 6,
+      "baseLot": 100,
+      "quoteLot": 10,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "initLeveragePerp": 20,
+      "maintLeveragePerp": 40,
+      "liquidationFeePerp": 0.0125,
+      "oracleProvider": "pyth"
+    },
+    {
+      "symbol": "ETH",
+      "mint": "AsYEqWmRyHPgocG35pu9EHduavgiUA5sU26m1oCEYJ3Y",
+      "baseLot": 1000,
+      "quoteLot": 10,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "initLeveragePerp": 20,
+      "maintLeveragePerp": 40,
+      "liquidationFeePerp": 0.0125,
+      "oracleProvider": "pyth",
+      "decimals": 6
+    },
+    {
+      "symbol": "SOL",
+      "mint": "So11111111111111111111111111111111111111112",
+      "decimals": 9,
+      "baseLot": 100000000,
+      "quoteLot": 100,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "initLeveragePerp": 20,
+      "maintLeveragePerp": 40,
+      "liquidationFeePerp": 0.0125,
+      "oracleProvider": "pyth"
+    },
+    {
+      "symbol": "USDT",
+      "mint": "9F7fShLuDueXHcZ2xnxF5qtN1vFBRNWmgqeFgSz7boxW",
+      "decimals": 6,
+      "baseLot": 1000000,
+      "quoteLot": 100,
+      "oracleProvider": "pyth",
+      "initLeverage": 10,
+      "maintLeverage": 20,
+      "liquidationFee": 0.025
+    },
+    {
+      "symbol": "SRM",
+      "mint": "5vGS1gUhHcHCWNFnQGJ8uRaWVknfFPHS8fgvomkHx5fh",
+      "decimals": 6,
+      "baseLot": 100000,
+      "quoteLot": 100,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "initLeveragePerp": 8,
+      "maintLeveragePerp": 16,
+      "liquidationFeePerp": 0.03125,
+      "oracleProvider": "pyth"
+    },
+    {
+      "symbol": "RAY",
+      "mint": "AAPkfrpqfJ1Sq6dEWEtJNN74YRi7YybSYxtmtx5QNxFe",
+      "decimals": 6,
+      "oracleProvider": "pyth",
+      "baseLot": 100000,
+      "quoteLot": 100,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "initLeveragePerp": 8,
+      "maintLeveragePerp": 16,
+      "liquidationFeePerp": 0.03125
+    },
+    {
+      "symbol": "COPE",
+      "mint": "4Jvv7evitAePYo61e1bfwrLvqtVSLLdwsvfqbMofzmv6",
+      "decimals": 6,
+      "oracleProvider": "pyth",
+      "quoteLot": 100,
+      "initLeverage": 2,
+      "maintLeverage": 4,
+      "liquidationFee": 0.125
+    },
+    {
+      "symbol": "FTT",
+      "mint": "UHkzA7RwBwj8Rtuj74TmPJYLRuDXXVu7CV45mtbKdrM",
+      "decimals": 6,
+      "oracleProvider": "pyth",
+      "baseLot": 100000,
+      "quoteLot": 100,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "initLeveragePerp": 10,
+      "maintLeveragePerp": 20,
+      "liquidationFeePerp": 0.025
+    },
+    {
+      "symbol": "MSOL",
+      "mint": "EHwfam2RkPGTBEEQrkFS9pt5KtmbYXdpVXhdisC4w6Jf",
+      "decimals": 9,
+      "baseLot": 100000000,
+      "quoteLot": 100,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "oracleProvider": "pyth"
+    },
+    {
+      "symbol": "BNB",
+      "mint": "2zbgxXtobk1DD1v9NuDE4XJsftGx5sc8YEgfSBxHCgbV",
+      "decimals": 8,
+      "oracleProvider": "pyth",
+      "baseLot": 100000,
+      "quoteLot": 100,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "initLeveragePerp": 10,
+      "maintLeveragePerp": 20,
+      "liquidationFeePerp": 0.025
+    },
+    {
+      "symbol": "AVAX",
+      "mint": "Ba7aMmNU1CsmR9JLUcnsFGFFePtvujzgPddja66tVooA",
+      "decimals": 8,
+      "oracleProvider": "pyth",
+      "baseLot": 1000000,
+      "quoteLot": 100,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "initLeveragePerp": 10,
+      "maintLeveragePerp": 20,
+      "liquidationFeePerp": 0.025
+    },
+    {
+      "symbol": "LUNA",
+      "mint": "E1uFVJjU3ZQCrDioMbLFjVMjeYQv1X7gYE8hbgFn3j4x",
+      "decimals": 6,
+      "oracleProvider": "pyth",
+      "baseLot": 10000,
+      "quoteLot": 100,
+      "initLeverage": 5,
+      "maintLeverage": 10,
+      "liquidationFee": 0.05,
+      "initLeveragePerp": 10,
+      "maintLeveragePerp": 20,
+      "liquidationFeePerp": 0.025
+    },
+    {
+      "symbol": "GMT",
+      "mint": "BiFY7TA4b2q5zxUSMQD1cKuFMT2GP5GjWh5DzCpkW9md",
+      "decimals": 6,
+      "oracleProvider": "pyth",
+      "baseLot": 1000000000,
+      "quoteLot": 100,
+      "initLeverage": 2,
+      "maintLeverage": 4,
+      "liquidationFee": 0.125,
+      "initLeveragePerp": 8,
+      "maintLeveragePerp": 16,
+      "liquidationFeePerp": 0.03125
+    }
+  ]
+}
