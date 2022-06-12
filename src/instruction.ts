@@ -2420,6 +2420,7 @@ export function makeRemoveSpotMarketInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   adminPk: PublicKey,
+  dustAccountPk: PublicKey,
   rootBankPk: PublicKey,
   adminVaultPk: PublicKey,
   signerPk: PublicKey,
@@ -2429,6 +2430,7 @@ export function makeRemoveSpotMarketInstruction(
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
     { isSigner: true, isWritable: true, pubkey: adminPk },
+    { isSigner: false, isWritable: true, pubkey: dustAccountPk },
     { isSigner: false, isWritable: true, pubkey: rootBankPk },
     { isSigner: false, isWritable: true, pubkey: adminVaultPk },
     { isSigner: false, isWritable: false, pubkey: signerPk },
