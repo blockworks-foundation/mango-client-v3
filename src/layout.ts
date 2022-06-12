@@ -617,8 +617,10 @@ MangoInstructionLayout.addVariant(
   'SetMarketMode',
 );
 MangoInstructionLayout.addVariant(67, struct([]), 'RemovePerpMarket');
+MangoInstructionLayout.addVariant(68, struct([]), 'SwapSpotMarket');
 MangoInstructionLayout.addVariant(69, struct([]), 'RemoveSpotMarket');
 MangoInstructionLayout.addVariant(70, struct([]), 'RemoveOracle');
+MangoInstructionLayout.addVariant(71, struct([]), 'LiquidateDelistingToken');
 MangoInstructionLayout.addVariant(72, struct([]), 'ForceSettlePerpPosition');
 
 const instructionMaxSpan = Math.max(
@@ -728,6 +730,9 @@ export class TokenInfo {
   rootBank!: PublicKey;
   decimals!: number;
   padding!: number[];
+  spotMarketMode!: MarketMode;
+  perpMarketMode!: MarketMode;
+  oracleInactive!: boolean;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -744,7 +749,10 @@ export class TokenInfoLayout extends Structure {
         publicKeyLayout('mint'),
         publicKeyLayout('rootBank'),
         u8('decimals'),
-        seq(u8(), 7, 'padding'),
+        u8('spotMarketMode'),
+        u8('perpMarketMode'),
+        bool('oracleInactive'),
+        seq(u8(), 4, 'padding'),
       ],
       property,
     );
