@@ -477,6 +477,49 @@ export default class MangoAccount {
     }
     return { assets, liabs };
   }
+  
+  /**
+   * Take health components and return the assets and liabs weighted using a price modifier
+   */
+   getModWeightedAssetsLiabsVals(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    spot: I80F48[],
+    perps: I80F48[],
+    quote: I80F48,
+    modifier: I80F48,
+    healthType?: HealthType,
+  ): { assets: I80F48; liabs: I80F48 } {
+    let assets = ZERO_I80F48;
+    let liabs = ZERO_I80F48;
+
+    if (quote.isPos()) {
+      assets = assets.add(quote);
+    } else {
+      liabs = liabs.add(quote.neg());
+    }
+
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      let priceModifier = ONE_I80F48;
+      if (i != QUOTE_INDEX || i != 4) {
+        priceModifier = modifier;
+      }
+      const w = getWeights(mangoGroup, i, healthType);
+      const price = mangoCache.priceCache[i].price.mul(priceModifier);
+      if (spot[i].isPos()) {
+        assets = spot[i].mul(price).mul(w.spotAssetWeight).add(assets);
+      } else {
+        liabs = spot[i].neg().mul(price).mul(w.spotLiabWeight).add(liabs);
+      }
+
+      if (perps[i].isPos()) {
+        assets = perps[i].mul(price).mul(w.perpAssetWeight).add(assets);
+      } else {
+        liabs = perps[i].neg().mul(price).mul(w.perpLiabWeight).add(liabs);
+      }
+    }
+    return { assets, liabs };
+  }
 
   getHealthFromComponents(
     mangoGroup: MangoGroup,
@@ -719,6 +762,155 @@ export default class MangoAccount {
     } else {
       return I80F48.fromNumber(100);
     }
+  }
+
+  /**
+   * Return the spot, perps and quote currency values after adjusting for
+   * worst case open orders scenarios, using a price modifier.
+   * These values are not adjusted for health type.
+   */
+  
+  getModHealthComponents(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+    modifier: I80F48,
+  ): { spot: I80F48[]; perps: I80F48[]; quote: I80F48 } {
+    const spot = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
+    const perps = Array(mangoGroup.numOracles).fill(ZERO_I80F48);
+    const quote = this.getNet(
+      mangoCache.rootBankCache[QUOTE_INDEX],
+      QUOTE_INDEX,
+    );
+
+    for (let i = 0; i < mangoGroup.numOracles; i++) {
+      let priceModifier = ONE_I80F48;
+      if (i != QUOTE_INDEX || i != 4) {
+        priceModifier = modifier;
+      }
+      const bankCache = mangoCache.rootBankCache[i];
+      const price = mangoCache.priceCache[i].price.mul(priceModifier);
+      const baseNet = this.getNet(bankCache, i);
+
+      // Evaluate spot first
+      const openOrders = this.spotOpenOrdersAccounts[i];
+      if (this.inMarginBasket[i] && openOrders !== undefined) {
+        const { quoteFree, quoteLocked, baseFree, baseLocked } =
+          splitOpenOrders(openOrders);
+
+        // base total if all bids were executed
+        const bidsBaseNet = baseNet
+          .add(quoteLocked.div(price))
+          .iadd(baseFree)
+          .iadd(baseLocked);
+
+        // base total if all asks were executed
+        const asksBaseNet = baseNet.add(baseFree);
+
+        // bids case worse if it has a higher absolute position
+        if (bidsBaseNet.abs().gt(asksBaseNet.abs())) {
+          spot[i] = bidsBaseNet;
+          quote.iadd(quoteFree);
+        } else {
+          spot[i] = asksBaseNet;
+          quote.iadd(baseLocked.mul(price)).iadd(quoteFree).iadd(quoteLocked);
+        }
+      } else {
+        spot[i] = baseNet;
+      }
+
+      // Evaluate perps
+      if (!mangoGroup.perpMarkets[i].perpMarket.equals(zeroKey)) {
+        const perpMarketCache = mangoCache.perpMarketCache[i];
+        const perpAccount = this.perpAccounts[i];
+        const baseLotSize = mangoGroup.perpMarkets[i].baseLotSize;
+        const quoteLotSize = mangoGroup.perpMarkets[i].quoteLotSize;
+        const takerQuote = I80F48.fromI64(
+          perpAccount.takerQuote.mul(quoteLotSize),
+        );
+        const basePos = I80F48.fromI64(
+          perpAccount.basePosition.add(perpAccount.takerBase).imul(baseLotSize),
+        );
+        const bidsQuantity = I80F48.fromI64(
+          perpAccount.bidsQuantity.mul(baseLotSize),
+        );
+        const asksQuantity = I80F48.fromI64(
+          perpAccount.asksQuantity.mul(baseLotSize),
+        );
+
+        const bidsBaseNet = basePos.add(bidsQuantity);
+        const asksBaseNet = basePos.sub(asksQuantity);
+
+        if (bidsBaseNet.abs().gt(asksBaseNet.abs())) {
+          const quotePos = perpAccount
+            .getQuotePosition(perpMarketCache)
+            .add(takerQuote)
+            .isub(bidsQuantity.mul(price));
+          quote.iadd(quotePos);
+          perps[i] = bidsBaseNet;
+        } else {
+          const quotePos = perpAccount
+            .getQuotePosition(perpMarketCache)
+            .add(takerQuote)
+            .iadd(asksQuantity.mul(price));
+          quote.iadd(quotePos);
+          perps[i] = asksBaseNet;
+        }
+      } else {
+        perps[i] = ZERO_I80F48;
+      }
+    }
+
+    return { spot, perps, quote };
+  }
+
+  getPriceMoveToLiquidate(
+    mangoGroup: MangoGroup,
+    mangoCache: MangoCache,
+  ): I80F48 {
+
+    const scenarioBaseLine = this.getHealthComponents(
+      mangoGroup,
+      mangoCache,
+    );
+
+    const scenarioBaseAssetsLiabs = this.getWeightedAssetsLiabsVals(
+      mangoGroup,
+      mangoCache,
+      scenarioBaseLine.spot,
+      scenarioBaseLine.perps,
+      scenarioBaseLine.quote,
+      'Maint',
+    );
+
+    const scenarioMod = this.getModHealthComponents(
+      mangoGroup,
+      mangoCache,
+      I80F48.fromNumber(1.01),
+    );
+
+    const scenarioModAssetsLiabs = this.getModWeightedAssetsLiabsVals(
+      mangoGroup,
+      mangoCache,
+      scenarioMod.spot,
+      scenarioMod.perps,
+      scenarioMod.quote,
+      I80F48.fromNumber(1.01),
+      'Maint',
+    );
+
+    const maintEquity = scenarioBaseAssetsLiabs.assets.sub(scenarioBaseAssetsLiabs.liabs);
+    const maintAssetsRateOfChange = scenarioModAssetsLiabs.assets.sub(scenarioBaseAssetsLiabs.assets);
+    const maintLiabsRateOfChange = scenarioModAssetsLiabs.liabs.sub(scenarioBaseAssetsLiabs.liabs);
+    const maintRateOfChange = maintLiabsRateOfChange.sub(maintAssetsRateOfChange);
+
+    let priceMoveToLiquidate = ZERO_I80F48;
+    if (maintRateOfChange.isZero()) {
+      priceMoveToLiquidate = ZERO_I80F48;
+    } else {
+      priceMoveToLiquidate = maintEquity.div(maintRateOfChange);
+    }
+
+    return priceMoveToLiquidate;
   }
 
   computeValue(mangoGroup: MangoGroup, mangoCache: MangoCache): I80F48 {
