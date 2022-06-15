@@ -610,7 +610,11 @@ MangoInstructionLayout.addVariant(
   ]),
   'PlacePerpOrder2',
 );
-
+MangoInstructionLayout.addVariant(
+  65,
+  struct([u8('limit')]),
+  'CancelAllSpotOrders',
+);
 MangoInstructionLayout.addVariant(
   66,
   struct([u8('marketIndex'), u8('marketMode'), u8('marketType')]),

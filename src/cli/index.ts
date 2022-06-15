@@ -51,7 +51,7 @@ const clusterDesc: [string, Options] = [
   {
     describe: 'the cluster to connect to',
     default: 'devnet',
-    choices: ['devnet', 'mainnet'],
+    choices: ['devnet', 'testnet', 'mainnet'],
   },
 ];
 
