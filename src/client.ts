@@ -2,7 +2,6 @@ import {
   AccountInfo,
   BlockhashWithExpiryBlockHeight,
   Commitment,
-  ComputeBudgetProgram,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
