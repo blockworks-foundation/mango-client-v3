@@ -36,6 +36,7 @@ import {
   ZERO_BN,
   zeroKey,
   MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION,
+  prependFeePrioritizationIx,
 } from './utils/utils';
 import {
   AssetType,
@@ -278,14 +279,10 @@ export class MangoClient {
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
       transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
       if (this.prioritizationFee) {
-        const computeBudgetIx = ComputeBudgetProgram.requestUnits({
-          additionalFee: this.prioritizationFee,
-          units: 1400000,
-        });
-        transaction.instructions = [
-          computeBudgetIx,
-          ...transaction.instructions,
-        ];
+        transaction = prependFeePrioritizationIx(
+          transaction,
+          this.prioritizationFee,
+        );
       }
       if (payer.publicKey) {
         transaction.setSigners(
@@ -326,13 +323,10 @@ export class MangoClient {
   ): Promise<TransactionSignature> {
     const currentBlockhash = await this.getCurrentBlockhash();
 
-    if (this.prioritizationFee) {
-      const computeBudgetIx = ComputeBudgetProgram.requestUnits({
-        additionalFee: this.prioritizationFee,
-        units: 1400000,
-      });
-      transaction.instructions = [computeBudgetIx, ...transaction.instructions];
-    }
+    transaction = prependFeePrioritizationIx(
+      transaction,
+      this.prioritizationFee,
+    );
 
     await this.signTransaction({
       transaction,
@@ -5328,14 +5322,12 @@ export class MangoClient {
     owner: Payer,
     limit: number,
   ) {
-    if(!owner.publicKey)
-      return;
+    if (!owner.publicKey) return;
     const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.address);
     const baseRootBank = mangoGroup.rootBankAccounts[marketIndex];
     const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
-    if(baseRootBank == null || quoteRootBank == null)
-    {
-      console.log("A root bank is null")
+    if (baseRootBank == null || quoteRootBank == null) {
+      console.log('A root bank is null');
       return;
     }
     const baseNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
