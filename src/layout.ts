@@ -610,14 +610,22 @@ MangoInstructionLayout.addVariant(
   ]),
   'PlacePerpOrder2',
 );
-
 MangoInstructionLayout.addVariant(
   65,
-  struct([
-    u8('limit'),
-  ]),
+  struct([u8('limit')]),
   'CancelAllSpotOrders',
 );
+MangoInstructionLayout.addVariant(
+  66,
+  struct([u8('marketIndex'), u8('marketMode'), u8('marketType')]),
+  'SetMarketMode',
+);
+MangoInstructionLayout.addVariant(67, struct([]), 'RemovePerpMarket');
+MangoInstructionLayout.addVariant(68, struct([]), 'SwapSpotMarket');
+MangoInstructionLayout.addVariant(69, struct([]), 'RemoveSpotMarket');
+MangoInstructionLayout.addVariant(70, struct([]), 'RemoveOracle');
+MangoInstructionLayout.addVariant(71, struct([]), 'LiquidateDelistingToken');
+MangoInstructionLayout.addVariant(72, struct([]), 'ForceSettlePerpPosition');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -669,6 +677,15 @@ export const enum AssetType {
   Perp = 1,
 }
 
+export const enum MarketMode {
+  Default = 0,
+  Active = 1,
+  CloseOnly = 2,
+  ForceCloseOnly = 3,
+  Inactive = 4,
+  SwappingSpotMarket = 5,
+}
+
 export const enum AdvancedOrderType {
   PerpTrigger = 0,
   SpotTrigger = 1,
@@ -717,6 +734,9 @@ export class TokenInfo {
   rootBank!: PublicKey;
   decimals!: number;
   padding!: number[];
+  spotMarketMode!: MarketMode;
+  perpMarketMode!: MarketMode;
+  oracleInactive!: boolean;
 
   constructor(decoded: any) {
     Object.assign(this, decoded);
@@ -733,7 +753,10 @@ export class TokenInfoLayout extends Structure {
         publicKeyLayout('mint'),
         publicKeyLayout('rootBank'),
         u8('decimals'),
-        seq(u8(), 7, 'padding'),
+        u8('spotMarketMode'),
+        u8('perpMarketMode'),
+        bool('oracleInactive'),
+        seq(u8(), 4, 'padding'),
       ],
       property,
     );
