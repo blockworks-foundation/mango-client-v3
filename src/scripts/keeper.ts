@@ -66,7 +66,10 @@ const connection = new Connection(
   process.env.ENDPOINT_URL || config.cluster_urls[cluster],
   'processed' as Commitment,
 );
-const client = new MangoClient(connection, mangoProgramId, { timeout: 10000 });
+const client = new MangoClient(connection, mangoProgramId, {
+  timeout: 10000,
+  prioritizationFee: 2,
+});
 
 async function main() {
   if (!groupIds) {

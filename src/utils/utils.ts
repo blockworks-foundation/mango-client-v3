@@ -3,6 +3,7 @@ import {
   AccountInfo,
   BlockhashWithExpiryBlockHeight,
   Commitment,
+  ComputeBudgetProgram,
   Connection,
   Keypair,
   PublicKey,
@@ -560,3 +561,14 @@ export function findPerpMarketParams(
     baseDecimals,
   };
 }
+
+export const prependFeePrioritizationIx = (transaction, prioritizationFee) => {
+  if (prioritizationFee) {
+    const computeBudgetIx = ComputeBudgetProgram.requestUnits({
+      additionalFee: prioritizationFee,
+      units: 200000 * transaction.instructions.length + 1,
+    });
+    transaction.instructions = [computeBudgetIx, ...transaction.instructions];
+  }
+  return transaction;
+};
