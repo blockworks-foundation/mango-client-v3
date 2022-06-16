@@ -2,6 +2,7 @@ import {
   AccountInfo,
   BlockhashWithExpiryBlockHeight,
   Commitment,
+  ComputeBudgetProgram,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
@@ -174,6 +175,7 @@ export class MangoClient {
   // The commitment level used when fetching recentBlockHash
   blockhashCommitment: Commitment;
   postSendTxCallback?: ({ txid: string }) => void;
+  prioritizationFee: number;
 
   constructor(
     connection: Connection,
@@ -184,6 +186,7 @@ export class MangoClient {
       blockhashCommitment?: Commitment;
       timeout?: number;
       sendConnection?: Connection;
+      prioritizationFee?: number;
     } = {},
   ) {
     this.connection = connection;
@@ -192,7 +195,8 @@ export class MangoClient {
     this.lastValidBlockHeight = 0;
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
     this.timeout = opts?.timeout || 60000;
-    this.sendConnection = opts.sendConnection;
+    this.sendConnection = opts?.sendConnection;
+    this.prioritizationFee = opts?.prioritizationFee || 0;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
     }
@@ -273,6 +277,16 @@ export class MangoClient {
       currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
       transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
+      if (this.prioritizationFee) {
+        const computeBudgetIx = ComputeBudgetProgram.requestUnits({
+          additionalFee: this.prioritizationFee,
+          units: 1400000,
+        });
+        transaction.instructions = [
+          computeBudgetIx,
+          ...transaction.instructions,
+        ];
+      }
       if (payer.publicKey) {
         transaction.setSigners(
           payer.publicKey,
@@ -311,6 +325,15 @@ export class MangoClient {
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
     const currentBlockhash = await this.getCurrentBlockhash();
+
+    if (this.prioritizationFee) {
+      const computeBudgetIx = ComputeBudgetProgram.requestUnits({
+        additionalFee: this.prioritizationFee,
+        units: 1400000,
+      });
+      transaction.instructions = [computeBudgetIx, ...transaction.instructions];
+    }
+
     await this.signTransaction({
       transaction,
       payer,
