@@ -181,6 +181,14 @@
     bs58 "^4.0.1"
     eventemitter3 "^4.0.4"
 
+"@pythnetwork/client@^2.7.0":
+  version "2.7.0"
+  resolved "https://registry.yarnpkg.com/@pythnetwork/client/-/client-2.7.0.tgz#e49725c13614de4fcf4cb45053374783a068b012"
+  integrity sha512-a/77ZHMb7Sl/M/+b9gvKTeUb4Q/66Y4aslmhln4a8SoU4jFdBrO7SBL47m183iOHSdhYPDlrR1Ue1IJppC71Nw==
+  dependencies:
+    "@solana/web3.js" "^1.30.2"
+    buffer "^6.0.1"
+
 "@solana/buffer-layout@^4.0.0":
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@solana/buffer-layout/-/buffer-layout-4.0.0.tgz#75b1b11adc487234821c81dfae3119b73a5fd734"
@@ -200,7 +208,7 @@
     buffer-layout "^1.2.0"
     dotenv "10.0.0"
 
-"@solana/web3.js@1.43.5", "@solana/web3.js@^1.12.0", "@solana/web3.js@^1.17.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.43.5":
+"@solana/web3.js@1.43.5", "@solana/web3.js@^1.12.0", "@solana/web3.js@^1.17.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.30.2", "@solana/web3.js@^1.43.5":
   version "1.43.5"
   resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.43.5.tgz#ab12bb6ab3fff0a08e8c7453b4fc4cda9f66df11"
   integrity sha512-/PF4Fp+2jvCt9R3hYrf+tVUZXpPXZaHcwpaY/ytgdcswy8YiYf2snug52BJTCTlxwiXJipS4JpIo7rJJO0nN6w==
@@ -640,7 +648,7 @@ buffer@6.0.1:
     base64-js "^1.3.1"
     ieee754 "^1.2.1"
 
-buffer@6.0.3, buffer@~6.0.3:
+buffer@6.0.3, buffer@^6.0.1, buffer@~6.0.3:
   version "6.0.3"
   resolved "https://registry.yarnpkg.com/buffer/-/buffer-6.0.3.tgz#2ace578459cc8fbe2a70aaa8f52ee63b6a74c6c6"
   integrity sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==
