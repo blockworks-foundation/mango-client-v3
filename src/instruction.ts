@@ -2483,6 +2483,7 @@ export function makeLiquidateDelistingTokenInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
   mangoCachePk: PublicKey,
+  dustAccountPk: PublicKey,
   liqeeMangoAccountPk: PublicKey,
   liqorMangoAccountPk: PublicKey,
   liqorPk: PublicKey,
@@ -2496,10 +2497,12 @@ export function makeLiquidateDelistingTokenInstruction(
   signerPk: PublicKey,
   liqeeOpenOrdersPks: PublicKey[],
   liqorOpenOrdersPks: PublicKey[],
+  maxLiquidateAmount: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: dustAccountPk },
     { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
     { isSigner: false, isWritable: true, pubkey: liqorMangoAccountPk },
     { isSigner: true, isWritable: false, pubkey: liqorPk },
@@ -2525,7 +2528,7 @@ export function makeLiquidateDelistingTokenInstruction(
   ];
 
   const data = encodeMangoInstruction({
-    LiquidateDelistingToken: {},
+    LiquidateDelistingToken: { maxLiquidateAmount: maxLiquidateAmount },
   });
   return new TransactionInstruction({
     keys,

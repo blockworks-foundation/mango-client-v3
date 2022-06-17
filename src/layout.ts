@@ -624,7 +624,11 @@ MangoInstructionLayout.addVariant(67, struct([]), 'RemovePerpMarket');
 MangoInstructionLayout.addVariant(68, struct([]), 'SwapSpotMarket');
 MangoInstructionLayout.addVariant(69, struct([]), 'RemoveSpotMarket');
 MangoInstructionLayout.addVariant(70, struct([]), 'RemoveOracle');
-MangoInstructionLayout.addVariant(71, struct([]), 'LiquidateDelistingToken');
+MangoInstructionLayout.addVariant(
+  71,
+  struct([u64('maxLiquidateAmount')]),
+  'LiquidateDelistingToken',
+);
 MangoInstructionLayout.addVariant(72, struct([]), 'ForceSettlePerpPosition');
 
 const instructionMaxSpan = Math.max(
