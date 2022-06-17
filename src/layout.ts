@@ -617,7 +617,7 @@ MangoInstructionLayout.addVariant(
 );
 MangoInstructionLayout.addVariant(
   66,
-  struct([u8('marketIndex'), u8('marketMode'), u8('marketType')]),
+  struct([u64('marketIndex'), u8('marketMode'), u8('marketType')]),
   'SetMarketMode',
 );
 MangoInstructionLayout.addVariant(67, struct([]), 'RemovePerpMarket');
