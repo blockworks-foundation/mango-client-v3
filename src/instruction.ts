@@ -4,7 +4,12 @@ import {
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { AssetType, encodeMangoInstruction, INFO_LEN } from './layout';
+import {
+  AssetType,
+  encodeMangoInstruction,
+  INFO_LEN,
+  MarketMode,
+} from './layout';
 import BN from 'bn.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Order } from '@project-serum/serum/lib/market';
@@ -2319,6 +2324,297 @@ export function makeRegisterReferrerIdInstruction(
 
   const data = encodeMangoInstruction({
     RegisterReferrerId: { referrerId },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeSetMarketModeInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  marketIndex: BN,
+  marketMode: MarketMode,
+  marketType: AssetType,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    SetMarketMode: { marketIndex, marketMode, marketType },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRemovePerpMarketInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  perpMarketPk: PublicKey,
+  eventQueuePk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  mngoVaultPk: PublicKey,
+  mngoDaoVaultPk: PublicKey,
+  signerPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: true, pubkey: adminPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: eventQueuePk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: mngoVaultPk },
+    { isSigner: false, isWritable: true, pubkey: mngoDaoVaultPk },
+    { isSigner: false, isWritable: true, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+  const data = encodeMangoInstruction({
+    RemovePerpMarket: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeSwapSpotMarketInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  newSpotMarketPk: PublicKey,
+  oldSpotMarketPk: PublicKey,
+  dexProgramId: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+    { isSigner: false, isWritable: false, pubkey: newSpotMarketPk },
+    { isSigner: false, isWritable: false, pubkey: oldSpotMarketPk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramId },
+  ];
+
+  const data = encodeMangoInstruction({
+    SwapSpotMarket: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRemoveSpotMarketInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  dustAccountPk: PublicKey,
+  rootBankPk: PublicKey,
+  adminVaultPk: PublicKey,
+  signerPk: PublicKey,
+  nodeBanks: PublicKey[],
+  vaults: PublicKey[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: true, pubkey: adminPk },
+    { isSigner: false, isWritable: true, pubkey: dustAccountPk },
+    { isSigner: false, isWritable: true, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: adminVaultPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+    ...nodeBanks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+    ...vaults.map((pubkey) => ({
+      isSigner: false,
+      isWritable: true,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMangoInstruction({
+    RemoveSpotMarket: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRemoveOracleInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  oraclePk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+    { isSigner: false, isWritable: false, pubkey: oraclePk },
+  ];
+
+  const data = encodeMangoInstruction({
+    RemoveOracle: {},
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeLiquidateDelistingTokenInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
+  dustAccountPk: PublicKey,
+  liqeeMangoAccountPk: PublicKey,
+  liqorMangoAccountPk: PublicKey,
+  liqorPk: PublicKey,
+  assetRootBankPk: PublicKey,
+  assetNodeBankPk: PublicKey,
+  liabRootBankPk: PublicKey,
+  liabNodeBankPk: PublicKey,
+  liabVaultPk: PublicKey,
+  liqeeLiabTokenAccountPk: PublicKey,
+  liqorLiabTokenAccountPk: PublicKey,
+  signerPk: PublicKey,
+  liqeeOpenOrdersPks: PublicKey[],
+  liqorOpenOrdersPks: PublicKey[],
+  maxLiquidateAmount: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: dustAccountPk },
+    { isSigner: false, isWritable: true, pubkey: liqeeMangoAccountPk },
+    { isSigner: false, isWritable: true, pubkey: liqorMangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: liqorPk },
+    { isSigner: false, isWritable: false, pubkey: assetRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: assetNodeBankPk },
+    { isSigner: false, isWritable: false, pubkey: liabRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: liabNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: liabVaultPk },
+    { isSigner: false, isWritable: true, pubkey: liqeeLiabTokenAccountPk },
+    { isSigner: false, isWritable: true, pubkey: liqorLiabTokenAccountPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+    ...liqeeOpenOrdersPks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+    ...liqorOpenOrdersPks.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMangoInstruction({
+    LiquidateDelistingToken: { maxLiquidateAmount: maxLiquidateAmount },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeForceSettlePerpPositionInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountAPk: PublicKey,
+  mangoAccountBPk: PublicKey,
+  mangoCachePk: PublicKey,
+  perpMarketPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountAPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountBPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    ForceSettlePerpPosition: {},
+  });
+
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+export function makeCancelAllSpotOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoCachePk: PublicKey,
+  mangoAccountPk: PublicKey,
+  owner: PublicKey,
+  baseRootBankPk: PublicKey,
+  baseNodeBankPk: PublicKey,
+  baseVaultPk: PublicKey,
+  quoteRootBankPk: PublicKey,
+  quoteNodeBankPk: PublicKey,
+  quoteVaultPk: PublicKey,
+  spotMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  openOrders: PublicKey,
+  signerPk: PublicKey,
+  dexEventQueuePk: PublicKey,
+  dexBasePk: PublicKey,
+  dexQuotePk: PublicKey,
+  dexSignerPk: PublicKey,
+  dexProgramPk: PublicKey,
+  limit: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: owner },
+    { isSigner: false, isWritable: false, pubkey: baseRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseVaultPk },
+    { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
+    { isSigner: false, isWritable: true, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: true, pubkey: openOrders },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: true, pubkey: dexEventQueuePk },
+    { isSigner: false, isWritable: true, pubkey: dexBasePk },
+    { isSigner: false, isWritable: true, pubkey: dexQuotePk },
+    { isSigner: false, isWritable: false, pubkey: dexSignerPk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+  const data = encodeMangoInstruction({
+    CancelAllSpotOrders: {
+      limit,
+    },
   });
   return new TransactionInstruction({
     keys,

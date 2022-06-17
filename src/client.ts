@@ -35,6 +35,7 @@ import {
   ZERO_BN,
   zeroKey,
   MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION,
+  prependFeePrioritizationIx,
 } from './utils/utils';
 import {
   AssetType,
@@ -116,6 +117,7 @@ import {
   makeUpgradeMangoAccountV0V1Instruction,
   makeWithdrawInstruction,
   makeWithdrawMsrmInstruction,
+  makeCancelAllSpotOrdersInstruction,
 } from './instruction';
 import {
   getFeeRates,
@@ -173,6 +175,7 @@ export class MangoClient {
   // The commitment level used when fetching recentBlockHash
   blockhashCommitment: Commitment;
   postSendTxCallback?: ({ txid: string }) => void;
+  prioritizationFee: number;
 
   constructor(
     connection: Connection,
@@ -183,6 +186,7 @@ export class MangoClient {
       blockhashCommitment?: Commitment;
       timeout?: number;
       sendConnection?: Connection;
+      prioritizationFee?: number;
     } = {},
   ) {
     this.connection = connection;
@@ -191,7 +195,8 @@ export class MangoClient {
     this.lastValidBlockHeight = 0;
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
     this.timeout = opts?.timeout || 60000;
-    this.sendConnection = opts.sendConnection;
+    this.sendConnection = opts?.sendConnection;
+    this.prioritizationFee = opts?.prioritizationFee || 0;
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
     }
@@ -272,6 +277,12 @@ export class MangoClient {
       currentBlockhash ? currentBlockhash : await this.getCurrentBlockhash();
     transactionsAndSigners.forEach(({ transaction, signers = [] }) => {
       transaction.recentBlockhash = blockhashWithExpiryBlockHeight.blockhash;
+      if (this.prioritizationFee) {
+        transaction = prependFeePrioritizationIx(
+          transaction,
+          this.prioritizationFee,
+        );
+      }
       if (payer.publicKey) {
         transaction.setSigners(
           payer.publicKey,
@@ -310,6 +321,12 @@ export class MangoClient {
     confirmLevel: TransactionConfirmationStatus = 'processed',
   ): Promise<TransactionSignature> {
     const currentBlockhash = await this.getCurrentBlockhash();
+
+    transaction = prependFeePrioritizationIx(
+      transaction,
+      this.prioritizationFee,
+    );
+
     await this.signTransaction({
       transaction,
       payer,
@@ -360,7 +377,7 @@ export class MangoClient {
       let done = false;
       let retryAttempts = 0;
       const retrySleep = 2000;
-      const maxRetries = 10;
+      const maxRetries = 30;
       (async () => {
         while (!done && getUnixTs() - startTime < timeout / 1000) {
           await sleep(retrySleep);
@@ -5295,5 +5312,63 @@ export class MangoClient {
     });
 
     return referrerIds;
+  }
+
+  async cancelAllSpotOrders(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    spotMarket: Market,
+    owner: Payer,
+    limit: number,
+  ) {
+    if (!owner.publicKey) return;
+    const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.address);
+    const baseRootBank = mangoGroup.rootBankAccounts[marketIndex];
+    const quoteRootBank = mangoGroup.rootBankAccounts[QUOTE_INDEX];
+    if (baseRootBank == null || quoteRootBank == null) {
+      console.log('A root bank is null');
+      return;
+    }
+    const baseNodeBanks = await baseRootBank.loadNodeBanks(this.connection);
+    const quoteNodeBanks = await quoteRootBank.loadNodeBanks(this.connection);
+    const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey);
+
+    const dexSigner = await PublicKey.createProgramAddress(
+      [
+        spotMarket.publicKey.toBuffer(),
+        spotMarket['_decoded'].vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      spotMarket.programId,
+    );
+
+    const instruction = makeCancelAllSpotOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoGroup.mangoCache,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      baseRootBank.publicKey,
+      baseNodeBanks[0].publicKey,
+      baseNodeBanks[0].vault,
+      quoteRootBank.publicKey,
+      quoteNodeBanks[0].publicKey,
+      quoteNodeBanks[0].vault,
+      spotMarket.publicKey,
+      spotMarket.bidsAddress,
+      spotMarket.asksAddress,
+      mangoAccount.spotOpenOrders[spotMarketIndex],
+      mangoGroup.signerKey,
+      spotMarket['_decoded'].eventQueue,
+      spotMarket['_decoded'].baseVault,
+      spotMarket['_decoded'].quoteVault,
+      dexSigner,
+      mangoGroup.dexProgramId,
+      new BN(limit),
+    );
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    return await this.sendTransaction(transaction, owner, []);
   }
 }
