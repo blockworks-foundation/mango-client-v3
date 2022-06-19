@@ -17,7 +17,6 @@ import * as path from 'path';
 import {
   BN,
   Config,
-  IDS,
   makeCreateMangoAccountInstruction,
   makeDepositInstruction,
   MangoClient,
@@ -26,16 +25,19 @@ import {
   uiToNative,
 } from '../..';
 
+const { KEYPAIR, KEYPAIR_PATH, MANGO_GROUP, NUM_ACCOUNTS, USDC_AMOUNT } =
+  process.env;
+
 const createAccounts = async () => {
   const out: any[] = [];
-  const accountsToCreate = 1;
+  const accountsToCreate = NUM_ACCOUNTS || 1;
 
   const payer = Keypair.fromSecretKey(
     Uint8Array.from(
       JSON.parse(
-        process.env.KEYPAIR ||
+        KEYPAIR ||
           fs.readFileSync(
-            os.homedir() + '/.config/solana/devnet.json',
+            KEYPAIR_PATH || os.homedir() + '/.config/solana/devnet.json',
             'utf-8',
           ),
       ),
@@ -45,28 +47,28 @@ const createAccounts = async () => {
     'https://api.testnet.solana.com',
     'processed',
   );
-  const ids = new Config(IDS).getGroup('testnet', 'testnet.0')!;
+  const ids = Config.ids().getGroupWithName(MANGO_GROUP || 'testnet.0')!;
   const client = new MangoClient(connection, ids.mangoProgramId);
   const group = await client.getMangoGroup(ids.publicKey);
 
   const usdcInfo = ids.tokens[0];
-    
-    const usdcVaultPk = (await group.loadRootBanks(connection))[QUOTE_INDEX]!
-      .nodeBankAccounts[0].vault;
-    const usdcToken = new Token(
-      connection,
-      new PublicKey(usdcInfo.mintKey),
-      TOKEN_PROGRAM_ID,
-      payer,
-    );
-    const usdcWalletKey = await usdcToken
-      .getOrCreateAssociatedAccountInfo(payer.publicKey)
-      .then((a) => a.address);
 
-  // create 500 accounts and deposit
+  const usdcVaultPk = (await group.loadRootBanks(connection))[QUOTE_INDEX]!
+    .nodeBankAccounts[0].vault;
+  const usdcToken = new Token(
+    connection,
+    new PublicKey(usdcInfo.mintKey),
+    TOKEN_PROGRAM_ID,
+    payer,
+  );
+  const usdcWalletKey = await usdcToken
+    .getOrCreateAssociatedAccountInfo(payer.publicKey)
+    .then((a) => a.address);
+
+  // create accounts and deposit
   for (let i = 0; i < accountsToCreate; i++) {
     const info = {};
-    console.log(`Creating account ${i + 1}/${accountsToCreate}...`)
+    console.log(`Creating account ${i + 1}/${accountsToCreate}...`);
     // Generate new keypair and sent 0.5 SOL, create a mango account
     const keypair = new Keypair();
     info['publicKey'] = keypair.publicKey.toBase58();
@@ -85,7 +87,7 @@ const createAccounts = async () => {
       ],
       ids.mangoProgramId,
     );
-    info['mangoAccountPks'] = [ mangoAccountPk.toBase58() ];
+    info['mangoAccountPks'] = [mangoAccountPk.toBase58()];
     const createMangoAccountIx = makeCreateMangoAccountInstruction(
       ids.mangoProgramId,
       ids.publicKey,
@@ -106,7 +108,7 @@ const createAccounts = async () => {
       usdcInfo.nodeKeys[0],
       usdcVaultPk,
       usdcWalletKey,
-      uiToNative(10, usdcInfo.decimals),
+      uiToNative((USDC_AMOUNT as any) || 10, usdcInfo.decimals),
     );
 
     const createAccountTx = new Transaction()
@@ -116,7 +118,11 @@ const createAccounts = async () => {
 
     // hang until it's done
     let done = false;
-    const sig = await connection.sendTransaction(createAccountTx, [payer, keypair], { skipPreflight: true });
+    const sig = await connection.sendTransaction(
+      createAccountTx,
+      [payer, keypair],
+      { skipPreflight: true },
+    );
     connection.onSignature(
       sig,
       (res) => {
@@ -138,7 +144,10 @@ const createAccounts = async () => {
     out.push(info);
   }
 
-  fs.writeFileSync(path.resolve(__dirname, 'accounts.json'), JSON.stringify(out));
+  fs.writeFileSync(
+    path.resolve(__dirname, 'accounts.json'),
+    JSON.stringify(out),
+  );
 };
 
 function writeSecretYaml(
