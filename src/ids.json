@@ -335,7 +335,7 @@
           "publicKey": "3hBYgfMHogR8X2JkpxvT8HMtUSbrE2PE61q64gZkWArr",
           "baseSymbol": "GMT",
           "baseDecimals": 9,
-          "quoteDecimals": "6",
+          "quoteDecimals": 6,
           "marketIndex": 14,
           "bidsKey": "67jnTtxDdDqz6R18Do3AUUjBbZT3yysprGLhaucyKd93",
           "asksKey": "DstVrGA3CBcq1r7op4yU7dX3sirzSgz1uicn63aYBMGz",
