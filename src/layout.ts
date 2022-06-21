@@ -617,19 +617,24 @@ MangoInstructionLayout.addVariant(
 );
 MangoInstructionLayout.addVariant(
   66,
+  struct([u64('quantity'), u8('allowBorrow')]),
+  'Withdraw2',
+);
+MangoInstructionLayout.addVariant(
+  67,
   struct([u64('marketIndex'), u8('marketMode'), u8('marketType')]),
   'SetMarketMode',
 );
-MangoInstructionLayout.addVariant(67, struct([]), 'RemovePerpMarket');
-MangoInstructionLayout.addVariant(68, struct([]), 'SwapSpotMarket');
-MangoInstructionLayout.addVariant(69, struct([]), 'RemoveSpotMarket');
-MangoInstructionLayout.addVariant(70, struct([]), 'RemoveOracle');
+MangoInstructionLayout.addVariant(68, struct([]), 'RemovePerpMarket');
+MangoInstructionLayout.addVariant(69, struct([]), 'SwapSpotMarket');
+MangoInstructionLayout.addVariant(70, struct([]), 'RemoveSpotMarket');
+MangoInstructionLayout.addVariant(71, struct([]), 'RemoveOracle');
 MangoInstructionLayout.addVariant(
-  71,
+  72,
   struct([u64('maxLiquidateAmount')]),
   'LiquidateDelistingToken',
 );
-MangoInstructionLayout.addVariant(72, struct([]), 'ForceSettlePerpPosition');
+MangoInstructionLayout.addVariant(73, struct([]), 'ForceSettlePerpPosition');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore

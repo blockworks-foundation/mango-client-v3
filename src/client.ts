@@ -1413,6 +1413,118 @@ export class MangoClient {
     return await this.sendTransaction(transaction, owner, additionalSigners);
   }
 
+  /**
+   * Withdraw tokens from a Mango Account, only passing open orders accounts in the margin basket
+   *
+   * @param rootBank The RootBank for the withdrawn currency
+   * @param nodeBank The NodeBank asociated with the RootBank
+   * @param vault The token account asociated with the NodeBank
+   * @param allowBorrow Whether to borrow tokens if there are not enough deposits for the withdrawal
+   */
+   async withdraw2(
+    mangoGroup: MangoGroup,
+    mangoAccount: MangoAccount,
+    owner: Payer,
+    rootBank: PublicKey,
+    nodeBank: PublicKey,
+    vault: PublicKey,
+
+    quantity: number,
+    allowBorrow: boolean,
+  ): Promise<TransactionSignature | undefined> {
+    if (!owner.publicKey) {
+      return;
+    }
+
+    const transaction = new Transaction();
+    const additionalSigners: Keypair[] = [];
+    const tokenIndex = mangoGroup.getRootBankIndex(rootBank);
+    const tokenMint = mangoGroup.tokens[tokenIndex].mint;
+
+    let tokenAcc = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      tokenMint,
+      owner.publicKey,
+    );
+
+    let wrappedSolAccount: Keypair | null = null;
+    if (tokenMint.equals(WRAPPED_SOL_MINT)) {
+      wrappedSolAccount = new Keypair();
+      tokenAcc = wrappedSolAccount.publicKey;
+      const space = 165;
+      const lamports = await this.connection.getMinimumBalanceForRentExemption(
+        space,
+        'processed',
+      );
+      transaction.add(
+        SystemProgram.createAccount({
+          fromPubkey: owner.publicKey,
+          newAccountPubkey: tokenAcc,
+          lamports,
+          space,
+          programId: TOKEN_PROGRAM_ID,
+        }),
+      );
+      transaction.add(
+        initializeAccount({
+          account: tokenAcc,
+          mint: WRAPPED_SOL_MINT,
+          owner: owner.publicKey,
+        }),
+      );
+      additionalSigners.push(wrappedSolAccount);
+    } else {
+      const tokenAccExists = await this.connection.getAccountInfo(tokenAcc);
+      if (!tokenAccExists) {
+        transaction.add(
+          Token.createAssociatedTokenAccountInstruction(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            tokenMint,
+            tokenAcc,
+            owner.publicKey,
+            owner.publicKey,
+          ),
+        );
+      }
+    }
+
+    const nativeQuantity = uiToNative(
+      quantity,
+      mangoGroup.tokens[tokenIndex].decimals,
+    );
+
+    const instruction = makeWithdrawInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      owner.publicKey,
+      mangoGroup.mangoCache,
+      rootBank,
+      nodeBank,
+      vault,
+      tokenAcc,
+      mangoGroup.signerKey,
+      mangoAccount.spotOpenOrders.filter((_, i) => mangoAccount.inMarginBasket[i]),
+      nativeQuantity,
+      allowBorrow,
+    );
+    transaction.add(instruction);
+
+    if (wrappedSolAccount) {
+      transaction.add(
+        closeAccount({
+          source: wrappedSolAccount.publicKey,
+          destination: owner.publicKey,
+          owner: owner.publicKey,
+        }),
+      );
+    }
+
+    return await this.sendTransaction(transaction, owner, additionalSigners);
+  }
+
   async withdrawAll(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,

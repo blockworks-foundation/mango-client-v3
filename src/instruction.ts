@@ -2332,6 +2332,49 @@ export function makeRegisterReferrerIdInstruction(
   });
 }
 
+export function makeWithdraw2Instruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  walletPk: PublicKey,
+  mangoCachePk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBankPk: PublicKey,
+  vaultPk: PublicKey,
+  tokenAccPk: PublicKey,
+  signerKey: PublicKey,
+  // pass in only openOrders in margin basket
+  openOrders: PublicKey[],
+  nativeQuantity: BN,
+  allowBorrow: boolean,
+): TransactionInstruction {
+  const withdrawKeys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: true, isWritable: false, pubkey: walletPk },
+    { isSigner: false, isWritable: false, pubkey: mangoCachePk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: true, pubkey: nodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: vaultPk },
+    { isSigner: false, isWritable: true, pubkey: tokenAccPk },
+    { isSigner: false, isWritable: false, pubkey: signerKey },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+    ...openOrders.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+  const withdrawData = encodeMangoInstruction({
+    Withdraw2: { quantity: nativeQuantity, allowBorrow },
+  });
+  return new TransactionInstruction({
+    keys: withdrawKeys,
+    data: withdrawData,
+    programId,
+  });
+}
+
 export function makeSetMarketModeInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
