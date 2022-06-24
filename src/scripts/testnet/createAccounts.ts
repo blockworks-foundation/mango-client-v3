@@ -15,6 +15,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
+  awaitTransactionSignatureConfirmation,
   BN,
   Config,
   makeCreateMangoAccountInstruction,
@@ -25,8 +26,14 @@ import {
   uiToNative,
 } from '../..';
 
-const { KEYPAIR, KEYPAIR_PATH, MANGO_GROUP, NUM_ACCOUNTS, USDC_AMOUNT } =
-  process.env;
+const {
+  KEYPAIR,
+  KEYPAIR_PATH,
+  MANGO_GROUP,
+  NUM_ACCOUNTS,
+  RPC_URL,
+  USDC_AMOUNT,
+} = process.env;
 
 const createAccounts = async () => {
   const out: any[] = [];
@@ -44,7 +51,7 @@ const createAccounts = async () => {
     ),
   );
   const connection = new Connection(
-    'https://api.testnet.solana.com',
+    RPC_URL || 'https://api.testnet.solana.com',
     'processed',
   );
   const ids = Config.ids().getGroupWithName(MANGO_GROUP || 'testnet.0')!;
@@ -117,29 +124,18 @@ const createAccounts = async () => {
       .add(depositUsdcIx);
 
     // hang until it's done
-    let done = false;
     const sig = await connection.sendTransaction(
       createAccountTx,
       [payer, keypair],
       { skipPreflight: true },
     );
-    connection.onSignature(
-      sig,
-      (res) => {
-        done = true;
 
-        if (res.err) {
-          console.error('err', sig, res.err.toString());
-        } else {
-          console.error('confirmed', sig);
-        }
-      },
+    await awaitTransactionSignatureConfirmation(
+      sig,
+      100000,
+      connection,
       'confirmed',
     );
-
-    while (!done) {
-      await sleep(500);
-    }
 
     out.push(info);
   }
