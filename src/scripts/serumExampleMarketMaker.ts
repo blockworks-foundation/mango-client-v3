@@ -38,7 +38,7 @@ by installing the Solana CLI tools as per https://docs.solana.com/cli/install-so
 and then generating a keypair using `solana-keygen new`.
 
 Airdrop some SOL to it using `solana airdrop -v --url devnet 1` - deposit some of it as
-collateral through the UI at https://devnet.mango.markets/?name=MNGO/USDC
+collateral through the UI at https://devnet.mango.markets/
 
 Finally execute the example command. You should see the orders quoted by the bot in the UI's orderbook.
 
@@ -119,6 +119,17 @@ const main = async () => {
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey)
 
     if (!mangoAccount.spotOpenOrdersAccounts[spotMarketIndex]) {
+        /*
+
+        Unlike in perp markets, where orders require only a Mango account, Serum
+        markets supported by Mango require an "open orders" account to serve as
+        an intermediary. One open orders account is needed for each spot market.
+
+        This block of code, after determining there isn't an open orders account
+        for the market in which the bot should quote, creates one.
+
+        */
+
         console.log('Open orders account not found, creating one...')
 
         const spotMarketIndexBN = new BN(spotMarketIndex)
@@ -166,13 +177,18 @@ const main = async () => {
         }
 
         await mangoAccount.reload(connection, mangoGroup.dexProgramId)
+        // ^ The newly created open orders account isn't immediately visible in
+        // the already fetched Mango account, hence it needs to be reloaded
 
         console.log('Created open orders account!')
     }
 
-    const latestBlockhash = await connection.getLatestBlockhash('finalized')
-
     const quote = async () => {
+        const latestBlockhash = await connection.getLatestBlockhash('finalized')
+        // ^ Solana validators use this hash to determine when a transaction
+        // might be considered "too old" and should be discarded, which is
+        // why we send the most recent one each time.
+
         const tx = new Transaction({
             recentBlockhash: latestBlockhash.blockhash,
             feePayer: payer.publicKey
@@ -183,6 +199,11 @@ const main = async () => {
         const bidPrice = tokenPrice! - spread
 
         const askPrice = tokenPrice! + spread
+
+        // It's important to batch instructions in one transaction - this way we get
+        // atomicity (if one instruction fails, the whole transaction is rolled back),
+        // save on SOL costs and speed up quoting, since we don't need to make one
+        // blockchain-client roundtrip per instruction.
 
         const instructions = await Promise.all([
             cancelAllSpotOrdersInstruction(mangoClient, mangoGroup , mangoAccount, spotMarket, payer, 255),
