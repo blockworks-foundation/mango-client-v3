@@ -283,11 +283,12 @@ export function makeCancelAllPerpOrdersInstruction(
   bidsPk: PublicKey,
   asksPk: PublicKey,
   limit: BN,
+  ownerIsSigner: boolean = true
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
-    { isSigner: true, isWritable: false, pubkey: ownerPk },
+    { isSigner: ownerIsSigner, isWritable: false, pubkey: ownerPk },
     { isSigner: false, isWritable: true, pubkey: perpMarketPk },
     { isSigner: false, isWritable: true, pubkey: bidsPk },
     { isSigner: false, isWritable: true, pubkey: asksPk },
@@ -1950,11 +1951,12 @@ export function makeCloseSpotOpenOrdersInstruction(
   openOrdersPk: PublicKey,
   spotMarketPk: PublicKey,
   signerPk: PublicKey,
+  ownerIsSigner: boolean = true,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
-    { isSigner: true, isWritable: true, pubkey: ownerPk },
+    { isSigner: ownerIsSigner, isWritable: true, pubkey: ownerPk },
     { isSigner: false, isWritable: false, pubkey: dexProgramPk },
     { isSigner: false, isWritable: true, pubkey: openOrdersPk },
     { isSigner: false, isWritable: false, pubkey: spotMarketPk },
@@ -2419,7 +2421,7 @@ export function makeRemovePerpMarketInstruction(
     { isSigner: false, isWritable: true, pubkey: asksPk },
     { isSigner: false, isWritable: true, pubkey: mngoVaultPk },
     { isSigner: false, isWritable: true, pubkey: mngoDaoVaultPk },
-    { isSigner: false, isWritable: true, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
     { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
   ];
 
@@ -2593,7 +2595,7 @@ export function makeForceSettlePerpPositionInstruction(
     { isSigner: false, isWritable: true, pubkey: mangoAccountAPk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountBPk },
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
-    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: true, pubkey: perpMarketPk },
   ];
 
   const data = encodeMangoInstruction({

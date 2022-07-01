@@ -1421,7 +1421,7 @@ export class MangoClient {
    * @param vault The token account asociated with the NodeBank
    * @param allowBorrow Whether to borrow tokens if there are not enough deposits for the withdrawal
    */
-   async withdraw2(
+  async withdraw2(
     mangoGroup: MangoGroup,
     mangoAccount: MangoAccount,
     owner: Payer,
@@ -1506,7 +1506,9 @@ export class MangoClient {
       vault,
       tokenAcc,
       mangoGroup.signerKey,
-      mangoAccount.spotOpenOrders.filter((_, i) => mangoAccount.inMarginBasket[i]),
+      mangoAccount.spotOpenOrders.filter(
+        (_, i) => mangoAccount.inMarginBasket[i],
+      ),
       nativeQuantity,
       allowBorrow,
     );
@@ -2069,6 +2071,7 @@ export class MangoClient {
     perpMarkets: PerpMarket[],
     mangoAccount: MangoAccount,
     owner: Payer,
+    ownerIsSigner: boolean = true,
   ): Promise<TransactionSignature[] | undefined> {
     if (!owner.publicKey) {
       return;
@@ -2098,11 +2101,12 @@ export class MangoClient {
         this.programId,
         group.publicKey,
         mangoAccount.publicKey,
-        owner.publicKey,
+        ownerIsSigner ? owner.publicKey : mangoAccount.owner,
         perpMarket.publicKey,
         perpMarket.bids,
         perpMarket.asks,
         new BN(20),
+        ownerIsSigner,
       );
       tx.add(cancelAllInstr);
       if (tx.instructions.length === 2) {
@@ -4716,6 +4720,7 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     payer: Payer,
     marketIndex: number,
+    ownerIsSigner: boolean = true,
   ): Promise<TransactionSignature | undefined> {
     if (!payer.publicKey) {
       return;
@@ -4724,11 +4729,12 @@ export class MangoClient {
       this.programId,
       mangoGroup.publicKey,
       mangoAccount.publicKey,
-      payer.publicKey,
+      ownerIsSigner ? payer.publicKey : mangoAccount.owner,
       mangoGroup.dexProgramId,
       mangoAccount.spotOpenOrders[marketIndex],
       mangoGroup.spotMarkets[marketIndex].spotMarket,
       mangoGroup.signerKey,
+      ownerIsSigner,
     );
     const transaction = new Transaction();
     transaction.add(instruction);
