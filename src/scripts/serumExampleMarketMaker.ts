@@ -125,9 +125,6 @@ const main = async () => {
         markets supported by Mango require an "open orders" account to serve as
         an intermediary. One open orders account is needed for each spot market.
 
-        This block of code, after determining there isn't an open orders account
-        for the market in which the bot should quote, creates one.
-
         */
 
         console.log('Open orders account not found, creating one...')
