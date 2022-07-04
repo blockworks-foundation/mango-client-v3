@@ -686,7 +686,7 @@ export const enum AssetType {
   Perp = 1,
 }
 
-export const enum MarketMode {
+export enum MarketMode {
   Default = 0,
   Active = 1,
   CloseOnly = 2,
