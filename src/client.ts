@@ -5438,6 +5438,7 @@ export class MangoClient {
     spotMarket: Market,
     owner: Payer,
     limit: number,
+    ownerIsSigner: boolean = true,
   ) {
     if (!owner.publicKey) return;
     const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.address);
@@ -5464,7 +5465,7 @@ export class MangoClient {
       mangoGroup.publicKey,
       mangoGroup.mangoCache,
       mangoAccount.publicKey,
-      owner.publicKey,
+      ownerIsSigner ? owner.publicKey : mangoAccount.owner,
       baseRootBank.publicKey,
       baseNodeBanks[0].publicKey,
       baseNodeBanks[0].vault,
@@ -5482,6 +5483,7 @@ export class MangoClient {
       dexSigner,
       mangoGroup.dexProgramId,
       new BN(limit),
+      ownerIsSigner,
     );
 
     const transaction = new Transaction();

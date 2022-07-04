@@ -2631,12 +2631,13 @@ export function makeCancelAllSpotOrdersInstruction(
   dexSignerPk: PublicKey,
   dexProgramPk: PublicKey,
   limit: BN,
+  ownerIsSigner: boolean = true,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
     { isSigner: false, isWritable: false, pubkey: mangoCachePk },
     { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
-    { isSigner: true, isWritable: false, pubkey: owner },
+    { isSigner: ownerIsSigner, isWritable: false, pubkey: owner },
     { isSigner: false, isWritable: false, pubkey: baseRootBankPk },
     { isSigner: false, isWritable: true, pubkey: baseNodeBankPk },
     { isSigner: false, isWritable: true, pubkey: baseVaultPk },
