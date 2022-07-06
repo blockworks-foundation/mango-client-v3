@@ -45,6 +45,7 @@ const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const consumeEvents = process.env.CONSUME_EVENTS
   ? process.env.CONSUME_EVENTS === 'true'
   : true;
+const prioritizationFee = parseInt(process.env.PRIORITIZATION_FEE || '0');
 const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
 const config = new Config(configFile);
 const groupIds = config.getGroup(cluster, groupName);
@@ -68,7 +69,7 @@ const connection = new Connection(
 );
 const client = new MangoClient(connection, mangoProgramId, {
   timeout: 10000,
-  prioritizationFee: 2,
+  prioritizationFee: prioritizationFee,
 });
 
 async function main() {
