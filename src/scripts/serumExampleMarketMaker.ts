@@ -14,13 +14,13 @@ import { zip, range } from 'lodash'
 import MangoGroup from "../MangoGroup";
 import MangoAccount from "../MangoAccount";
 import {Payer} from "../utils/types";
-import {nativeToUi, ZERO_BN} from "../utils/utils";
+import {nativeToUi, sleep, ZERO_BN} from "../utils/utils";
 import {QUOTE_INDEX} from "../layout";
 
 /*
 
 Example command:
-KEYPAIR_PATH=~/.config/solana/id.json MANGO_GROUP=devnet.2 MANGO_ACCOUNT=YOUR_MANGO_ACCOUNT MARKET=MNGO yarn ts-node src/scripts/serumExampleMarketMaker.ts
+KEYPAIR_PATH=~/.config/solana/id.json MANGO_GROUP=devnet.2 MANGO_ACCOUNT=YOUR_MANGO_ACCOUNT MARKETS=MNGO,BTC yarn ts-node src/scripts/serumExampleMarketMaker.ts
 
 This is a simple market maker bot that quotes on Serum markets supported by Mango.
 It showcases the instructions needed to create limit orders and cancel them, all
@@ -57,16 +57,15 @@ https://github.com/blockworks-foundation/mango-client-v3/blob/main/src/scripts/b
 
 */
 
-const main = async () => {
+const main = async (market: string) => {
     const {
+        KEYPAIR,
         KEYPAIR_PATH,
         MANGO_GROUP,
         MANGO_ACCOUNT,
-        MARKET
     } = process.env
 
     const config = Config.ids()
-
     const mangoGroupConfig = config.getGroupWithName(MANGO_GROUP || 'devnet.2')
 
     if (!mangoGroupConfig) {
@@ -86,12 +85,12 @@ const main = async () => {
     const rootBanks = await mangoGroup.loadRootBanks(connection)
 
     const payer = Keypair.fromSecretKey(
-        new Uint8Array(JSON.parse(fs.readFileSync(KEYPAIR_PATH || os.homedir() + '/.config/solana/id.json', 'utf-8')))
+        new Uint8Array(JSON.parse(KEYPAIR || fs.readFileSync(KEYPAIR_PATH || os.homedir() + '/.config/solana/id.json', 'utf-8')))
     )
 
     const mangoAccount = await mangoClient.getMangoAccount(new PublicKey(MANGO_ACCOUNT!), mangoGroup.dexProgramId)
 
-    const spotMarketConfig = getSpotMarketByBaseSymbol(mangoGroupConfig, MARKET!)
+    const spotMarketConfig = getSpotMarketByBaseSymbol(mangoGroupConfig, market)
 
     if (!spotMarketConfig) {
         return
@@ -172,7 +171,7 @@ const main = async () => {
         } catch (error) {
             console.log('create_open_orders_account::error', error);
         }
-
+        await sleep(2500);
         await mangoAccount.reload(connection, mangoGroup.dexProgramId)
         // ^ The newly created open orders account isn't immediately visible in
         // the already fetched Mango account, hence it needs to be reloaded
@@ -219,13 +218,13 @@ const main = async () => {
                 signedAtBlock: latestBlockhash,
             });
 
-            console.log('quote::response', resp);
+            console.log('quote::response::' + market.toLowerCase(), resp);
         } catch (error) {
-            console.log('quote::error', error);
+            console.log('quote::error::' + market.toLowerCase(), error);
         }
     }
 
-    setInterval(quote, 750)
+    setInterval(quote, 5000)
 }
 
 async function cancelAllSpotOrdersInstruction(
@@ -416,5 +415,13 @@ async function createSpotOrder2Instruction(
     return placeOrderInstruction
   }
 
-
-main()
+const markets = process.env.MARKETS?.split(',');
+if (markets && markets.length > 0 && markets.length < 7) {
+  markets.forEach((market) => {
+    main(market).catch((err) => {
+    console.error('error in market', market, err);
+    });
+  });
+} else {
+  console.error('You must specify between 1 and 6 markets');
+}
