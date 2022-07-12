@@ -1132,6 +1132,9 @@ export default class MangoAccount {
     const lines: string[] = [];
     lines.push('MangoAccount ' + this.publicKey.toBase58());
     lines.push('Owner: ' + this.owner.toBase58());
+    if (!this.delegate.equals(zeroKey)) {
+      lines.push('Delegate: ' + this.delegate.toBase58());
+    }
     lines.push(
       'Maint Health Ratio: ' +
         this.getHealthRatio(mangoGroup, cache, 'Maint').toFixed(4),

@@ -20,7 +20,7 @@ import {
 import { MangoClient } from '../client';
 import { throwUndefined, uiToNative } from '../utils/utils';
 import { QUOTE_INDEX } from '../layout';
-import { Coder } from '@project-serum/anchor';
+import { BorshCoder } from '@project-serum/anchor';
 import idl from '../mango_logs.json';
 import { getMarketIndexBySymbol } from '../config';
 import { Market } from '@project-serum/serum';
@@ -577,7 +577,7 @@ yargs(hideBin(process.argv)).command(
   async (args) => {
     console.log('decode-log', args);
     // @ts-ignore
-    const coder = new Coder(idl);
+    const coder = new BorshCoder(idl);
     const event = coder.events.decode(args.log_b64 as string);
     if (!event) {
       throw new Error('Invalid mango log');

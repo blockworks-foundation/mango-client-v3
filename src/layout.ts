@@ -681,7 +681,7 @@ export const DataType = {
   ReferrerIdRecord: 11,
 };
 
-export const enum AssetType {
+export enum AssetType {
   Token = 0,
   Perp = 1,
 }
@@ -695,7 +695,7 @@ export enum MarketMode {
   SwappingSpotMarket = 5,
 }
 
-export const enum AdvancedOrderType {
+export enum AdvancedOrderType {
   PerpTrigger = 0,
   SpotTrigger = 1,
 }
