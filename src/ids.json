@@ -132,13 +132,6 @@
           ]
         },
         {
-          "symbol": "LUNA",
-          "mintKey": "F6v4wfAdJB8D8p77bMXZgYt8TDKsYxLYxH5AFhUkYx9W",
-          "decimals": 6,
-          "rootKey": "AUU8Zw5ezmZJBuWtMjfTTyP6eowkpNbH5pHh6uY5BHu7",
-          "nodeKeys": ["BNpfdZZC8NP1PabGATRHH2ABh94U47zm1kjvneRSMSBE"]
-        },
-        {
           "symbol": "GMT",
           "mintKey": "7i5KKsX2weiTkry7jA4ZwSuXGhs5eJBEjY8vVxR4pfRx",
           "decimals": 9,
@@ -320,17 +313,6 @@
           "eventsKey": "5Grgo9kLu692SUcJ6S7jtbi1WkdwiyRWgThAfN1PcvbL"
         },
         {
-          "name": "LUNA-PERP",
-          "publicKey": "BCJrpvsB2BJtqiDgKVC4N6gyX1y24Jz96C6wMraYmXss",
-          "baseSymbol": "LUNA",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 13,
-          "bidsKey": "AiBurBkETJHHujZxNHm6UPvBQ1LLLkNkckPoZLeuLnS1",
-          "asksKey": "7Vcbxj2M8fqaNGfRDsau47uXumfCBhCTA97D6PNDPWfe",
-          "eventsKey": "HDJ43o9Dxxu6yWRWPEce44gtCHauRGLXJwwtvD7GwEBx"
-        },
-        {
           "name": "GMT-PERP",
           "publicKey": "3hBYgfMHogR8X2JkpxvT8HMtUSbrE2PE61q64gZkWArr",
           "baseSymbol": "GMT",
@@ -474,17 +456,6 @@
           "bidsKey": "925NuYb44V63wNRooM5tBFNCXM5daD72m6KDxoCmYpYX",
           "asksKey": "q2eUYuqJeBD6DndxDQ2tEuFqAe6j9j9jMtMnkkKU5P9",
           "eventsKey": "HY7ZpmQ6VXLHKxN4cruFKMTNu42EbjPEDthyGPnsYYHq"
-        },
-        {
-          "name": "LUNA/USDC",
-          "publicKey": "HBTu8hNaoT3VyiSSzJYa8jwt9sDGKtJviSwFa11iXdmE",
-          "baseSymbol": "LUNA",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 13,
-          "bidsKey": "2qZyNiiupG9c3dZkmgPJ53XLMyb3uYnfmPrUfLBisEBn",
-          "asksKey": "2oVNv7BTvvRUuHmbPvMjafBVQhoAFVdWPCuKiDAPNsbD",
-          "eventsKey": "8fGeJPZGsW3kjnfGkGNU3dXWXkuDFEUK7RXeiMW2rmGm"
         },
         {
           "name": "GMT/USDC",
