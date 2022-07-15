@@ -23,7 +23,7 @@ export const delistedSpotMarkets = [
 ];
 
 export const delistedPerpMarkets = [
-  { publicKey: new PublicKey('BCJrpvsB2BJtqiDgKVC4N6gyX1y24Jz96C6wMraYmXss'), name: 'LUNA-PERP', baseSymbol: 'LUNA', baseDecimals: 6 },
+  { publicKey: new PublicKey('BCJrpvsB2BJtqiDgKVC4N6gyX1y24Jz96C6wMraYmXss'), name: 'LUNA-PERP', baseSymbol: 'LUNA', baseDecimals: 6, quoteDecimals: 6 },
 ];
 
 export const delistedTokens = [
