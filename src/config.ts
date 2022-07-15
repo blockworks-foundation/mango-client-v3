@@ -158,7 +158,7 @@ export interface GroupConfig {
   tokens: TokenConfig[];
 }
 
-function getSpotMarketConfig(group: GroupConfig, predicate) {
+export function getSpotMarketConfig(group: GroupConfig, predicate) {
   let config = group.spotMarkets.find(predicate);
 
   if (!config) {
@@ -168,7 +168,7 @@ function getSpotMarketConfig(group: GroupConfig, predicate) {
   return config;
 }
 
-function getPerpMarketConfig(group: GroupConfig, predicate) {
+export function getPerpMarketConfig(group: GroupConfig, predicate) {
   let config = group.perpMarkets.find(predicate);
 
   if (!config) {
@@ -178,7 +178,7 @@ function getPerpMarketConfig(group: GroupConfig, predicate) {
   return config;
 }
 
-function getTokenConfig(group: GroupConfig, predicate) {
+export function getTokenConfig(group: GroupConfig, predicate) {
   let config = group.tokens.find(predicate);
 
   if (!config) {
@@ -188,7 +188,7 @@ function getTokenConfig(group: GroupConfig, predicate) {
   return config;
 }
 
-function getOracleConfig(group: GroupConfig, predicate) {
+export function getOracleConfig(group: GroupConfig, predicate) {
   let config = group.oracles.find(predicate);
 
   if (!config) {
