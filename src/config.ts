@@ -18,12 +18,12 @@ export const mngoMints = {
 };
 
 export const delistedSpotMarkets = [
-  { publicKey: new PublicKey('HBTu8hNaoT3VyiSSzJYa8jwt9sDGKtJviSwFa11iXdmE'), name: 'LUNA/USDC', baseSymbol: 'LUNA', baseDecimals: 6 },
-  { publicKey: new PublicKey('6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk'), name: 'COPE/USDC',  baseSymbol: 'COPE', baseDecimals: 6 },
+  { publicKey: new PublicKey('HBTu8hNaoT3VyiSSzJYa8jwt9sDGKtJviSwFa11iXdmE'), name: 'LUNA/USDC', baseSymbol: 'LUNA', baseDecimals: 6, marketIndex: 13 },
+  { publicKey: new PublicKey('6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk'), name: 'COPE/USDC',  baseSymbol: 'COPE', baseDecimals: 6, marketIndex: 7 },
 ];
 
 export const delistedPerpMarkets = [
-  { publicKey: new PublicKey('BCJrpvsB2BJtqiDgKVC4N6gyX1y24Jz96C6wMraYmXss'), name: 'LUNA-PERP', baseSymbol: 'LUNA', baseDecimals: 6, quoteDecimals: 6 },
+  { publicKey: new PublicKey('BCJrpvsB2BJtqiDgKVC4N6gyX1y24Jz96C6wMraYmXss'), name: 'LUNA-PERP', baseSymbol: 'LUNA', baseDecimals: 6, quoteDecimals: 6, marketIndex: 13 },
 ];
 
 export const delistedTokens = [
