@@ -193,10 +193,6 @@
           "publicKey": "C2GXZT21UUm6G3J4N26h6d3tpgfUhh6ok5aNi24K88Wu"
         },
         {
-          "symbol": "LUNA",
-          "publicKey": "5bmWuR1dgP4avtGYMNKLuxumZTVKGgoN2BCMXWDNL9nY"
-        },
-        {
           "symbol": "GMT",
           "publicKey": "DZYZkJcFJThN9nZy4nK3hrHra1LaWeiyoZ9SMdLFEFpY"
         }
@@ -764,10 +760,6 @@
         {
           "symbol": "AVAX",
           "publicKey": "6npJ7pCBQ1YkaF7wEyu5sfDNN1aHXnvhxh1z9GySKCEs"
-        },
-        {
-          "symbol": "LUNA",
-          "publicKey": "7rDLFn73inQQ3F1dYJhouHmbryngWZH5WMNGgEKcJZvf"
         },
         {
           "symbol": "BNB",
