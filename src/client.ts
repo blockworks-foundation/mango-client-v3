@@ -5493,57 +5493,59 @@ export class MangoClient {
   }
 
   async ensureOpenOrdersAccount(
-      mangoAccount: MangoAccount,
-      mangoGroup: MangoGroup,
-      payer: Keypair,
-      spotMarket: Market,
-      spotMarketConfig
+    mangoAccount: MangoAccount,
+    mangoGroup: MangoGroup,
+    payer: Keypair,
+    spotMarket: Market,
+    spotMarketConfig,
   ) {
     if (mangoAccount.spotOpenOrdersAccounts[spotMarketConfig.marketIndex]) {
-      return
+      return;
     }
 
     const [openOrdersPk] = await PublicKey.findProgramAddress(
-        [
-          mangoAccount.publicKey.toBytes(),
-          new BN(spotMarketConfig.marketIndex).toArrayLike(Buffer, 'le', 8),
-          new Buffer('OpenOrders', 'utf-8'),
-        ],
-        this.programId,
-    )
+      [
+        mangoAccount.publicKey.toBytes(),
+        new BN(spotMarketConfig.marketIndex).toArrayLike(Buffer, 'le', 8),
+        new Buffer('OpenOrders', 'utf-8'),
+      ],
+      this.programId,
+    );
 
     const createSpotOpenOrdersInstruction = makeCreateSpotOpenOrdersInstruction(
-        this.programId,
-        mangoGroup.publicKey,
-        mangoAccount.publicKey,
-        payer.publicKey,
-        mangoGroup.dexProgramId,
-        openOrdersPk,
-        spotMarket.publicKey,
-        mangoGroup.signerKey
-    )
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      mangoGroup.dexProgramId,
+      openOrdersPk,
+      spotMarket.publicKey,
+      mangoGroup.signerKey,
+    );
 
-    const recentBlockHash = await this.connection.getLatestBlockhash('finalized')
+    const recentBlockHash = await this.connection.getLatestBlockhash(
+      'finalized',
+    );
 
     const tx = new Transaction({
       recentBlockhash: recentBlockHash.blockhash,
-      feePayer: payer.publicKey
-    })
+      feePayer: payer.publicKey,
+    });
 
-    tx.add(createSpotOpenOrdersInstruction)
+    tx.add(createSpotOpenOrdersInstruction);
 
-    tx.sign(payer)
+    tx.sign(payer);
 
     try {
       await this.sendSignedTransaction({
         signedTransaction: tx,
-        signedAtBlock: recentBlockHash
-      })
+        signedAtBlock: recentBlockHash,
+      });
     } catch (e) {
-      console.error(e)
+      console.error(e);
     }
 
-    await mangoAccount.reload(this.connection, mangoGroup.dexProgramId)
+    await mangoAccount.reload(this.connection, mangoGroup.dexProgramId);
     // ^ The newly created open orders account isn't immediately visible in
     // the already fetched Mango account, hence why it needs to be reloaded
   }

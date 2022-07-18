@@ -63,6 +63,7 @@
     "cross-env": "^7.0.2",
     "eslint": "^7.28.0",
     "eslint-config-prettier": "^7.2.0",
+    "mango_risk_check": "^1.2.1",
     "mocha": "9",
     "prettier": "^2.0.5",
     "ts-node": "^9.1.1",
@@ -87,7 +88,6 @@
     "buffer-layout": "^1.2.1",
     "cross-fetch": "^3.1.5",
     "dotenv": "^10.0.0",
-    "mango_risk_check": "^1.2.1",
     "toformat": "^2.0.0",
     "yargs": "^17.0.1"
   },
