@@ -162,10 +162,10 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@project-serum/serum@0.13.55":
-  version "0.13.55"
-  resolved "https://registry.yarnpkg.com/@project-serum/serum/-/serum-0.13.55.tgz#2ac44fe7b07651274eb57ac54ea9325789df5dd7"
-  integrity sha512-SPQ4NsuNbBJO3mLGnTYbjt47WCXoNIcW2C9xv0gNXyG62dxgONsAEEgErKv1gT34hWCMPsXFSpatnX6ppriq7w==
+"@project-serum/serum@^0.13.65":
+  version "0.13.65"
+  resolved "https://registry.yarnpkg.com/@project-serum/serum/-/serum-0.13.65.tgz#6d3cf07912f13985765237f053cca716fe84b0b0"
+  integrity sha512-BHRqsTqPSfFB5p+MgI2pjvMBAQtO8ibTK2fYY96boIFkCI3TTwXDt2gUmspeChKO2pqHr5aKevmexzAcXxrSRA==
   dependencies:
     "@project-serum/anchor" "^0.11.1"
     "@solana/spl-token" "^0.1.6"
@@ -182,11 +182,10 @@
     eventemitter3 "^4.0.4"
 
 "@pythnetwork/client@^2.7.0":
-  version "2.7.0"
-  resolved "https://registry.yarnpkg.com/@pythnetwork/client/-/client-2.7.0.tgz#e49725c13614de4fcf4cb45053374783a068b012"
-  integrity sha512-a/77ZHMb7Sl/M/+b9gvKTeUb4Q/66Y4aslmhln4a8SoU4jFdBrO7SBL47m183iOHSdhYPDlrR1Ue1IJppC71Nw==
+  version "2.7.1"
+  resolved "https://registry.yarnpkg.com/@pythnetwork/client/-/client-2.7.1.tgz#33a3ff108937bc7da765ed9d84878002396719f8"
+  integrity sha512-q8lRwon69Q6P7TC8u3IFVXvC6Wa0FjxuuvbGclOelE2zbom7ZA2014bwPlu5ta9NDs4EUkUAPv39e+2ikYHyHg==
   dependencies:
-    "@solana/web3.js" "^1.30.2"
     buffer "^6.0.1"
 
 "@solana/buffer-layout@^4.0.0":

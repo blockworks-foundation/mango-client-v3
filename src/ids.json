@@ -132,13 +132,6 @@
           ]
         },
         {
-          "symbol": "LUNA",
-          "mintKey": "F6v4wfAdJB8D8p77bMXZgYt8TDKsYxLYxH5AFhUkYx9W",
-          "decimals": 6,
-          "rootKey": "AUU8Zw5ezmZJBuWtMjfTTyP6eowkpNbH5pHh6uY5BHu7",
-          "nodeKeys": ["BNpfdZZC8NP1PabGATRHH2ABh94U47zm1kjvneRSMSBE"]
-        },
-        {
           "symbol": "GMT",
           "mintKey": "7i5KKsX2weiTkry7jA4ZwSuXGhs5eJBEjY8vVxR4pfRx",
           "decimals": 9,
@@ -198,10 +191,6 @@
         {
           "symbol": "AVAX",
           "publicKey": "C2GXZT21UUm6G3J4N26h6d3tpgfUhh6ok5aNi24K88Wu"
-        },
-        {
-          "symbol": "LUNA",
-          "publicKey": "5bmWuR1dgP4avtGYMNKLuxumZTVKGgoN2BCMXWDNL9nY"
         },
         {
           "symbol": "GMT",
@@ -320,22 +309,11 @@
           "eventsKey": "5Grgo9kLu692SUcJ6S7jtbi1WkdwiyRWgThAfN1PcvbL"
         },
         {
-          "name": "LUNA-PERP",
-          "publicKey": "BCJrpvsB2BJtqiDgKVC4N6gyX1y24Jz96C6wMraYmXss",
-          "baseSymbol": "LUNA",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 13,
-          "bidsKey": "AiBurBkETJHHujZxNHm6UPvBQ1LLLkNkckPoZLeuLnS1",
-          "asksKey": "7Vcbxj2M8fqaNGfRDsau47uXumfCBhCTA97D6PNDPWfe",
-          "eventsKey": "HDJ43o9Dxxu6yWRWPEce44gtCHauRGLXJwwtvD7GwEBx"
-        },
-        {
           "name": "GMT-PERP",
           "publicKey": "3hBYgfMHogR8X2JkpxvT8HMtUSbrE2PE61q64gZkWArr",
           "baseSymbol": "GMT",
           "baseDecimals": 9,
-          "quoteDecimals": "6",
+          "quoteDecimals": 6,
           "marketIndex": 14,
           "bidsKey": "67jnTtxDdDqz6R18Do3AUUjBbZT3yysprGLhaucyKd93",
           "asksKey": "DstVrGA3CBcq1r7op4yU7dX3sirzSgz1uicn63aYBMGz",
@@ -455,14 +433,14 @@
         },
         {
           "name": "BNB/USDC",
-          "publicKey": "3zzTxtDCt9PimwzGrgWJEbxZfSLetDMkdYegPanGNpMf",
+          "publicKey": "4UPUurKveNEJgBqJzqHPyi8DhedvpYsMXi7d43CjAg2f",
           "baseSymbol": "BNB",
           "baseDecimals": 8,
           "quoteDecimals": 6,
           "marketIndex": 11,
-          "bidsKey": "8JJrdQEzMSoekpzy7qcYDs1hVJyWoRcfTHR2pGDgd7wy",
-          "asksKey": "A3TmGhemkp8u8d5HCLMyiBByvwDtp7khv9Vt3p1cqH8c",
-          "eventsKey": "ZYhSiaFWkuNTBzRFM9UPJXwHPyTGbujCKvPXhbssYPG"
+          "bidsKey": "XHJx6VrtEjpHhTQVt7KSapsTf63BqrStuFd3X3LSovP",
+          "asksKey": "4wZkXYKNcnkkf2ALX3ktRDCuj8Sj1dd2L4APxcKDpgwG",
+          "eventsKey": "DK7Jw2fZCbTVDF191eXywDFymmbXqGUp4VuERiX6RAR4"
         },
         {
           "name": "AVAX/USDC",
@@ -474,17 +452,6 @@
           "bidsKey": "925NuYb44V63wNRooM5tBFNCXM5daD72m6KDxoCmYpYX",
           "asksKey": "q2eUYuqJeBD6DndxDQ2tEuFqAe6j9j9jMtMnkkKU5P9",
           "eventsKey": "HY7ZpmQ6VXLHKxN4cruFKMTNu42EbjPEDthyGPnsYYHq"
-        },
-        {
-          "name": "LUNA/USDC",
-          "publicKey": "HBTu8hNaoT3VyiSSzJYa8jwt9sDGKtJviSwFa11iXdmE",
-          "baseSymbol": "LUNA",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 13,
-          "bidsKey": "2qZyNiiupG9c3dZkmgPJ53XLMyb3uYnfmPrUfLBisEBn",
-          "asksKey": "2oVNv7BTvvRUuHmbPvMjafBVQhoAFVdWPCuKiDAPNsbD",
-          "eventsKey": "8fGeJPZGsW3kjnfGkGNU3dXWXkuDFEUK7RXeiMW2rmGm"
         },
         {
           "name": "GMT/USDC",
@@ -523,15 +490,6 @@
           "rootKey": "HfV52Z5rjY4PYxTEHiks8m6jTwxyLM24RxW3A1AFtWpn",
           "nodeKeys": [
             "EEUVfNXkLNCzsEmq4pS5aXpePA8i5yGfgFNaU5SbrQA8"
-          ]
-        },
-        {
-          "symbol": "BTC",
-          "mintKey": "3UNBZ6o52WTWwjac2kPUb4FyodhU1vFkRJheu1Sh2TvU",
-          "decimals": 6,
-          "rootKey": "9oZ7YDfbY3KfuVnspCvTBmKYDWbanyZH3DrM8chgk5UY",
-          "nodeKeys": [
-            "6biZhkxGKBxm2gvUXEgYS75abyS8Ayy59yeLe3h3WWS6"
           ]
         },
         {
@@ -611,17 +569,6 @@
         }
       ],
       "perpMarkets": [
-        {
-          "name": "BTC-PERP",
-          "publicKey": "C2uMB62wCcv6ufPgjND2Pz4ZyYxzdDV6Fw3WaMHR6U37",
-          "baseSymbol": "BTC",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 1,
-          "bidsKey": "2EM63gvBjuN8CUMGJjPwdhco9ENsUrGdBEFq6ZCqMbpt",
-          "asksKey": "GsYcihKaF4LUZHhNz5KrWPfKxBvEuh4uDx16tY8KfhZU",
-          "eventsKey": "9D2jFJuwrHAyeoWKpvDrATLXTmaMLMu3evrSsYPT3HfB"
-        }
       ],
       "spotMarkets": [
         {
@@ -634,17 +581,6 @@
           "bidsKey": "98guKbHBvEQsdXtwPVXhqzVQddMDxvYKExHiDBQjjEgM",
           "asksKey": "AQgDsKzVQT9enwebZCV1GgaffCsjUpsuj6xeUFxuza42",
           "eventsKey": "2iGo6GWEPBUuuruWofGwvzZMMos4aPJKDLbMmTt9ZBXQ"
-        },
-        {
-          "name": "BTC/USDC",
-          "publicKey": "8H7c3jxFG8gi2YBhSqBxxE8ySYHkXW1M5jUokJYQWqhj",
-          "baseSymbol": "BTC",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 1,
-          "bidsKey": "FbpdjQWwN6yQkZGidbfY6BzbF8hZ2xW4eq57NXz76Bav",
-          "asksKey": "8soWw7yVDqbW64mdqzm6fciGTDBGrigDBZkrGe1YX5ae",
-          "eventsKey": "8S1RyX7j11VGmfeyPEV1HXG4V4kixd1TJuyUWgHe6Soc"
         },
         {
           "name": "ETH/USDC",
@@ -782,15 +718,6 @@
           "nodeKeys": [
             "ERkKh9yUKzJ3kkHWhMNd3xGaync11TpzQiDFukEatHEQ"
           ]
-        },
-        {
-          "symbol": "FTT",
-          "mintKey": "Fxh4bpZnRCnpg2vcH11ttmSTDSEeC5qWbPRZNZWnRnqY",
-          "decimals": 6,
-          "rootKey": "4m3kgpf8qQRvaoTJdqmdeiRL5u2NaifYyTAHccKMtQhT",
-          "nodeKeys": [
-            "2k89sUjCE2ZSm4MPhXM9JV1zFEV2SjgEzvvJN6EsMFWa"
-          ]
         }
       ],
       "oracles": [
@@ -835,10 +762,6 @@
           "publicKey": "6npJ7pCBQ1YkaF7wEyu5sfDNN1aHXnvhxh1z9GySKCEs"
         },
         {
-          "symbol": "LUNA",
-          "publicKey": "7rDLFn73inQQ3F1dYJhouHmbryngWZH5WMNGgEKcJZvf"
-        },
-        {
           "symbol": "BNB",
           "publicKey": "GwzBgrXb4PG59zjce24SF2b9JXbLEjJJTBkmytuEZj1b"
         },
@@ -858,17 +781,6 @@
           "bidsKey": "5Zpfa8VbFKBJQFueomXz82EjbbtP6nFFQmBkHPCxfKpb",
           "asksKey": "4Z9xHcCUMY9QLevHu3JpzxnwiHzzaQACMJERZ1XVJcSa",
           "eventsKey": "uaUCSQejWYrDeYSuvn4As4kaCwJ2rLnRQSsSjY3ogZk"
-        },
-        {
-          "name": "BTC-PERP",
-          "publicKey": "FHQtNjRHA9U5ahrH7mWky3gamouhesyQ5QvpeGKrTh2z",
-          "baseSymbol": "BTC",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 1,
-          "bidsKey": "F1Dcnq6F8NXR3gXADdsYqrXYBUUwoT7pfCtRuQWSyQFd",
-          "asksKey": "BFEBZsLYmEhj4quWDRKbyMKhW1Q9c7gu3LqsnipNGTVn",
-          "eventsKey": "Bu17U2YdBM9gRrqQ1zD6MpngQBb71RRAAn8dbxoFDSkU"
         },
         {
           "name": "ETH-PERP",
@@ -924,17 +836,6 @@
           "bidsKey": "9J1Etaw9AbUVr3dXT3ZZweUQC5StCkTVSYG7GDdWucFy",
           "asksKey": "CESZWBf6Yry4PmXZeX3kC5Xdc5s7VRLCt342FmSYf633",
           "eventsKey": "4b7NqjqWoQoQh9V3dubfjkLPQVNJijwAwr7D9q6vTqqd"
-        },
-        {
-          "name": "LUNA-PERP",
-          "publicKey": "CuYEjB3vneuzpimL5iZXeiQRHuDwRefcVbJSsBPoxgwF",
-          "baseSymbol": "LUNA",
-          "baseDecimals": 8,
-          "quoteDecimals": 6,
-          "marketIndex": 10,
-          "bidsKey": "ACPFzNGukMiv6nTJDfXvL4ctQpjo5Uwv45tSdoVbCEfg",
-          "asksKey": "3qay74WyTeiqc3iJ3g7GpCUiMQ5wnGnVs4pW2dFdq3CP",
-          "eventsKey": "65X4vefU5AkQJWD5S5fAzJeN5XqwnngdSN8RZ79zzi4f"
         },
         {
           "name": "BNB-PERP",
@@ -1036,17 +937,6 @@
           "bidsKey": "ELwx9pggHdz9CKDpnyCg6L1b8U67WPGsQ4TTbNsLjZJc",
           "asksKey": "Gr9rsX5uGCTDbhSPzCfrzufSt1mTCggSJAgPfwhBBX1r",
           "eventsKey": "H1gJZngRXUtj7N91xnnydC39XqmbU8d2jQZxwqSf21jX"
-        },
-        {
-          "name": "FTT/USDC",
-          "publicKey": "CiN2BzCaThxLRDALeMq3GJGR24MQhdBWmHHjitW74oST",
-          "baseSymbol": "FTT",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 8,
-          "bidsKey": "JCkuoUPnVAvXKySpcJVm8PDR1KUm45njKPuPg8w1ePo1",
-          "asksKey": "GoUZsqQRMvkkNTJ4EgjzjUamWc9ayd3ztkjv5GeWoG4Q",
-          "eventsKey": "Fh4JNfLpNRDDYnNBPUUHjQLYih6hFcP4wwMQNQz3tBiD"
         }
       ]
     },

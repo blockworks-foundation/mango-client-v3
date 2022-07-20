@@ -617,19 +617,24 @@ MangoInstructionLayout.addVariant(
 );
 MangoInstructionLayout.addVariant(
   66,
-  struct([u8('marketIndex'), u8('marketMode'), u8('marketType')]),
+  struct([u64('quantity'), u8('allowBorrow')]),
+  'Withdraw2',
+);
+MangoInstructionLayout.addVariant(
+  67,
+  struct([u64('marketIndex'), u8('marketMode'), u8('marketType')]),
   'SetMarketMode',
 );
-MangoInstructionLayout.addVariant(67, struct([]), 'RemovePerpMarket');
-MangoInstructionLayout.addVariant(68, struct([]), 'SwapSpotMarket');
-MangoInstructionLayout.addVariant(69, struct([]), 'RemoveSpotMarket');
-MangoInstructionLayout.addVariant(70, struct([]), 'RemoveOracle');
+MangoInstructionLayout.addVariant(68, struct([]), 'RemovePerpMarket');
+MangoInstructionLayout.addVariant(69, struct([]), 'SwapSpotMarket');
+MangoInstructionLayout.addVariant(70, struct([]), 'RemoveSpotMarket');
+MangoInstructionLayout.addVariant(71, struct([]), 'RemoveOracle');
 MangoInstructionLayout.addVariant(
-  71,
+  72,
   struct([u64('maxLiquidateAmount')]),
   'LiquidateDelistingToken',
 );
-MangoInstructionLayout.addVariant(72, struct([]), 'ForceSettlePerpPosition');
+MangoInstructionLayout.addVariant(73, struct([]), 'ForceSettlePerpPosition');
 
 const instructionMaxSpan = Math.max(
   // @ts-ignore
@@ -676,12 +681,12 @@ export const DataType = {
   ReferrerIdRecord: 11,
 };
 
-export const enum AssetType {
+export enum AssetType {
   Token = 0,
   Perp = 1,
 }
 
-export const enum MarketMode {
+export enum MarketMode {
   Default = 0,
   Active = 1,
   CloseOnly = 2,
@@ -690,7 +695,7 @@ export const enum MarketMode {
   SwappingSpotMarket = 5,
 }
 
-export const enum AdvancedOrderType {
+export enum AdvancedOrderType {
   PerpTrigger = 0,
   SpotTrigger = 1,
 }

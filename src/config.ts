@@ -17,6 +17,26 @@ export const mngoMints = {
   testnet: new PublicKey('2hvukwp4UR9tqmCQhRzcsW9S2QBuU5Xcv5JJ5fUMmfvQ'),
 };
 
+export const delistedSpotMarkets = [
+  { publicKey: new PublicKey('HBTu8hNaoT3VyiSSzJYa8jwt9sDGKtJviSwFa11iXdmE'), name: 'LUNA/USDC', baseSymbol: 'LUNA', baseDecimals: 6, marketIndex: 13 },
+  { publicKey: new PublicKey('6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk'), name: 'COPE/USDC',  baseSymbol: 'COPE', baseDecimals: 6, marketIndex: 7 },
+  { publicKey: new PublicKey('3zzTxtDCt9PimwzGrgWJEbxZfSLetDMkdYegPanGNpMf'), name: 'BNB/USDC', baseSymbol: 'BNB', baseDecimals: 8, marketIndex: 11}
+];
+
+export const delistedPerpMarkets = [
+  { publicKey: new PublicKey('BCJrpvsB2BJtqiDgKVC4N6gyX1y24Jz96C6wMraYmXss'), name: 'LUNA-PERP', baseSymbol: 'LUNA', baseDecimals: 6, quoteDecimals: 6, marketIndex: 13 },
+];
+
+export const delistedTokens = [
+  { mintKey: new PublicKey('F6v4wfAdJB8D8p77bMXZgYt8TDKsYxLYxH5AFhUkYx9W'), symbol: 'LUNA', decimals: 6 },
+  { mintKey: new PublicKey('8HGyAAB1yoM1ttS7pXjHMa3dukTFGQggnFFH3hJZgzQh'), symbol: 'COPE', decimals: 6 },
+];
+
+export const delistedOracles = [
+  { publicKey: new PublicKey('5bmWuR1dgP4avtGYMNKLuxumZTVKGgoN2BCMXWDNL9nY'), symbol: 'LUNA', marketIndex: 13 },
+  { publicKey: new PublicKey('9xYBiDWYsh2fHzpsz3aaCnNHCKWBNtfEDLtU6kS4aFD9'), symbol: 'COPE', marketIndex: 7 },
+]
+
 export interface OracleConfig {
   symbol: string;
   publicKey: PublicKey;
@@ -139,27 +159,74 @@ export interface GroupConfig {
   tokens: TokenConfig[];
 }
 
+export function getSpotMarketConfig(group: GroupConfig, predicate) {
+  let config = group.spotMarkets.find(predicate);
+
+  if (!config) {
+    config = (delistedSpotMarkets.find(predicate)) as SpotMarketConfig | undefined;
+  }
+
+  return config;
+}
+
+export function getPerpMarketConfig(group: GroupConfig, predicate) {
+  let config = group.perpMarkets.find(predicate);
+
+  if (!config) {
+    config = (delistedPerpMarkets.find(predicate)) as PerpMarketConfig | undefined;
+  }
+
+  return config;
+}
+
+export function getTokenConfig(group: GroupConfig, predicate) {
+  let config = group.tokens.find(predicate);
+
+  if (!config) {
+    config = (delistedTokens.find(predicate)) as TokenConfig | undefined;
+  }
+
+  return config;
+}
+
+export function getOracleConfig(group: GroupConfig, predicate) {
+  let config = group.oracles.find(predicate);
+
+  if (!config) {
+    config = (delistedOracles.find(predicate)) as OracleConfig | undefined;
+  }
+
+  return config;
+}
+
 export function getMarketIndexBySymbol(group: GroupConfig, symbol: string) {
-  return group.oracles.findIndex((o) => o.symbol === symbol);
+  let index = group.oracles.findIndex((o) => o.symbol === symbol)
+
+  if (index === -1) {
+    const delistedOracle = getOracleConfig(group, (o) => o.symbol === symbol);
+    index = delistedOracle ? delistedOracle['marketIndex'] : -1;
+  }
+
+  return index;
 }
 
 export function getOracleBySymbol(group: GroupConfig, symbol: string) {
-  return group.oracles.find((o) => o.symbol === symbol);
+  return getOracleConfig(group, (o) => o.symbol === symbol);
 }
 
 export function getPerpMarketByBaseSymbol(group: GroupConfig, symbol: string) {
-  return group.perpMarkets.find((p) => p.baseSymbol === symbol);
+  return getPerpMarketConfig(group, (p) => p.baseSymbol === symbol);
 }
 
 export function getPerpMarketByIndex(
   group: GroupConfig,
   marketIndex: number,
 ): PerpMarketConfig | undefined {
-  return group.perpMarkets.find((p) => p.marketIndex === marketIndex);
+  return getPerpMarketConfig(group, (p) => p.marketIndex === marketIndex);
 }
 
 export function getSpotMarketByBaseSymbol(group: GroupConfig, symbol: string) {
-  return group.spotMarkets.find((p) => p.baseSymbol === symbol);
+  return getSpotMarketConfig(group, (p) => p.baseSymbol === symbol);
 }
 
 export type MarketKind = 'spot' | 'perp';
@@ -208,13 +275,13 @@ export function getMarketByPublicKey(
   if (!(key instanceof PublicKey)) {
     key = new PublicKey(key);
   }
-  const spot = group.spotMarkets.find((m) =>
+  const spot = getSpotMarketConfig(group, (m) =>
     m.publicKey.equals(key as PublicKey),
   );
   if (spot) {
     return { kind: 'spot', ...spot } as MarketConfig;
   }
-  const perp = group.perpMarkets.find((m) =>
+  const perp = getPerpMarketConfig(group, (m) =>
     m.publicKey.equals(key as PublicKey),
   );
   if (perp) {
@@ -229,14 +296,14 @@ export function getTokenByMint(
   if (!(mint instanceof PublicKey)) {
     mint = new PublicKey(mint);
   }
-  return group.tokens.find((t) => t.mintKey.equals(mint as PublicKey));
+  return getTokenConfig(group, (t) => t.mintKey.equals(mint as PublicKey));
 }
 
 export function getTokenBySymbol(
   group: GroupConfig,
   symbol: string,
 ): TokenConfig {
-  const tokenConfig = group.tokens.find((t) => t.symbol === symbol);
+  const tokenConfig = getTokenConfig(group, (t) => t.symbol === symbol);
   if (tokenConfig === undefined) {
     throw new Error(`Unable to find symbol: ${symbol} in GroupConfig`);
   }
