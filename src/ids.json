@@ -433,14 +433,14 @@
         },
         {
           "name": "BNB/USDC",
-          "publicKey": "3zzTxtDCt9PimwzGrgWJEbxZfSLetDMkdYegPanGNpMf",
+          "publicKey": "4UPUurKveNEJgBqJzqHPyi8DhedvpYsMXi7d43CjAg2f",
           "baseSymbol": "BNB",
           "baseDecimals": 8,
           "quoteDecimals": 6,
           "marketIndex": 11,
-          "bidsKey": "8JJrdQEzMSoekpzy7qcYDs1hVJyWoRcfTHR2pGDgd7wy",
-          "asksKey": "A3TmGhemkp8u8d5HCLMyiBByvwDtp7khv9Vt3p1cqH8c",
-          "eventsKey": "ZYhSiaFWkuNTBzRFM9UPJXwHPyTGbujCKvPXhbssYPG"
+          "bidsKey": "XHJx6VrtEjpHhTQVt7KSapsTf63BqrStuFd3X3LSovP",
+          "asksKey": "4wZkXYKNcnkkf2ALX3ktRDCuj8Sj1dd2L4APxcKDpgwG",
+          "eventsKey": "DK7Jw2fZCbTVDF191eXywDFymmbXqGUp4VuERiX6RAR4"
         },
         {
           "name": "AVAX/USDC",
