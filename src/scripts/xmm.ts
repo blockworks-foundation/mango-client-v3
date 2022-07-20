@@ -1,8 +1,8 @@
-import {Connection, Keypair, PublicKey, Transaction} from "@solana/web3.js";
+import {BlockhashWithExpiryBlockHeight, Connection, Keypair, PublicKey, Transaction} from "@solana/web3.js";
 import fs from "fs";
 import {BN} from "bn.js";
 import {getFeeRates, getFeeTier, Market} from "@project-serum/serum";
-import {range, zip} from "lodash";
+import _, {range, zip} from "lodash";
 import WebSocket from "ws";
 import {Payer} from "../utils/types";
 import {getMultipleAccounts, I64_MAX_BN, nativeToUi, ZERO_BN} from "../utils/utils";
@@ -19,17 +19,26 @@ import MangoGroup from "../MangoGroup";
 import {performance} from "perf_hooks";
 import MangoAccount from "../MangoAccount";
 
+// KEYPAIR=~/.config/solana/id.json MANGO_GROUP=devnet.2 MANGO_ACCOUNT=BFLAGijqDyRnK93scRizT8YSotrvdxhdJyWYZch6yMMW SYMBOL=SOL PERPS_FILLS_FEED=ws://api.mngo.cloud:2082 npx ts-node xmm.ts
+
 const main = async () => {
     const {
-        KEYPAIR,
         MANGO_GROUP,
+        KEYPAIR,
         MANGO_ACCOUNT,
-        SYMBOL
+        SYMBOL,
+        PERPS_FILLS_FEED
     } = process.env
 
     const config = Config.ids()
 
-    const mangoGroupConfig = config.getGroupWithName(MANGO_GROUP || 'devnet.2')
+    if (!MANGO_GROUP) {
+        console.log('Attach a MANGO_GROUP env variable.')
+
+        return
+    }
+
+    const mangoGroupConfig = config.getGroupWithName(MANGO_GROUP!)
 
     if (!mangoGroupConfig) {
         console.log(`Couldn't find group by name ${MANGO_GROUP}`)
@@ -82,36 +91,63 @@ const main = async () => {
 
     console.log(`Loaded! ${(performance.now() / 1e3).toFixed(2)}s` )
 
+    console.log('Loading meta...')
+
     const payer = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync(KEYPAIR!, 'utf-8'))))
 
     const mangoAccountPk = new PublicKey(MANGO_ACCOUNT!)
 
-    console.log('Loading meta...')
+    async function monitor(): Promise<[number, MangoAccount, PerpEventQueue, BlockhashWithExpiryBlockHeight, number]> {
+        const [mangoAccountRaw, perpEventQueueRaw] = await getMultipleAccounts(
+            connection,
+            [mangoAccountPk, perpMarketConfig!.eventsKey]
+        )
 
-    const mangoAccount = await mangoClient.getMangoAccount(mangoAccountPk, mangoGroup.dexProgramId)
+        const slots = _.uniq([mangoAccountRaw.context.slot, perpEventQueueRaw.context.slot])
 
-    let recentBlockHash = await connection.getLatestBlockhash('finalized')
-    // ^ Solana transactions require a recent block hash passed as metadata in order to be signed.
-    // Instead of fetching this before dispatching every transaction (which would delay it by a
-    // few milliseconds) we poll for this regularly in the background.
+        if (slots.length !== 1) {
+            throw new Error('Inconsistent slots on Mango account monitor.')
+        }
 
-    let recentBlockTime = await connection.getBlockTime(
-        await connection.getSlot('finalized')
-    )
+        const slot = slots[0]
+
+        const mangoAccount = new MangoAccount(mangoAccountPk, MangoAccountLayout.decode(mangoAccountRaw.accountInfo.data))
+
+        const perpEventQueue = new PerpEventQueue(PerpEventQueueLayout.decode(perpEventQueueRaw.accountInfo.data))
+
+        const recentBlockHash = await connection.getLatestBlockhash('finalized')
+        // ^ Solana transactions require a recent block hash passed as metadata in order to be signed.
+        // Instead of fetching this before dispatching every transaction (which would delay it by a
+        // few milliseconds) we poll for this regularly in the background.
+
+        const recentBlockTime = await connection.getBlockTime(
+            await connection.getSlot('finalized')
+        )
+
+        return [slot, mangoAccount, perpEventQueue, recentBlockHash, recentBlockTime!]
+    }
+
+    let [
+        slot,
+        mangoAccount,
+        perpEventQueue,
+        recentBlockHash,
+        recentBlockTime
+    ] = await monitor()
 
     console.log(`Loaded! ${(performance.now() / 1e3).toFixed(2)}s` )
     // ^ This will be used to as reference for time in force orders later on.
     // It is important to use cluster time, like above, and not local time.
 
-    connection.onSlotChange(async slotInfo => {
-        console.log(slotInfo)
-
-        recentBlockHash = await connection.getLatestBlockhash('finalized')
-
-        recentBlockTime = await connection.getBlockTime(
-            await connection.getSlot('finalized')
-        )
-    })
+    setInterval(async () => {
+        [
+            slot,
+            mangoAccount,
+            perpEventQueue,
+            recentBlockHash,
+            recentBlockTime
+        ] = await monitor()
+    }, 5000)
 
     /*
 
@@ -179,178 +215,110 @@ const main = async () => {
         ]
     })
 
-    const ws = new WebSocket('ws://api.mngo.cloud:8080')
+    const recentFills: any[] = []
 
-    ws.onmessage = async (message) => {
-        const { data } = message
+    function listenToFills() {
+        const ws = new WebSocket(PERPS_FILLS_FEED!)
 
-        const perpEvent = JSON.parse(data.toString());
+        ws.onopen = event => {
+            console.log('Fills feed connection is open!')
+        }
 
-        // eslint-disable-next-line no-prototype-builtins
-        const isSnapshot = perpEvent.hasOwnProperty('events')
-        // ^ `events` is received when the connection is first established, containing a snapshot of past fills
-        //   `event` is received in subsequent messages, containing one fill at a time
+        ws.onmessage = async (message) => {
+            const data = JSON.parse(message.data.toString());
 
-        const parseEvent = (event: string) =>
-            PerpEventLayout.decode(Buffer.from(event, 'base64'))
+            // eslint-disable-next-line no-prototype-builtins
+            const isSnapshot = data.hasOwnProperty('events')
 
-        if (isSnapshot) {
-            for (const event of perpEvent.events.map(parseEvent)) {
+            const parseEvent = (event: string) =>
+                PerpEventLayout.decode(Buffer.from(event, 'base64'))
+
+            if (isSnapshot) {
+                for (const event of data.events.map(parseEvent)) {
+                    const fill = perpMarket.parseFillEvent(event.fill)
+
+                    // TODO: Account for the recent fills snapshot in case the connection restarts
+
+                    continue
+                }
+            } else {
+                if (data.market.split('-')[0] !== SYMBOL) {
+                    return
+                }
+
+                const event = parseEvent(data.event)
+
                 const fill = perpMarket.parseFillEvent(event.fill)
-            }
-        } else {
-            const event = parseEvent(perpEvent.event)
 
-            const fill = perpMarket.parseFillEvent(event.fill)
+                if (!(fill.maker.equals(mangoAccountPk))) {
+                    return
+                }
 
-            if (!(fill.maker.equals(mangoAccountPk))) {
-                return
-            }
+                recentFills.push({...fill, slot: data.slot})
 
-            const [mangoAccountRaw, perpEventQueueRaw] = await getMultipleAccounts(
-                connection,
-                [mangoAccountPk, perpMarketConfig.eventsKey]
-            )
+                while (recentFills.length > 256) {
+                    recentFills.shift()
+                }
 
-            const [mangoAccount, perpEventQueue] = [
-                new MangoAccount(mangoAccountPk, MangoAccountLayout.decode(mangoAccountRaw.accountInfo.data)),
-                new PerpEventQueue(PerpEventQueueLayout.decode(perpEventQueueRaw.accountInfo.data))
-            ]
+                const takerBase = perpMarket.baseLotsToNumber(mangoAccount.perpAccounts[perpMarketConfig!.marketIndex].takerBase)
 
-            const basePosition = mangoAccount.perpAccounts[perpMarketConfig.marketIndex].basePosition
+                const basePosition = perpMarket.baseLotsToNumber(mangoAccount.perpAccounts[perpMarketConfig!.marketIndex].basePosition)
 
-            const takerBase = mangoAccount.perpAccounts[perpMarketConfig.marketIndex].takerBase
-
-            const unprocessedFills = perpEventQueue.getUnconsumedEvents()
-                .filter(event => event.fill !== undefined)
-                .map(event => event.fill)
-
-            const unprocessedBasePosition = unprocessedFills
-                // @ts-ignore
-                .filter(fill => fill.maker.equals(mangoAccount.publicKey))
-                .reduce((accumulator, fill) => {
-                // @ts-ignore
-                    switch (fill.takerSide) {
-                        case "buy":
-                // @ts-ignore
-                            return accumulator.sub(fill.quantity)
-                        case "sell":
-                // @ts-ignore
-                            return accumulator.add(fill.quantity)
-                    }
-                }, basePosition.add(takerBase))
-
-            // @ts-ignore
-            const dump = (fill) =>
-                Object.fromEntries(
-                    Object.entries(fill).map(([key, value]) => {
-                        if (['timestamp', 'makerTimestamp'].includes(key)) {
-                            // @ts-ignore
-                            return [key, (new Date(value.toNumber() * 1000)).toISOString()]
-                        } else {
-                            // @ts-ignore
-                            return [key, value.toString()]
+                const queuedBasePosition = perpEventQueue.getUnconsumedEvents()
+                    .filter(event => event.fill !== undefined)
+                    .map(event => event.fill)
+                                // @ts-ignore
+                    .filter(fill => fill.maker.equals(mangoAccount.publicKey))
+                    .reduce((accumulator, fill) => {
+                    // @ts-ignore
+                        switch (fill.takerSide) {
+                            case "buy":
+                    // @ts-ignore
+                                return accumulator - fill.quantity
+                            case "sell":
+                    // @ts-ignore
+                                return accumulator + fill.quantity
                         }
-                    })
-                )
+                    }, basePosition + takerBase)
 
+                const applicableFills = recentFills.filter(fill => fill.slot > slot)
 
-            console.log(JSON.stringify(unprocessedFills.map(dump)))
+                const completeBasePosition = queuedBasePosition + applicableFills.reduce((accumulator, fill) => {
+                        switch (fill.takerSide) {
+                            case "buy":
+                                return accumulator - fill.quantity
+                            case "sell":
+                                return accumulator + fill.quantity
+                        }
+                }, 0)
 
-            console.table(dump(fill))
+                console.log(applicableFills, data.slot, slot, data.slot - slot, basePosition, queuedBasePosition, completeBasePosition)
+            }
+        }
 
-            console.table({
-                basePosition: perpMarket.baseLotsToNumber(basePosition),
-                takerBase: perpMarket.baseLotsToNumber(takerBase),
-                unprocessedBasePosition: perpMarket.baseLotsToNumber(unprocessedBasePosition),
-                perpEventQueueHead: perpEventQueue.head.toNumber(),
-                perpEventQueueCount: perpEventQueue.count.toNumber(),
-                perpEventQueueSeqNum: perpEventQueue.seqNum.toNumber(),
-                perpEventQueueSlot: perpEventQueueRaw.context.slot,
-                mangoAccountSlot: mangoAccountRaw.context.slot,
-                perpEventSlot: perpEvent.slot,
-                writeVersion: perpEvent.write_version,
-                perpEventMarket: perpEvent.market
-            })
+        ws.onclose = function (event) {
+            console.log('Fills feed connection is closed. Reconnecting...', event.reason);
 
-            // const completeBasePosition = basePosition + unprocessedBasePosition
+            listenToFills()
+        };
 
-            // const tokenDeposit = mangoAccount.getUiDeposit(mangoCache.rootBankCache[tokenIndex], mangoGroup, tokenIndex)
+        ws.onerror = (event) => {
+            console.log(event)
 
-            // const openOrdersAccountPk = mangoAccount.spotOpenOrders[spotMarketConfig.marketIndex]
-
-            // const openOrdersAccountInfo = await connection.getAccountInfo(openOrdersAccountPk, 'processed')
-
-            // const openOrdersAccount = OpenOrders.fromAccountInfo(openOrdersAccountPk, openOrdersAccountInfo!, mangoGroup.dexProgramId)
-
-            // const tokenUnsettledBalance = new I80F48(openOrdersAccount.baseTokenFree)
-
-            // const tokenSpotBalance = parseFloat(tokenDeposit.add(tokenUnsettledBalance).toString())
-
-            // const { takerSide, price, quantity } = fill
-
-            // // @ts-ignore
-            // const makerSide = { buy: 'sell', sell: 'buy' }[takerSide]
-            //
-            // console.log(`Got ${makerSide} hit for ${quantity} @ $${price}, hedging on ${takerSide}...`)
-            //
-            // const tx = new Transaction({
-            //     recentBlockhash: recentBlockHash.blockhash,
-            //     feePayer: payer.publicKey
-            // })
-            //
-            // const instruction = await createSpotOrder2Instruction(
-            //     mangoClient,
-            //     mangoGroup,
-            //     mangoAccount,
-            //     spotMarket,
-            //     payer,
-            //     takerSide,
-            //     price,
-            //     quantity,
-            //     'ioc',
-            //     undefined,
-            //     true
-            // )
-            //
-            // tx.add(instruction!)
-            //
-            // tx.sign(payer)
-            //
-            // try {
-            //     const response = await mangoClient.sendSignedTransaction({
-            //         signedTransaction: tx,
-            //         signedAtBlock: recentBlockHash,
-            //     });
-            //
-            //     console.log('hedge::response', response);
-            // } catch (error) {
-            //     console.log('hedge::error', error);
-            // }
-
-            // console.table({
-            //     eventType: 'fill',
-            //     counterparty: fill.taker.toString(),
-            //     side: fill.takerSide,
-            //     price: fill.price,
-            //     quantity: fill.quantity,
-            //     // basePosition,
-            //     // unprocessedBasePosition,
-            //     // completeBasePosition,
-            //     // tokenSpotBalance,
-            //     timestamp: new Date(fill.timestamp.toString())
-            // })
+            ws.close()
         }
     }
+
+    listenToFills()
 
     const quote = async () => {
         // const spread = tokenPrice! * 0.0005
 
         const spread = 0.0005
 
-        const [bidPriceUi, bidSizeUi] = [tokenPrice! - spread, 0.01]
+        const [bidPriceUi, bidSizeUi] = [tokenPrice! - spread, 0.1]
 
-        const [askPriceUi, askSizeUi] = [tokenPrice! + spread, 0.01]
+        const [askPriceUi, askSizeUi] = [tokenPrice! + spread, 0.1]
 
         const [bidPrice, bidSize] = perpMarket.uiToNativePriceQuantity(bidPriceUi, bidSizeUi)
 
