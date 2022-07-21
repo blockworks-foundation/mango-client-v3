@@ -3216,6 +3216,67 @@ export class MangoClient {
     return this.getAllMangoAccounts(mangoGroup, filters, includeOpenOrders);
   }
 
+    /**
+   * Get multiple MangoAccounts given a list of mango account public keys
+   */  
+    async getMultipleMangoAccounts(
+    mangoGroup: MangoGroup,
+    mangoAccountPks: PublicKey[],
+    includeOpenOrders = true,
+  ): Promise<MangoAccount[]> {
+
+    const mangoAccounts = await getMultipleAccounts(
+      this.connection,
+      mangoAccountPks,
+    ).then((accounts) =>
+      accounts.map(({ publicKey, accountInfo }) => {
+        return new MangoAccount(
+          publicKey,
+          MangoAccountLayout.decode(
+            accountInfo == null ? undefined : accountInfo.data,
+          ),
+        );
+      }),
+    );
+
+    if (includeOpenOrders) {
+      const openOrderPks = mangoAccounts
+        .map((ma) => ma.spotOpenOrders.filter((pk) => !pk.equals(zeroKey)))
+        .flat();
+
+      const openOrderAccountInfos = await getMultipleAccounts(
+        this.connection,
+        openOrderPks,
+      );
+
+      const openOrders = openOrderAccountInfos.map(
+        ({ publicKey, accountInfo }) =>
+          OpenOrders.fromAccountInfo(
+            publicKey,
+            accountInfo,
+            mangoGroup.dexProgramId,
+          ),
+      );
+
+      const pkToOpenOrdersAccount = {};
+      openOrders.forEach((openOrdersAccount) => {
+        pkToOpenOrdersAccount[openOrdersAccount.publicKey.toBase58()] =
+          openOrdersAccount;
+      });
+
+      for (const ma of mangoAccounts) {
+        for (let i = 0; i < ma.spotOpenOrders.length; i++) {
+          if (ma.spotOpenOrders[i].toBase58() in pkToOpenOrdersAccount) {
+            ma.spotOpenOrdersAccounts[i] =
+              pkToOpenOrdersAccount[ma.spotOpenOrders[i].toBase58()];
+          }
+        }
+      }
+    }
+
+    return mangoAccounts;
+  }
+  
   async getAllMangoAccounts(
     mangoGroup: MangoGroup,
     filters?: any[],
