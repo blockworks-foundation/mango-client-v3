@@ -20,6 +20,7 @@ export const mngoMints = {
 export const delistedSpotMarkets = [
   { publicKey: new PublicKey('HBTu8hNaoT3VyiSSzJYa8jwt9sDGKtJviSwFa11iXdmE'), name: 'LUNA/USDC', baseSymbol: 'LUNA', baseDecimals: 6, marketIndex: 13 },
   { publicKey: new PublicKey('6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk'), name: 'COPE/USDC',  baseSymbol: 'COPE', baseDecimals: 6, marketIndex: 7 },
+  { publicKey: new PublicKey('3zzTxtDCt9PimwzGrgWJEbxZfSLetDMkdYegPanGNpMf'), name: 'BNB/USDC', baseSymbol: 'BNB', baseDecimals: 8, marketIndex: 11}
 ];
 
 export const delistedPerpMarkets = [
