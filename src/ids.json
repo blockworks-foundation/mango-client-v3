@@ -816,17 +816,6 @@
           "eventsKey": "5v5fz2cCSy2VvrgVf5Vu7PF23RiZjv6BL36bgg48bA1c"
         },
         {
-          "name": "FTT-PERP",
-          "publicKey": "8fKNzMe22bZ6H9TP8KpyM8B6b6DhZQyNmodChvQRbV8P",
-          "baseSymbol": "FTT",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 8,
-          "bidsKey": "78fRmLeyvMQ96GwJuusxN5Zn2QKbYh752GoAGc2qVE6q",
-          "asksKey": "9GTHBjPNUBBWuqhYinxwqdesW8amzFBCAVS96waKkE5L",
-          "eventsKey": "7rswj7FVZcMYUKxcTLndZhWBmuVNc2GuxqjuXU8KcPWv"
-        },
-        {
           "name": "AVAX-PERP",
           "publicKey": "FYCrDJEC1FxEtSqwvqJz1nL4wSBsBWUMuYvRHV8CTJWp",
           "baseSymbol": "AVAX",

@@ -27,7 +27,7 @@ import { MangoGroup, PerpMarket, promiseUndef } from '..';
 import PerpEventQueue from '../PerpEventQueue';
 
 let lastRootBankCacheUpdate = 0;
-const groupName = process.env.GROUP || 'mainnet.1';
+const groupName = process.env.GROUP || 'devnet.2';
 const updateCacheInterval = parseInt(
   process.env.UPDATE_CACHE_INTERVAL || '3000',
 );
@@ -46,7 +46,7 @@ const consumeEvents = process.env.CONSUME_EVENTS
   ? process.env.CONSUME_EVENTS === 'true'
   : true;
 const prioritizationFee = parseInt(process.env.PRIORITIZATION_FEE || '0');
-const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
+const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
 const config = new Config(configFile);
 const groupIds = config.getGroup(cluster, groupName);
 
@@ -110,13 +110,14 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
     const perpMarkets = mangoGroup.perpMarkets
       .filter((pm) => !pm.isEmpty())
       .map((pm) => pm.perpMarket);
+      console.log(rootBanks.length, oracles.length, perpMarkets.length)
     const nowTs = Date.now();
     let shouldUpdateRootBankCache = false;
     if (nowTs - lastRootBankCacheUpdate > updateRootBankCacheInterval) {
       shouldUpdateRootBankCache = true;
       lastRootBankCacheUpdate = nowTs;
     }
-    for (let i = 0; i < rootBanks.length / batchSize; i++) {
+    for (let i = 0; i < oracles.length / batchSize; i++) {
       const startIndex = i * batchSize;
       const endIndex = i * batchSize + batchSize;
       const cacheTransaction = new Transaction();
