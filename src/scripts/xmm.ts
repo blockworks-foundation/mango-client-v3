@@ -268,10 +268,10 @@ const main = async () => {
 
                 const unprocessedFills = perpEventQueue.getUnconsumedEvents()
                     .filter(event => event.fill !== undefined)
-                    .map(event => event.fill) as any[]
+                    .map(event => perpMarket.parseFillEvent(event.fill))
+                    .filter(fill => fill.maker.equals(mangoAccount.publicKey)) as any[]
 
                 const queuedBasePosition = unprocessedFills
-                    .filter(fill => fill.maker.equals(mangoAccount.publicKey))
                     .reduce((accumulator, fill) => {
                         switch (fill.takerSide) {
                             case "buy":
@@ -292,7 +292,7 @@ const main = async () => {
                         }
                 }, 0)
 
-                console.log(recentFills, data.slot, slot, data.slot - slot, basePosition, takerBase, queuedBasePosition, completeBasePosition)
+                console.log(unprocessedFills, recentFills, data.slot, slot, data.slot - slot, basePosition, takerBase, queuedBasePosition, completeBasePosition)
             }
         }
 
