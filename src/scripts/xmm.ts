@@ -1,13 +1,13 @@
 import {BlockhashWithExpiryBlockHeight, Connection, Keypair, PublicKey, Transaction} from "@solana/web3.js";
 import fs from "fs";
 import {BN} from "bn.js";
-import {getFeeRates, getFeeTier, Market} from "@project-serum/serum";
+import {getFeeRates, getFeeTier, Market, OpenOrders} from "@project-serum/serum";
 import _, {range, zip} from "lodash";
 import WebSocket from "ws";
 import {Payer} from "../utils/types";
-import {getMultipleAccounts, I64_MAX_BN, nativeToUi, ZERO_BN} from "../utils/utils";
+import {getMultipleAccounts, I64_MAX_BN, nativeToUi, ZERO_BN, zeroKey} from "../utils/utils";
 import {MangoClient} from "../client";
-import {MangoAccountLayout, PerpEventLayout, PerpEventQueueLayout, QUOTE_INDEX} from "../layout";
+import {FillEvent, MangoAccountLayout, PerpEventLayout, PerpEventQueueLayout, QUOTE_INDEX} from "../layout";
 import {Config, getPerpMarketByBaseSymbol, getSpotMarketByBaseSymbol, getTokenBySymbol} from "../config";
 import {
     makeCancelAllPerpOrdersInstruction,
@@ -18,6 +18,7 @@ import PerpEventQueue from "../PerpEventQueue";
 import MangoGroup from "../MangoGroup";
 import {performance} from "perf_hooks";
 import MangoAccount from "../MangoAccount";
+import {MangoRiskCheck, ViolationBehaviour} from "mango_risk_check";
 
 // KEYPAIR=~/.config/solana/id.json MANGO_GROUP=devnet.2 MANGO_ACCOUNT=BFLAGijqDyRnK93scRizT8YSotrvdxhdJyWYZch6yMMW SYMBOL=SOL PERPS_FILLS_FEED=ws://api.mngo.cloud:2082 npx ts-node xmm.ts
 
@@ -97,21 +98,35 @@ const main = async () => {
 
     const mangoAccountPk = new PublicKey(MANGO_ACCOUNT!)
 
+    const spotOpenOrdersPks = (await mangoClient.getMangoAccount(mangoAccountPk, mangoGroup.dexProgramId)).spotOpenOrders
+
     async function monitor(): Promise<[number, MangoAccount, PerpEventQueue, BlockhashWithExpiryBlockHeight, number]> {
-        const [mangoAccountRaw, perpEventQueueRaw] = await getMultipleAccounts(
+        const [mangoAccountRaw, perpEventQueueRaw, ...spotOpenOrdersAccountsRaw] = await getMultipleAccounts(
             connection,
-            [mangoAccountPk, perpMarketConfig!.eventsKey]
+            [
+                mangoAccountPk,
+                perpMarketConfig!.eventsKey,
+                ...spotOpenOrdersPks.filter(spotOpenOrderAccount => !spotOpenOrderAccount.equals(zeroKey))
+            ],
         )
 
-        const slots = _.uniq([mangoAccountRaw.context.slot, perpEventQueueRaw.context.slot])
-
-        if (slots.length !== 1) {
-            throw new Error('Inconsistent slots on Mango account monitor.')
-        }
-
-        const slot = slots[0]
+        const slot = mangoAccountRaw.context.slot
 
         const mangoAccount = new MangoAccount(mangoAccountPk, MangoAccountLayout.decode(mangoAccountRaw.accountInfo.data))
+
+        mangoAccount.spotOpenOrdersAccounts = spotOpenOrdersPks.map((openOrderPk) => {
+          if (openOrderPk.equals(zeroKey)) {
+            return undefined;
+          }
+          const account = spotOpenOrdersAccountsRaw.find((a) => a.publicKey.equals(openOrderPk));
+          return account
+            ? OpenOrders.fromAccountInfo(
+                openOrderPk,
+                account.accountInfo,
+                mangoGroup.dexProgramId,
+              )
+            : undefined;
+        })
 
         const perpEventQueue = new PerpEventQueue(PerpEventQueueLayout.decode(perpEventQueueRaw.accountInfo.data))
 
@@ -162,37 +177,35 @@ const main = async () => {
 
     await mangoClient.ensureOpenOrdersAccount(mangoAccount, mangoGroup, payer, spotMarket, spotMarketConfig)
 
-    // console.log('Loading risk checker...')
-    //
-    // // https://github.com/Is0tope/mango_risk_check/blob/master/js/examples/example.ts
-    // const riskChecker = new MangoRiskCheck({
-    //     connection: connection,
-    //     // @ts-ignore
-    //     mangoAccount: mangoAccount,
-    //     // @ts-ignore
-    //     mangoClient: mangoClient,
-    //     // @ts-ignore
-    //     mangoGroup: mangoGroup,
-    //     owner: payer
-    // })
-    //
-    // try {
-    //     await riskChecker.initializeRiskAccount(perpMarketConfig)
-    // } catch (error) {
-    //     // @ts-ignore
-    //     console.log(Object.entries(error))
-    // } finally {
-    //     await Promise.all([
-    //         riskChecker.setMaxOpenOrders(perpMarketConfig, 2),
-    //         // @ts-ignore
-    //         riskChecker.setMaxLongExposure(perpMarketConfig, perpMarket,1000),
-    //         // @ts-ignore
-    //         riskChecker.setMaxShortExposure(perpMarketConfig, perpMarket, 1000),
-    //         riskChecker.setViolationBehaviour(perpMarketConfig, ViolationBehaviour.CancelIncreasingOrders)
-    //     ])
-    // }
-    //
-    // console.log('Loaded!')
+    console.log('Loading risk checker...')
+
+    // https://github.com/Is0tope/mango_risk_check/blob/master/js/examples/example.ts
+    const riskChecker = new MangoRiskCheck({
+        connection: connection,
+        mangoAccount: mangoAccount,
+        mangoClient: mangoClient,
+        mangoGroup: mangoGroup,
+        owner: payer
+    })
+
+    try {
+        await riskChecker.initializeRiskAccount(perpMarketConfig)
+    } catch (error) {
+        console.log(error)
+    }
+
+    try {
+        await Promise.all([
+            riskChecker.setMaxOpenOrders(perpMarketConfig, 2),
+            riskChecker.setMaxLongExposure(perpMarketConfig, perpMarket,1000),
+            riskChecker.setMaxShortExposure(perpMarketConfig, perpMarket, 1000),
+            riskChecker.setViolationBehaviour(perpMarketConfig, ViolationBehaviour.CancelIncreasingOrders)
+        ])
+    } catch (error) {
+        console.log(error)
+    }
+
+    console.log('Loaded!')
 
     const tokenIndex = mangoGroup.getTokenIndex(token.mintKey)
 
@@ -215,7 +228,7 @@ const main = async () => {
         ]
     })
 
-    const recentFills: any[] = []
+    let recentFills: any[] = []
 
     function listenToFills() {
         const ws = new WebSocket(PERPS_FILLS_FEED!)
@@ -234,13 +247,7 @@ const main = async () => {
                 PerpEventLayout.decode(Buffer.from(event, 'base64'))
 
             if (isSnapshot) {
-                for (const event of data.events.map(parseEvent)) {
-                    const fill = perpMarket.parseFillEvent(event.fill)
-
-                    // TODO: Account for the recent fills snapshot in case the connection restarts
-
-                    continue
-                }
+                return
             } else {
                 if (data.market.split('-')[0] !== SYMBOL) {
                     return
@@ -256,34 +263,28 @@ const main = async () => {
 
                 recentFills.push({...fill, slot: data.slot})
 
-                while (recentFills.length > 256) {
-                    recentFills.shift()
-                }
+                recentFills = recentFills.filter(fill => fill.slot > slot)
 
                 const takerBase = perpMarket.baseLotsToNumber(mangoAccount.perpAccounts[perpMarketConfig!.marketIndex].takerBase)
 
                 const basePosition = perpMarket.baseLotsToNumber(mangoAccount.perpAccounts[perpMarketConfig!.marketIndex].basePosition)
 
-                const queuedBasePosition = perpEventQueue.getUnconsumedEvents()
+                const unprocessedFills = perpEventQueue.getUnconsumedEvents()
                     .filter(event => event.fill !== undefined)
-                    .map(event => event.fill)
-                                // @ts-ignore
+                    .map(event => event.fill) as any[]
+
+                const queuedBasePosition = unprocessedFills
                     .filter(fill => fill.maker.equals(mangoAccount.publicKey))
                     .reduce((accumulator, fill) => {
-                    // @ts-ignore
                         switch (fill.takerSide) {
                             case "buy":
-                    // @ts-ignore
                                 return accumulator - fill.quantity
                             case "sell":
-                    // @ts-ignore
                                 return accumulator + fill.quantity
                         }
                     }, basePosition + takerBase)
 
-                const applicableFills = recentFills.filter(fill => fill.slot > slot)
-
-                const completeBasePosition = queuedBasePosition + applicableFills.reduce((accumulator, fill) => {
+                const completeBasePosition = queuedBasePosition + recentFills.reduce((accumulator, fill) => {
                         switch (fill.takerSide) {
                             case "buy":
                                 return accumulator - fill.quantity
@@ -292,7 +293,7 @@ const main = async () => {
                         }
                 }, 0)
 
-                console.log(applicableFills, data.slot, slot, data.slot - slot, basePosition, queuedBasePosition, completeBasePosition)
+                console.log(recentFills, data.slot, slot, data.slot - slot, basePosition, queuedBasePosition, completeBasePosition)
             }
         }
 
@@ -316,9 +317,9 @@ const main = async () => {
 
         const spread = 0.0005
 
-        const [bidPriceUi, bidSizeUi] = [tokenPrice! - spread, 0.1]
+        const [bidPriceUi, bidSizeUi] = [tokenPrice - spread, 0.1]
 
-        const [askPriceUi, askSizeUi] = [tokenPrice! + spread, 0.1]
+        const [askPriceUi, askSizeUi] = [tokenPrice + spread, 0.1]
 
         const [bidPrice, bidSize] = perpMarket.uiToNativePriceQuantity(bidPriceUi, bidSizeUi)
 
@@ -403,8 +404,7 @@ const main = async () => {
                 undefined,
                 expiryTimestamp
             ),
-            // @ts-ignore
-            // tx.add(riskChecker.makeCheckRiskInstruction(perpMarketConfig, perpMarket))
+            riskChecker.makeCheckRiskInstruction(perpMarketConfig, perpMarket)
         )
 
         tx.sign(payer)
