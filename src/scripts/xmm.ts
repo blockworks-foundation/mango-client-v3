@@ -179,6 +179,7 @@ const main = async () => {
 
     console.log('Loading risk checker...')
 
+    // The risk checker prevents long/short exposure & open orders from exceeding specific thresholds
     // https://github.com/Is0tope/mango_risk_check/blob/master/js/examples/example.ts
     const riskChecker = new MangoRiskCheck({
         connection: connection,
@@ -197,8 +198,8 @@ const main = async () => {
     try {
         await Promise.all([
             riskChecker.setMaxOpenOrders(perpMarketConfig, 2),
-            riskChecker.setMaxLongExposure(perpMarketConfig, perpMarket,1000),
-            riskChecker.setMaxShortExposure(perpMarketConfig, perpMarket, 1000),
+            riskChecker.setMaxLongExposure(perpMarketConfig, perpMarket, 5),
+            riskChecker.setMaxShortExposure(perpMarketConfig, perpMarket, 5),
             riskChecker.setViolationBehaviour(perpMarketConfig, ViolationBehaviour.CancelIncreasingOrders)
         ])
     } catch (error) {
@@ -261,10 +262,6 @@ const main = async () => {
                     return
                 }
 
-                recentFills.push({...fill, slot: data.slot})
-
-                recentFills = recentFills.filter(fill => fill.slot > slot)
-
                 const takerBase = perpMarket.baseLotsToNumber(mangoAccount.perpAccounts[perpMarketConfig!.marketIndex].takerBase)
 
                 const basePosition = perpMarket.baseLotsToNumber(mangoAccount.perpAccounts[perpMarketConfig!.marketIndex].basePosition)
@@ -284,6 +281,8 @@ const main = async () => {
                         }
                     }, basePosition + takerBase)
 
+                recentFills = [...recentFills, { ...fill, slot: data.slot }].filter(fill => fill.slot > slot)
+
                 const completeBasePosition = queuedBasePosition + recentFills.reduce((accumulator, fill) => {
                         switch (fill.takerSide) {
                             case "buy":
@@ -293,7 +292,7 @@ const main = async () => {
                         }
                 }, 0)
 
-                console.log(recentFills, data.slot, slot, data.slot - slot, basePosition, queuedBasePosition, completeBasePosition)
+                console.log(recentFills, data.slot, slot, data.slot - slot, basePosition, takerBase, queuedBasePosition, completeBasePosition)
             }
         }
 
