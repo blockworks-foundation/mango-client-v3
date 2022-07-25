@@ -20,7 +20,7 @@ import {performance} from "perf_hooks";
 import MangoAccount from "../MangoAccount";
 import {MangoRiskCheck, ViolationBehaviour} from "mango_risk_check";
 
-// KEYPAIR=~/.config/solana/id.json MANGO_GROUP=devnet.2 MANGO_ACCOUNT=BFLAGijqDyRnK93scRizT8YSotrvdxhdJyWYZch6yMMW SYMBOL=SOL PERPS_FILLS_FEED=ws://api.mngo.cloud:2082 npx ts-node xmm.ts
+// KEYPAIR=~/.config/solana/id.json MANGO_GROUP=devnet.2 MANGO_ACCOUNT=BFLAGijqDyRnK93scRizT8YSotrvdxhdJyWYZch6yMMW SYMBOL=SOL PERPS_FILLS_FEED=ws://api.mngo.cloud:2082 npx ts-node serumExampleHedge.ts
 
 const main = async () => {
     const {
