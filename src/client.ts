@@ -5491,4 +5491,62 @@ export class MangoClient {
 
     return await this.sendTransaction(transaction, owner, []);
   }
+
+  async ensureOpenOrdersAccount(
+    mangoAccount: MangoAccount,
+    mangoGroup: MangoGroup,
+    payer: Keypair,
+    spotMarket: Market,
+    spotMarketConfig,
+  ) {
+    if (mangoAccount.spotOpenOrdersAccounts[spotMarketConfig.marketIndex]) {
+      return;
+    }
+
+    const [openOrdersPk] = await PublicKey.findProgramAddress(
+      [
+        mangoAccount.publicKey.toBytes(),
+        new BN(spotMarketConfig.marketIndex).toArrayLike(Buffer, 'le', 8),
+        new Buffer('OpenOrders', 'utf-8'),
+      ],
+      this.programId,
+    );
+
+    const createSpotOpenOrdersInstruction = makeCreateSpotOpenOrdersInstruction(
+      this.programId,
+      mangoGroup.publicKey,
+      mangoAccount.publicKey,
+      payer.publicKey,
+      mangoGroup.dexProgramId,
+      openOrdersPk,
+      spotMarket.publicKey,
+      mangoGroup.signerKey,
+    );
+
+    const recentBlockHash = await this.connection.getLatestBlockhash(
+      'finalized',
+    );
+
+    const tx = new Transaction({
+      recentBlockhash: recentBlockHash.blockhash,
+      feePayer: payer.publicKey,
+    });
+
+    tx.add(createSpotOpenOrdersInstruction);
+
+    tx.sign(payer);
+
+    try {
+      await this.sendSignedTransaction({
+        signedTransaction: tx,
+        signedAtBlock: recentBlockHash,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+
+    await mangoAccount.reload(this.connection, mangoGroup.dexProgramId);
+    // ^ The newly created open orders account isn't immediately visible in
+    // the already fetched Mango account, hence why it needs to be reloaded
+  }
 }
