@@ -27,7 +27,7 @@ import { MangoGroup, PerpMarket, promiseUndef } from '..';
 import PerpEventQueue from '../PerpEventQueue';
 
 let lastRootBankCacheUpdate = 0;
-const groupName = process.env.GROUP || 'devnet.2';
+const groupName = process.env.GROUP || 'testnet.0';
 const updateCacheInterval = parseInt(
   process.env.UPDATE_CACHE_INTERVAL || '3000',
 );
@@ -46,7 +46,7 @@ const consumeEvents = process.env.CONSUME_EVENTS
   ? process.env.CONSUME_EVENTS === 'true'
   : true;
 const prioritizationFee = parseInt(process.env.PRIORITIZATION_FEE || '0');
-const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
+const cluster = (process.env.CLUSTER || 'testnet') as Cluster;
 const config = new Config(configFile);
 const groupIds = config.getGroup(cluster, groupName);
 
@@ -110,7 +110,6 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
     const perpMarkets = mangoGroup.perpMarkets
       .filter((pm) => !pm.isEmpty())
       .map((pm) => pm.perpMarket);
-      console.log(rootBanks.length, oracles.length, perpMarkets.length)
     const nowTs = Date.now();
     let shouldUpdateRootBankCache = false;
     if (nowTs - lastRootBankCacheUpdate > updateRootBankCacheInterval) {
@@ -149,7 +148,7 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
         ),
       );
       if (cacheTransaction.instructions.length > 0) {
-        promises.push(client.sendTransaction(cacheTransaction, payer, []));
+        promises.push(client.sendTransaction(cacheTransaction, payer, [], undefined, 'processed', true));
       }
     }
 
@@ -313,12 +312,12 @@ async function processKeeperTransactions(
 
       if (updateRootBankTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateRootBankTransaction, payer, []),
+          client.sendTransaction(updateRootBankTransaction, payer, [], undefined, 'processed', true),
         );
       }
       if (updateFundingTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateFundingTransaction, payer, []),
+          client.sendTransaction(updateFundingTransaction, payer, [], undefined, 'processed', true),
         );
       }
     }

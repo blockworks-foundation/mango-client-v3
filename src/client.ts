@@ -319,6 +319,7 @@ export class MangoClient {
     additionalSigners: Keypair[],
     timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'processed',
+    disableBlockhashTimeout = false,
   ): Promise<TransactionSignature> {
     const currentBlockhash = await this.getCurrentBlockhash();
 
@@ -398,7 +399,7 @@ export class MangoClient {
           txid,
           timeout,
           confirmLevel,
-          currentBlockhash,
+          disableBlockhashTimeout ? undefined : currentBlockhash,
         );
       } catch (err: any) {
         if (err.timeout) {
@@ -1771,7 +1772,7 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(consumeEventsInstruction);
 
-    return await this.sendTransaction(transaction, payer, []);
+    return await this.sendTransaction(transaction, payer, [], undefined, 'processed', true);
   }
 
   /**
