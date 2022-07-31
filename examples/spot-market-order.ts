@@ -2,11 +2,11 @@ import {Connection, Keypair, PublicKey, Transaction} from "@solana/web3.js"
 import {
     Config,
     getSpotMarketByBaseSymbol,
-    getTokenBySymbol, makePlaceSpotOrder2Instruction,
+    getTokenBySymbol, makeCreateSpotOpenOrdersInstruction, makePlaceSpotOrder2Instruction,
     MangoAccount,
     MangoClient,
     MangoGroup,
-    nativeToUi, Payer, QUOTE_INDEX, ZERO_BN
+    nativeToUi, Payer, QUOTE_INDEX, sleep, ZERO_BN
 } from "../src";
 import fs from "fs";
 import os from "os";
@@ -92,13 +92,77 @@ async function main() {
 
     const spotMarketIndex = mangoGroup.getSpotMarketIndex(spotMarket.publicKey)
 
+    if (!mangoAccount.spotOpenOrdersAccounts[spotMarketIndex]) {
+        /*
+
+        Unlike in perp markets, where orders require only a Mango account, Serum
+        markets supported by Mango require an "open orders" account to serve as
+        an intermediary. One open orders account is needed for each spot market.
+
+        */
+
+        console.log('Open orders account not found, creating one...')
+
+        const spotMarketIndexBN = new BN(spotMarketIndex)
+
+        const [openOrdersPk] = await PublicKey.findProgramAddress(
+            [
+                mangoAccount.publicKey.toBytes(),
+                spotMarketIndexBN.toArrayLike(Buffer, 'le', 8),
+                new Buffer('OpenOrders', 'utf-8'),
+            ],
+            mangoClient.programId,
+        )
+
+        const createSpotOpenOrdersInstruction = makeCreateSpotOpenOrdersInstruction(
+            mangoClient.programId,
+            mangoGroup.publicKey,
+            mangoAccount.publicKey,
+            payer.publicKey,
+            mangoGroup.dexProgramId,
+            openOrdersPk,
+            spotMarket.publicKey,
+            mangoGroup.signerKey
+        )
+
+        const latestBlockhash = await connection.getLatestBlockhash('finalized')
+
+        const tx = new Transaction({
+            recentBlockhash: latestBlockhash.blockhash,
+            feePayer: payer.publicKey
+        })
+
+        tx.add(createSpotOpenOrdersInstruction)
+
+        tx.sign(payer)
+
+        try {
+            const response = await mangoClient.sendSignedTransaction({
+                signedTransaction: tx,
+                signedAtBlock: latestBlockhash
+            })
+
+            console.log('create_open_orders_account::response', response)
+        } catch (error) {
+            console.log('create_open_orders_account::error', error);
+        }
+
+        await sleep(2500);
+
+        await mangoAccount.reload(connection, mangoGroup.dexProgramId)
+        // ^ The newly created open orders account isn't immediately visible in
+        // the already fetched Mango account, hence it needs to be reloaded
+
+        console.log('Created open orders account!')
+    }
+
     const token = getTokenBySymbol(mangoGroupConfig, spotMarketConfig.baseSymbol)
 
     const tokenPrice = mangoGroup.cachePriceToUi(
         mangoCache.getPrice(mangoGroup.getTokenIndex(token.mintKey)), mangoGroup.getTokenIndex(token.mintKey)
     )
 
-    const slippageTolerance = 0.5
+    const slippageTolerance = 0.025
 
     const spread = tokenPrice * slippageTolerance
 
@@ -133,8 +197,6 @@ async function main() {
     tx.add(...instructions)
 
     tx.sign(payer)
-
-    console.log()
 
     try {
         console.log(`Placing ${SIDE} market order for ${SIZE} ${TOKEN} (Oracle: ${tokenPrice}, Quote: ${price})`)
