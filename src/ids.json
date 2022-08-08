@@ -87,15 +87,6 @@
           ]
         },
         {
-          "symbol": "COPE",
-          "mintKey": "8HGyAAB1yoM1ttS7pXjHMa3dukTFGQggnFFH3hJZgzQh",
-          "decimals": 6,
-          "rootKey": "6cMrtzhWNEEDkcSMx19orcred8h9HyRb31MtbCkKDdf6",
-          "nodeKeys": [
-            "2CpaAtjDt4s9Fps7dyJUaUMeUGBDPAUUui5rxYbVzPfA"
-          ]
-        },
-        {
           "symbol": "FTT",
           "mintKey": "AGFEad2et2ZJif9jaGpdMixQqvW5i81aBdvKe7PHNfz3",
           "decimals": 6,
@@ -167,10 +158,6 @@
         {
           "symbol": "RAY",
           "publicKey": "AnLf8tVYCM816gmBjiy8n53eXKKEDydT5piYjjQDPgTB"
-        },
-        {
-          "symbol": "COPE",
-          "publicKey": "9xYBiDWYsh2fHzpsz3aaCnNHCKWBNtfEDLtU6kS4aFD9"
         },
         {
           "symbol": "FTT",
@@ -397,17 +384,6 @@
           "bidsKey": "Hf84mYadE1VqSvVWAvCWc9wqLXak4RwXiPb4A91EAUn5",
           "asksKey": "DC1HsWWRCXVg3wk2NndS5LTbce3axwUwUZH1RgnV4oDN",
           "eventsKey": "H9dZt8kvz1Fe5FyRisb77KcYTaN8LEbuVAfJSnAaEABz"
-        },
-        {
-          "name": "COPE/USDC",
-          "publicKey": "6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk",
-          "baseSymbol": "COPE",
-          "baseDecimals": 6,
-          "quoteDecimals": 6,
-          "marketIndex": 7,
-          "bidsKey": "FLjCjU5wLUsqF6FeYJaH5JtTTFSTZzTCingxN1uyr9zn",
-          "asksKey": "7TcstD7AdWqjuFoRVK24zFv66v1qyMYDNDT1V5RNWKRz",
-          "eventsKey": "2dQ1Spgc7rGSuE1t3Fb9RL7zvGc7F7pH9XwJ46u3QiJr"
         },
         {
           "name": "FTT/USDC",
