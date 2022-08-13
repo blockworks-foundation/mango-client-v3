@@ -68,7 +68,7 @@ const connection = new Connection(
   'processed' as Commitment,
 );
 const client = new MangoClient(connection, mangoProgramId, {
-  timeout: 10000,
+  timeout: parseInt(process.env.TIMEOUT || '30000') ,
   prioritizationFee: prioritizationFee,
 });
 
