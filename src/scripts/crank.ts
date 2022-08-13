@@ -22,14 +22,13 @@ import {
 } from '@project-serum/serum';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
-// const interval = process.env.INTERVAL || 3500;
-const interval = 4000; // TODO - stop sharing env var with Keeper
+const interval = process.env.SERUM_CRANK_INTERVAL || 3500;
 const maxUniqueAccounts = parseInt(process.env.MAX_UNIQUE_ACCOUNTS || '10');
 const consumeEventsLimit = new BN(process.env.CONSUME_EVENTS_LIMIT || '10');
 const config = new Config(configFile);
 
-const cluster = (process.env.CLUSTER || 'devnet') as Cluster;
-const groupName = process.env.GROUP || 'devnet.1';
+const cluster = (process.env.CLUSTER || 'mainnet') as Cluster;
+const groupName = process.env.GROUP || 'mainnet.1';
 const groupIds = config.getGroup(cluster, groupName);
 
 if (!groupIds) {
@@ -43,7 +42,7 @@ const payer = Keypair.fromSecretKey(
   Uint8Array.from(
     JSON.parse(
       process.env.KEYPAIR ||
-        fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+        fs.readFileSync(os.homedir() + '/.config/solana/keeper-mainnet.json', 'utf-8'),
     ),
   ),
 );
@@ -151,10 +150,14 @@ async function run() {
         events.length,
         'events',
       );
-      await client.sendTransaction(transaction, payer, []);
+      client.sendTransaction(transaction, payer, []);
     }
     await sleep(interval);
   }
 }
+
+process.on('unhandledRejection', (err: any, p: any) => {
+  console.error(`Unhandled rejection: ${err} promise: ${p})`);
+});
 
 run();
