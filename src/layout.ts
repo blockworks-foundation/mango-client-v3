@@ -635,7 +635,17 @@ MangoInstructionLayout.addVariant(
   'LiquidateDelistingToken',
 );
 MangoInstructionLayout.addVariant(73, struct([]), 'ForceSettlePerpPosition');
-
+MangoInstructionLayout.addVariant(
+  74,
+  struct([
+    u32('refSurchargeCentibpsTier1'),
+    u32('refShareCentibpsTier1'),
+    u32('refSurchargeCentibpsTier2'),
+    u32('refShareCentibpsTier2'),
+    u64('refMngoRequired'),
+  ]),
+  'ChangeReferralFeeParams2',
+);
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),
