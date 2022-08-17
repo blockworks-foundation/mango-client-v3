@@ -15,5 +15,5 @@
     "esModuleInterop": true
   },
   "include": ["./src/**/*", "examples/example.ts"],
-  "exclude": ["./src/**/*.test.js", "node_modules", "**/node_modules"]
+  "exclude": ["./src/**/*.test.js", "node_modules", "**/node_modules", "src/scripts/serumExampleHedge.ts"]
 }
