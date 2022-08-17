@@ -945,10 +945,11 @@ export const MangoGroupLayout = struct([
 
   u32('maxMangoAccounts'),
   u32('numMangoAccounts'),
-  u32('refSurchargeCentibps'),
-  u32('refShareCentibps'),
+  u32('refSurchargeCentibpsTier1'),
+  u32('refShareCentibpsTier1'),
   u64('refMngoRequired'),
-  seq(u8(), 8, 'padding'),
+  u32('refSurchargeCentibpsTier2'),
+  u32('refShareCentibpsTier2'),
 ]);
 /** @internal */
 export const MangoAccountLayout = struct([
