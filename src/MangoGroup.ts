@@ -42,8 +42,10 @@ export default class MangoGroup {
 
   maxMangoAccounts!: BN;
   numMangoAccounts!: BN;
-  refSurchargeCentibps!: BN;
-  refShareCentibps!: BN;
+  refSurchargeCentibpsTier1!: BN;
+  refShareCentibpsTier1!: BN;
+  refSurchargeCentibpsTier2!: BN;
+  refShareCentibpsTier2!: BN;
   refMngoRequired!: BN;
 
   constructor(publicKey: PublicKey, decoded: any) {

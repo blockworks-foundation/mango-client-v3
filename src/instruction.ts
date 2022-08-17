@@ -2279,6 +2279,37 @@ export function makeChangeReferralFeeParamsInstruction(
   });
 }
 
+export function makeChangeReferralFeeParams2Instruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  adminPk: PublicKey,
+  refSurchargeCentibpsTier1: BN,
+  refShareCentibpsTier1: BN,
+  refSurchargeCentibpsTier2: BN,
+  refShareCentibpsTier2: BN,
+  refMngoRequired: BN,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
+    { isSigner: true, isWritable: false, pubkey: adminPk },
+  ];
+
+  const data = encodeMangoInstruction({
+    ChangeReferralFeeParams2: {
+      refSurchargeCentibpsTier1,
+      refShareCentibpsTier1,
+      refSurchargeCentibpsTier2,
+      refShareCentibpsTier2,
+      refMngoRequired,
+    },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
 export function makeSetReferrerMemoryInstruction(
   programId: PublicKey,
   mangoGroupPk: PublicKey,
