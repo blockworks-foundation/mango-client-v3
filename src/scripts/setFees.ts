@@ -69,6 +69,7 @@ async function check() {
     new BN(100),
     new BN(90),
     uiToNative(10000, 6),
+    new BN(10),
   );
   const tx = new Transaction().add(ix);
   await client.sendTransaction(tx, payer, []);
