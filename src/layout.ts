@@ -640,9 +640,10 @@ MangoInstructionLayout.addVariant(
   struct([
     u32('refSurchargeCentibpsTier1'),
     u32('refShareCentibpsTier1'),
-    u32('refSurchargeCentibpsTier2'),
-    u32('refShareCentibpsTier2'),
+    u16('refSurchargeCentibpsTier2'),
+    u16('refShareCentibpsTier2'),
     u64('refMngoRequired'),
+    u8('refMngoTier2Factor'),
   ]),
   'ChangeReferralFeeParams2',
 );
@@ -948,8 +949,9 @@ export const MangoGroupLayout = struct([
   u32('refSurchargeCentibpsTier1'),
   u32('refShareCentibpsTier1'),
   u64('refMngoRequired'),
-  u32('refSurchargeCentibpsTier2'),
-  u32('refShareCentibpsTier2'),
+  u16('refSurchargeCentibpsTier2'),
+  u16('refShareCentibpsTier2'),
+  u8('refMngoTier2Factor'),
 ]);
 /** @internal */
 export const MangoAccountLayout = struct([

@@ -2288,6 +2288,7 @@ export function makeChangeReferralFeeParams2Instruction(
   refSurchargeCentibpsTier2: BN,
   refShareCentibpsTier2: BN,
   refMngoRequired: BN,
+  refMngoTier2Factor: BN,
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: true, pubkey: mangoGroupPk },
@@ -2301,6 +2302,7 @@ export function makeChangeReferralFeeParams2Instruction(
       refSurchargeCentibpsTier2,
       refShareCentibpsTier2,
       refMngoRequired,
+      refMngoTier2Factor,
     },
   });
   return new TransactionInstruction({
