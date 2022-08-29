@@ -1934,6 +1934,7 @@ export class MangoClient {
       reduceOnly?: boolean;
       referrerMangoAccountPk?: PublicKey;
       expiryTimestamp?: number;
+      expiryType?: 'absolute' | 'relative';
     },
   ): Promise<TransactionSignature | undefined> {
     if (!owner.publicKey) {
@@ -1949,6 +1950,7 @@ export class MangoClient {
       reduceOnly,
       referrerMangoAccountPk,
       expiryTimestamp,
+      expiryType,
     } = options;
     limit = limit || 20;
     clientOrderId = clientOrderId === undefined ? 0 : clientOrderId;
@@ -1986,6 +1988,7 @@ export class MangoClient {
       reduceOnly,
       referrerMangoAccountPk,
       expiryTimestamp ? new BN(Math.floor(expiryTimestamp)) : ZERO_BN,
+      expiryType ? expiryType : 'absolute',
     );
     transaction.add(instruction);
 
@@ -5184,7 +5187,6 @@ export class MangoClient {
     } else {
       throw new Error('Unable to sign emptyAndCloseMangoAccount transactions');
     }
-
     return txids;
   }
 

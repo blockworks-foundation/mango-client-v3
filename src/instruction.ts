@@ -1067,11 +1067,11 @@ export function makePlacePerpOrder2Instruction(
   clientOrderId: BN,
   side: 'buy' | 'sell',
   limit: BN, // one byte; max 255
-
   orderType?: PerpOrderType,
   reduceOnly?: boolean,
   referrerMangoAccountPk?: PublicKey,
   expiryTimestamp?: BN,
+  expiryType?: 'absolute' | 'relative',
 ): TransactionInstruction {
   const keys = [
     { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
@@ -1112,6 +1112,7 @@ export function makePlacePerpOrder2Instruction(
       orderType,
       reduceOnly: reduceOnly ? reduceOnly : false,
       limit,
+      expiryType,
     },
   });
 
