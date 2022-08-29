@@ -194,6 +194,9 @@ export function advancedOrderTypeLayout(property, span) {
   return new EnumLayout({ perpTrigger: 0, spotTrigger: 1 }, span, property);
 }
 
+export function expiryTypeLayout(property, span) {
+  return new EnumLayout({ absolute: 0, relative: 1 }, span, property);
+}
 /**
  * Makes custom modifications to the instruction layouts because valid instructions can be many sizes
  */
@@ -607,6 +610,7 @@ MangoInstructionLayout.addVariant(
     orderTypeLayout('orderType', 1),
     bool('reduceOnly'),
     u8('limit'),
+    expiryTypeLayout('expiryType', 1),
   ]),
   'PlacePerpOrder2',
 );
