@@ -175,6 +175,8 @@ export default class MangoAccount {
       this.publicKey,
       decodedMangoAccount,
     );
+    newMangoAccount.spotOpenOrdersAccounts = this.spotOpenOrdersAccounts;
+    newMangoAccount.advancedOrders = this.advancedOrders;
     if (dexProgramId) {
       await newMangoAccount.loadOpenOrders(connection, dexProgramId);
     }
