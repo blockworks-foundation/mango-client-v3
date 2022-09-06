@@ -231,7 +231,7 @@ async function processConsumeEvents(
               .sort(),
             payer,
             consumeEventsLimit,
-            20_000,
+            25_000,
           )
           .then(() => {
             console.log(`metricName=ConsumeEventsSuccess durationMs=${Date.now() - start}`);
@@ -319,12 +319,12 @@ async function processKeeperTransactions(
 
       if (updateRootBankTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateRootBankTransaction, payer, [], null, 'processed', true, 20_000 * ixsLength),
+          client.sendTransaction(updateRootBankTransaction, payer, [], null, 'processed', true, 18_000 * ixsLength),
         );
       }
       if (updateFundingTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateFundingTransaction, payer, [], null, 'processed', true, 20_000 * ixsLength),
+          client.sendTransaction(updateFundingTransaction, payer, [], null, 'processed', true, 18_000 * ixsLength),
         );
       }
     }
