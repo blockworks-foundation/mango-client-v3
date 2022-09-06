@@ -153,9 +153,6 @@ export default class MangoAccount {
     return this;
   }
 
-  /**
-   * DEPRECATED
-   */
   async reloadFromSlot(
     connection: Connection,
     lastSlot = 0,
@@ -173,11 +170,16 @@ export default class MangoAccount {
       await sleep(250);
     }
 
-    Object.assign(this, MangoAccountLayout.decode(value?.data));
+    const decodedMangoAccount = MangoAccountLayout.decode(value?.data);
+    const newMangoAccount = new MangoAccount(
+      this.publicKey,
+      decodedMangoAccount,
+    );
     if (dexProgramId) {
-      await this.loadOpenOrders(connection, dexProgramId);
+      await newMangoAccount.loadOpenOrders(connection, dexProgramId);
     }
-    return [this, slot];
+    Object.assign(this, newMangoAccount);
+    return [newMangoAccount, slot];
   }
 
   async loadSpotOrdersForMarket(
@@ -477,11 +479,11 @@ export default class MangoAccount {
     }
     return { assets, liabs };
   }
-  
+
   /**
    * Take health components and return the assets and liabs weighted using a price modifier
    */
-   getModWeightedAssetsLiabsVals(
+  getModWeightedAssetsLiabsVals(
     mangoGroup: MangoGroup,
     mangoCache: MangoCache,
     spot: I80F48[],
@@ -769,7 +771,7 @@ export default class MangoAccount {
    * worst case open orders scenarios, using a price modifier.
    * These values are not adjusted for health type.
    */
-  
+
   getModHealthComponents(
     mangoGroup: MangoGroup,
     mangoCache: MangoCache,
@@ -867,11 +869,7 @@ export default class MangoAccount {
     mangoGroup: MangoGroup,
     mangoCache: MangoCache,
   ): I80F48 {
-
-    const scenarioBaseLine = this.getHealthComponents(
-      mangoGroup,
-      mangoCache,
-    );
+    const scenarioBaseLine = this.getHealthComponents(mangoGroup, mangoCache);
 
     const scenarioBaseAssetsLiabs = this.getWeightedAssetsLiabsVals(
       mangoGroup,
@@ -898,10 +896,18 @@ export default class MangoAccount {
       'Maint',
     );
 
-    const maintEquity = scenarioBaseAssetsLiabs.assets.sub(scenarioBaseAssetsLiabs.liabs);
-    const maintAssetsRateOfChange = scenarioModAssetsLiabs.assets.sub(scenarioBaseAssetsLiabs.assets);
-    const maintLiabsRateOfChange = scenarioModAssetsLiabs.liabs.sub(scenarioBaseAssetsLiabs.liabs);
-    const maintRateOfChange = maintLiabsRateOfChange.sub(maintAssetsRateOfChange);
+    const maintEquity = scenarioBaseAssetsLiabs.assets.sub(
+      scenarioBaseAssetsLiabs.liabs,
+    );
+    const maintAssetsRateOfChange = scenarioModAssetsLiabs.assets.sub(
+      scenarioBaseAssetsLiabs.assets,
+    );
+    const maintLiabsRateOfChange = scenarioModAssetsLiabs.liabs.sub(
+      scenarioBaseAssetsLiabs.liabs,
+    );
+    const maintRateOfChange = maintLiabsRateOfChange.sub(
+      maintAssetsRateOfChange,
+    );
 
     let priceMoveToLiquidate = ZERO_I80F48;
     if (maintRateOfChange.isZero()) {
