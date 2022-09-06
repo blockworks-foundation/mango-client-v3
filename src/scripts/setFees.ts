@@ -1,17 +1,9 @@
-import {
-  Account,
-  Commitment,
-  Connection,
-  Keypair,
-  PublicKey,
-  Transaction,
-} from '@solana/web3.js';
+import { Commitment, Connection, Keypair, Transaction } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import { Cluster, Config } from '../config';
 import * as fs from 'fs';
 import * as os from 'os';
-import { nativeToUi, uiToNative } from '../utils/utils';
-import { sleep } from '@blockworks-foundation/mango-client';
+import { nativeToUi, sleep, uiToNative } from '../utils/utils';
 import { makeChangeReferralFeeParams2Instruction } from '../instruction';
 import { BN } from 'bn.js';
 
@@ -38,11 +30,11 @@ const payer = Keypair.fromSecretKey(
   ),
 );
 
-const makerPk = new PublicKey('6rnq9ajZpJCkDe3xP7WAs9KFgLAhQWA2gyz1zVv2cnTn');
-const takerPk = new PublicKey('HGaFMw6fJmTzL3wq2H9tXXj2sx3BMg7kYtJmgedvKrJy');
-const referrerPk = new PublicKey(
-  'DxUrnFn3GF9cK3YTv33oA4VVDP2yRa5BtS6MrHY5yFKY',
-);
+// const makerPk = new PublicKey('6rnq9ajZpJCkDe3xP7WAs9KFgLAhQWA2gyz1zVv2cnTn');
+// const takerPk = new PublicKey('HGaFMw6fJmTzL3wq2H9tXXj2sx3BMg7kYtJmgedvKrJy');
+// const referrerPk = new PublicKey(
+//   'DxUrnFn3GF9cK3YTv33oA4VVDP2yRa5BtS6MrHY5yFKY',
+// );
 
 async function check() {
   let group = await client.getMangoGroup(mangoGroupKey);

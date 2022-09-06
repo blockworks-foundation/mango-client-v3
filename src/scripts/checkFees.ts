@@ -1,16 +1,9 @@
-import {
-  Account,
-  Commitment,
-  Connection,
-  Keypair,
-  PublicKey,
-} from '@solana/web3.js';
+import { Commitment, Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { MangoClient } from '../client';
 import { Cluster, Config } from '../config';
 import * as fs from 'fs';
 import * as os from 'os';
-import { nativeToUi } from '../utils/utils';
-import { sleep } from '@blockworks-foundation/mango-client';
+import { nativeToUi, sleep } from '../utils/utils';
 
 const groupName = process.env.GROUP || 'devnet.2';
 const cluster = (process.env.CLUSTER || groupName.split('.')[0]) as Cluster;
