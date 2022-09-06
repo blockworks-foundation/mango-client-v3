@@ -455,7 +455,7 @@ export async function getMultipleAccounts(
     throw new Error(resp.error.message);
   }
   if (resp.result) {
-    const nullResults = resp.result.value.filter((r) => r?.account === null);
+    const nullResults = resp.result.value.filter((r) => r?.account === null || r?.data === null || !r);
     if (nullResults.length > 0)
       throw new Error(
         `gma returned ${
@@ -566,11 +566,11 @@ export function findPerpMarketParams(
   };
 }
 
-export const prependFeePrioritizationIx = (transaction, prioritizationFee) => {
+export const prependFeePrioritizationIx = (transaction, prioritizationFee, units) => {
   if (prioritizationFee) {
     const computeBudgetIx = ComputeBudgetProgram.requestUnits({
       additionalFee: prioritizationFee,
-      units: 200000 * transaction.instructions.length + 1,
+      units: units ? units : 200_000 * transaction.instructions.length + 1,
     });
     transaction.instructions = [computeBudgetIx, ...transaction.instructions];
   }

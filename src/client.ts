@@ -258,18 +258,21 @@ export class MangoClient {
     }
   }
 
-  async signTransactions({
-    transactionsAndSigners,
-    payer,
-    currentBlockhash,
-  }: {
-    transactionsAndSigners: {
-      transaction: Transaction;
-      signers?: Array<Keypair>;
-    }[];
-    payer: Payer;
-    currentBlockhash?: BlockhashWithExpiryBlockHeight;
-  }) {
+  async signTransactions(
+    {
+      transactionsAndSigners,
+      payer,
+      currentBlockhash,
+    }: {
+      transactionsAndSigners: {
+        transaction: Transaction;
+        signers?: Array<Keypair>;
+      }[];
+      payer: Payer;
+      currentBlockhash?: BlockhashWithExpiryBlockHeight;
+    },
+    requestedComputeUnits?: number,
+  ) {
     if (!payer.publicKey) {
       return;
     }
@@ -281,6 +284,7 @@ export class MangoClient {
         transaction = prependFeePrioritizationIx(
           transaction,
           this.prioritizationFee,
+          requestedComputeUnits,
         );
       }
       if (payer.publicKey) {
@@ -320,12 +324,14 @@ export class MangoClient {
     timeout: number | null = this.timeout,
     confirmLevel: TransactionConfirmationStatus = 'processed',
     disableBlockhashTimeout = false,
+    requestedComputeUnits?: number,
   ): Promise<TransactionSignature> {
     const currentBlockhash = await this.getCurrentBlockhash();
 
     transaction = prependFeePrioritizationIx(
       transaction,
       this.prioritizationFee,
+      requestedComputeUnits,
     );
 
     await this.signTransaction({
@@ -411,7 +417,7 @@ export class MangoClient {
             await simulateTransaction(this.connection, transaction, 'processed')
           ).value;
         } catch (e) {
-          console.warn('Simulate transaction failed');
+          console.warn('Simulate transaction failed', e);
         }
 
         if (simulateResult && simulateResult.err) {
@@ -1758,6 +1764,7 @@ export class MangoClient {
     mangoAccounts: PublicKey[],
     payer: Keypair,
     limit: BN,
+    requestedComputeUnits: number = 200_000
   ): Promise<TransactionSignature> {
     const consumeEventsInstruction = makeConsumeEventsInstruction(
       this.programId,
@@ -1772,7 +1779,7 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(consumeEventsInstruction);
 
-    return await this.sendTransaction(transaction, payer, [], undefined, 'processed', true);
+    return await this.sendTransaction(transaction, payer, [], null, 'processed', true, requestedComputeUnits);
   }
 
   /**

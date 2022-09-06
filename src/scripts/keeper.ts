@@ -120,13 +120,16 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
       const startIndex = i * batchSize;
       const endIndex = i * batchSize + batchSize;
       const cacheTransaction = new Transaction();
+      const rootBanksSlice = rootBanks.slice(startIndex, endIndex);
+      const oraclesSlice = oracles.slice(startIndex, endIndex);
+      const perpMarketsSlice = perpMarkets.slice(startIndex, endIndex);
       if (shouldUpdateRootBankCache) {
         cacheTransaction.add(
           makeCacheRootBankInstruction(
             mangoProgramId,
             mangoGroup.publicKey,
             mangoGroup.mangoCache,
-            rootBanks.slice(startIndex, endIndex),
+            rootBanksSlice,
           ),
         );
       }
@@ -135,7 +138,7 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          oracles.slice(startIndex, endIndex),
+          oraclesSlice,
         ),
       );
 
@@ -144,11 +147,12 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
           mangoProgramId,
           mangoGroup.publicKey,
           mangoGroup.mangoCache,
-          perpMarkets.slice(startIndex, endIndex),
+          perpMarketsSlice,
         ),
       );
       if (cacheTransaction.instructions.length > 0) {
-        promises.push(client.sendTransaction(cacheTransaction, payer, [], undefined, 'processed', true));
+        const computeUnits = (shouldUpdateRootBankCache ? 10000 : 0) + 10000 + 7000 * oraclesSlice.length;
+        promises.push(client.sendTransaction(cacheTransaction, payer, [], null, 'processed', true, computeUnits));
       }
     }
 
@@ -226,6 +230,7 @@ async function processConsumeEvents(
               .sort(),
             payer,
             consumeEventsLimit,
+            20_000,
           )
           .then(() => {
             console.log(`metricName=ConsumeEventsSuccess durationMs=${Date.now() - start}`);
@@ -312,12 +317,12 @@ async function processKeeperTransactions(
 
       if (updateRootBankTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateRootBankTransaction, payer, [], undefined, 'processed', true),
+          client.sendTransaction(updateRootBankTransaction, payer, [], null, 'processed', true, 30_000),
         );
       }
       if (updateFundingTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateFundingTransaction, payer, [], undefined, 'processed', true),
+          client.sendTransaction(updateFundingTransaction, payer, [], null, 'processed', true, 30_000),
         );
       }
     }
