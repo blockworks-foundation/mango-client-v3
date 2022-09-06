@@ -1779,7 +1779,7 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(consumeEventsInstruction);
 
-    return await this.sendTransaction(transaction, payer, [], null, 'processed', true, requestedComputeUnits * mangoAccounts.length);
+    return await this.sendTransaction(transaction, payer, [], null, 'confirmed', true, requestedComputeUnits * mangoAccounts.length);
   }
 
   /**
