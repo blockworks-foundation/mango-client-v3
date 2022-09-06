@@ -25,6 +25,7 @@ import BN from 'bn.js';
 import { PerpEventQueueLayout } from '../layout';
 import { MangoGroup, PerpMarket, promiseUndef } from '..';
 import PerpEventQueue from '../PerpEventQueue';
+import { start } from 'repl';
 
 let lastRootBankCacheUpdate = 0;
 const groupName = process.env.GROUP || 'testnet.0';
@@ -285,6 +286,7 @@ async function processKeeperTransactions(
     for (let i = 0; i < groupIds.tokens.length / batchSize; i++) {
       const startIndex = i * batchSize;
       const endIndex = i * batchSize + batchSize;
+      const ixsLength = endIndex - startIndex;
 
       const updateRootBankTransaction = new Transaction();
       groupIds.tokens.slice(startIndex, endIndex).forEach((token) => {
@@ -317,12 +319,12 @@ async function processKeeperTransactions(
 
       if (updateRootBankTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateRootBankTransaction, payer, [], null, 'processed', true, 30_000),
+          client.sendTransaction(updateRootBankTransaction, payer, [], null, 'processed', true, 20_000 * ixsLength),
         );
       }
       if (updateFundingTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateFundingTransaction, payer, [], null, 'processed', true, 30_000),
+          client.sendTransaction(updateFundingTransaction, payer, [], null, 'processed', true, 20_000 * ixsLength),
         );
       }
     }
