@@ -327,7 +327,7 @@ export class MangoClient {
     requestedComputeUnits?: number,
   ): Promise<TransactionSignature> {
     const currentBlockhash = await this.getCurrentBlockhash();
-
+    console.log(timeout);
     transaction = prependFeePrioritizationIx(
       transaction,
       this.prioritizationFee,
@@ -1779,7 +1779,7 @@ export class MangoClient {
     const transaction = new Transaction();
     transaction.add(consumeEventsInstruction);
 
-    return await this.sendTransaction(transaction, payer, [], null, 'confirmed', true, requestedComputeUnits * mangoAccounts.length);
+    return await this.sendTransaction(transaction, payer, [], undefined, 'confirmed', true, requestedComputeUnits * mangoAccounts.length);
   }
 
   /**

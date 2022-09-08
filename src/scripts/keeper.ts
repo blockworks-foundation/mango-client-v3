@@ -153,7 +153,7 @@ async function processUpdateCache(mangoGroup: MangoGroup) {
       );
       if (cacheTransaction.instructions.length > 0) {
         const computeUnits = (shouldUpdateRootBankCache ? 10000 : 0) + 10000 + 7000 * oraclesSlice.length;
-        promises.push(client.sendTransaction(cacheTransaction, payer, [], null, 'confirmed', true, computeUnits));
+        promises.push(client.sendTransaction(cacheTransaction, payer, [], undefined, 'confirmed', true, computeUnits));
       }
     }
 
@@ -319,12 +319,12 @@ async function processKeeperTransactions(
 
       if (updateRootBankTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateRootBankTransaction, payer, [], null, 'confirmed', true, 18_000 * ixsLength),
+          client.sendTransaction(updateRootBankTransaction, payer, [], undefined, 'confirmed', true, 18_000 * ixsLength),
         );
       }
       if (updateFundingTransaction.instructions.length > 0) {
         promises.push(
-          client.sendTransaction(updateFundingTransaction, payer, [], null, 'confirmed', true, 18_000 * ixsLength),
+          client.sendTransaction(updateFundingTransaction, payer, [], undefined, 'confirmed', true, 18_000 * ixsLength),
         );
       }
     }
