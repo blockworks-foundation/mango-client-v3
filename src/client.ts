@@ -1914,6 +1914,8 @@ export class MangoClient {
    *
    * @param clientOrderId An optional id that can be used to correlate events related to your order
    * @param bookSideInfo Account info for asks if side === bid, bids if side === ask. If this is given, crank instruction is added
+   * @param expiryTimestamp Absolute: 0 for never expire, othereise future expiry timestamp in seconds. Relative: expiry offset in seconds
+   * @param expiryType Since there is an unknown delay from sending a transaction to the transaction being processed, Absolute expiry usually preferred.
    */
   async placePerpOrder2(
     mangoGroup: MangoGroup,
