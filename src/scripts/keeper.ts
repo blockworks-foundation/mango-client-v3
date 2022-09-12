@@ -231,7 +231,7 @@ async function processConsumeEvents(
               .sort(),
             payer,
             consumeEventsLimit,
-            25_000,
+            35_000,
           )
           .then(() => {
             console.log(`metricName=ConsumeEventsSuccess durationMs=${Date.now() - start}`);
