@@ -1378,6 +1378,9 @@ export default class MangoAccount {
     // then for each oracle
     for (let index = 0; index < group.numOracles; ++index) {
       const oracle = groupConfig.oracles[index];
+      if (!oracle) {
+        continue;
+      }
       const price = group.getPrice(index, cache).toNumber();
 
       // calculate spot margin balance
@@ -1422,8 +1425,8 @@ export default class MangoAccount {
         const marketConfig = groupConfig.perpMarkets.find(
           (p) => p.marketIndex == index,
         )!;
-        const market = perpMarkets.find(
-          (p) => p?.publicKey == marketConfig?.publicKey,
+        const market = perpMarkets.find((p) =>
+          p?.publicKey.equals(marketConfig?.publicKey),
         )!;
 
         const amount = this.perpAccounts[index].getBasePositionUi(market);
