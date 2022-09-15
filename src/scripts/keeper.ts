@@ -68,7 +68,7 @@ const connection = new Connection(
 );
 const client = new MangoClient(connection, mangoProgramId, {
   timeout: 10000,
-  prioritizationFee: 2,
+  prioritizationFee: 10000, // number of micro lamports
 });
 
 async function main() {

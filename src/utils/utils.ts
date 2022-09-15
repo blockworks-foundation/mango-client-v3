@@ -564,9 +564,8 @@ export function findPerpMarketParams(
 
 export const prependFeePrioritizationIx = (transaction, prioritizationFee) => {
   if (prioritizationFee) {
-    const computeBudgetIx = ComputeBudgetProgram.requestUnits({
-      additionalFee: prioritizationFee,
-      units: 200000 * transaction.instructions.length + 1,
+    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitPrice({
+      microLamports: prioritizationFee,
     });
     transaction.instructions = [computeBudgetIx, ...transaction.instructions];
   }

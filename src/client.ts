@@ -163,7 +163,7 @@ type AccountWithPnl = {
  *
  * @param connection A solana web.js Connection object
  * @param programId The PublicKey of the Mango V3 Program
- * @param opts An object used to configure the MangoClient. Accepts a postSendTxCallback
+ * @param opts An object used to configure the MangoClient. Accepts a postSendTxCallback, and prioritizationFee. The prioritizationFee is a number measured in micro lamports that is charged per compute unit.
  */
 export class MangoClient {
   connection: Connection;
@@ -174,7 +174,7 @@ export class MangoClient {
   timeout: number | null;
   // The commitment level used when fetching recentBlockHash
   blockhashCommitment: Commitment;
-  postSendTxCallback?: ({ txid: string }) => void;
+  postSendTxCallback?: ({ txid }: { txid: string }) => void;
   prioritizationFee: number;
 
   constructor(
@@ -2015,19 +2015,20 @@ export class MangoClient {
           break;
         }
       }
-
-      const consumeInstruction = makeConsumeEventsInstruction(
-        this.programId,
-        mangoGroup.publicKey,
-        mangoGroup.mangoCache,
-        perpMarket.publicKey,
-        perpMarket.eventQueue,
-        Array.from(accounts)
-          .map((s) => new PublicKey(s))
-          .sort(),
-        new BN(4),
-      );
-      transaction.add(consumeInstruction);
+      if (accounts.size > 1) {
+        const consumeInstruction = makeConsumeEventsInstruction(
+          this.programId,
+          mangoGroup.publicKey,
+          mangoGroup.mangoCache,
+          perpMarket.publicKey,
+          perpMarket.eventQueue,
+          Array.from(accounts)
+            .map((s) => new PublicKey(s))
+            .sort(),
+          new BN(4),
+        );
+        transaction.add(consumeInstruction);
+      }
     }
 
     return await this.sendTransaction(transaction, owner, additionalSigners);
@@ -2076,7 +2077,7 @@ export class MangoClient {
     perpMarkets: PerpMarket[],
     mangoAccount: MangoAccount,
     owner: Payer,
-    ownerIsSigner: boolean = true,
+    ownerIsSigner = true,
   ): Promise<TransactionSignature[] | undefined> {
     if (!owner.publicKey) {
       return;
@@ -4725,7 +4726,7 @@ export class MangoClient {
     mangoAccount: MangoAccount,
     payer: Payer,
     marketIndex: number,
-    ownerIsSigner: boolean = true,
+    ownerIsSigner = true,
   ): Promise<TransactionSignature | undefined> {
     if (!payer.publicKey) {
       return;
@@ -5442,7 +5443,7 @@ export class MangoClient {
     spotMarket: Market,
     owner: Payer,
     limit: number,
-    ownerIsSigner: boolean = true,
+    ownerIsSigner = true,
   ) {
     if (!owner.publicKey) return;
     const marketIndex = mangoGroup.getSpotMarketIndex(spotMarket.address);
