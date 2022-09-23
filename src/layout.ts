@@ -956,6 +956,7 @@ export const MangoGroupLayout = struct([
   u16('refSurchargeCentibpsTier2'),
   u16('refShareCentibpsTier2'),
   u8('refMngoTier2Factor'),
+  seq(u8(), 3, 'padding'),
 ]);
 /** @internal */
 export const MangoAccountLayout = struct([
