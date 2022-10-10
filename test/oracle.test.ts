@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion, no-console */
-import { Account, PublicKey, Connection } from '@solana/web3.js';
+import { Keypair, PublicKey, Connection } from '@solana/web3.js';
 import { Token } from '@solana/spl-token';
 import * as Test from './utils';
 import { MangoClient } from '../src';
@@ -7,12 +7,12 @@ import { QUOTE_INDEX } from '../src/layout';
 
 describe('Oracles', async () => {
   let client: MangoClient;
-  let payer: Account;
+  let payer: Keypair;
   const connection: Connection = Test.createDevnetConnection();
 
   before(async () => {
     client = new MangoClient(connection, Test.MangoProgramId);
-    payer = await Test.createAccount(connection, 10);
+    payer = await Test.createAccount(connection);
   });
 
   describe('MNGO', async () => {

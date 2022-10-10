@@ -8,7 +8,7 @@ import {
   I80F48,
 } from '../src';
 import configFile from '../src/ids.json';
-import { Account, Commitment, Connection } from '@solana/web3.js';
+import { Keypair, Commitment, Connection } from '@solana/web3.js';
 import { Market } from '@project-serum/serum';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import TestGroup from './TestGroup';
@@ -18,7 +18,7 @@ async function testPerpLiquidationAndBankruptcy() {
   const sleepTime = 2000;
   const config = new Config(configFile);
 
-  const payer = new Account(
+  const payer = new Keypair(
     JSON.parse(
       process.env.KEYPAIR ||
         fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
@@ -29,7 +29,9 @@ async function testPerpLiquidationAndBankruptcy() {
     'processed' as Commitment,
   );
 
-  const testGroup = new TestGroup();
+  const mangoProgramId = config.getGroup(cluster, 'devnet.2')!.mangoProgramId;
+
+  const testGroup = new TestGroup(connection, payer, mangoProgramId);
   const mangoGroupKey = await testGroup.init();
   const mangoGroup = await testGroup.client.getMangoGroup(mangoGroupKey);
   const perpMarkets = await Promise.all(
@@ -57,6 +59,11 @@ async function testPerpLiquidationAndBankruptcy() {
   );
 
   const liqorPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
+
+  if (liqorPk == undefined){
+    return false;
+  }
+
   const liqorAccount = await testGroup.client.getMangoAccount(
     liqorPk,
     mangoGroup.dexProgramId,
@@ -64,6 +71,11 @@ async function testPerpLiquidationAndBankruptcy() {
   console.log('Created Liqor:', liqorPk.toBase58());
 
   const liqeePk = await testGroup.client.initMangoAccount(mangoGroup, payer);
+
+  if (liqeePk == undefined){
+    return false;
+  }
+
   const liqeeAccount = await testGroup.client.getMangoAccount(
     liqeePk,
     mangoGroup.dexProgramId,

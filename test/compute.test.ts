@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import { Cluster, Config, MangoClient, sleep, throwUndefined } from '../src';
 import configFile from '../src/ids.json';
-import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
+import { Keypair, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import { Market } from '@project-serum/serum';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
@@ -18,7 +18,7 @@ async function testMaxCompute() {
   }
   const mangoProgramId = groupIds.mangoProgramId;
   const mangoGroupKey = groupIds.publicKey;
-  const payer = new Account(
+  const payer = new Keypair(
     JSON.parse(
       process.env.KEYPAIR ||
         fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),

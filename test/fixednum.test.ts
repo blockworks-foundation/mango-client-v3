@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { I80F48 } from '../src/fixednum';
+import { I80F48 } from '../src';
 import BN from 'bn.js';
 import Big from 'big.js';
 

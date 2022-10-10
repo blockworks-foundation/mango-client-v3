@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion, no-console */
-import { Account, Connection } from '@solana/web3.js';
+import { Connection, Keypair } from '@solana/web3.js';
 import { Token } from '@solana/spl-token';
 import * as Test from './utils';
 import { MangoClient } from '../src';
@@ -9,12 +9,12 @@ import { QUOTE_INDEX } from '../src/layout';
 
 describe('MaxMarkets', async () => {
   let client: MangoClient;
-  let payer: Account;
+  let payer: Keypair;
   const connection: Connection = Test.createDevnetConnection();
 
   before(async () => {
     client = new MangoClient(connection, Test.MangoProgramId);
-    payer = await Test.createAccount(connection, 10);
+    payer = await Test.createAccount(connection);
   });
 
   describe('testOrdersX32', async () => {
@@ -44,10 +44,20 @@ describe('MaxMarkets', async () => {
         Test.MAX_RATE,
         payer,
       );
+
+      if (mangoGroupPk == undefined) {
+         return false;
+      }
+
       let mangoGroup = await client.getMangoGroup(mangoGroupPk);
 
       // Create mango account
       const mangoAccountPk = await client.initMangoAccount(mangoGroup, payer);
+
+      if (mangoAccountPk == undefined) {
+        return false;
+     }
+
       let mangoAccount = await client.getMangoAccount(
         mangoAccountPk,
         Test.DexProgramId,

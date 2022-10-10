@@ -10,7 +10,7 @@ import {
 } from '../src';
 import configFile from '../src/ids.json';
 import {
-  Account,
+  Keypair,
   Commitment,
   Connection,
   PublicKey,
@@ -41,7 +41,7 @@ async function fillBook() {
   const mangoProgramId = groupIds.mangoProgramId;
   const mangoGroupKey = groupIds.publicKey;
 
-  const payer = new Account(
+  const payer = new Keypair(
     JSON.parse(
       fs.readFileSync(
         process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',

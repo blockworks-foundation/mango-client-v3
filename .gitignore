@@ -5,3 +5,6 @@ lib
 .idea
 
 .DS_Store
+.yarnrc.yml
+.yarn/
+yarn.lock

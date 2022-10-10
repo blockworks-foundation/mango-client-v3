@@ -50,6 +50,11 @@ async function testSocializedLoss() {
   const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
 
   const liqor = await client.initMangoAccount(mangoGroup, payer);
+
+  if (liqor == undefined){
+    return false;
+  }
+
   console.log('Created Liqor:', liqor.toBase58());
   await sleep(sleepTime);
   const liqorAccount = await client.getMangoAccount(
@@ -76,6 +81,11 @@ async function testSocializedLoss() {
   console.log('LIQOR', liqorAccount.publicKey.toBase58());
 
   const mangoAccountPk = await client.initMangoAccount(mangoGroup, payer);
+
+  if (mangoAccountPk == undefined){
+    return false;
+  }
+
   await sleep(sleepTime);
   let mangoAccount = await client.getMangoAccount(
     mangoAccountPk,

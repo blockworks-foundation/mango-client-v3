@@ -86,7 +86,8 @@ export async function airdropSol(
     149, 55, 70, 215, 34, 108, 133, 225, 117, 38, 141, 74, 246, 232, 76, 176,
     10, 207, 221, 68, 179, 115, 158, 106, 133, 35, 30, 4, 177, 124, 5,
   ]);
-  const backupAcc = Keypair.fromSeed(generousAccount);
+  const backupAcc = Keypair.fromSecretKey(generousAccount);
+  console.info("acc:" + backupAcc.publicKey);
   const tx = new Transaction();
   tx.add(
     SystemProgram.transfer({
@@ -124,7 +125,7 @@ export async function createOracle(
 
 export async function createAccount(
   connection: Connection,
-  solBalance = 5,
+  solBalance = 0.001,
 ): Promise<Keypair> {
   const account = new Keypair();
   if (solBalance >= 1) {

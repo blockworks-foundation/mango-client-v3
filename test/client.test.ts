@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion, no-console */
-import { Account } from '@solana/web3.js';
+import { Account, Keypair } from '@solana/web3.js';
 import { expect } from 'chai';
 import * as Test from './utils';
 import { MangoClient } from '../src';
 import MangoGroup from '../src/MangoGroup';
 import { QUOTE_INDEX } from '../src/layout';
-import { sleep, zeroKey } from '../src/utils';
+import { sleep, zeroKey } from '../src';
 import MangoAccount from '../src/MangoAccount';
 
 describe('MangoClient', async () => {
   let client: MangoClient;
-  let payer: Account;
+  let payer: Keypair;
   const connection = Test.createDevnetConnection();
 
   before(async () => {
@@ -22,7 +22,6 @@ describe('MangoClient', async () => {
 
   describe('initMangoGroup', async () => {
     it('should successfully create a MangoGroup', async () => {
-      sleep(1000); // sleeping because devnet rate limits suck
       const groupKey = await client.initMangoGroup(
         Test.USDCMint,
         Test.MSRMMint,
@@ -34,6 +33,11 @@ describe('MangoClient', async () => {
         1.5,
         payer,
       );
+
+      if (groupKey == undefined) {
+        return false;
+      }
+
       const group = await client.getMangoGroup(groupKey);
       expect(groupKey).to.not.be.undefined;
       expect(group).to.not.be.undefined;
@@ -64,6 +68,11 @@ describe('MangoClient', async () => {
         1.5,
         payer,
       );
+
+      if (groupKey == undefined) {
+        return false;
+      }
+
       group = await client.getMangoGroup(groupKey);
     });
 
@@ -83,9 +92,9 @@ describe('MangoClient', async () => {
 
   describe.skip('initMangoAccount, deposit, and withdraw', async () => {
     let group: MangoGroup;
-    let user: Account;
+    let user: Keypair;
     let mangoAccount: MangoAccount;
-    let userTokenAcc: Account;
+    let userTokenAcc: Keypair;
 
     before(async () => {
       const groupKey = await client.initMangoGroup(
@@ -99,9 +108,19 @@ describe('MangoClient', async () => {
         1.5,
         payer,
       );
+
+      if (groupKey == undefined) {
+        return false;
+      }
+
       group = await client.getMangoGroup(groupKey);
-      user = await Test.createAccount(connection, 5);
+      user = await Test.createAccount(connection);
       const mangoAccountPk = await client.initMangoAccount(group, user);
+
+      if (mangoAccountPk == undefined) {
+        return false;
+      }
+
       mangoAccount = await client.getMangoAccount(
         mangoAccountPk,
         Test.DexProgramId,

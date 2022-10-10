@@ -3,7 +3,7 @@ import os from 'os';
 import { Cluster, Config, QUOTE_INDEX, sleep } from '../src';
 import configFile from '../src/ids.json';
 import {
-  Account,
+  Keypair,
   Commitment,
   Connection,
   LAMPORTS_PER_SOL,
@@ -20,7 +20,7 @@ async function testStopLoss() {
   const sleepTime = 2000;
   const config = new Config(configFile);
 
-  const payer = new Account(
+  const payer = new Keypair(
     JSON.parse(
       process.env.KEYPAIR ||
       fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
@@ -31,7 +31,9 @@ async function testStopLoss() {
     'processed' as Commitment,
   );
 
-  const testGroup = new TestGroup();
+  const mangoProgramId = config.getGroup(cluster, 'devnet.2')!.mangoProgramId;
+
+  const testGroup = new TestGroup(connection, payer, mangoProgramId);
   const mangoGroupKey = await testGroup.init();
   const mangoGroup = await testGroup.client.getMangoGroup(mangoGroupKey);
   const perpMarkets = await Promise.all(
@@ -49,6 +51,11 @@ async function testStopLoss() {
   const quoteNodeBanks = await quoteRootBank.loadNodeBanks(connection);
 
   const accountPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
+
+  if (accountPk == undefined) {
+    return false;
+  }
+
   console.log('Created Account:', accountPk.toBase58());
   await sleep(sleepTime);
   const account = await testGroup.client.getMangoAccount(
@@ -82,6 +89,11 @@ async function testStopLoss() {
   await testGroup.runKeeper();
 
   const makerPk = await testGroup.client.initMangoAccount(mangoGroup, payer);
+
+  if (makerPk == undefined) {
+    return false;
+  }
+
   console.log('Created Maker:', accountPk.toBase58());
   await sleep(sleepTime);
   const maker = await testGroup.client.getMangoAccount(
@@ -158,13 +170,18 @@ async function testStopLoss() {
     51000,
     false
   );
+
+  if (txid == undefined) {
+    return false;
+  }
+
   console.log('add perp trigger order successful', txid.toString());
   const advanced = await account.loadAdvancedOrders(connection);
   console.log(advanced.filter((o) => o.perpTrigger && o.perpTrigger.isActive));
 
   // Agent trigger the order
   // First create an agent SOL account and fund it
-  const agent = new Account();
+  const agent = new Keypair();
   const tx = new Transaction().add(
     SystemProgram.transfer({
       fromPubkey: payer.publicKey,

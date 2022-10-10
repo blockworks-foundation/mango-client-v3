@@ -55,6 +55,11 @@ async function testCloseAccount() {
     payer,
     1,
   );
+
+  if (accountPk == undefined) {
+    return false;
+  }
+
   //const accountPk2 = await testGroup.client.createMangoAccount(mangoGroup, payer, 1);
   console.log('Created Account:', accountPk.toBase58());
   //console.log('Created Account:', accountPk2.toBase58());
