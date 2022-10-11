@@ -407,6 +407,51 @@ export async function getFilteredProgramAccounts(
   );
 }
 
+export async function getFilteredSlicedProgramAccounts(
+  connection: Connection,
+  programId: PublicKey,
+  filters,
+  sliceOffset,
+  sliceLength,
+): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
+  // @ts-ignore
+  const resp = await connection._rpcRequest('getProgramAccounts', [
+    programId.toBase58(),
+    {
+      commitment: connection.commitment,
+      filters,
+      encoding: 'base64',
+      dataSlice: {
+        offset: sliceOffset,
+        length: sliceLength,
+      }
+    },
+  ]);
+  if (resp.error) {
+    throw new Error(resp.error.message);
+  }
+  if (resp.result) {
+    const nullResults = resp.result.filter((r) => r?.account === null);
+    if (nullResults.length > 0)
+      throw new Error(
+        `gpa returned ${
+          nullResults.length
+        } null results. ex: ${nullResults[0]?.pubkey.toString()}`,
+      );
+  }
+  return resp.result.map(
+    ({ pubkey, account: { data, executable, owner, lamports } }) => ({
+      publicKey: new PublicKey(pubkey),
+      accountInfo: {
+        data: Buffer.from(data[0], 'base64'),
+        executable,
+        owner: new PublicKey(owner),
+        lamports,
+      },
+    }),
+  );
+}
+
 // Clamp number between two values
 export function clamp(x: number, min: number, max: number): number {
   if (x < min) {

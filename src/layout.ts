@@ -161,6 +161,8 @@ class EnumLayout extends UInt {
     );
     if (entry) {
       return entry[0];
+    } else {
+      return 0;
     }
     throw new Error('Invalid ' + this['property']);
   }
@@ -922,6 +924,8 @@ export class PerpAccountLayout extends Structure {
     return super.encode(src.toBuffer(), b, offset);
   }
 }
+/** @internal */
+export const perpAccountsLayout = seq(perpAccountLayout(), MAX_PAIRS)
 /** @internal */
 export function perpAccountLayout(property = '') {
   return new PerpAccountLayout(property);

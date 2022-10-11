@@ -36,6 +36,7 @@ import {
   zeroKey,
   MAXIMUM_NUMBER_OF_BLOCKS_FOR_TRANSACTION,
   prependFeePrioritizationIx,
+  getFilteredSlicedProgramAccounts,
 } from './utils/utils';
 import {
   AssetType,
@@ -48,6 +49,7 @@ import {
   MangoCacheLayout,
   MangoGroupLayout,
   NodeBankLayout,
+  perpAccountsLayout,
   PerpEventLayout,
   PerpEventQueueHeaderLayout,
   PerpMarketLayout,
@@ -2916,12 +2918,17 @@ export class MangoClient {
     price: I80F48, // should be the MangoCache price
     sign: number,
     mangoAccounts?: MangoAccount[],
+    requestThinAccounts = false,
   ): Promise<AccountWithPnl[]> {
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
     const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
 
     if (mangoAccounts === undefined) {
-      mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
+      if (requestThinAccounts) {
+        mangoAccounts = await this.getAllMangoAccountsPerpAccounts(mangoGroup);
+      } else {
+        mangoAccounts = await this.getAllMangoAccounts(mangoGroup);
+      }
     }
 
     return mangoAccounts
@@ -3292,6 +3299,45 @@ export class MangoClient {
         }
       }
     }
+
+    return mangoAccounts;
+  }
+
+  async getAllMangoAccountsPerpAccounts(
+    mangoGroup: MangoGroup,
+  ): Promise<MangoAccount[]> {
+    const accountFilters = [
+      {
+        memcmp: {
+          offset: MangoAccountLayout.offsetOf('mangoGroup'),
+          bytes: mangoGroup.publicKey.toBase58(),
+        },
+      },
+      {
+        dataSize: MangoAccountLayout.span,
+      },
+    ];
+
+    const perpAccountsOffset = MangoAccountLayout.offsetOf('perpAccounts');
+    const perpAccountsSpan = MangoAccountLayout.layoutFor('perpAccounts').span;
+    const mangoAccounts = await getFilteredSlicedProgramAccounts(
+      this.connection,
+      this.programId,
+      accountFilters,
+      perpAccountsOffset,
+      perpAccountsSpan,
+    ).then((accounts) =>
+      accounts.map(({ publicKey, accountInfo }) => {
+        const account = new MangoAccount(
+          publicKey,
+          MangoAccountLayout.decode(
+            Buffer.alloc(MangoAccountLayout.span),
+          ),
+        );
+        account.perpAccounts = perpAccountsLayout.decode(accountInfo.data);
+        return account;
+      }),
+    );
 
     return mangoAccounts;
   }
