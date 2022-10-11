@@ -2976,7 +2976,6 @@ export class MangoClient {
     owner: Payer,
     mangoAccounts?: MangoAccount[],
   ): Promise<TransactionSignature | null> {
-    // fetch all MangoAccounts filtered for having this perp market in basket
     const marketIndex = mangoGroup.getPerpMarketIndex(perpMarket.publicKey);
     const perpMarketInfo = mangoGroup.perpMarkets[marketIndex];
     let pnl = mangoAccount.perpAccounts[marketIndex].getPnl(
@@ -3028,14 +3027,7 @@ export class MangoClient {
     // we don't maintain an off chain service for finding accounts for
     // devnet, so use fetchTopPnlAccountsFromDB only for mainnet
     let accountsWithPnl;
-    // note: simplistic way of checking if we are on mainnet
-    const isMainnet =
-      (this.connection as any)['_rpcEndpoint'] &&
-      !(this.connection as any)['_rpcEndpoint']
-        .toLowerCase()
-        // usually devnet rpc endpoints have devnet in them, mainnet ones don't
-        .includes('devnet');
-    if (isMainnet) {
+    if (this.isMainnet()) {
       try {
         accountsWithPnl = await this.fetchTopPnlAccountsFromDB(
           mangoGroup,
@@ -3111,7 +3103,8 @@ export class MangoClient {
     mangoAccounts?: MangoAccount[],
   ): Promise<TransactionSignature[] | undefined> {
     // fetch all MangoAccounts filtered for having this perp market in basket
-    if (mangoAccounts === undefined) {
+    // only if we didn't fetch them already or have the settlePnl service connected
+    if (mangoAccounts === undefined && !this.isMainnet()) {
       mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
     }
     const signatures: (TransactionSignature | null)[] = await Promise.all(
@@ -3164,7 +3157,8 @@ export class MangoClient {
     mangoAccounts?: MangoAccount[],
   ): Promise<(TransactionSignature | null)[]> {
     // fetch all MangoAccounts filtered for having this perp market in basket
-    if (mangoAccounts === undefined) {
+    // only if we didn't fetch them already or have the settlePnl service connected
+    if (mangoAccounts === undefined && !this.isMainnet()) {
       mangoAccounts = await this.getAllMangoAccounts(mangoGroup, [], false);
     }
     return await Promise.all(
@@ -5599,5 +5593,16 @@ export class MangoClient {
     await mangoAccount.reload(this.connection, mangoGroup.dexProgramId);
     // ^ The newly created open orders account isn't immediately visible in
     // the already fetched Mango account, hence why it needs to be reloaded
+  }
+
+  isMainnet() {
+    // simplistic way of checking if we are on mainnet
+    let rpcUrl = this.connection['_rpcEndpoint']?.toLowerCase();
+    return (
+      rpcUrl &&
+      !rpcUrl.includes('devnet') &&
+      !rpcUrl.includes('testnet') &&
+      !rpcUrl.includes('localhost')
+    );
   }
 }
