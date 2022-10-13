@@ -3,6 +3,8 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   Token,
 } from '@solana/spl-token';
+import * as path from 'path';
+import * as csv from 'fast-csv';
 import {
   Commitment,
   Connection,
@@ -134,7 +136,7 @@ async function tokenTransfer(
   const sig = await sendAndConfirmTransaction(connection, tx, [PAYER], {
     skipPreflight: true,
   });
-  console.log(` - transferrd, sig https://explorer.solana.com/tx/${sig}`);
+  console.log(` - transferred, sig https://explorer.solana.com/tx/${sig}`);
 }
 
 async function reimburseUser(
@@ -206,3 +208,8 @@ reimburseUser(new PublicKey('9Ut1gZJnd5D7EjPXm2DygYWZkZGpt5QSMEYAaVx2hur4'), [
 ]);
 
 // TODO read csv, grab mango accounts owner, grab token deposits per token, call reimburseUser
+fs.createReadStream(path.resolve(__dirname, 'assets', 'output.csv'))
+  .pipe(csv.parse({ headers: true }))
+  .on('error', (error) => console.error(error))
+  .on('data', (row) => console.log(row.mango_account, row.equity))
+  .on('end', (rowCount: number) => console.log(`Parsed ${rowCount} rows`));
