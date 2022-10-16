@@ -8,11 +8,12 @@ import {
 } from '../src';
 import { Commitment, Connection } from '@solana/web3.js';
 import configFile from '../src/ids.json';
+import BN from "bn.js";
 
 async function subscribeToOrderbook() {
   // setup client
   const config = new Config(configFile);
-  const groupConfig = config.getGroupWithName('mainnet.1') as GroupConfig;
+  const groupConfig = config.getGroupWithName('devnet.2') as GroupConfig;
   const connection = new Connection(
     config.cluster_urls[groupConfig.cluster],
     'processed' as Commitment,
@@ -22,7 +23,7 @@ async function subscribeToOrderbook() {
   // load group & market
   const perpMarketConfig = getMarketByBaseSymbolAndKind(
     groupConfig,
-    'BTC',
+    'SOL',
     'perp',
   );
   const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
@@ -41,21 +42,12 @@ async function subscribeToOrderbook() {
       BookSideLayout.decode(accountInfo.data),
     );
 
-    // print L2 orderbook data
-    for (const [price, size] of bids.getL2(20)) {
-      console.log(price, size);
-    }
+    const [_, nativeQuantity] = perpMarket.uiToNativePriceQuantity(0, 25000)
 
-    // print L3 orderbook data
-    for (const order of bids) {
-      console.log(
-        order.owner.toBase58(),
-        order.orderId.toString('hex'),
-        order.price,
-        order.size,
-        order.side, // 'buy' or 'sell'
-      );
-    }
+    console.log(nativeQuantity.toString())
+
+    console.log(bids.getImpactPriceUi(nativeQuantity))
+
   });
 }
 

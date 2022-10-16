@@ -13,7 +13,7 @@ async function getAccountBalance() {
   const client = new MangoClient(connection, groupConfig.mangoProgramId);
 
   // load group, cache, account
-  const mangoAccountPk = new PublicKey('YOUR_MANGOACCOUNT_KEY');
+  const mangoAccountPk = new PublicKey('GSsDQvctP6CkLb9KgMuPwQv63V7aiS5FUzycLX9zcUyZ');
   const mangoGroup = await client.getMangoGroup(groupConfig.publicKey);
   const cache = await mangoGroup.loadCache(connection);
   const mangoAccount = await client.getMangoAccount(
