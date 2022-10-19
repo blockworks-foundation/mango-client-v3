@@ -651,6 +651,11 @@ MangoInstructionLayout.addVariant(
   ]),
   'ChangeReferralFeeParams2',
 );
+MangoInstructionLayout.addVariant(75, struct([u8('limit')]), 'RecoveryForceSettleSpotOrders');
+MangoInstructionLayout.addVariant(76, struct([]), 'RecoveryWithdrawTokenVault');
+MangoInstructionLayout.addVariant(77, struct([]), 'RecoveryWithdrawMngoVault');
+MangoInstructionLayout.addVariant(78, struct([]), 'RecoveryWithdrawInsuranceVault');
+
 const instructionMaxSpan = Math.max(
   // @ts-ignore
   ...Object.values(MangoInstructionLayout.registry).map((r) => r.span),

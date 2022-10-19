@@ -2702,3 +2702,145 @@ export function makeCancelAllSpotOrdersInstruction(
     programId,
   });
 }
+
+export function makeRecoveryForceSettleSpotOrdersInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  mangoAccountPk: PublicKey,
+  baseRootBankPk: PublicKey,
+  baseNodeBankPk: PublicKey,
+  baseVaultPk: PublicKey,
+  quoteRootBankPk: PublicKey,
+  quoteNodeBankPk: PublicKey,
+  quoteVaultPk: PublicKey,
+  spotMarketPk: PublicKey,
+  bidsPk: PublicKey,
+  asksPk: PublicKey,
+  signerPk: PublicKey,
+  dexEventQueuePk: PublicKey,
+  dexBasePk: PublicKey,
+  dexQuotePk: PublicKey,
+  dexSignerPk: PublicKey,
+  dexProgramPk: PublicKey,
+  limit: BN,
+  openOrdersKeys: { pubkey: PublicKey; isWritable: boolean }[],
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: mangoAccountPk },
+    { isSigner: false, isWritable: false, pubkey: baseRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: baseVaultPk },
+    { isSigner: false, isWritable: false, pubkey: quoteRootBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteNodeBankPk },
+    { isSigner: false, isWritable: true, pubkey: quoteVaultPk },
+    { isSigner: false, isWritable: true, pubkey: spotMarketPk },
+    { isSigner: false, isWritable: true, pubkey: bidsPk },
+    { isSigner: false, isWritable: true, pubkey: asksPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: true, pubkey: dexEventQueuePk },
+    { isSigner: false, isWritable: true, pubkey: dexBasePk },
+    { isSigner: false, isWritable: true, pubkey: dexQuotePk },
+    { isSigner: false, isWritable: false, pubkey: dexSignerPk },
+    { isSigner: false, isWritable: false, pubkey: dexProgramPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+    ...openOrdersKeys.map(({ pubkey, isWritable }) => ({
+      isSigner: false,
+      isWritable,
+      pubkey,
+    })),
+  ];
+
+  const data = encodeMangoInstruction({
+    RecoveryForceSettleSpotOrders: {
+      limit,
+    },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRecoveryWithdrawTokenVaultInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  signerPk: PublicKey,
+  rootBankPk: PublicKey,
+  nodeBankPk: PublicKey,
+  vaultPk: PublicKey,
+  destinationPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: vaultPk },
+    { isSigner: false, isWritable: true, pubkey: destinationPk },
+    { isSigner: false, isWritable: false, pubkey: rootBankPk },
+    { isSigner: false, isWritable: false, pubkey: nodeBankPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+  const data = encodeMangoInstruction({
+    RecoveryWithdrawTokenVault: { },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRecoveryWithdrawMngoVaultInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  signerPk: PublicKey,
+  perpMarketPk: PublicKey,
+  vaultPk: PublicKey,
+  destinationPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: vaultPk },
+    { isSigner: false, isWritable: true, pubkey: destinationPk },
+    { isSigner: false, isWritable: false, pubkey: perpMarketPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+  const data = encodeMangoInstruction({
+    RecoveryWithdrawMngoVault: { },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
+
+export function makeRecoveryWithdrawInsuranceVaultInstruction(
+  programId: PublicKey,
+  mangoGroupPk: PublicKey,
+  signerPk: PublicKey,
+  vaultPk: PublicKey,
+  destinationPk: PublicKey,
+): TransactionInstruction {
+  const keys = [
+    { isSigner: false, isWritable: false, pubkey: mangoGroupPk },
+    { isSigner: false, isWritable: true, pubkey: vaultPk },
+    { isSigner: false, isWritable: true, pubkey: destinationPk },
+    { isSigner: false, isWritable: false, pubkey: signerPk },
+    { isSigner: false, isWritable: false, pubkey: TOKEN_PROGRAM_ID },
+  ];
+
+
+  const data = encodeMangoInstruction({
+    RecoveryWithdrawInsuranceVault: { },
+  });
+  return new TransactionInstruction({
+    keys,
+    data,
+    programId,
+  });
+}
