@@ -1,0 +1,18 @@
+[
+  {
+    "name": "SOL/USDC",
+    "publicKey": "8BnEgHoWFysVcuFFX7QztDmzuH8r5ZFvyP3sYwn1XTh6"
+  },
+  {
+    "name": "USDT/USDC",
+    "publicKey": "B2na8Awyd7cpC59iEU43FagJAPLigr3AP3s38KM982bu"
+  },
+  {
+    "name": "MSOL/USDC",
+    "publicKey": "9Lyhks5bQQxb9EyyX55NtgKQzpM4WK7JCmeaWuQ5MoXD"
+  },
+  {
+    "name": "wheETH/USDC",
+    "publicKey": "FZxi3yWkE5mMjyaZj6utmYL54QQYfMCKMcLaQZq4UwnA"
+  }
+]
