@@ -45,6 +45,8 @@ const payer = Keypair.fromSecretKey(
   ),
 );
 
+console.log('serumCrank', payer.publicKey.toString());
+
 const connection = new Connection(ENDPOINT_URL!, 'processed' as Commitment);
 
 async function run() {

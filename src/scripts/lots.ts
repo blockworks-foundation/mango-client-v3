@@ -26,6 +26,9 @@ async function main() {
     '77quYg4MGneUdjgXCunt9GgM1usmrxKY31twEy3WHwcS',
     '6oGsL2puUgySccKzn9XA9afqF217LfxP5ocq4B3LWsjy',
     '8Gmi2HhZmwQPVdCwzS7CM66MGstMXPcTVHA7jF19cLZz',
+    '2xiv8A5xrJ7RnGdxXB42uFEkYHJjszEhaJyKKt4WaLep',
+    '3d4rzwpy9iGdCZvgxcu7B1YocYffVLsQXPXkBZKt2zLc',
+    '65HCcVzCVLDLEUHVfQrvE5TmHAUKgnCnbii9dojxE7wV',
   ]) {
     let mkt = await Market.load(
       connection,
@@ -49,6 +52,7 @@ async function main() {
     console.log('minOrderSize', mkt.minOrderSize);
     console.log('tickSize', mkt.tickSize);
 
+    console.log('baseToken', mkt.baseMintAddress.toString());
     console.log('baseLotSize', baseLotSize.toNumber());
     console.log('quoteLotSize', quoteLotSize.toNumber());
     console.log('feeRateBps', feeRateBps.toNumber());
