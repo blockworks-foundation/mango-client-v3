@@ -14,5 +14,21 @@
   {
     "name": "wheETH/USDC",
     "publicKey": "FZxi3yWkE5mMjyaZj6utmYL54QQYfMCKMcLaQZq4UwnA"
+  },
+  {
+    "name": "RAY/USDC",
+    "publicKey": "DZjbn4XC8qoHKikZqzmhemykVzmossoayV9ffbsUqxVj"
+  },
+  {
+    "name": "RAY/USDT",
+    "publicKey": "GpHbiJJ9VHiuHVXeoet121Utrbm1CSNNzYrBKB8Xz2oz"
+  },
+  {
+    "name": "SOL/USDT",
+    "publicKey": "2AdaV97p6SfkuMQJdu8DHhBhmJe7oWdvbm52MJfYQmfA"
+  },
+  {
+    "name": "stSOL/USDC",
+    "publicKey": "JCKa72xFYGWBEVJZ7AKZ2ofugWPBfrrouQviaGaohi3R"
   }
 ]
