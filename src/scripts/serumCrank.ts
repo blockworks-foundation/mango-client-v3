@@ -27,15 +27,18 @@ const {
   INTERVAL,
   MAX_UNIQUE_ACCOUNTS,
   CONSUME_EVENTS_LIMIT,
+  CLUSTER,
 } = process.env;
 
+const cluster = CLUSTER || 'mainnet';
 const interval = INTERVAL || 3500;
 const maxUniqueAccounts = parseInt(MAX_UNIQUE_ACCOUNTS || '10');
 const consumeEventsLimit = new BN(CONSUME_EVENTS_LIMIT || '10');
 const serumProgramId = new PublicKey(
-  PROGRAM_ID || 'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX',
+  PROGRAM_ID || cluster == 'mainnet'
+    ? 'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'
+    : 'EoTcMgcDRTJVZDMZWBoU6rhYHZfkNTVEAfz3uUJRcYGj',
 );
-
 const payer = Keypair.fromSecretKey(
   Uint8Array.from(
     JSON.parse(
@@ -51,7 +54,7 @@ const connection = new Connection(ENDPOINT_URL!, 'processed' as Commitment);
 
 async function run() {
   const spotMarkets = await Promise.all(
-    markets.map((m) => {
+    markets[cluster].map((m) => {
       return Market.load(
         connection,
         new PublicKey(m.publicKey),
