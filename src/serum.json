@@ -1,40 +1,70 @@
 {
   "mainnet": [
     {
+      "address": "8BnEgHoWFysVcuFFX7QztDmzuH8r5ZFvyP3sYwn1XTh6",
+      "deprecated": false,
       "name": "SOL/USDC",
-      "publicKey": "8BnEgHoWFysVcuFFX7QztDmzuH8r5ZFvyP3sYwn1XTh6"
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     },
     {
+      "address": "B2na8Awyd7cpC59iEU43FagJAPLigr3AP3s38KM982bu",
+      "deprecated": false,
       "name": "USDT/USDC",
-      "publicKey": "B2na8Awyd7cpC59iEU43FagJAPLigr3AP3s38KM982bu"
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     },
     {
-      "name": "MSOL/USDC",
-      "publicKey": "9Lyhks5bQQxb9EyyX55NtgKQzpM4WK7JCmeaWuQ5MoXD"
+      "address": "9Lyhks5bQQxb9EyyX55NtgKQzpM4WK7JCmeaWuQ5MoXD",
+      "deprecated": false,
+      "name": "mSOL/USDC",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     },
     {
-      "name": "wheETH/USDC",
-      "publicKey": "FZxi3yWkE5mMjyaZj6utmYL54QQYfMCKMcLaQZq4UwnA"
+      "address": "3vtRgLDesutQdwotnoUuSMuKKj8YJAE85s938mGKfxXZ",
+      "deprecated": false,
+      "name": "scnSOL/USDC",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     },
     {
+      "address": "FZxi3yWkE5mMjyaZj6utmYL54QQYfMCKMcLaQZq4UwnA",
+      "deprecated": false,
+      "name": "ETH/USDC",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
+    },
+    {
+      "address": "3NnxQvDcZXputNMxaxsGvqiKpqgPfSYXpNigZNFcknmD",
+      "deprecated": false,
       "name": "MNGO/USDC",
-      "publicKey": "3NnxQvDcZXputNMxaxsGvqiKpqgPfSYXpNigZNFcknmD"
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     },
     {
-      "name": "RAY/USDC",
-      "publicKey": "DZjbn4XC8qoHKikZqzmhemykVzmossoayV9ffbsUqxVj"
-    },
-    {
+      "address": "GpHbiJJ9VHiuHVXeoet121Utrbm1CSNNzYrBKB8Xz2oz",
+      "deprecated": false,
       "name": "RAY/USDT",
-      "publicKey": "GpHbiJJ9VHiuHVXeoet121Utrbm1CSNNzYrBKB8Xz2oz"
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     },
     {
-      "name": "SOL/USDT",
-      "publicKey": "2AdaV97p6SfkuMQJdu8DHhBhmJe7oWdvbm52MJfYQmfA"
-    },
-    {
+      "address": "JCKa72xFYGWBEVJZ7AKZ2ofugWPBfrrouQviaGaohi3R",
+      "deprecated": false,
       "name": "stSOL/USDC",
-      "publicKey": "JCKa72xFYGWBEVJZ7AKZ2ofugWPBfrrouQviaGaohi3R"
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
+    },
+    {
+      "address": "2AdaV97p6SfkuMQJdu8DHhBhmJe7oWdvbm52MJfYQmfA",
+      "deprecated": false,
+      "name": "SOL/USDT",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
+    },
+    {
+      "address": "DZjbn4XC8qoHKikZqzmhemykVzmossoayV9ffbsUqxVj",
+      "deprecated": false,
+      "name": "RAY/USDC",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
+    },
+    {
+      "address": "HTHMfoxePjcXFhrV74pfCUNoWGe374ecFwiDjPGTkzHr",
+      "deprecated": false,
+      "name": "SLND/USDC",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     }
   ],
   "devnet": [

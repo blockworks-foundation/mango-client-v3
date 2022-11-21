@@ -57,7 +57,7 @@ async function run() {
     markets[cluster].map((m) => {
       return Market.load(
         connection,
-        new PublicKey(m.publicKey),
+        new PublicKey(m.address),
         {
           skipPreflight: true,
           commitment: 'processed' as Commitment,
