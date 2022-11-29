@@ -70,7 +70,7 @@
   "devnet": [
     {
       "name": "SOL/USDC",
-      "publicKey": "82iPEvGiTceyxYpeLK3DhSwga3R5m4Yfyoydd13CukQ9"
+      "address": "82iPEvGiTceyxYpeLK3DhSwga3R5m4Yfyoydd13CukQ9"
     }
   ]
 }
