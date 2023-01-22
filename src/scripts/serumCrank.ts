@@ -10,6 +10,8 @@ import {
   Connection,
   PublicKey,
   Transaction,
+  ComputeBudgetInstruction,
+  ComputeBudgetProgram,
 } from '@solana/web3.js';
 import { getMultipleAccounts, sleep } from '../utils/utils';
 import BN from 'bn.js';
@@ -18,7 +20,8 @@ import {
   DexInstructions,
   Market,
 } from '@project-serum/serum';
-import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { ASSOCIATED_TOKEN_PROGRAM_ID, Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { WRAPPED_SOL_MINT } from '@project-serum/serum/lib/token-instructions';
 
 const {
   ENDPOINT_URL,
@@ -43,7 +46,7 @@ const payer = Keypair.fromSecretKey(
   Uint8Array.from(
     JSON.parse(
       KEYPAIR ||
-        fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
+        fs.readFileSync(os.homedir() + '/.config/solana/azzers.json', 'utf-8'),
     ),
   ),
 );
@@ -55,6 +58,7 @@ const connection = new Connection(ENDPOINT_URL!, 'processed' as Commitment);
 async function run() {
   const spotMarkets = await Promise.all(
     markets[cluster].map((m) => {
+      console.log(m.address);
       return Market.load(
         connection,
         new PublicKey(m.address),
@@ -137,6 +141,9 @@ async function run() {
         });
 
         const transaction = new Transaction();
+        transaction.add(ComputeBudgetProgram.setComputeUnitPrice({
+          microLamports: 25000
+        }))
         transaction.add(instr);
 
         console.log(
@@ -146,10 +153,10 @@ async function run() {
           events.length,
           'events',
         );
-        await connection.sendTransaction(transaction, [payer], {
+        console.log(await connection.sendTransaction(transaction, [payer], {
           skipPreflight: true,
           maxRetries: 2,
-        });
+        }));
       }
       await sleep(interval);
     } catch (e) {
