@@ -10,7 +10,6 @@ import {
   Connection,
   PublicKey,
   Transaction,
-  ComputeBudgetInstruction,
   ComputeBudgetProgram,
 } from '@solana/web3.js';
 import { getMultipleAccounts, sleep } from '../utils/utils';
@@ -20,8 +19,7 @@ import {
   DexInstructions,
   Market,
 } from '@project-serum/serum';
-import { ASSOCIATED_TOKEN_PROGRAM_ID, Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { WRAPPED_SOL_MINT } from '@project-serum/serum/lib/token-instructions';
+import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 const {
   ENDPOINT_URL,
@@ -31,12 +29,20 @@ const {
   MAX_UNIQUE_ACCOUNTS,
   CONSUME_EVENTS_LIMIT,
   CLUSTER,
+  PRIORITY_MARKETS,      // markets to apply a priority fee for
+  PRIORITY_QUEUE_LIMIT,  // queue length at which to apply the priority fee
+  PRIORITY_CU_PRICE,     // extra microlamports per cu
+  PRIORITY_CU_LIMIT,     // compute limit
 } = process.env;
 
 const cluster = CLUSTER || 'mainnet';
 const interval = INTERVAL || 3500;
 const maxUniqueAccounts = parseInt(MAX_UNIQUE_ACCOUNTS || '10');
 const consumeEventsLimit = new BN(CONSUME_EVENTS_LIMIT || '10');
+const priorityMarkets: number[] = JSON.parse(PRIORITY_MARKETS || "[]");
+const priorityQueueLimit = parseInt(PRIORITY_QUEUE_LIMIT || "100");
+const priorityCuPrice = parseInt(PRIORITY_CU_PRICE || "5000");
+const priorityCuLimit = parseInt(PRIORITY_CU_LIMIT || "200000");
 const serumProgramId = new PublicKey(
   PROGRAM_ID || cluster == 'mainnet'
     ? 'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'
@@ -46,7 +52,7 @@ const payer = Keypair.fromSecretKey(
   Uint8Array.from(
     JSON.parse(
       KEYPAIR ||
-        fs.readFileSync(os.homedir() + '/.config/solana/azzers.json', 'utf-8'),
+        fs.readFileSync(os.homedir() + '/.config/solana/devnet.json', 'utf-8'),
     ),
   ),
 );
@@ -58,7 +64,6 @@ const connection = new Connection(ENDPOINT_URL!, 'processed' as Commitment);
 async function run() {
   const spotMarkets = await Promise.all(
     markets[cluster].map((m) => {
-      console.log(m.address);
       return Market.load(
         connection,
         new PublicKey(m.address),
@@ -139,11 +144,17 @@ async function run() {
           limit: consumeEventsLimit,
           programId: serumProgramId,
         });
-
         const transaction = new Transaction();
-        transaction.add(ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 25000
-        }))
+        if (priorityMarkets.includes(i) && events.length > priorityQueueLimit) {
+          transaction.add(...[
+            ComputeBudgetProgram.setComputeUnitLimit({
+              units: priorityCuLimit,
+            }),
+            ComputeBudgetProgram.setComputeUnitPrice({
+              microLamports: priorityCuPrice
+            })
+          ]);
+        }
         transaction.add(instr);
 
         console.log(
