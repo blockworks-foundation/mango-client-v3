@@ -83,6 +83,10 @@
     {
       "name": "SOL/USDC",
       "address": "82iPEvGiTceyxYpeLK3DhSwga3R5m4Yfyoydd13CukQ9"
-    }
+    },
+    {
+      "name": "WSOL/USDC",
+      "address": "6xYbSQyhajUqyatJDdkonpj7v41bKeEBWpf7kwRh5X7A"
+    }    
   ]
 }
