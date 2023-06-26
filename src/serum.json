@@ -107,6 +107,12 @@
       "deprecated": false,
       "name": "mSOL/SOL",
       "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
+    },
+    {
+      "address": "DkbVbMhFxswS32xnn1K2UY4aoBugXooBTxdzkWWDWRkH",
+      "deprecated": false,
+      "name": "JitoSOL/USDC",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     }
   ],
   "devnet": [
