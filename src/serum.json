@@ -113,6 +113,12 @@
       "deprecated": false,
       "name": "JitoSOL/USDC",
       "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
+    },
+    {
+      "address": "CK1X54onkDCqVnqY7hnvhcT7EosnjiLTwPBXAMLxkA2A",
+      "deprecated": false,
+      "name": "HNT/USDC",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     }
   ],
   "devnet": [
