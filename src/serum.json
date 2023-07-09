@@ -115,6 +115,12 @@
       "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     },
     {
+      "address": "G8KnvNg5puzLmxQVeWT2cRHCm1XmurbWGG9B8Bze6mav",
+      "deprecated": false,
+      "name": "JitoSOL/SOL",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
+    },
+    {
       "address": "CK1X54onkDCqVnqY7hnvhcT7EosnjiLTwPBXAMLxkA2A",
       "deprecated": false,
       "name": "HNT/USDC",
