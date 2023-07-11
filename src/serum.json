@@ -125,6 +125,18 @@
       "deprecated": false,
       "name": "HNT/USDC",
       "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
+    },
+    {
+      "address": "BEhRuJZiKwTdVTsGYjbHRh9RmGbKBtT6xo7yPqxLiSSY",
+      "deprecated": false,
+      "name": "ORCA/USDC",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
+    },
+    {
+      "address": "ARjaHVxGCQfTvvKjLd7U7srvk6orthZSE6uqWchCczZc",
+      "deprecated": false,
+      "name": "bSOL/USDC",
+      "programId": "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
     }
   ],
   "devnet": [
